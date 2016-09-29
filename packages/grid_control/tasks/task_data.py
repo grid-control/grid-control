@@ -44,7 +44,7 @@ class DataTask(TaskModule):
 		def externalRefresh(sig, frame):
 			for psrc in psrc_list:
 				self._log.info('External signal triggered resync of datasource %r', psrc.get_name())
-				psrc.resyncSetup(force = True)
+				psrc.setup_resync(force = True)
 		signal.signal(signal.SIGUSR2, externalRefresh)
 
 		config.set_state(False, 'resync', detail = 'datasets')
@@ -56,11 +56,12 @@ class DataTask(TaskModule):
 
 		if dataProvider is not None:
 			splitterName = config.get('%s splitter' % datasource_name, 'FileBoundarySplitter')
-			splitterClass = dataProvider.checkSplitter(DataSplitter.get_class(splitterName))
+			splitterClass = dataProvider.check_splitter(DataSplitter.get_class(splitterName))
 			dataSplitter = splitterClass(config, datasource_name)
 
 			# Create and register dataset parameter source
-			partProcessor = config.get_composited_plugin(['partition processor', '%s partition processor' % datasource_name],
+			partition_config = config.change_view(default_on_change=None)
+			partProcessor = partition_config.get_composited_plugin(['partition processor', '%s partition processor' % datasource_name],
 				'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
 				'MultiPartitionProcessor', cls = PartitionProcessor, on_change = TriggerResync(['parameters']),
 				pargs = (datasource_name,))
@@ -72,9 +73,9 @@ class DataTask(TaskModule):
 			# Select dataset refresh rate
 			data_refresh = config.get_time('%s refresh' % datasource_name, -1, on_change = None)
 			if data_refresh >= 0:
-				data_refresh = max(data_refresh, dataProvider.queryLimit())
+				data_refresh = max(data_refresh, dataProvider.get_query_interval())
 				self._log.info('Dataset source will be queried every %s', str_time_long(data_refresh))
-			data_ps.resyncSetup(interval = data_refresh, force = config.get_state('resync', detail = 'datasets'))
+			data_ps.setup_resync(interval = data_refresh, force = config.get_state('resync', detail = 'datasets'))
 			if dataSplitter.get_partition_len() == 0:
 				if data_refresh < 0:
 					raise UserError('Currently used dataset does not provide jobs to process')

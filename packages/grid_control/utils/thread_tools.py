@@ -20,6 +20,10 @@ from python_compat import get_current_thread, get_thread_name
 BLOCKING_EQUIVALENT = 60 * 60 * 24 * 7  # instead of blocking, we wait for a week ;)
 
 
+class TimeoutException(Exception):
+	pass
+
+
 def hang_protection(fun, timeout=5):
 	# Function to protect against hanging system calls
 	result = {}
@@ -51,10 +55,10 @@ def tchain(iterable_list, timeout=None,
 	result = GCQueue()
 	exc = ExceptionCollector()
 	for idx, iterable in enumerate(iterable_list):
-		def generator_thread(iterator):  # TODO: Python 3.5 hickup related to pep 479?
+		def generator_thread(iterable):  # TODO: Python 3.5 hickup related to pep 479?
 			try:
 				try:
-					for item in iterator:
+					for item in iterable:
 						result.put(item)
 				finally:
 					result.put(GCQueue)  # Use GCQueue as end-of-generator marker
@@ -267,10 +271,6 @@ class GCThreadPool(object):
 		finally:
 			self._lock.release()
 		self._notify.set()
-
-
-class TimeoutException(Exception):
-	pass
 
 
 def _start_thread(desc, daemon, fun, *args, **kwargs):

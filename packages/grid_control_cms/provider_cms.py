@@ -59,12 +59,12 @@ class CMSBaseProvider(DataProvider):
 
 
 	# Define how often the dataprovider can be queried automatically
-	def queryLimit(self):
+	def get_query_interval(self):
 		return 2 * 60 * 60 # 2 hour delay minimum
 
 
 	# Check if splitterClass is valid
-	def checkSplitter(self, splitterClass):
+	def check_splitter(self, splitterClass):
 		if (DataSplitter.Skipped in splitterClass.get_needed_enums()) and not self._lumi_filter.empty():
 			self._log.debug('Selected splitter %s is not compatible with active lumi filter!', splitterClass.__name__)
 			self._log.warning('Active lumi section filter forced selection of HybridSplitter')
@@ -131,7 +131,7 @@ class CMSBaseProvider(DataProvider):
 				dictReplicas[blockPath].append((replica['node'], replica.get('se'), replica['complete'] == 'y'))
 
 
-	def getDatasets(self):
+	def get_dataset_name_list(self):
 		if self._cache_dataset is None:
 			self._cache_dataset = [self._datasetPath]
 			if '*' in self._datasetPath:
@@ -183,7 +183,7 @@ class CMSBaseProvider(DataProvider):
 
 
 	def _getGCBlocks(self, usePhedex):
-		for datasetPath in self.getDatasets():
+		for datasetPath in self.get_dataset_name_list():
 			counter = 0
 			for (blockPath, replica_infos) in self._getCMSBlocks(datasetPath, getSites = not usePhedex):
 				result = {}

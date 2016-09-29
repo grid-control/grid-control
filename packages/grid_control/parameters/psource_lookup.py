@@ -191,7 +191,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		return [self] + self._psrc.get_used_psrc_list()
 
 	def resync_psrc(self):
-		(result_redo, result_disable, _) = ParameterSource.EmptyResyncResult()
+		(result_redo, result_disable, _) = ParameterSource.get_empty_resync_result()
 		(psrc_redo, psrc_disable, psrc_size_change) = self._psrc.resync_psrc()
 		self._psp_field = self._init_psp_field()
 		for pnum, psp_info in enumerate(self._psp_field):

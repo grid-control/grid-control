@@ -15,9 +15,18 @@
 import re, random
 from grid_control.backends import WMS
 from grid_control.config import ConfigError
-from grid_control.parameters.psource_base import ImmutableParameterSource, ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.utils.parsing import parse_time, parse_type, str_dict
-from python_compat import imap, lmap
+from python_compat import imap, lmap, md5_hex
+
+
+class ImmutableParameterSource(ParameterSource):
+	def __init__(self, hash_src_list):
+		ParameterSource.__init__(self)
+		self._hash = md5_hex(repr(hash_src_list))
+
+	def get_psrc_hash(self):
+		return self._hash
 
 
 class InternalParameterSource(ImmutableParameterSource):
@@ -43,13 +52,13 @@ class SingleParameterSource(ImmutableParameterSource):
 	def __init__(self, key, hash_src_list):
 		ImmutableParameterSource.__init__(self, hash_src_list)
 		self._key = key.lstrip('!')
-		self._meta = ParameterMetadata(self._key, untracked = '!' in key)
+		self._meta = ParameterMetadata(self._key, untracked='!' in key)
 
 	def fill_parameter_metadata(self, result):
 		result.append(self._meta)
 
 
-class CollectParameterSource(SingleParameterSource): # Merge parameter values
+class CollectParameterSource(SingleParameterSource):  # Merge parameter values
 	alias_list = ['collect']
 
 	def __init__(self, key, *vn_list):
@@ -75,7 +84,7 @@ class ConstParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'const(%r, %s)' % (self._meta.get_value(), repr(self._value))
 
-	def create_psrc(cls, pconfig, repository, key, value = None): # pylint:disable=arguments-differ
+	def create_psrc(cls, pconfig, repository, key, value=None):  # pylint:disable=arguments-differ
 		if value is None:
 			value = pconfig.get(key)
 		return ConstParameterSource(key, value)
@@ -108,7 +117,7 @@ class CounterParameterSource(SingleParameterSource):
 class FormatterParameterSource(SingleParameterSource):
 	alias_list = ['format']
 
-	def __init__(self, key, fmt, source, default = ''):
+	def __init__(self, key, fmt, source, default=''):
 		SingleParameterSource.__init__(self, '!%s' % key, [key, fmt, source, default])
 		(self._fmt, self._source, self._default) = (fmt, source, default)
 
@@ -127,7 +136,7 @@ class FormatterParameterSource(SingleParameterSource):
 class RNGParameterSource(SingleParameterSource):
 	alias_list = ['rng']
 
-	def __init__(self, key = 'JOB_RANDOM', low = 1e6, high = 1e7-1):
+	def __init__(self, key='JOB_RANDOM', low=1e6, high=1e7 - 1):
 		SingleParameterSource.__init__(self, '!%s' % key.lstrip('!'), [key, low, high])
 		(self._low, self._high) = (int(low), int(high))
 
@@ -138,7 +147,8 @@ class RNGParameterSource(SingleParameterSource):
 		result[self._key] = random.randint(self._low, self._high)
 
 	def show_psrc(self):
-		return ['%s: var = %s, range = (%s, %s)' % (self.__class__.__name__, self._key, self._low, self._high)]
+		return ['%s: var = %s, range = (%s, %s)' % (self.__class__.__name__,
+			self._key, self._low, self._high)]
 
 
 class SimpleParameterSource(SingleParameterSource):
@@ -153,7 +163,7 @@ class SimpleParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'var(%r)' % self._meta.get_value()
 
-	def create_psrc(cls, pconfig, repository, key): # pylint:disable=arguments-differ
+	def create_psrc(cls, pconfig, repository, key):  # pylint:disable=arguments-differ
 		return SimpleParameterSource(key, pconfig.get_parameter(key.lstrip('!')))
 	create_psrc = classmethod(create_psrc)
 
@@ -170,7 +180,7 @@ class SimpleParameterSource(SingleParameterSource):
 class TransformParameterSource(SingleParameterSource):
 	alias_list = ['transform']
 
-	def __init__(self, key, fmt, default = ''):
+	def __init__(self, key, fmt, default=''):
 		SingleParameterSource.__init__(self, '!%s' % key, [key, fmt, default])
 		(self._fmt, self._default) = (fmt, default)
 
@@ -180,7 +190,7 @@ class TransformParameterSource(SingleParameterSource):
 	def fill_parameter_content(self, pNum, result):
 		tmp = dict(imap(lambda k_v: (str(k_v[0]), parse_type(str(k_v[1]))), result.items()))
 		try:
-			result[self._key] = eval(self._fmt, tmp) # pylint:disable=eval-used
+			result[self._key] = eval(self._fmt, tmp)  # pylint:disable=eval-used
 		except Exception:
 			result[self._key] = self._default
 
@@ -195,7 +205,7 @@ class KeyParameterSource(ParameterSource):
 	def __init__(self, *keys):
 		ParameterSource.__init__(self)
 		self._keys = lmap(lambda key: key.lstrip('!'), keys)
-		self._meta = lmap(lambda key: ParameterMetadata(key.lstrip('!'), untracked = '!' in key), keys)
+		self._meta = lmap(lambda key: ParameterMetadata(key.lstrip('!'), untracked='!' in key), keys)
 
 	def __repr__(self):
 		return 'key(%s)' % str.join(', ', self._keys)

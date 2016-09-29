@@ -423,7 +423,7 @@ class Condor(BasicWMS):
 			output_files = ",".join([target for (desc, src, target) in self._getSandboxFilesOut(module) if ((src != 'gc.stdout') and (src != 'gc.stderr'))])
 			jdlData.extend([
 				# store matching Grid-Control and Condor ID
-				'+GridControl_GCtoWMSID = "%s@$(Cluster).$(Process)"' % module.getDescription(jobNum).jobName,
+				'+GridControl_GCtoWMSID = "%s@$(Cluster).$(Process)"' % module.getDescription(jobNum).job_name,
 				'+GridControl_GCIDtoWMSID = "%s@$(Cluster).$(Process)"' % jobNum,
 				# publish the WMS id for Dashboard
 				'environment = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self._name,

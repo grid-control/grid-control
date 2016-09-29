@@ -23,19 +23,23 @@ class InfoScanner(ConfigurablePlugin):
 		self._log = logging.getLogger('%s.provider.infoscanner' % datasource_name)
 		self._datasource_name = datasource_name
 
-	def getGuards(self):
+	def get_ds_block_class_keys(self):
 		return ([], [])
 
-	def getEntriesVerbose(self, depth, path, metadata, events, seList, objStore):
-		self._log.log(logging.DEBUG, '    ' * depth + 'Collecting information with %s...', self.__class__.__name__)
-		for level, content, name in [
+	def _iter_datasource_entriesVerbose(self, depth, path, metadata, events, seList, objStore):
+		if self._log.isEnabledFor(logging.DEBUG):
+			self._log.log(logging.DEBUG, '    ' * depth +
+				'Collecting information with %s...', self.__class__.__name__)
+			logging_info_list = [
 				(logging.DEBUG, path, 'Path'),
 				(logging.DEBUG1, metadata, 'Metadata'),
 				(logging.DEBUG, events, 'Events'),
 				(logging.DEBUG1, seList, 'SE list'),
-				(logging.DEBUG1, objStore, 'Objects')]:
-			self._log.log(level, '    ' * depth + '  %s: %s', name, content)
-		return self.getEntries(path, metadata, events, seList, objStore)
+				(logging.DEBUG1, objStore, 'Objects')
+			]
+			for (level, content, name) in logging_info_list:
+				self._log.log(level, '    ' * depth + '  %s: %s', name, content)
+		return self._iter_datasource_entries(path, metadata, events, seList, objStore)
 
-	def getEntries(self, path, metadata, events, seList, objStore):
+	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
 		raise AbstractError

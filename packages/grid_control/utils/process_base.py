@@ -285,6 +285,14 @@ class LocalProcess(Process):
 LocalProcess.fdCreationLock = GCLock()
 
 
+class ProcessError(Exception):
+	pass
+
+
+class ProcessTimeout(ProcessError):
+	pass
+
+
 class ProcessStream(object):
 	def __init__(self, buffer, log):
 		(self._buffer, self._log) = (buffer, log)
@@ -388,11 +396,3 @@ class ProcessWriteStream(ProcessStream):
 		if log and (self._log is not None):
 			self._log += value
 		self._buffer.put(value)
-
-
-class ProcessError(Exception):
-	pass
-
-
-class ProcessTimeout(ProcessError):
-	pass

@@ -24,10 +24,10 @@ class BasicPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._vn_file_names = config.get(['partition variable file names', '%s partition variable file names' % datasource_name], 'FILE_NAMES', on_change = None)
-		self._vn_max_events = config.get(['partition variable max events', '%s partition variable max events' % datasource_name], 'MAX_EVENTS', on_change = None)
-		self._vn_skip_events = config.get(['partition variable skip events', '%s partition variable skip events' % datasource_name], 'SKIP_EVENTS', on_change = None)
-		self._vn_prefix = config.get(['partition variable prefix', '%s partition variable prefix' % datasource_name], 'DATASET', on_change = None)
+		self._vn_file_names = config.get(self._get_opt('variable file names'), 'FILE_NAMES')
+		self._vn_max_events = config.get(self._get_opt('variable max events'), 'MAX_EVENTS')
+		self._vn_skip_events = config.get(self._get_opt('variable skip events'), 'SKIP_EVENTS')
+		self._vn_prefix = config.get(self._get_opt('variable prefix'), datasource_name.upper())
 
 	def get_needed_vn_list(self, splitter):
 		map_splitter_enum2vn = {
@@ -38,10 +38,10 @@ class BasicPartitionProcessor(PartitionProcessor):
 			yield map_splitter_enum2vn[enum]
 
 	def get_partition_metadata(self):
-		result = lmap(lambda k: ParameterMetadata(k, untracked = True), [
+		result = lmap(lambda k: ParameterMetadata(k, untracked=True), [
 			self._vn_file_names, self._vn_max_events, self._vn_skip_events,
 			self._vn_prefix + 'PATH', self._vn_prefix + 'BLOCK', self._vn_prefix + 'NICK'])
-		result.append(ParameterMetadata(self._vn_prefix + 'SPLIT', untracked = False))
+		result.append(ParameterMetadata(self._vn_prefix + 'SPLIT', untracked=False))
 		return result
 
 	def process(self, pnum, partition_info, result):
@@ -57,10 +57,11 @@ class BasicPartitionProcessor(PartitionProcessor):
 			result[self._vn_prefix + 'SPLIT'] = pnum
 		else:
 			result[self._vn_prefix + 'SPLIT'] = '%s:%d' % (self._datasource_name, pnum)
-		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not partition_info.get(DataSplitter.Invalid, False)
+		is_invalid = partition_info.get(DataSplitter.Invalid, False)
+		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not is_invalid
 
-	def _format_file_list(self, fl):
-		return str.join(' ', fl)
+	def _format_file_list(self, fn_list):
+		return str.join(' ', fn_list)
 
 
 class LocationPartitionProcessor(PartitionProcessor):
@@ -68,11 +69,11 @@ class LocationPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._filter = config.get_filter(['partition location filter', '%s partition location filter' % datasource_name],
-			default = '', on_change = None, default_matcher = 'blackwhite', default_filter = 'weak')
-		self._preference = config.get_list(['partition location preference', '%s partition location preference' % datasource_name], [], on_change = None)
-		self._reqs = config.get_bool(['partition location requirement', '%s partition location requirement' % datasource_name], True, on_change = None)
-		self._disable = config.get_bool(['partition location check', '%s partition location check' % datasource_name], True, on_change = None)
+		self._filter = config.get_filter(self._get_opt('location filter'),
+			default='', default_matcher='blackwhite', default_filter='weak')
+		self._preference = config.get_list(self._get_opt('location preference'), [])
+		self._reqs = config.get_bool(self._get_opt('location requirement'), True)
+		self._disable = config.get_bool(self._get_opt('location check'), True)
 
 	def enabled(self):
 		return self._filter.get_selector() or self._preference or self._reqs or self._disable
@@ -80,10 +81,10 @@ class LocationPartitionProcessor(PartitionProcessor):
 	def process(self, pnum, partition_info, result):
 		locations = self._filter.filter_list(partition_info.get(DataSplitter.Locations))
 		if self._preference:
-			if not locations: # [] or None
+			if not locations:  # [] or None
 				locations = self._preference
-			elif any(imap(lambda x: x in self._preference, locations)): # preferred location available
-				locations = lfilter(lambda x: x in self._preference, locations)
+			elif any(imap(self._preference.__contains__, locations)):  # preferred location available
+				locations = lfilter(self._preference.__contains__, locations)
 		if (partition_info.get(DataSplitter.Locations) is None) and not locations:
 			return
 		if self._reqs and (locations is not None):
@@ -97,20 +98,20 @@ class MetaPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._metadata_list = config.get_list(['partition metadata', '%s partition metadata' % datasource_name], [], on_change = None)
+		self._metadata_list = config.get_list(self._get_opt('metadata'), [])
 
 	def enabled(self):
 		return self._metadata_list != []
 
 	def get_partition_metadata(self):
-		return lmap(lambda k: ParameterMetadata(k, untracked = True), self._metadata_list)
+		return lmap(lambda k: ParameterMetadata(k, untracked=True), self._metadata_list)
 
 	def process(self, pnum, partition_info, result):
 		for idx, metadata_name in enumerate(partition_info.get(DataSplitter.MetadataHeader, [])):
 			if metadata_name in self._metadata_list:
-				def get_metadata_protected(x):
-					if idx < len(x):
-						return x[idx]
+				def get_metadata_protected(metadata_list):
+					if idx < len(metadata_list):
+						return metadata_list[idx]
 				tmp = set(imap(get_metadata_protected, partition_info[DataSplitter.Metadata]))
 				if len(tmp) == 1:
 					value = tmp.pop()
@@ -123,12 +124,12 @@ class RequirementsPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._wt_offset = config.get_float(['partition walltime offset', '%s partition walltime offset' % datasource_name], 0., on_change = None)
-		self._wt_factor = config.get_float(['partition walltime factor', '%s partition walltime factor' % datasource_name], 0., on_change = None)
-		self._ct_offset = config.get_float(['partition cputime offset', '%s partition cputime offset' % datasource_name], 0., on_change = None)
-		self._ct_factor = config.get_float(['partition cputime factor', '%s partition cputime factor' % datasource_name], 0., on_change = None)
-		self._mem_offset = config.get_float(['partition memory offset', '%s partition memory offset' % datasource_name], 0., on_change = None)
-		self._mem_factor = config.get_float(['partition memory factor', '%s partition memory factor' % datasource_name], 0., on_change = None)
+		self._wt_offset = config.get_float(self._get_opt('walltime offset'), 0.)
+		self._wt_factor = config.get_float(self._get_opt('walltime factor'), 0.)
+		self._ct_offset = config.get_float(self._get_opt('cputime offset'), 0.)
+		self._ct_factor = config.get_float(self._get_opt('cputime factor'), 0.)
+		self._mem_offset = config.get_float(self._get_opt('memory offset'), 0.)
+		self._mem_factor = config.get_float(self._get_opt('memory factor'), 0.)
 
 	def enabled(self):
 		return any(imap(lambda x: x > 0, [self._wt_factor, self._ct_factor, self._mem_factor,
@@ -152,22 +153,22 @@ class TFCPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._tfc = config.get_lookup(['partition tfc', '%s partition tfc' % datasource_name], {}, on_change = None)
+		self._tfc = config.get_lookup(self._get_opt('tfc'), {})
 
 	def enabled(self):
 		return not self._tfc.empty()
 
 	def process(self, pnum, partition_info, result):
-		fl = partition_info[DataSplitter.FileList]
+		fn_list = partition_info[DataSplitter.FileList]
 		locations = partition_info.get(DataSplitter.Locations)
 		if not locations:
-			partition_info[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, None), fl)
+			partition_info[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, None), fn_list)
 		else:
 			for location in locations:
-				partition_info[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, location), fl)
+				partition_info[DataSplitter.FileList] = lmap(lambda fn: self._lookup(fn, location), fn_list)
 
 	def _lookup(self, fn, location):
-		prefix = self._tfc.lookup(location, is_selector = False)
+		prefix = self._tfc.lookup(location, is_selector=False)
 		if prefix:
 			return prefix + fn
 		return fn

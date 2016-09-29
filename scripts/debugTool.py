@@ -177,7 +177,7 @@ if opts.dataset_show_diff:
 		utils.exit_with_usage('%s <dataset source 1> <dataset source 2>' % sys.argv[0])
 	a = DataProvider.create_instance('ListProvider', config, args[0], None)
 	b = DataProvider.create_instance('ListProvider', config, args[1], None)
-	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(show_stats = False), b.getBlocks(show_stats = False))
+	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resync_blocks(a.get_block_list_cached(show_stats = False), b.get_block_list_cached(show_stats = False))
 	utils.display_table([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block')], blocksMissing)
 
 if opts.dataset_show_removed:
@@ -187,7 +187,7 @@ if opts.dataset_show_removed:
 	oldDP = DataProvider.create_instance('ListProvider', config, args[0], None)
 	for new in args[1:]:
 		newDP = DataProvider.create_instance('ListProvider', config, new, None)
-		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldDP.getBlocks(show_stats = False), newDP.getBlocks(show_stats = False))
+		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resync_blocks(oldDP.get_block_list_cached(show_stats = False), newDP.get_block_list_cached(show_stats = False))
 		for block in blocksMissing:
 			tmp = dict(block)
 			tmp[-1] = new

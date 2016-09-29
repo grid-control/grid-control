@@ -15,7 +15,7 @@
 import logging
 from grid_control.utils.parsing import str_dict
 from hpfwk import APIError, NestedException, clear_current_exception
-from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted, unspecified
+from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted, unspecified, identity
 
 
 class ConfigError(NestedException):
@@ -139,7 +139,7 @@ class ConfigEntry(object):
 			prefix = self.option
 		prefix += ' %s' % self.opttype
 
-		line_list = lfilter(lambda x: x != '', imap(str.strip, self.value.strip().splitlines()))
+		line_list = lfilter(identity, imap(str.strip, self.value.strip().splitlines()))
 		if not line_list:
 			line_list = [prefix]  # just prefix - without trailing whitespace
 		elif len(line_list) > 1:

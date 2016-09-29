@@ -195,19 +195,19 @@ def list_infos(blocks):
 
 def save_dataset(opts, provider):
 	print('')
-	blocks = provider.getBlocks(show_stats = False)
+	blocks = provider.get_block_list_cached(show_stats = False)
 	if opts.ordered:
 		sort_inplace(blocks, key = itemgetter(DataProvider.Dataset, DataProvider.BlockName))
 		for b in blocks:
 			sort_inplace(b[DataProvider.FileList], key = itemgetter(DataProvider.URL))
-	DataProvider.saveToFile(opts.save, blocks)
+	DataProvider.save_to_file(opts.save, blocks)
 	print('Dataset information saved to ./%s' % opts.save)
 
 def get_dataset_info(opts, args):
 	config = get_dataset_config(opts, args)
 
 	provider = config.get_plugin('dataset', cls = DataProvider)
-	blocks = provider.getBlocks(show_stats = False)
+	blocks = provider.get_block_list_cached(show_stats = False)
 	if len(blocks) == 0:
 		raise DatasetError('No blocks!')
 

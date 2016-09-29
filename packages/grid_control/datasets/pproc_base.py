@@ -19,8 +19,8 @@ from hpfwk import AbstractError
 from python_compat import imap, lchain
 
 
-# Class used by DataParameterSource to convert dataset splittings into parameter data
 class PartitionProcessor(ConfigurablePlugin):
+	# Class used by DataParameterSource to convert dataset splittings into parameter data
 	def __init__(self, config, datasource_name):
 		ConfigurablePlugin.__init__(self, config)
 		self._datasource_name = datasource_name
@@ -38,12 +38,16 @@ class PartitionProcessor(ConfigurablePlugin):
 	def process(self, pnum, partition_info, result):
 		raise AbstractError
 
+	def _get_opt(self, opt):
+		return ['partition %s' % opt, '%s partition %s' % (self._datasource_name, opt)]
+
 
 class MultiPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, processor_list, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		do_prune = config.get_bool(['partition processor prune', '%s partition processor prune' % datasource_name], True, on_change = None)
-		self._processor_list = prune_processors(do_prune, processor_list, self._log, 'Removed %d inactive partition processors!')
+		do_prune = config.get_bool(self._get_opt('processor prune'), True)
+		self._processor_list = prune_processors(do_prune, processor_list,
+			self._log, 'Removed %d inactive partition processors!')
 
 	def get_needed_vn_list(self, splitter):
 		return lchain(imap(lambda p: p.get_needed_vn_list(splitter) or [], self._processor_list))

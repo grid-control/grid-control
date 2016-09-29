@@ -24,14 +24,15 @@ from python_compat import md5_hex, set
 class DataParameterSource(LimitedResyncParameterSource):
 	alias_list = ['data']
 
-	def __init__(self, dn, ds_name, data_provider, data_splitter, data_proc, repository, keep_old = True):
+	def __init__(self, dn, ds_name, data_provider, data_splitter,
+			data_proc, repository, keep_old=True):
 		LimitedResyncParameterSource.__init__(self)
-		(self._dn, self._name, self._data_provider, self._data_splitter, self._part_proc, self._keep_old) = \
-			(dn, ds_name, data_provider, data_splitter, data_proc, keep_old)
+		(self._dn, self._name, self._part_proc, self._keep_old) = (dn, ds_name, data_proc, keep_old)
+		(self._data_provider, self._data_splitter) = (data_provider, data_splitter)
 		repository['dataset:%s' % ds_name] = self
-		self.resyncSetup(interval = -1)
+		self.setup_resync(interval=-1)
 
-		if not data_provider: # debug mode - used by scripts - disables resync
+		if not data_provider:  # debug mode - used by scripts - disables resync
 			self._len = self._data_splitter.get_partition_len()
 			return
 
@@ -45,8 +46,10 @@ class DataParameterSource(LimitedResyncParameterSource):
 		if self._exists_data_path('cache.dat') and self._exists_data_path('map.tar'):
 			self._data_splitter.import_partitions(self._get_data_path('map.tar'))
 		else:
-			DataProvider.saveToFile(self._get_data_path('cache.dat'), self._data_provider.getBlocks(show_stats = False))
-			self._data_splitter.partition_blocks(self._get_data_path('map.tar'), self._data_provider.getBlocks(show_stats = False))
+			DataProvider.save_to_file(self._get_data_path('cache.dat'),
+				self._data_provider.get_block_list_cached(show_stats=False))
+			self._data_splitter.partition_blocks(self._get_data_path('map.tar'),
+				self._data_provider.get_block_list_cached(show_stats=False))
 
 		self._len = self._data_splitter.get_partition_len()
 
@@ -54,18 +57,18 @@ class DataParameterSource(LimitedResyncParameterSource):
 		return 'data(%s)' % utils.QM(self._name == 'data', '', self._name)
 
 	def can_finish(self):
-		return self._resyncInterval < 0
+		return self._resync_interval < 0
 
-	def create_psrc(cls, pconfig, repository, src = 'data'): # pylint:disable=arguments-differ
+	def create_psrc(cls, pconfig, repository, src='data'):  # pylint:disable=arguments-differ
 		src_key = 'dataset:%s' % src
 		if src_key not in repository:
 			raise UserError('Dataset parameter source "%s" not setup!' % src)
 		return repository[src_key]
 	create_psrc = classmethod(create_psrc)
 
-	def fill_parameter_content(self, pNum, result):
-		splitInfo = self._data_splitter.get_partition(pNum)
-		self._part_proc.process(pNum, splitInfo, result)
+	def fill_parameter_content(self, pnum, result):
+		splitInfo = self._data_splitter.get_partition(pnum)
+		self._part_proc.process(pnum, splitInfo, result)
 
 	def fill_parameter_metadata(self, result):
 		result.extend(self._part_proc.get_partition_metadata() or [])
@@ -95,10 +98,10 @@ class DataParameterSource(LimitedResyncParameterSource):
 		if self._data_provider:
 			activity = Activity('Performing resync of datasource %r' % self._name)
 			# Get old and new dataset information
-			ds_old = DataProvider.loadFromFile(self._get_data_path('cache.dat')).getBlocks(show_stats = False)
-			self._data_provider.clearCache()
-			ds_new = self._data_provider.getBlocks(show_stats = False)
-			self._data_provider.saveToFile(self._get_data_path('cache-new.dat'), ds_new)
+			ds_old = DataProvider.load_from_file(self._get_data_path('cache.dat')).get_block_list_cached(show_stats=False)
+			self._data_provider.clear_cache()
+			ds_new = self._data_provider.get_block_list_cached(show_stats=False)
+			self._data_provider.save_to_file(self._get_data_path('cache-new.dat'), ds_new)
 
 			# Use old splitting information to synchronize with new dataset infos
 			old_len = self._data_splitter.get_partition_len()
@@ -110,7 +113,7 @@ class DataParameterSource(LimitedResyncParameterSource):
 					if self._keep_old:
 						os.rename(self._get_data_path(cur), self._get_data_path(old))
 					os.rename(self._get_data_path(new), self._get_data_path(cur))
-				backupRename(  'map-old-%d.tar' % time.time(),   'map.tar',   'map-new.tar')
+				backupRename('map-old-%d.tar' % time.time(), 'map.tar', 'map-new.tar')
 				backupRename('cache-old-%d.dat' % time.time(), 'cache.dat', 'cache-new.dat')
 				self._data_splitter.import_partitions(self._get_data_path('map.tar'))
 				self._len = self._data_splitter.get_partition_len()

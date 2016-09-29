@@ -130,9 +130,9 @@ class LocalWMS(BasicWMS):
 			reqs[WMS.MEMORY] = self.memory # local jobs need higher (more realistic) memory requirements
 
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
-		jobName = module.getDescription(jobNum).jobName
+		job_name = module.getDescription(jobNum).job_name
 		submit_args = shlex.split(self.submitOpts)
-		submit_args.extend(shlex.split(self.getSubmitArguments(jobNum, jobName, reqs, sandbox, stdout, stderr)))
+		submit_args.extend(shlex.split(self.getSubmitArguments(jobNum, job_name, reqs, sandbox, stdout, stderr)))
 		submit_args.append(utils.get_path_share('gc-local.sh'))
 		submit_args.extend(shlex.split(self.getJobArguments(jobNum, sandbox)))
 		proc = LocalProcess(self.submitExec, *submit_args)
@@ -191,7 +191,7 @@ class LocalWMS(BasicWMS):
 	def getJobArguments(self, jobNum, sandbox):
 		raise AbstractError
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr):
 		raise AbstractError
 
 	def parseSubmitOutput(self, data):

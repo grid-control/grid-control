@@ -93,7 +93,7 @@ class RangeParameterSource(ForwardingParameterSource):
 		return md5_hex(self._psrc.get_psrc_hash() + str([self._pos_start, self._pos_end]))
 
 	def resync_psrc(self):
-		(result_redo, result_disable, _) = ParameterSource.EmptyResyncResult() # empty resync result
+		(result_redo, result_disable, _) = ParameterSource.get_empty_resync_result() # empty resync result
 		(psrc_redo, psrc_disable, _) = self._psrc.resync_psrc() # size change is irrelevant if outside of range
 		def translate(source, target):
 			for pnum in source:
@@ -234,7 +234,7 @@ class MultiParameterSource(ParameterSource): # Meta processing of parameter psrc
 		self._psrc_max_list = lmap(lambda p: p.get_parameter_len(), self._psrc_list)
 		self._psrc_max = self._init_psrc_max()
 		# translate affected pnums from subsources
-		(result_redo, result_disable, _) = ParameterSource.EmptyResyncResult()
+		(result_redo, result_disable, _) = ParameterSource.get_empty_resync_result()
 		for (psrc_idx, psrc_resync) in enumerate(psrc_resync_list):
 			(psrc_redo, psrc_disable, _) = psrc_resync
 			for pnum in psrc_redo:
@@ -269,7 +269,7 @@ class BaseZipParameterSource(MultiParameterSource): # Base class for psrc_list i
 				psrc.fill_parameter_content(pnum, result)
 
 	def resync_psrc(self): # Quicker version than the general purpose implementation
-		result = ParameterSource.EmptyResyncResult()
+		result = ParameterSource.get_empty_resync_result()
 		for psrc in self._psrc_list:
 			result = combine_resync_result(result, psrc.resync_psrc())
 		psrc_max_old = self._psrc_max

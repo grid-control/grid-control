@@ -91,7 +91,7 @@ class TaggedConfigView(SimpleConfigView):
 			# Section is selected by class or manually
 			name_idx_tuple = tuple(imap(lambda n: safe_index(self._section_name_list, n), cur_name_list))
 			if None not in name_idx_tuple:  # All names in current section are selected
-				cur_tag_name_list = lfilter(lambda tn: tn in cur_tag_map, self._section_tag_order)
+				cur_tag_name_list = lfilter(cur_tag_map.__contains__, self._section_tag_order)
 				left_tag_name_list = lfilter(lambda tn: tn not in self._section_tag_order, cur_tag_map)
 				tag_tuple_list = imap(lambda tn: (tn, cur_tag_map[tn]), cur_tag_name_list)
 				tag_idx_tuple = tuple(imap(lambda tt: safe_index(self._section_tag_list, tt), tag_tuple_list))

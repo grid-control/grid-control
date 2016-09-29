@@ -20,7 +20,7 @@ from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import NestedException, clear_current_exception
-from python_compat import exit_without_cleanup, get_user_input, identity, ifilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sorted, tarfile
+from python_compat import exit_without_cleanup, get_user_input, identity, ifilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sorted, tarfile, unspecified, sort_inplace
 
 
 class GCIOError(NestedException):
@@ -406,6 +406,20 @@ def split_blackwhite_list(bwfilter):
 	blacklist = lmap(lambda x: x[1:], ifilter(lambda x: x.startswith('-'), bwfilter or []))
 	whitelist = lfilter(lambda x: not x.startswith('-'), bwfilter or [])
 	return (blacklist, whitelist)
+
+
+def split_list(iterable, fun, sort_key=unspecified):
+	# single pass on iterable!
+	(result_true, result_false) = ([], [])
+	for value in iterable:
+		if fun(value):
+			result_true.append(value)
+		else:
+			result_false.append(value)
+	if not unspecified(sort_key):
+		sort_inplace(result_true, key=sort_key)
+		sort_inplace(result_false, key=sort_key)
+	return (result_true, result_false)
 
 
 def split_opt(opt, delim, empty=''):

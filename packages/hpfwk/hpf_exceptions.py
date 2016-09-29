@@ -18,6 +18,31 @@ import os, sys
 HPF_STARTUP_DIRECTORY = os.getcwd()
 
 
+class NestedException(Exception):
+	# nested exception base class
+	def __init__(self, *args, **kwargs):
+		self.nested = []
+		self.traceback = []
+		cur_exception = get_current_exception()
+		if cur_exception:
+			self.nested = [cur_exception]
+			self.traceback = _parse_traceback(_get_current_traceback())
+		Exception.__init__(self, *args, **kwargs)
+
+
+class APIError(NestedException):
+	# some error in using the API
+	pass
+
+
+class AbstractError(APIError):
+	# some error related to abstract functions
+	def __init__(self):
+		fun_name = impl_detail(sys, '_getframe', args=(2,),
+			fun=lambda x: x.f_code.co_name, default='The invoked method')
+		APIError.__init__(self, '%s is an abstract function!' % fun_name)
+
+
 def clear_current_exception():
 	return impl_detail(sys, 'exc_clear', args=(), default=None)
 
@@ -74,31 +99,6 @@ class ExceptionWrapper(object):
 	def __init__(self, exception_value, exception_traceback):
 		self.nested = [exception_value]
 		self.traceback = _parse_traceback(exception_traceback)
-
-
-class NestedException(Exception):
-	# nested exception base class
-	def __init__(self, *args, **kwargs):
-		self.nested = []
-		self.traceback = []
-		cur_exception = get_current_exception()
-		if cur_exception:
-			self.nested = [cur_exception]
-			self.traceback = _parse_traceback(_get_current_traceback())
-		Exception.__init__(self, *args, **kwargs)
-
-
-class APIError(NestedException):
-	# some error in using the API
-	pass
-
-
-class AbstractError(APIError):
-	# some error related to abstract functions
-	def __init__(self):
-		fun_name = impl_detail(sys, '_getframe', args=(2,),
-			fun=lambda x: x.f_code.co_name, default='The invoked method')
-		APIError.__init__(self, '%s is an abstract function!' % fun_name)
 
 
 def _get_current_traceback():

@@ -20,271 +20,288 @@ from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, InstanceFactory, NestedException
-from python_compat import StringBuffer, identity, ifilter, imap, irange, json, lmap, lrange, md5_hex, set, sort_inplace, sorted
+from python_compat import StringBuffer, identity, ifilter, imap, irange, json, lmap, lrange, md5_hex, set, sort_inplace, itemgetter
 
 
 class DatasetError(NestedException):
 	pass
 
 
+class DatasetRetrievalError(DatasetError):
+	pass
+
+
 class DataProvider(ConfigurablePlugin):
-	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None, dataset_proc=None):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('%s.provider' % datasource_name)
-		(self._datasource_name, self._dataset_expr, self._dataset_nick) = (datasource_name, dataset_expr, dataset_nick)
+		(self._datasource_name, self._dataset_expr) = (datasource_name, dataset_expr)
+		self._dataset_nick_override = dataset_nick
 		(self._cache_block, self._cache_dataset) = (None, None)
-		self._dataset_query_interval = config.get_time('%s default query interval' % datasource_name, 60, on_change = None)
+		self._dataset_query_interval = config.get_time(
+			'%s default query interval' % datasource_name, 60, on_change=None)
 
-		triggerDataResync = TriggerResync(['datasets', 'parameters'])
-		self._stats = dataset_proc or DataProcessor.create_instance('SimpleStatsDataProcessor', config, datasource_name,
-			triggerDataResync, self._log, ' * Dataset %s:\n\tcontains ' % repr(dataset_nick or dataset_expr))
-		self._nick_producer = config.get_plugin(['nickname source', '%s nickname source' % datasource_name], 'SimpleNickNameProducer',
-			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), on_change = triggerDataResync)
-		self._dataset_processor = dataset_proc or config.get_composited_plugin('%s processor' % datasource_name,
-			'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
-			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor', 'MultiDataProcessor',
-			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), on_change = triggerDataResync)
+		self._stats = dataset_proc or DataProcessor.create_instance('SimpleStatsDataProcessor',
+			config, datasource_name, self._log,
+			' * Dataset %s:\n\tcontains ' % repr(dataset_nick or dataset_expr))
 
+		dataset_config = config.change_view(default_on_change=TriggerResync(['datasets', 'parameters']))
+		self._nick_producer = dataset_config.get_plugin(
+			['nickname source', '%s nickname source' % datasource_name], 'SimpleNickNameProducer',
+			cls=DataProcessor, pargs=(datasource_name,))
+		self._dataset_processor = dataset_proc or config.get_composited_plugin(
+			'%s processor' % datasource_name,
+			'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor ' +
+			'URLCountDataProcessor EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor ' +
+			'LocationDataProcessor', 'MultiDataProcessor', cls=DataProcessor, pargs=(datasource_name,))
 
 	def bind(cls, value, **kwargs):
 		config = kwargs.pop('config')
 		datasource_name = kwargs.pop('datasource_name', 'dataset')
-		defaultProvider = config.get('%s provider' % datasource_name, 'ListProvider')
+		provider_name_default = config.get('%s provider' % datasource_name, 'ListProvider')
 
 		instance_args = []
 		for entry in ifilter(str.strip, value.splitlines()):
-			(nickname, provider, dataset) = ('', defaultProvider, None)
-			temp = lmap(str.strip, entry.split(':', 2))
-			if len(temp) == 3:
-				(nickname, provider, dataset) = temp
-				if dataset.startswith('/'):
-					dataset = '/' + dataset.lstrip('/')
-			elif len(temp) == 2:
-				(nickname, dataset) = temp
-			elif len(temp) == 1:
-				dataset = temp[0]
+			(nickname, provider_name, dataset_name) = ('', provider_name_default, None)
+			tmp = lmap(str.strip, entry.split(':', 2))
+			if len(tmp) == 3:  # use tmp[...] to avoid false positives for unpacking checker ...
+				(nickname, provider_name, dataset_name) = (tmp[0], tmp[1], tmp[2])
+				if dataset_name.startswith('/'):
+					dataset_name = '/' + dataset_name.lstrip('/')
+			elif len(tmp) == 2:
+				(nickname, dataset_name) = (tmp[0], tmp[1])
+			elif len(tmp) == 1:
+				dataset_name = tmp[0]
 
-			clsNew = cls.get_class(provider)
-			bindValue = str.join(':', [nickname, provider, dataset])
-			instance_args.append([bindValue, clsNew, config, datasource_name, dataset, nickname])
+			provider = cls.get_class(provider_name)
+			bind_value = str.join(':', [nickname, provider_name, dataset_name])
+			instance_args.append([bind_value, provider, config, datasource_name, dataset_name, nickname])
 		for instance_arg in instance_args:
 			if len(instance_args) > 1:
-				instance_arg.append(NullDataProcessor()) # setting dataset_proc
+				instance_arg.append(NullDataProcessor())  # setting dataset_proc
 			yield InstanceFactory(*instance_arg)
 	bind = classmethod(bind)
 
+	def check_splitter(self, splitter):
+		# Check if splitter is valid
+		return splitter
 
-	def getBlocksFromExpr(cls, config, dataset_expr):
-		for dp_factory in DataProvider.bind(dataset_expr, config = config):
-			dproc = dp_factory.create_instance_bound()
-			for block in dproc.get_blocks_raw():
-				yield block
-	getBlocksFromExpr = classmethod(getBlocksFromExpr)
+	def clear_cache(self):
+		self._cache_block = None
+		self._cache_dataset = None
 
-
-	def bName(cls, block):
+	def get_block_id(cls, block):
 		if block.get(DataProvider.BlockName, '') in ['', '0']:
 			return block[DataProvider.Dataset]
 		return block[DataProvider.Dataset] + '#' + block[DataProvider.BlockName]
-	bName = classmethod(bName)
+	get_block_id = classmethod(get_block_id)
 
+	def get_block_list_cached(self, show_stats):
+		return self._create_block_cache(show_stats, self.iter_blocks_normed)
 
 	def get_dataset_expr(self):
 		return self._dataset_expr
 
-
-	def _raise_on_abort(self):
-		if utils.abort():
-			raise DatasetError('Received abort request during retrieval of %r' % self.get_dataset_expr())
-
-
-	# Define how often the dataprovider can be queried automatically
-	def queryLimit(self):
-		return self._dataset_query_interval
-
-
-	# Check if splitter is valid
-	def checkSplitter(self, splitter):
-		return splitter
-
-
-	# Default implementation via getBlocks
-	def getDatasets(self):
+	def get_dataset_name_list(self):
+		# Default implementation via get_block_list_cached
 		if self._cache_dataset is None:
 			self._cache_dataset = set()
-			for block in self.getBlocks(show_stats = True):
+			for block in self.get_block_list_cached(show_stats=True):
 				self._cache_dataset.add(block[DataProvider.Dataset])
 				if utils.abort():
 					raise DatasetError('Received abort request during dataset name retrieval!')
 		return list(self._cache_dataset)
 
+	def get_hash(self):
+		buffer = StringBuffer()
+		block_iter_processed = self._dataset_processor.process(self.iter_blocks_normed())
+		for _ in DataProvider.save_to_stream(buffer, block_iter_processed):
+			pass
+		return md5_hex(buffer.getvalue())
 
-	# Cached access to list of block dicts, does also the validation checks
-	def getBlocks(self, show_stats):
-		statsProcessor = NullDataProcessor()
-		if show_stats:
-			statsProcessor = self._stats
-		if self._cache_block is None:
-			try:
-				self._cache_block = list(statsProcessor.process(self._dataset_processor.process(self.get_blocks_raw())))
-			except Exception:
-				raise DatasetError('Unable to run dataset %s through processing pipeline!' % repr(self._dataset_expr))
-		return self._cache_block
+	def get_query_interval(self):
+		# Define how often the dataprovider can be queried automatically
+		return self._dataset_query_interval
 
+	def iter_blocks_from_expr(cls, config, dataset_expr):
+		for dp_factory in DataProvider.bind(dataset_expr, config=config):
+			dproc = dp_factory.create_instance_bound()
+			for block in dproc.iter_blocks_normed():
+				yield block
+	iter_blocks_from_expr = classmethod(iter_blocks_from_expr)
 
-	# List of block dicts with format
-	# { NEntries: 123, Dataset: '/path/to/data', Block: 'abcd-1234', Locations: ['site1','site2'],
-	#   Filelist: [{URL: '/path/to/file1', NEntries: 100}, {URL: '/path/to/file2', NEntries: 23}]}
-	def _getBlocksInternal(self):
-		raise AbstractError
-
-
-	def get_blocks_raw(self):
+	def iter_blocks_normed(self):
 		activity = Activity('Retrieving %s' % self._dataset_expr)
 		try:
 			# Validation, Naming:
-			for block in self._getBlocksInternal():
-				assert(block[DataProvider.Dataset])
+			for block in self._iter_blocks_raw():
+				if not block.get(DataProvider.Dataset):
+					raise DatasetError('Block does not contain the dataset name!')
 				block.setdefault(DataProvider.BlockName, '0')
 				block.setdefault(DataProvider.Provider, self.__class__.__name__)
 				block.setdefault(DataProvider.Locations, None)
-				events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
+				events = sum(imap(itemgetter(DataProvider.NEntries), block[DataProvider.FileList]))
 				block.setdefault(DataProvider.NEntries, events)
-				if self._dataset_nick:
-					block[DataProvider.Nickname] = self._dataset_nick
+				if self._dataset_nick_override:
+					block[DataProvider.Nickname] = self._dataset_nick_override
 				elif self._nick_producer:
 					block = self._nick_producer.process_block(block)
 					if not block:
 						raise DatasetError('Nickname producer failed!')
 				yield block
 		except Exception:
-			raise DatasetError('Unable to retrieve dataset %s' % repr(self._dataset_expr))
+			raise DatasetRetrievalError('Unable to retrieve dataset %s' % repr(self._dataset_expr))
 		activity.finish()
 
+	def load_from_file(path):
+		# Load dataset information using ListProvider
+		return DataProvider.create_instance('ListProvider', create_config(
+			config_dict={'dataset': {'dataset processor': 'NullDataProcessor'}}), 'dataset', path)
+	load_from_file = staticmethod(load_from_file)
 
-	def clearCache(self):
-		self._cache_block = None
-		self._cache_dataset = None
+	def parse_block_id(cls, block_id_str):
+		block_id_parts = block_id_str.split('#', 1)
+		if len(block_id_parts) == 2:
+			return {DataProvider.Dataset: block_id_parts[0], DataProvider.BlockName: block_id_parts[1]}
+		elif len(block_id_parts) == 1:
+			return {DataProvider.Dataset: block_id_parts[0]}
+		raise DatasetError('Invalid block ID: %r' % block_id_str)
+	parse_block_id = classmethod(parse_block_id)
 
+	def resync_blocks(block_list_old, block_list_new):
+		# Returns changes between two sets of blocks in terms of added, missing and changed blocks
+		# Only the affected files are returned in the block file list
+		def get_block_key(block):  # Compare different blocks according to their name - NOT full content
+			return (block[DataProvider.Dataset], block[DataProvider.BlockName])
+		sort_inplace(block_list_old, key=get_block_key)
+		sort_inplace(block_list_new, key=get_block_key)
 
-	def _classify_metadata_name_list(block):
-		def metadataHash(fi, idx):
-			if idx < len(fi[DataProvider.Metadata]):
-				return md5_hex(repr(fi[DataProvider.Metadata][idx]))
-		cMetadataIdx = lrange(len(block[DataProvider.Metadata]))
-		cMetadataHash = lmap(lambda idx: metadataHash(block[DataProvider.FileList][0], idx), cMetadataIdx)
-		for fi in block[DataProvider.FileList]: # Identify common metadata
-			for idx in cMetadataIdx:
-				if metadataHash(fi, idx) != cMetadataHash[idx]:
-					cMetadataIdx.remove(idx)
-		def filterC(common):
-			idxList = ifilter(lambda idx: (idx in cMetadataIdx) == common, irange(len(block[DataProvider.Metadata])))
-			return sorted(idxList, key = lambda idx: block[DataProvider.Metadata][idx])
-		return (filterC(True), filterC(False))
-	_classify_metadata_name_list = staticmethod(_classify_metadata_name_list)
+		def handle_matching_block(block_list_added, block_list_missing, block_list_matching,
+				block_old, block_new):
+			# Compare different files according to their name - NOT full content
+			get_file_key = itemgetter(DataProvider.URL)
+			sort_inplace(block_old[DataProvider.FileList], key=get_file_key)
+			sort_inplace(block_new[DataProvider.FileList], key=get_file_key)
 
+			def handle_matching_fi(fi_list_added, fi_list_missing, fi_list_matched, fi_old, fi_new):
+				fi_list_matched.append((fi_old, fi_new))
 
-	def get_hash(self):
-		buffer = StringBuffer()
-		for _ in DataProvider.saveToStream(buffer, self._dataset_processor.process(self.get_blocks_raw())):
-			pass
-		return md5_hex(buffer.getvalue())
+			(fi_list_added, fi_list_missing, fi_list_matched) = utils.get_list_difference(
+				block_old[DataProvider.FileList], block_new[DataProvider.FileList],
+				get_file_key, handle_matching_fi, is_sorted=True)
+			if fi_list_added:  # Create new block for added files in an existing block
+				block_added = copy.copy(block_new)
+				block_added[DataProvider.FileList] = fi_list_added
+				block_added[DataProvider.NEntries] = sum(imap(itemgetter(DataProvider.NEntries), fi_list_added))
+				block_list_added.append(block_added)
+			block_list_matching.append((block_old, block_new, fi_list_missing, fi_list_matched))
 
+		return utils.get_list_difference(block_list_old, block_list_new,
+			get_block_key, handle_matching_block, is_sorted=True)
+	resync_blocks = staticmethod(resync_blocks)
 
-	# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
-	def saveToStream(stream, dataBlocks, stripMetadata = False):
+	def save_to_file(path, block_iter, strip_metadata=False):
+		# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
+		if os.path.dirname(path):
+			utils.ensure_dir_exists(os.path.dirname(path), 'dataset cache directory')
+		fp = open(path, 'w')
+		try:
+			for _ in DataProvider.save_to_stream(fp, block_iter, strip_metadata):
+				pass
+		finally:
+			fp.close()
+	save_to_file = staticmethod(save_to_file)
+
+	def save_to_stream(stream, block_iter, strip_metadata=False):
 		writer = StringBuffer()
 		write_separator = False
-		for block in dataBlocks:
+		for block in block_iter:
 			if write_separator:
 				writer.write('\n')
-			writer.write('[%s]\n' % DataProvider.bName(block))
+			writer.write('[%s]\n' % DataProvider.get_block_id(block))
 			if DataProvider.Nickname in block:
 				writer.write('nickname = %s\n' % block[DataProvider.Nickname])
 			if DataProvider.NEntries in block:
 				writer.write('events = %d\n' % block[DataProvider.NEntries])
 			if block.get(DataProvider.Locations) is not None:
 				writer.write('se list = %s\n' % str.join(',', block[DataProvider.Locations]))
-			cPrefix = os.path.commonprefix(lmap(lambda x: x[DataProvider.URL], block[DataProvider.FileList]))
-			cPrefix = str.join('/', cPrefix.split('/')[:-1])
-			if len(cPrefix) > 6:
-				writer.write('prefix = %s\n' % cPrefix)
-				formatter = lambda x: x.replace(cPrefix + '/', '')
+			common_prefix = os.path.commonprefix(lmap(itemgetter(DataProvider.URL),
+				block[DataProvider.FileList]))
+			common_prefix = str.join('/', common_prefix.split('/')[:-1])
+			if len(common_prefix) > 6:
+				def formatter(value):
+					return value.replace(common_prefix + '/', '')
+				writer.write('prefix = %s\n' % common_prefix)
 			else:
 				formatter = identity
 
-			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
-			if writeMetadata:
-				(idxListBlock, idxListFile) = DataProvider._classify_metadata_name_list(block)
-				def getMetadata(fi, idxList):
-					idxList = ifilter(lambda idx: idx < len(fi[DataProvider.Metadata]), idxList)
-					return json.dumps(lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList))
-				writer.write('metadata = %s\n' % json.dumps(lmap(lambda idx: block[DataProvider.Metadata][idx], idxListBlock + idxListFile)))
-				if idxListBlock:
-					writer.write('metadata common = %s\n' % getMetadata(block[DataProvider.FileList][0], idxListBlock))
+			do_write_metadata = (DataProvider.Metadata in block) and not strip_metadata
+			if do_write_metadata:
+				def get_metadata_str(fi, idx_list):
+					idx_list = ifilter(lambda idx: idx < len(fi[DataProvider.Metadata]), idx_list)
+					return json.dumps(lmap(lambda idx: fi[DataProvider.Metadata][idx], idx_list))
+				(metadata_idx_list_block, metadata_idx_list_file) = _split_metadata_idx_list(block)
+				metadata_header_str = json.dumps(lmap(lambda idx: block[DataProvider.Metadata][idx],
+					metadata_idx_list_block + metadata_idx_list_file))
+				writer.write('metadata = %s\n' % metadata_header_str)
+				if metadata_idx_list_block:
+					metadata_str = get_metadata_str(block[DataProvider.FileList][0], metadata_idx_list_block)
+					writer.write('metadata common = %s\n' % metadata_str)
 			for fi in block[DataProvider.FileList]:
 				writer.write('%s = %d' % (formatter(fi[DataProvider.URL]), fi[DataProvider.NEntries]))
-				if writeMetadata and idxListFile:
-					writer.write(' %s' % getMetadata(fi, idxListFile))
+				if do_write_metadata and metadata_idx_list_file:
+					writer.write(' %s' % get_metadata_str(fi, metadata_idx_list_file))
 				writer.write('\n')
 			stream.write(writer.getvalue())
 			writer.seek(0)
 			writer.truncate(0)
 			write_separator = True
 			yield block
-	saveToStream = staticmethod(saveToStream)
+	save_to_stream = staticmethod(save_to_stream)
 
+	def _create_block_cache(self, show_stats, iter_fun):
+		# Cached access to list of block dicts, does also the validation checks
+		stats_processor = NullDataProcessor()
+		if show_stats:
+			stats_processor = self._stats
+		if self._cache_block is None:
+			try:
+				self._cache_block = list(stats_processor.process(self._dataset_processor.process(iter_fun())))
+			except DatasetRetrievalError:  # skip dataset processing pipeline error message
+				raise
+			except Exception:
+				raise DatasetError('Unable to run dataset %s ' % repr(self._dataset_expr) +
+					'through processing pipeline!')
+		return self._cache_block
 
-	def saveToFile(path, dataBlocks, stripMetadata = False):
-		if os.path.dirname(path):
-			utils.ensure_dir_exists(os.path.dirname(path), 'dataset cache directory')
-		fp = open(path, 'w')
-		try:
-			for _ in DataProvider.saveToStream(fp, dataBlocks, stripMetadata):
-				pass
-		finally:
-			fp.close()
-	saveToFile = staticmethod(saveToFile)
+	def _iter_blocks_raw(self):
+		# List of (partial or complete) block dicts with format
+		# { NEntries: 123, Dataset: '/path/to/data', Block: 'abcd-1234', Locations: ['site1','site2'],
+		#   Filelist: [{URL: '/path/to/file1', NEntries: 100}, {URL: '/path/to/file2', NEntries: 23}]}
+		raise AbstractError
 
-
-	# Load dataset information using ListProvider
-	def loadFromFile(path):
-		return DataProvider.create_instance('ListProvider', create_config(
-			config_dict = {'dataset': {'dataset processor': 'NullDataProcessor'}}), 'dataset', path)
-	loadFromFile = staticmethod(loadFromFile)
-
-
-	# Returns changes between two sets of blocks in terms of added, missing and changed blocks
-	# Only the affected files are returned in the block file list
-	def resyncSources(oldBlocks, newBlocks):
-		# Compare different blocks according to their name - NOT full content
-		def keyBlock(x):
-			return (x[DataProvider.Dataset], x[DataProvider.BlockName])
-		sort_inplace(oldBlocks, key = keyBlock)
-		sort_inplace(newBlocks, key = keyBlock)
-
-		def onMatchingBlock(blocksAdded, blocksMissing, blocksMatching, oldBlock, newBlock):
-			# Compare different files according to their name - NOT full content
-			def keyFiles(x):
-				return x[DataProvider.URL]
-			sort_inplace(oldBlock[DataProvider.FileList], key = keyFiles)
-			sort_inplace(newBlock[DataProvider.FileList], key = keyFiles)
-
-			def onMatchingFile(filesAdded, filesMissing, filesMatched, oldFile, newFile):
-				filesMatched.append((oldFile, newFile))
-
-			(filesAdded, filesMissing, filesMatched) = \
-				utils.get_list_difference(oldBlock[DataProvider.FileList], newBlock[DataProvider.FileList], keyFiles, onMatchingFile, is_sorted = True)
-			if filesAdded: # Create new block for added files in an existing block
-				tmpBlock = copy.copy(newBlock)
-				tmpBlock[DataProvider.FileList] = filesAdded
-				tmpBlock[DataProvider.NEntries] = sum(imap(lambda x: x[DataProvider.NEntries], filesAdded))
-				blocksAdded.append(tmpBlock)
-			blocksMatching.append((oldBlock, newBlock, filesMissing, filesMatched))
-
-		return utils.get_list_difference(oldBlocks, newBlocks, keyBlock, onMatchingBlock, is_sorted = True)
-	resyncSources = staticmethod(resyncSources)
+	def _raise_on_abort(self):
+		if utils.abort():
+			raise DatasetError('Received abort request during retrieval of %r' % self.get_dataset_expr())
 
 # To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise
 make_enum(['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
 	'Nickname', 'Metadata', 'Provider', 'ResyncInfo'], DataProvider)
+
+
+def _split_metadata_idx_list(block):
+	def get_metadata_hash(fi, idx):
+		if idx < len(fi[DataProvider.Metadata]):
+			return md5_hex(repr(fi[DataProvider.Metadata][idx]))
+	fi_list = block[DataProvider.FileList]
+	common_metadata_idx_list = lrange(len(block[DataProvider.Metadata]))
+	if fi_list:
+		common_metadata_hash_list = lmap(lambda idx: get_metadata_hash(fi_list[0], idx),
+			common_metadata_idx_list)
+	for fi in fi_list:  # Identify common metadata
+		for idx in common_metadata_idx_list:
+			if get_metadata_hash(fi, idx) != common_metadata_hash_list[idx]:
+				common_metadata_idx_list.remove(idx)
+	return utils.split_list(irange(len(block[DataProvider.Metadata])),
+		fun=common_metadata_idx_list.__contains__,
+		sort_key=lambda idx: block[DataProvider.Metadata][idx])

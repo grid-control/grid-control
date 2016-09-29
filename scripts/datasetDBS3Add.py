@@ -87,7 +87,7 @@ def create_dbs3_proto_blocks(opts, dataset_blocks):
 			block_dump = {'dataset_conf_list': [], 'files': [], 'file_conf_list': [], 'file_parent_list': []}
 			(block_size, block_dataset_types) = create_dbs3_json_files(opts, block, block_dump)
 			if len(block_dataset_types) > 1:
-				raise Exception('Data and MC files are mixed in block %s' % DataProvider.bName(block))
+				raise Exception('Data and MC files are mixed in block %s' % DataProvider.get_block_id(block))
 			elif len(block_dataset_types) == 1:
 				yield (block, block_dump, block_size, block_dataset_types.pop())
 			else:
@@ -132,7 +132,7 @@ def create_dbs3_json_blocks(opts, dataset_blocks):
 		except IndexError:
 			origin_site_name = 'UNKNOWN'
 
-		block_dump['block'] = {'block_name': DataProvider.bName(block), 'block_size': block_size,
+		block_dump['block'] = {'block_name': DataProvider.get_block_id(block), 'block_size': block_size,
 			'file_count': len(block[DataProvider.FileList]), 'origin_site_name': origin_site_name}
 		if opts.do_close_blocks:
 			block_dump['block']['open_for_writing'] = 0
@@ -223,8 +223,8 @@ def discover_blocks(options):
 		config = getConfig(config_dict = {'dataset': options.config_dict})
 		provider = DataProvider.create_instance('DBSInfoProvider', config, options.args[0], None)
 
-	blocks = provider.getBlocks(show_stats = False)
-	DataProvider.saveToFile(os.path.join(options.opts.tempdir, 'dbs.dat'), blocks)
+	blocks = provider.get_block_list_cached(show_stats = False)
+	DataProvider.save_to_file(os.path.join(options.opts.tempdir, 'dbs.dat'), blocks)
 	if options.opts.discovery:
 		sys.exit(os.EX_OK)
 	return blocks
@@ -237,8 +237,8 @@ def filter_blocks(opts, blocks):
 #		dNames = set(ximap(lambda b: b[DataProvider.Dataset], blocks))
 #		dNames = xfilter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames) - todo
 #		config = getConfig(config_dict = {None: {'dbs instance': opts.dbsTarget}})
-#		oldBlocks = xreduce(xoperator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(show_stats = False), dNames), [])
-#		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
+#		oldBlocks = xreduce(xoperator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).get_block_list_cached(show_stats = False), dNames), [])
+#		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resync_blocks(oldBlocks, blocks)
 #		if len(blocksMissing) or len(blocksChanged):
 #			if not utils.get_user_bool(' * WARNING: Block structure has changed! Continue?', False):
 #				sys.exit(os.EX_OK)

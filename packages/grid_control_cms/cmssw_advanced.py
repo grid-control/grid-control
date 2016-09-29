@@ -70,7 +70,7 @@ class CMSSW_Advanced(CMSSW):
 	def _displaySetup(self, dsPath, head):
 		if os.path.exists(dsPath):
 			nickNames = set()
-			for block in DataProvider.loadFromFile(dsPath).getBlocks(show_stats = False):
+			for block in DataProvider.load_from_file(dsPath).get_block_list_cached(show_stats = False):
 				nickNames.add(block[DataProvider.Nickname])
 			self._log.info('Mapping between nickname and other settings:')
 			report = []

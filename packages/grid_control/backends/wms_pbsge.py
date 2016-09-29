@@ -33,9 +33,9 @@ class PBSGECommon(LocalWMS):
 		return ''
 
 
-	def getCommonSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap):
+	def getCommonSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr, reqMap):
 		# Job name
-		params = ' -N "%s"' % jobName
+		params = ' -N "%s"' % job_name
 		# Job accounting
 		if self._account:
 			params += ' -P %s' % self._account

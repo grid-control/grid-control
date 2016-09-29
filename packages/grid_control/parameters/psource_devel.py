@@ -28,7 +28,7 @@ class CombineParameterSource(ZipLongParameterSource):
 		for (pNum2, value) in self._iterParamItems(psource2, var2 or var1):
 			for pNum1 in psource1_values.get(value, []):
 				self._combine_idx.append((pNum1, pNum2))
-		sort_inplace(self._combine_idx)
+		self._combine_idx.sort()
 		raise AbstractError
 
 	def _iterParamItems(self, psource, var):

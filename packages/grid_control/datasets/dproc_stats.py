@@ -17,8 +17,9 @@ from grid_control.datasets.provider_base import DataProvider
 
 
 class StatsDataProcessor(DataProcessor):
-	def __init__(self, config, datasource_name, on_change):
-		DataProcessor.__init__(self, config, datasource_name, on_change)
+	def __init__(self, config, datasource_name):
+		DataProcessor.__init__(self, config, datasource_name)
+		(self._entries, self._blocks, self._files) = (0, 0, 0)
 
 	def process_block(self, block):
 		if block:
@@ -34,8 +35,8 @@ class StatsDataProcessor(DataProcessor):
 
 
 class SimpleStatsDataProcessor(StatsDataProcessor):
-	def __init__(self, config, datasource_name, on_change, log, msg):
-		StatsDataProcessor.__init__(self, config, datasource_name, on_change)
+	def __init__(self, config, datasource_name, log, msg):
+		StatsDataProcessor.__init__(self, config, datasource_name)
 		(self._log, self._msg) = (log, msg)
 
 	def process(self, block_iter):

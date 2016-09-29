@@ -164,7 +164,7 @@ class HistoricalConfigView(ConfigView):
 	def _match_entries(self, container, option_list=None):
 		key_list = container.get_options()
 		if option_list is not None:
-			key_list = lfilter(lambda key: key in key_list, option_list)
+			key_list = lfilter(key_list.__contains__, option_list)
 
 		def get_entry_key_ordered(entry):
 			return (tuple(imap(remove_none, get_section_key_filtered(entry))), entry.order)

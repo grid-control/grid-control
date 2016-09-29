@@ -80,7 +80,7 @@ class PythonConfigFiller(DictConfigFiller):
 				utils.exec_wrapper(fp.read(), {'Settings': Settings})
 			finally:
 				fp.close()
-		DictConfigFiller.__init__(self, Settings.getConfigDict())
+		DictConfigFiller.__init__(self, Settings.get_config_dict())
 
 
 class FileConfigFiller(ConfigFiller):

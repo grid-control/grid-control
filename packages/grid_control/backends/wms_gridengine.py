@@ -144,7 +144,7 @@ class GridEngine(PBSGECommon):
 		self._configExec = utils.resolve_install_path('qconf')
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr):
 		timeStr = lambda s: '%02d:%02d:%02d' % (s / 3600, (s / 60) % 60, s % 60)
 		reqMap = { WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
 			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
@@ -160,7 +160,7 @@ class GridEngine(PBSGECommon):
 			params += ' -q %s' % str.join(',', imap(lambda node: '%s@%s' % (queue, node), nodes))
 		elif nodes:
 			raise ConfigError('Please also specify queue when selecting nodes!')
-		return params + PBSGECommon.getCommonSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap)
+		return params + PBSGECommon.getCommonSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr, reqMap)
 
 
 	def parseSubmitOutput(self, data):

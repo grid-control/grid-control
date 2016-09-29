@@ -494,7 +494,7 @@
 
     * grid_control.parameters.psource_file GCDumpParameterSource
 
-    * grid_control.parameters.psource_base ImmutableParameterSource
+    * grid_control.parameters.psource_basic ImmutableParameterSource
 
      * grid_control.parameters.psource_basic InternalParameterSource
 

@@ -17,7 +17,7 @@ from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError
 
 
-DataProcessorMergeMode = make_enum(['intersection', 'union', 'separate'])
+DataProcessorMergeMode = make_enum(['intersection', 'union', 'separate'])  # pylint: disable=invalid-name
 
 
 class MergeDataProcessor(DataProcessor):

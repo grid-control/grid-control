@@ -86,7 +86,7 @@ class XMLWriter: # xml.dom.minidom needs a lot of memory - could be replaced by 
 
 
 def getDBSXML(opts, block, dsBlocks):
-	fqBlock = DataProvider.bName(block)
+	fqBlock = DataProvider.get_block_id(block)
 	validBlock = re.compile(r'^(/[a-zA-Z0-9\.\-_]{1,100}){3}#[a-zA-Z0-9\.\-_]{1,100}$')
 	if validBlock.match(fqBlock) == None:
 		raise UserException('Invalid block name: %s' % fqBlock)
@@ -416,10 +416,10 @@ try:
 			config.set(None, 'dataset name pattern', '@DS_KEY@')
 		provider = DBSInfoProvider(config, None, args[0], None)
 
-	provider.saveToFile(os.path.join(opts.tmpDir, 'dbs.dat'), ...)
+	provider.save_to_file(os.path.join(opts.tmpDir, 'dbs.dat'), ...)
 	if opts.discovery:
 		sys.exit(os.EX_OK)
-	blocks = provider.getBlocks(show_stats = False)
+	blocks = provider.get_block_list_cached(show_stats = False)
 
 	# 2) Filter datasets
 	if opts.incremental:
@@ -427,8 +427,8 @@ try:
 		dNames = set(map(lambda b: b[DataProvider.Dataset], blocks))
 		dNames = filter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames)
 		config = Config(config_dict = {None: {'dbs instance': opts.dbsTarget}})
-		oldBlocks = reduce(operator.add, map(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(show_stats = False), dNames), [])
-		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
+		oldBlocks = reduce(operator.add, map(lambda ds: DBSApiv2(config, None, ds, None).get_block_list_cached(show_stats = False), dNames), [])
+		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resync_blocks(oldBlocks, blocks)
 		if len(blocksMissing) or len(blocksChanged):
 			if not utils.get_user_bool(' * WARNING: Block structure has changed! Continue?', False):
 				sys.exit(os.EX_OK)

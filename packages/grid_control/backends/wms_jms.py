@@ -63,9 +63,9 @@ class JMS(LocalWMS):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
-		params = ' -J "%s"' % jobName
+		params = ' -J "%s"' % job_name
 		# Job requirements
 		if WMS.QUEUES in reqs:
 			params += ' -c %s' % reqs[WMS.QUEUES][0]

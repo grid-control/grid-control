@@ -22,7 +22,7 @@ from hpfwk import AbstractError, Plugin
 from python_compat import lfilter, sorted, unspecified
 
 
-ListOrder = make_enum(['source', 'matcher'])
+ListOrder = make_enum(['source', 'matcher'])  # pylint: disable=invalid-name
 
 
 class MatcherHolder(object):

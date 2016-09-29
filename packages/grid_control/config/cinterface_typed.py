@@ -158,7 +158,8 @@ class TypedConfigInterface(ConfigInterface):
 			obj2str=lambda value: str.join('\n', imap(lambda obj: obj.get_bind_value(), value)),
 			str2obj=_bind_plugins, def2obj=_bind_plugins, option=option, default_obj=default, **kwargs)
 
-CommandType = make_enum(['executable', 'command'])
+
+CommandType = make_enum(['executable', 'command'])  # pylint: disable=invalid-name
 
 
 class SimpleConfigInterface(TypedConfigInterface):
@@ -249,10 +250,11 @@ class SimpleConfigInterface(TypedConfigInterface):
 		return state
 
 	def is_interactive(self, option, default):
+		option_list_all = self.get_option_list()
 		if isinstance(option, list):
-			user_option_exists = any(imap(lambda opt: opt in self.get_option_list(), option))
+			user_option_exists = any(imap(option_list_all.__contains__, option))
 		else:
-			user_option_exists = option in self.get_option_list()
+			user_option_exists = option in option_list_all
 		# global switch to enable / disable interactive option queries
 		config_interactive = self.change_view(interface_cls=TypedConfigInterface,
 			view_class=SimpleConfigView, setSections=['interactive'])

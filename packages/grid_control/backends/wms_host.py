@@ -68,7 +68,7 @@ class Host(LocalWMS):
 		return ''
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr):
 		return '%d "%s" "%s" "%s"' % (jobNum, sandbox, stdout, stderr)
 
 

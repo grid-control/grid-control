@@ -237,7 +237,7 @@ class TaskModule(NamedPlugin):
 
 	def getDescription(self, jobNum): # (task name, job name, job type)
 		return utils.Result(taskName = self.taskID, jobType = None,
-			jobName = self._job_name_generator.getName(task = self, jobNum = jobNum))
+			job_name = self._job_name_generator.getName(task = self, jobNum = jobNum))
 
 
 	def can_finish(self):

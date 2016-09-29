@@ -21,10 +21,12 @@ from python_compat import identity, ifilter, lmap
 class PartitionEstimator(DataProcessor):
 	alias_list = ['estimate', 'SplitSettingEstimator']
 
-	def __init__(self, config, datasource_name, on_change):
-		DataProcessor.__init__(self, config, datasource_name, on_change)
-		self._target_jobs = config.get_int(['target partitions', '%s target partitions' % datasource_name], -1, on_change = on_change)
-		self._target_jobs_ds = config.get_int(['target partitions per nickname', '%s target partitions per nickname' % datasource_name], -1, on_change = on_change)
+	def __init__(self, config, datasource_name):
+		DataProcessor.__init__(self, config, datasource_name)
+		self._target_jobs = config.get_int(
+			['target partitions', '%s target partitions' % datasource_name], -1)
+		self._target_jobs_ds = config.get_int(
+			['target partitions per nickname', '%s target partitions per nickname' % datasource_name], -1)
 		self._entries = {None: 0}
 		self._files = {None: 0}
 		self._config = None
@@ -42,7 +44,7 @@ class PartitionEstimator(DataProcessor):
 				self._set_split_opt(self._config, 'events per job', self._entries[None], self._target_jobs)
 			if self._target_jobs_ds > 0:
 				for nick in ifilter(identity, self._files):
-					block_config = self._config.change_view(setSections = ['dataset %s' % nick])
+					block_config = self._config.change_view(setSections=['dataset %s' % nick])
 					self._set_split_opt(block_config, 'files per job', self._files[nick], self._target_jobs_ds)
 					self._set_split_opt(block_config, 'events per job', self._entries[nick], self._target_jobs_ds)
 			self._config = None

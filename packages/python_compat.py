@@ -145,10 +145,7 @@ def _sorted(unsorted_iterable, key=None, reverse=False):
 	['ham', 'spam', 'cheese']
 	"""
 	unsorted_list = list(unsorted_iterable)
-	if key:
-		sort_inplace(unsorted_list, key=key)
-	else:
-		unsorted_list.sort()
+	sort_inplace(unsorted_list, key=key)
 	if reverse:
 		unsorted_list.reverse()
 	return unsorted_list

@@ -55,8 +55,8 @@ def discoverDataset(providerName, config_dict):
 	if config_dict['dump config'] == 'True':
 		config.write(sys.stdout, print_default = True, print_minimal = True)
 		return
-	stripMetadata = config_dict['strip'] == 'True'
+	strip_metadata = config_dict['strip'] == 'True'
 	if config_dict['output']:
-		return DataProvider.saveToFile(config_dict['output'], provider.getBlocks(show_stats = False), stripMetadata)
-	for _ in DataProvider.saveToStream(sys.stdout, provider.getBlocks(show_stats = False), stripMetadata):
+		return DataProvider.save_to_file(config_dict['output'], provider.get_block_list_cached(show_stats = False), strip_metadata)
+	for _ in DataProvider.save_to_stream(sys.stdout, provider.get_block_list_cached(show_stats = False), strip_metadata):
 		pass

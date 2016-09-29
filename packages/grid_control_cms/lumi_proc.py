@@ -37,10 +37,10 @@ def removeRunLumi(value, idxRuns, idxLumi):
 class LumiDataProcessor(DataProcessor):
 	alias_list = ['lumi']
 
-	def __init__(self, config, datasource_name, on_change):
-		DataProcessor.__init__(self, config, datasource_name, on_change)
+	def __init__(self, config, datasource_name):
+		DataProcessor.__init__(self, config, datasource_name)
 		self._lumi_filter = config.get_lookup(['lumi filter', '%s lumi filter' % datasource_name],
-			default = {}, parser = parseLumiFilter, strfun = strLumi, on_change = on_change)
+			default = {}, parser = parseLumiFilter, strfun = strLumi)
 		if self._lumi_filter.empty():
 			lumi_keep_default = LumiKeep.none
 		else:
@@ -48,9 +48,9 @@ class LumiDataProcessor(DataProcessor):
 			config.set_bool('%s lumi metadata' % datasource_name, True)
 			self._log.info('Runs/lumi section filter enabled!')
 		self._lumi_keep = config.get_enum(['lumi keep', '%s lumi keep' % datasource_name],
-			LumiKeep, lumi_keep_default, on_change = on_change)
+			LumiKeep, lumi_keep_default)
 		self._lumi_strict = config.get_enum(['lumi filter strictness', '%s lumi filter strictness' % datasource_name],
-			LumiMode, LumiMode.strict, on_change = on_change)
+			LumiMode, LumiMode.strict)
 
 	def _acceptRun(self, block, fi, idxRuns, lumi_filter):
 		if idxRuns is None:
@@ -88,9 +88,9 @@ class LumiDataProcessor(DataProcessor):
 		if not self._lumi_filter.empty():
 			lumi_filter = self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector = False)
 			if lumi_filter and (self._lumi_strict == LumiMode.strict) and ((idxRuns is None) or (idxLumi is None)):
-				raise DatasetError('Strict lumi filter active but dataset %s does not provide lumi information!' % DataProvider.bName(block))
+				raise DatasetError('Strict lumi filter active but dataset %s does not provide lumi information!' % DataProvider.get_block_id(block))
 			elif lumi_filter and (self._lumi_strict == LumiMode.weak) and (idxRuns is None):
-				raise DatasetError('Weak lumi filter active but dataset %s does not provide run information!' % DataProvider.bName(block))
+				raise DatasetError('Weak lumi filter active but dataset %s does not provide run information!' % DataProvider.get_block_id(block))
 
 		block[DataProvider.FileList] = list(self._processFI(block, idxRuns, idxLumi))
 		if not block[DataProvider.FileList]:
@@ -108,9 +108,8 @@ class LumiDataProcessor(DataProcessor):
 class LumiPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		changeTrigger = TriggerResync(['datasets', 'parameters'])
 		self._lumi_filter = config.get_lookup(['lumi filter', '%s lumi filter' % datasource_name],
-			default = {}, parser = parseLumiFilter, strfun = strLumi, on_change = changeTrigger)
+			default = {}, parser = parseLumiFilter, strfun = strLumi)
 
 	def get_partition_metadata(self):
 		if self.enabled():

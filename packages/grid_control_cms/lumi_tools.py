@@ -31,10 +31,6 @@ def parseLumiFromJSON(data, select = ''):
 			yield ([run, lumi[0]], [run, lumi[1]])
 
 
-def keyLumi(a):
-	return tuple(a[0])
-
-
 def mergeLumi(rlrange):
 	""" Merge consecutive lumi sections
 	>>> mergeLumi([([1, 11], [1, 20]), ([1, 1], [1, 10]), ([1, 22], [1, 30])])
@@ -42,7 +38,7 @@ def mergeLumi(rlrange):
 	>>> mergeLumi([([1, 1], [2, 2]), ([2, 3], [2, 10]), ([2, 11], [4, 30])])
 	[([1, 1], [4, 30])]
 	"""
-	sort_inplace(rlrange, keyLumi)
+	sort_inplace(rlrange, key = lambda lumi_start_end: tuple(lumi_start_end[0]))
 	i = 0
 	while i < len(rlrange) - 1:
 		(end_run, end_lumi) = rlrange[i][1]

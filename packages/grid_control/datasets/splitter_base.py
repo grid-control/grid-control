@@ -150,7 +150,7 @@ class DataSplitter(ConfigurablePlugin):
 
 	def resync_partitions(self, path, block_list_old, block_list_new):
 		activity = Activity('Performing resynchronization of dataset')
-		(block_list_added, block_list_missing, block_list_matching) = DataProvider.resyncSources(block_list_old, block_list_new)
+		(block_list_added, block_list_missing, block_list_matching) = DataProvider.resync_blocks(block_list_old, block_list_new)
 		for block_missing in block_list_missing: # Files in matching blocks are already sorted
 			sort_inplace(block_missing[DataProvider.FileList], key = itemgetter(DataProvider.URL))
 		activity.finish()

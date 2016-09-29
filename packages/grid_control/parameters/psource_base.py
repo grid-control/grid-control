@@ -20,12 +20,13 @@ from python_compat import md5_hex, set
 
 ParameterInfo = make_enum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
 
+
 class ParameterError(NestedException):
 	pass
 
 
 class ParameterMetadata(object):
-	def __init__(self, value, untracked = False):
+	def __init__(self, value, untracked=False):
 		(self.value, self.untracked) = (value, untracked)
 
 	def __repr__(self):
@@ -49,15 +50,15 @@ class ParameterSource(Plugin):
 		return cls(*args, **kwargs)
 	create_psrc = classmethod(create_psrc)
 
-	def EmptyResyncResult(cls):
-		return (set(), set(), False)
-	EmptyResyncResult = classmethod(EmptyResyncResult)
-
-	def fill_parameter_content(self, pNum, result):
+	def fill_parameter_content(self, pnum, result):
 		raise AbstractError
 
 	def fill_parameter_metadata(self, result):
 		raise AbstractError
+
+	def get_empty_resync_result(cls):
+		return (set(), set(), False)  # (<redo>, <disable>, <size changes>)
+	get_empty_resync_result = classmethod(get_empty_resync_result)
 
 	def get_parameter_deps(self):
 		return []
@@ -71,51 +72,45 @@ class ParameterSource(Plugin):
 	def get_used_psrc_list(self):
 		return [self]
 
-	def resync_psrc(self): # only needed if the parameters are opaque references (like partition idx)
-		return ParameterSource.EmptyResyncResult()
+	def resync_psrc(self):
+		# only needed if the parameters are opaque references (like partition idx)
+		return ParameterSource.get_empty_resync_result()
 
 	def show_psrc(self):
 		return [self.__class__.__name__ + ':']
 
 
-class ImmutableParameterSource(ParameterSource):
-	def __init__(self, hash_src_list):
-		ParameterSource.__init__(self)
-		self._hash = md5_hex(repr(hash_src_list))
-
-	def get_psrc_hash(self):
-		return self._hash
-
-
 class LimitedResyncParameterSource(ParameterSource):
 	def __init__(self):
 		ParameterSource.__init__(self)
-		(self._resyncInterval, self._resyncForce, self._resyncLast) = (0, False, time.time())
+		(self._resync_interval, self._resync_force, self._resync_last) = (0, False, time.time())
 
 	def get_psrc_hash(self):
 		if self._resync_enabled():
 			return md5_hex(repr(time.time()))
 		return self._get_psrc_hash()
 
-	def resync_psrc(self): # only needed if the parameters are opaque references (like partition index)
+	def resync_psrc(self):
 		result = None
 		if self._resync_enabled():
 			result = self._resync_psrc()
-			self._resyncForce = False
-			self._resyncLast = time.time()
-		return result or ParameterSource.EmptyResyncResult()
+			self._resync_force = False
+			self._resync_last = time.time()
+		return result or ParameterSource.get_empty_resync_result()
 
-	def resyncSetup(self, interval = None, force = None):
+	def setup_resync(self, interval=None, force=None):
 		if interval is not None:
-			self._resyncInterval = interval
+			self._resync_interval = interval
 		if force is not None:
-			self._resyncForce = force
+			self._resync_force = force
 
 	def _get_psrc_hash(self):
 		raise AbstractError
 
 	def _resync_enabled(self):
-		return self._resyncForce or (self._resyncInterval >= 0 and (abs(time.time() - self._resyncLast) >= self._resyncInterval))
+		t_last_resync = abs(time.time() - self._resync_last)
+		resync_needed = self._resync_interval >= 0 and (t_last_resync >= self._resync_interval)
+		return self._resync_force or resync_needed
 
 	def _resync_psrc(self):
 		pass
@@ -131,7 +126,7 @@ class NullParameterSource(ParameterSource):
 		return cls()
 	create_psrc = classmethod(create_psrc)
 
-	def fill_parameter_content(self, pNum, result):
+	def fill_parameter_content(self, pnum, result):
 		pass
 
 	def fill_parameter_metadata(self, result):

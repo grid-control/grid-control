@@ -19,55 +19,33 @@ from grid_control.utils.parsing import parse_json, parse_list
 from python_compat import sorted
 
 
-# Provides dataset information from a config file
-# required format: <config section>
 class ConfigDataProvider(DataProvider):
+	# Provides dataset information from a config file
+	# required format: <config section>
 	alias_list = ['config']
 
-	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None, dataset_proc=None):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 
-		ds_config = config.change_view(view_class = 'SimpleConfigView', setSections = ['datasource %s' % dataset_expr])
-		self._block = self._readBlockFromConfig(ds_config, dataset_expr, dataset_nick)
+		ds_config = config.change_view(view_class='SimpleConfigView',
+			setSections=['datasource %s' % dataset_expr])
+		self._block = self._read_block(ds_config, dataset_expr, dataset_nick)
 
 		def on_change(config, old_obj, cur_obj, cur_entry, obj2str):
 			self._log.critical('Dataset %r changed', dataset_expr)
 			return TriggerResync(['datasets', 'parameters'])(config, old_obj, cur_obj, cur_entry, obj2str)
-		ds_config.get('%s hash' % datasource_name, self.get_hash(), persistent = True, on_change = on_change)
+		ds_config.get('%s hash' % datasource_name, self.get_hash(), persistent=True, on_change=on_change)
 
+	def _iter_blocks_raw(self):
+		yield copy.deepcopy(self._block)  # dataset processors might modify metadata inplace
 
-	def _readFileFromConfig(self, ds_config, url, metadata_name_list, common_metadata, common_prefix):
-		info = ds_config.get(url, on_change = None)
-		tmp = info.split(' ', 1)
-		fi = {DataProvider.URL: common_prefix + url, DataProvider.NEntries: int(tmp[0])}
-		if common_metadata:
-			fi[DataProvider.Metadata] = common_metadata
-		if len(tmp) == 2:
-			file_metadata = parse_json(tmp[1])
-			if len(common_metadata) + len(file_metadata) > len(metadata_name_list):
-				raise DatasetError('Unable to set %d file metadata items with %d metadata keys (%d common metadata items)' %
-					(len(file_metadata), len(metadata_name_list), len(common_metadata)))
-			fi[DataProvider.Metadata] = fi.get(DataProvider.Metadata, []) + file_metadata
-		return fi
-
-
-	def _createBlockInfo(self, ds_config, dataset_expr, dataset_nick):
-		datasetNameParts = dataset_expr.split('#', 1)
-		if len(datasetNameParts) == 1:
-			datasetNameParts.append('0')
-		return {
-			DataProvider.Nickname: ds_config.get('nickname', dataset_nick or '', on_change = None),
-			DataProvider.Dataset: datasetNameParts[0],
-			DataProvider.BlockName: datasetNameParts[1],
-		}
-
-
-	def _readBlockFromConfig(self, ds_config, dataset_expr, dataset_nick):
-		metadata_name_list = parse_json(ds_config.get('metadata', '[]', on_change = None))
-		common_metadata = parse_json(ds_config.get('metadata common', '[]', on_change = None))
+	def _read_block(self, ds_config, dataset_expr, dataset_nick):
+		metadata_name_list = parse_json(ds_config.get('metadata', '[]', on_change=None))
+		common_metadata = parse_json(ds_config.get('metadata common', '[]', on_change=None))
 		if len(common_metadata) > len(metadata_name_list):
-			raise DatasetError('Unable to set %d common metadata items with %d metadata keys' % (len(common_metadata), len(metadata_name_list)))
-		common_prefix = ds_config.get('prefix', '', on_change = None)
+			raise DatasetError('Unable to set %d common metadata items ' % len(common_metadata) +
+				'with %d metadata keys' % len(metadata_name_list))
+		common_prefix = ds_config.get('prefix', '', on_change=None)
 		file_list = []
 		has_events = False
 		has_se_list = False
@@ -77,20 +55,35 @@ class ConfigDataProvider(DataProvider):
 			elif url == 'events':
 				has_events = True
 			elif url not in ['dataset hash', 'metadata', 'metadata common', 'nickname', 'prefix']:
-				file_list.append(self._readFileFromConfig(ds_config, url, metadata_name_list, common_metadata, common_prefix))
+				fi = self._read_fi(ds_config, url, metadata_name_list, common_metadata, common_prefix)
+				file_list.append(fi)
 		if not file_list:
 			raise DatasetError('There are no dataset files specified for dataset %r' % dataset_expr)
 
-		result = self._createBlockInfo(ds_config, dataset_expr, dataset_nick)
-		result[DataProvider.FileList] = sorted(file_list, key = lambda fi: fi[DataProvider.URL])
+		result = {
+			DataProvider.Nickname: ds_config.get('nickname', dataset_nick or '', on_change=None),
+			DataProvider.FileList: sorted(file_list, key=lambda fi: fi[DataProvider.URL])
+		}
+		result.update(DataProvider.parse_block_id(dataset_expr))
 		if metadata_name_list:
 			result[DataProvider.Metadata] = metadata_name_list
 		if has_events:
-			result[DataProvider.NEntries] = ds_config.get_int('events', -1, on_change = None)
+			result[DataProvider.NEntries] = ds_config.get_int('events', -1, on_change=None)
 		if has_se_list:
-			result[DataProvider.Locations] = parse_list(ds_config.get('se list', '', on_change = None), ',')
+			result[DataProvider.Locations] = parse_list(ds_config.get('se list', '', on_change=None), ',')
 		return result
 
-
-	def _getBlocksInternal(self):
-		yield copy.deepcopy(self._block) # dataset processors can modify metadata inplace
+	def _read_fi(self, ds_config, url, metadata_name_list, common_metadata, common_prefix):
+		info = ds_config.get(url, on_change=None)
+		tmp = info.split(' ', 1)
+		fi = {DataProvider.URL: common_prefix + url, DataProvider.NEntries: int(tmp[0])}
+		if common_metadata:
+			fi[DataProvider.Metadata] = common_metadata
+		if len(tmp) == 2:
+			file_metadata = parse_json(tmp[1])
+			if len(common_metadata) + len(file_metadata) > len(metadata_name_list):
+				raise DatasetError('Unable to set %d file metadata items ' % len(file_metadata) +
+					'with %d metadata keys ' % len(metadata_name_list) +
+					'(%d common metadata items)' % len(common_metadata))
+			fi[DataProvider.Metadata] = fi.get(DataProvider.Metadata, []) + file_metadata
+		return fi

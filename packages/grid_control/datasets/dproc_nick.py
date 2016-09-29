@@ -18,10 +18,10 @@ from hpfwk import AbstractError
 
 
 class NickNameProducer(DataProcessor):
-	def get_name(self, current_nickname, dataset, block): # Overwritten by users / other implementations
-		raise AbstractError
+	def get_name(self, current_nickname, dataset, block):
+		raise AbstractError  # Overwritten by users / other implementations
 
-	def process_block(self, block): # Get nickname and check for collisions
+	def process_block(self, block):  # Get nickname and check for collisions
 		dataset = block[DataProvider.Dataset]
 		current_nickname = block.get(DataProvider.Nickname, '')
 		# legacy API
@@ -35,27 +35,29 @@ class NickNameProducer(DataProcessor):
 class InlineNickNameProducer(NickNameProducer):
 	alias_list = ['inline']
 
-	def __init__(self, config, datasource_name, on_change):
-		NickNameProducer.__init__(self, config, datasource_name, on_change)
-		self._expr = config.get(['nickname expr', '%s nickname expr' % datasource_name], 'current_nickname', on_change = on_change)
+	def __init__(self, config, datasource_name):
+		NickNameProducer.__init__(self, config, datasource_name)
+		self._expr = config.get(
+			['nickname expr', '%s nickname expr' % datasource_name], 'current_nickname')
 
 	def get_name(self, current_nickname, dataset, block):
-		return eval(self._expr, {'oldnick': current_nickname, 'current_nickname': current_nickname, # pylint:disable=eval-used
+		return eval(self._expr, {  # pylint:disable=eval-used
+			'oldnick': current_nickname, 'current_nickname': current_nickname,
 			'dataset': dataset, 'block': block, 'DataProvider': DataProvider})
 
 
 class SimpleNickNameProducer(NickNameProducer):
 	alias_list = ['simple']
 
-	def __init__(self, config, datasource_name, on_change):
-		NickNameProducer.__init__(self, config, datasource_name, on_change)
-		self._full_name = config.get_bool(['nickname full name', '%s nickname full name' % datasource_name],
-			True, on_change = on_change)
+	def __init__(self, config, datasource_name):
+		NickNameProducer.__init__(self, config, datasource_name)
+		self._full_name = config.get_bool(
+			['nickname full name', '%s nickname full name' % datasource_name], True)
 
-	def get_name(self, current_nickname, dataset, block):
+	def get_name(self, current_nickname, dataset_name, block):
 		if current_nickname == '':
-			ds = dataset.replace('/PRIVATE/', '').lstrip('/').split('#')[0]
+			dataset_name = dataset_name.replace('/PRIVATE/', '').lstrip('/').split('#')[0]
 			if self._full_name:
-				return ds.replace(' ', '').replace('/', '_').replace('__', '_')
-			return ds.split('/')[0]
+				return dataset_name.replace(' ', '').replace('/', '_').replace('__', '_')
+			return dataset_name.split('/')[0]
 		return current_nickname

@@ -28,7 +28,8 @@ class ScanProviderBase(DataProvider):
 		(self._ds_select, self._ds_name, self._ds_keys_user, self._ds_keys_guard) = self._setup(config, 'dataset')
 		(self._b_select, self._b_name, self._b_keys_user, self._b_keys_guard) = self._setup(config, 'block')
 		scanList = config.get_list('scanner', sList) + ['NullScanner']
-		self._scanner = lmap(lambda cls: InfoScanner.create_instance(cls, config, datasource_name), scanList)
+		scanner_config = config.change_view(default_on_change=TriggerResync(['datasets', 'parameters'])
+		self._scanner = lmap(lambda cls: InfoScanner.create_instance(cls, scanner_config, datasource_name), scanList)
 
 
 	def _setup(self, config, prefix):
@@ -48,7 +49,7 @@ class ScanProviderBase(DataProvider):
 						self._raise_on_abort()
 			else:
 				yield args
-		return recurse(len(self._scanner), lmap(lambda x: x.getEntriesVerbose, self._scanner), (None, {}, None, None, {}))
+		return recurse(len(self._scanner), lmap(lambda x: x._iter_datasource_entriesVerbose, self._scanner), (None, {}, None, None, {}))
 
 
 	def _generateKey(self, keys, base, path, metadata, events, seList, objStore):
@@ -118,15 +119,15 @@ class ScanProviderBase(DataProvider):
 				}
 
 
-	def _getBlocksInternal(self):
+	def _iter_blocks_raw(self):
 		# Split files into blocks/datasets via key functions and determine metadata intersection
 		(protoBlocks, commonDS, commonB) = ({}, {}, {})
 		def getActiveKeys(kUser, kGuard, gIdx):
-			return kUser + (kGuard or lchain(imap(lambda x: x.getGuards()[gIdx], self._scanner)))
+			return kUser + (kGuard or lchain(imap(lambda x: x.get_ds_block_class_keys()[gIdx], self._scanner)))
 		keysDS = getActiveKeys(self._ds_keys_user, self._ds_keys_guard, 0)
 		keysB = getActiveKeys(self._b_keys_user, self._b_keys_guard, 1)
 		for fileInfo in ifilter(itemgetter(0), self._collectFiles()):
-			hashDS = self._generateKey(keysDS, md5_hex(repr(self._dataset_expr)) + md5_hex(repr(self._dataset_nick)), *fileInfo)
+			hashDS = self._generateKey(keysDS, md5_hex(repr(self._dataset_expr)) + md5_hex(repr(self._dataset_nick_override)), *fileInfo)
 			hashB = self._generateKey(keysB, hashDS + md5_hex(repr(fileInfo[3])), *fileInfo) # [3] == SE list
 			if not self._ds_select or (hashDS in self._ds_select):
 				if not self._b_select or (hashB in self._b_select):

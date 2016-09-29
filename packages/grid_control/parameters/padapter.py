@@ -76,13 +76,13 @@ class ResyncParameterAdapter(ParameterAdapter):
 	def __init__(self, config, source):
 		ParameterAdapter.__init__(self, config, source)
 		self._psrc_hash = source.get_psrc_hash()
-		self._resync_state = ParameterSource.EmptyResyncResult()
+		self._resync_state = ParameterSource.get_empty_resync_result()
 
 	def resync(self, force=False):
 		# Do not overwrite resync results - eg. from external or init trigger
 		source_hash = self._psrc.get_psrc_hash()
 		do_resync = (source_hash != self._psrc_hash) or force
-		if (self._resync_state == ParameterSource.EmptyResyncResult()) and do_resync:
+		if (self._resync_state == ParameterSource.get_empty_resync_result()) and do_resync:
 			activity = Activity('Syncronizing parameter information')
 			t_start = time.time()
 			try:
@@ -94,7 +94,7 @@ class ResyncParameterAdapter(ParameterAdapter):
 			self._log.log(logging.INFO, 'Finished resync of parameter source (%s)',
 				str_time_short(time.time() - t_start))
 		result = self._resync_state
-		self._resync_state = ParameterSource.EmptyResyncResult()
+		self._resync_state = ParameterSource.get_empty_resync_result()
 		return result
 
 	def _resync(self):
@@ -113,7 +113,7 @@ class BasicParameterAdapter(ResyncParameterAdapter):
 
 	def resync(self, force=False):
 		result = ResyncParameterAdapter.resync(self, force)
-		if result not in (None, ParameterSource.EmptyResyncResult()):
+		if result not in (None, ParameterSource.get_empty_resync_result()):
 			self._can_submit_map = {}  # invalidate cache on changes
 		return result
 
@@ -146,7 +146,7 @@ def create_placeholder_psrc(pa_old, pa_new, map_job_num2pnum, pspi_list_missing,
 def diff_pspi_list(pa_old, pa_new, result_redo, result_disable):
 	map_job_num2pnum = {}
 
-	def handle_same_pspi(pspi_list_added, pspi_list_missing, pspi_list_same, pspi_old, pspi_new):
+	def handle_matching_pspi(pspi_list_added, pspi_list_missing, pspi_list_same, pspi_old, pspi_new):
 		map_job_num2pnum[pspi_old[TrackingInfo.pnum]] = pspi_new[TrackingInfo.pnum]
 		if not pspi_old[TrackingInfo.ACTIVE] and pspi_new[TrackingInfo.ACTIVE]:
 			result_redo.add(pspi_new[TrackingInfo.pnum])
@@ -155,7 +155,7 @@ def diff_pspi_list(pa_old, pa_new, result_redo, result_disable):
 	# pspi_list_changed is ignored, since it is already processed by the change handler above
 	(pspi_list_added, pspi_list_missing, _) = utils.get_list_difference(
 		translate_pa2pspi_list(pa_old), translate_pa2pspi_list(pa_new),
-		itemgetter(TrackingInfo.HASH), handle_same_pspi)
+		itemgetter(TrackingInfo.HASH), handle_matching_pspi)
 	return (map_job_num2pnum, pspi_list_added, pspi_list_missing)
 
 
@@ -259,7 +259,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		psrc_hash_changed = self._psrc_hash_stored != psrc_hash_new
 		self._psrc_hash_stored = psrc_hash_new
 		if not (result_redo or result_disable or size_change or psrc_hash_changed):
-			return ParameterSource.EmptyResyncResult()
+			return ParameterSource.get_empty_resync_result()
 
 		ps_old = ParameterSource.create_instance('GCDumpParameterSource', self._path_params)
 		pa_old = ParameterAdapter(None, ps_old)

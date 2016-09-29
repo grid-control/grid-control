@@ -63,9 +63,9 @@ class SLURM(LocalWMS):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
-		params = ' -J "%s"' % jobName
+		params = ' -J "%s"' % job_name
 		# processes and IO paths
 		params += ' -o "%s" -e "%s"' % (stdout, stderr)
 		if WMS.QUEUES in reqs:

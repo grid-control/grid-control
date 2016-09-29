@@ -14,14 +14,11 @@
 
 import os, re, xml.dom.minidom
 from grid_control import utils
-from grid_control.config import TriggerResync
 from grid_control.datasets import DatasetError
 from grid_control.datasets.provider_scan import GCProviderSetup
 from grid_control.datasets.scanner_base import InfoScanner
 from python_compat import all, bytes2str, ifilter, imap, lfilter, tarfile
 
-
-triggerDataResync = TriggerResync(['datasets', 'parameters'])
 
 class GCProviderSetup_CMSSW(GCProviderSetup):
 	scan_pipeline = ['ObjectsFromCMSSW', 'JobInfoFromOutputDir', 'FilesFromJobInfo',
@@ -46,9 +43,9 @@ def readList(base, container, items):
 class ObjectsFromCMSSW(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._import_parents = config.get_bool('include parent infos', False, on_change = TriggerResync(['datasets', 'parameters']))
+		self._import_parents = config.get_bool('include parent infos', False)
 		self._merge_key = 'CMSSW_CONFIG_FILE'
-		if config.get_bool('merge config infos', True, on_change = TriggerResync(['datasets', 'parameters'])):
+		if config.get_bool('merge config infos', True):
 			self._merge_key = 'CMSSW_CONFIG_HASH'
 		self._stored_config = {}
 		self._stored_globaltag = {}
@@ -129,7 +126,7 @@ class ObjectsFromCMSSW(InfoScanner):
 				fileSummary['CMSSW_CONFIG_FILE'] = cfg
 				fileSummaryMap.setdefault(pfn, {}).update(fileSummary)
 
-	def getEntries(self, path, metadata, events, seList, objStore):
+	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
 		jobNum = metadata['GC_JOBNUM']
 		cmsRunLog = os.path.join(path, 'cmssw.dbs.tar.gz')
 		if os.path.exists(cmsRunLog):
@@ -155,9 +152,9 @@ class ObjectsFromCMSSW(InfoScanner):
 class MetadataFromCMSSW(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._include_config = config.get_bool('include config infos', False, on_change = TriggerResync(['datasets', 'parameters']))
+		self._include_config = config.get_bool('include config infos', False)
 
-	def getEntries(self, path, metadata, events, seList, objStore):
+	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
 		cmssw_files_dict = objStore.get('CMSSW_FILES', {})
 		metadata.update(cmssw_files_dict.get(metadata.get('SE_OUTPUT_FILE'), {}))
 		if self._include_config:
@@ -167,7 +164,7 @@ class MetadataFromCMSSW(InfoScanner):
 
 
 class SEListFromPath(InfoScanner):
-	def getEntries(self, path, metadata, events, seList, objStore):
+	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
 		tmp = path.split(':', 1)
 		if len(tmp) == 1:
 			tmp = ['dir', tmp[0]]
@@ -188,9 +185,9 @@ class SEListFromPath(InfoScanner):
 class LFNFromPath(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._strip_path = config.get('lfn marker', '/store/', on_change = TriggerResync(['datasets', 'parameters']))
+		self._strip_path = config.get('lfn marker', '/store/')
 
-	def getEntries(self, path, metadata, events, seList, objStore):
+	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
 		if self._strip_path and self._strip_path in path:
 			yield (self._strip_path + path.split(self._strip_path, 1)[1], metadata, events, seList, objStore)
 		else:
@@ -198,6 +195,6 @@ class LFNFromPath(InfoScanner):
 
 
 class FilterEDMFiles(InfoScanner):
-	def getEntries(self, path, metadata, events, seList, objStore):
+	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
 		if all(imap(lambda x: x in metadata, ['CMSSW_EVENTS_WRITE', 'CMSSW_CONFIG_FILE'])):
 			yield (path, metadata, events, seList, objStore)

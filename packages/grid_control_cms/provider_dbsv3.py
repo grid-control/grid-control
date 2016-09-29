@@ -65,5 +65,5 @@ class DBS3Provider(CMSBaseProvider):
 		return result
 
 
-	def _getBlocksInternal(self):
+	def _iter_blocks_raw(self):
 		return self._getGCBlocks(usePhedex = self._use_phedex)
