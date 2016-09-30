@@ -21,20 +21,6 @@ class Settings(object):
 	def __init__(self, section=None):
 		self._section = section
 
-	def section(self, section, name='', **tags):
-		section_parts = [section]
-		if name:
-			section_parts.append(name)
-		for key in tags:
-			section_parts.append('%s:%s' % (key, tags[key]))
-		return Settings(str.join(' ', section_parts))
-
-	def set(self, name, value, override=False, append=False, force=False):
-		if isinstance(value, list):
-			value = str.join('\n\t', value)
-		mod = dict([(override, '?'), (append, '+'), (force, '*')]).get(True, '')
-		Settings._config.setdefault(self._section, []).append((name.replace('_', ' '), mod, value))
-
 	def __getattribute__(self, name):
 		if name in ['_section', 'section', 'set', 'get_config_dict', 'getConfigDict']:
 			return object.__getattribute__(self, name)
@@ -65,3 +51,17 @@ class Settings(object):
 		return result
 	get_config_dict = classmethod(get_config_dict)
 	getConfigDict = classmethod(get_config_dict)
+
+	def section(self, section, name='', **tags):
+		section_parts = [section]
+		if name:
+			section_parts.append(name)
+		for key in tags:
+			section_parts.append('%s:%s' % (key, tags[key]))
+		return Settings(str.join(' ', section_parts))
+
+	def set(self, name, value, override=False, append=False, force=False):
+		if isinstance(value, list):
+			value = str.join('\n\t', value)
+		mod = dict([(override, '?'), (append, '+'), (force, '*')]).get(True, '')
+		Settings._config.setdefault(self._section, []).append((name.replace('_', ' '), mod, value))

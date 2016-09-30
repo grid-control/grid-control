@@ -26,15 +26,15 @@ from python_compat import ichain, ifilter, imap, izip, lchain, lmap, lru_cache, 
 
 
 class JobNamePlugin(ConfigurablePlugin):
-	def getName(self, task, jobNum):
+	def getName(self, task, jobnum):
 		raise AbstractError
 
 
 class DefaultJobName(JobNamePlugin):
 	alias_list = ['default']
 
-	def getName(self, task, jobNum):
-		return task.taskID[:10] + '.' + str(jobNum)
+	def getName(self, task, jobnum):
+		return task.taskID[:10] + '.' + str(jobnum)
 
 
 class ConfigurableJobName(JobNamePlugin):
@@ -44,8 +44,8 @@ class ConfigurableJobName(JobNamePlugin):
 		JobNamePlugin.__init__(self, config)
 		self._name = config.get('job name', '@GC_TASK_ID@.@GC_JOB_ID@', on_change = None)
 
-	def getName(self, task, jobNum):
-		return task.substVars('job name', self._name, jobNum)
+	def getName(self, task, jobnum):
+		return task.substVars('job name', self._name, jobnum)
 
 
 class TaskModule(NamedPlugin):
@@ -119,7 +119,7 @@ class TaskModule(NamedPlugin):
 
 
 	# Get environment variables for gc_config.sh
-	def getTaskConfig(self):
+	def get_task_dict(self):
 		taskConfig = {
 			# Storage element
 			'SE_MINFILESIZE': self.seMinSize,
@@ -139,12 +139,12 @@ class TaskModule(NamedPlugin):
 			'GC_VERSION': utils.get_version(),
 		}
 		return utils.merge_dict_list([taskConfig, self.taskVariables])
-	getTaskConfig = lru_cache()(getTaskConfig)
+	get_task_dict = lru_cache()(get_task_dict)
 
 
 	# Get job dependent environment variables
-	def getJobConfig(self, jobNum):
-		tmp = self.source.get_job_content(jobNum)
+	def get_job_dict(self, jobnum):
+		tmp = self.source.get_job_content(jobnum)
 		return dict(imap(lambda key: (key.value, tmp.get(key.value, '')), self.source.get_job_metadata()))
 
 
@@ -156,10 +156,10 @@ class TaskModule(NamedPlugin):
 
 	def getVarNames(self):
 		# Take task variables and the variables from the parameter source
-		return lchain([self.getTaskConfig().keys(), imap(lambda key: key.value, self.source.get_job_metadata())])
+		return lchain([self.get_task_dict().keys(), imap(lambda key: key.value, self.source.get_job_metadata())])
 
 
-	def getVarMapping(self):
+	def get_var_alias_map(self):
 		# Transient variables
 		transients = ['GC_DATE', 'GC_TIMESTAMP', 'GC_GUID'] # these variables are determined on the WN
 		# Alias vars: Eg. __MY_JOB__ will access $GC_JOB_ID - used mostly for compatibility
@@ -171,12 +171,12 @@ class TaskModule(NamedPlugin):
 		return var_alias_map
 
 
-	def substVars(self, name, inp, jobNum = None, addDict = None, check = True):
+	def substVars(self, name, inp, jobnum = None, addDict = None, check = True):
 		addDict = addDict or {}
-		allVars = utils.merge_dict_list([addDict, self.getTaskConfig()])
-		if jobNum is not None:
-			allVars.update(self.getJobConfig(jobNum))
-		subst = lambda x: utils.replace_with_dict(x, allVars, ichain([self.getVarMapping().items(), izip(addDict, addDict)]))
+		allVars = utils.merge_dict_list([addDict, self.get_task_dict()])
+		if jobnum is not None:
+			allVars.update(self.get_job_dict(jobnum))
+		subst = lambda x: utils.replace_with_dict(x, allVars, ichain([self.get_var_alias_map().items(), izip(addDict, addDict)]))
 		result = subst(subst(str(inp)))
 		if check and self._varCheck.check(result):
 			raise ConfigError('%s references unknown variables: %s' % (name, result))
@@ -186,18 +186,18 @@ class TaskModule(NamedPlugin):
 	def validateVariables(self):
 		example_vars = dict.fromkeys(self.getVarNames(), '')
 		example_vars.update(dict.fromkeys(['X', 'XBASE', 'XEXT', 'GC_DATE', 'GC_TIMESTAMP', 'GC_GUID', 'RANDOM'], ''))
-		for name, value in ichain([self.getTaskConfig().items(), example_vars.items()]):
+		for name, value in ichain([self.get_task_dict().items(), example_vars.items()]):
 			self.substVars(name, value, None, example_vars)
 
 
 	# Get job requirements
-	def getRequirements(self, jobNum):
+	def getRequirements(self, jobnum):
 		return [
 			(WMS.WALLTIME, self.wallTime),
 			(WMS.CPUTIME, self.cpuTime),
 			(WMS.MEMORY, self.memory),
 			(WMS.CPUS, self.cpus)
-		] + self.source.get_job_content(jobNum)[ParameterInfo.REQS]
+		] + self.source.get_job_content(jobnum)[ParameterInfo.REQS]
 
 
 	def getSEInFiles(self):
@@ -223,7 +223,7 @@ class TaskModule(NamedPlugin):
 		raise AbstractError
 
 
-	def getJobArguments(self, jobNum):
+	def getJobArguments(self, jobnum):
 		return ''
 
 
@@ -235,17 +235,17 @@ class TaskModule(NamedPlugin):
 		return list(self.dependencies)
 
 
-	def getDescription(self, jobNum): # (task name, job name, job type)
+	def getDescription(self, jobnum): # (task name, job name, job type)
 		return utils.Result(taskName = self.taskID, jobType = None,
-			job_name = self._job_name_generator.getName(task = self, jobNum = jobNum))
+			job_name = self._job_name_generator.getName(task = self, jobnum = jobnum))
 
 
 	def can_finish(self):
 		return self.source.can_finish()
 
 
-	def can_submit(self, jobNum):
-		return self.source.can_submit(jobNum)
+	def can_submit(self, jobnum):
+		return self.source.can_submit(jobnum)
 
 
 	# Intervene in job management - return (redoJobs, disableJobs, size_change)

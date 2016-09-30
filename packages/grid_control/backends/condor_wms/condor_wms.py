@@ -139,20 +139,20 @@ class Condor(BasicWMS):
 			return utils.Result(waitOnIdle = 20, waitBetweenSteps = 5)
 
 # getSandbox: return path to sandbox for a specific job or basepath
-	def getSandboxPath(self, jobNum=''):
-		sandpath = os.path.join(self.sandPath, str(jobNum), '' )
+	def getSandboxPath(self, jobnum=''):
+		sandpath = os.path.join(self.sandPath, str(jobnum), '' )
 		return utils.ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
 
 # getWorkdirPath: return path to condor output dir for a specific job or basepath
-	def getWorkdirPath(self, jobNum=''):
+	def getWorkdirPath(self, jobnum=''):
 		# local and spool make condor access the local sandbox directly
 		if self.remoteType == PoolType.LOCAL or self.remoteType == PoolType.SPOOL:
-			return self.getSandboxPath(jobNum)
+			return self.getSandboxPath(jobnum)
 		# ssh and gsissh require a remote working directory
 		else:
-			remotePath = os.path.join( self.poolWorkDir, 'GCRemote.work.TaskID.' + self.taskID, str(jobNum), '' )
+			remotePath = os.path.join( self.poolWorkDir, 'GCRemote.work.TaskID.' + self.taskID, str(jobnum), '' )
 			mkdirProcess = self.Pool.LoggedExecute('mkdir -p', remotePath )
-			self.debugOut('Getting Workdir Nmr: %s Dir: %s - retcode %s' % (jobNum,remotePath,mkdirProcess.wait()))
+			self.debugOut('Getting Workdir Nmr: %s Dir: %s - retcode %s' % (jobnum,remotePath,mkdirProcess.wait()))
 			if mkdirProcess.wait()==0:
 				return remotePath
 			else:
@@ -171,10 +171,10 @@ class Condor(BasicWMS):
 		self.debugOut("Started retrieving: %s" % set(lzip(*wmsJobIdList)[0]))
 
 		activity = Activity('retrieving job outputs')
-		for gcID, jobNum in wmsJobIdList:
-			sandpath = self.getSandboxPath(jobNum)
+		for gcID, jobnum in wmsJobIdList:
+			sandpath = self.getSandboxPath(jobnum)
 			if sandpath is None:
-				yield (jobNum, None)
+				yield (jobnum, None)
 				continue
 			# when working with a remote spool schedd, tell condor to return files
 			if self.remoteType == PoolType.SPOOL:
@@ -186,21 +186,21 @@ class Condor(BasicWMS):
 						transferProcess.logError(self.errorLog)
 			# when working with a remote [gsi]ssh schedd, manually return files
 			elif self.remoteType == PoolType.SSH or self.remoteType == PoolType.GSISSH:
-				transferProcess = self.Pool.LoggedCopyFromRemote( self.getWorkdirPath(jobNum), self.getSandboxPath())
+				transferProcess = self.Pool.LoggedCopyFromRemote( self.getWorkdirPath(jobnum), self.getSandboxPath())
 				if transferProcess.wait() != 0:
 					if self.explainError(transferProcess, transferProcess.wait()):
 						pass
 					else:
 						transferProcess.logError(self.errorLog)
 				# clean up remote working directory
-				cleanupProcess = self.Pool.LoggedExecute('rm -rf %s' % self.getWorkdirPath(jobNum) )
-				self.debugOut("Cleaning up remote workdir: JobID %s\n	%s"%(jobNum,cleanupProcess.cmd))
+				cleanupProcess = self.Pool.LoggedExecute('rm -rf %s' % self.getWorkdirPath(jobnum) )
+				self.debugOut("Cleaning up remote workdir: JobID %s\n	%s"%(jobnum,cleanupProcess.cmd))
 				if cleanupProcess.wait() != 0:
 					if self.explainError(cleanupProcess, cleanupProcess.wait()):
 						pass
 					else:
 						cleanupProcess.logError(self.errorLog)
-			yield (jobNum, sandpath)
+			yield (jobnum, sandpath)
 		# clean up if necessary
 		activity.finish()
 		self._tidyUpWorkingDirectory()
@@ -229,37 +229,37 @@ class Condor(BasicWMS):
 			activity.finish()
 
 
-# submitJobs: Submit a number of jobs and yield (jobNum, WMS ID, other data) sequentially
+# submitJobs: Submit a number of jobs and yield (jobnum, WMS ID, other data) sequentially
 #	GC handles most job data by sending a batch file setting up the environment and executing/monitoring the actual job
-#>>jobNum: internal ID of the Job
+#>>jobnum: internal ID of the Job
 #	JobNum is linked to the actual *task* here
-	def submitJobs(self, jobNumListFull, module):
+	def submitJobs(self, jobnumListFull, module):
 		submitBatch=25
-		for index in irange(0, len(jobNumListFull), submitBatch):
-			jobNumList=jobNumListFull[index:index+submitBatch]
-			self.debugOut("\nStarted submitting: %s" % jobNumList)
+		for index in irange(0, len(jobnumListFull), submitBatch):
+			jobnumList=jobnumListFull[index:index+submitBatch]
+			self.debugOut("\nStarted submitting: %s" % jobnumList)
 			self.debugPool()
 			# get the full job config path and basename
-			def _getJobCFG(jobNum):
-				return os.path.join(self.getSandboxPath(jobNum), 'job_%d.var' % jobNum), 'job_%d.var' % jobNum
+			def _getJobCFG(jobnum):
+				return os.path.join(self.getSandboxPath(jobnum), 'job_%d.var' % jobnum), 'job_%d.var' % jobnum
 			activity = Activity('preparing jobs')
 			# construct a temporary JDL for this batch of jobs
 			jdlDescriptor, jdlFilePath = tempfile.mkstemp(suffix='.jdl')
 			jdlSubmitPath = jdlFilePath
 			self.debugOut("Writing temporary jdl to: "+jdlSubmitPath)
 			try:
-				data = self.makeJDLdata(jobNumList, module)
+				data = self.makeJDLdata(jobnumList, module)
 				utils.safe_write(os.fdopen(jdlDescriptor, 'w'), data)
 			except Exception:
 				utils.remove_files([jdlFilePath])
 				raise BackendError('Could not write jdl data to %s.' % jdlFilePath)
 
 			# create the _jobconfig.sh file containing the actual data
-			for jobNum in jobNumList:
+			for jobnum in jobnumList:
 				try:
-					self._writeJobConfig(_getJobCFG(jobNum)[0], jobNum, module, {})
+					self._writeJobConfig(_getJobCFG(jobnum)[0], jobnum, module, {})
 				except Exception:
-					raise BackendError('Could not write _jobconfig data for %s.' % jobNum)
+					raise BackendError('Could not write _jobconfig data for %s.' % jobnum)
 
 			self.debugOut("Copying to remote")
 			# copy infiles to ssh/gsissh remote pool if required
@@ -278,9 +278,9 @@ class Condor(BasicWMS):
 					self.debugFlush()
 				# copy job config files
 				self.debugOut("Copying job configs")
-				for jobNum in jobNumList:
-					fileSource, fileTarget = _getJobCFG(jobNum)
-					copyProcess = self.Pool.LoggedCopyToRemote(fileSource, os.path.join(self.getWorkdirPath(jobNum), fileTarget))
+				for jobnum in jobnumList:
+					fileSource, fileTarget = _getJobCFG(jobnum)
+					copyProcess = self.Pool.LoggedCopyToRemote(fileSource, os.path.join(self.getWorkdirPath(jobnum), fileTarget))
 					if copyProcess.wait() != 0:
 						if self.explainError(copyProcess, copyProcess.wait()):
 							pass
@@ -331,17 +331,17 @@ class Condor(BasicWMS):
 
 				retCode = proc.wait()
 				activity.finish()
-				if (retCode != 0) or ( len(wmsJobIdList) < len(jobNumList) ):
+				if (retCode != 0) or ( len(wmsJobIdList) < len(jobnumList) ):
 					if self.explainError(proc, retCode):
 						pass
 					else:
-						self._log.error('Submitted %4d jobs of %4d expected', len(wmsJobIdList), len(jobNumList))
+						self._log.error('Submitted %4d jobs of %4d expected', len(wmsJobIdList), len(jobnumList))
 						proc.logError(self.errorLog, jdl = jdlFilePath)
 			finally:
 				utils.remove_files([jdlFilePath])
 			self.debugOut("Done Submitting")
 
-			# yield the (jobNum, WMS ID, other data) of each job successively
+			# yield the (jobnum, WMS ID, other data) of each job successively
 			for index in irange(len(wmsJobIdList)):
 				yield (wmsJobIdList[index][1], wmsJobIdList[index][0], {} )
 			self.debugOut("Yielded submitted job")
@@ -372,10 +372,10 @@ class Condor(BasicWMS):
 
 # makeJDL: create a JDL file's *content* specifying job data for several Jobs
 #	GridControl handles job data (executable, environment etc) via batch files which are pre-placed in the sandbox refered to by the JDL
-#>>jobNumList: List of jobNums for which to define tasks in this JDL
-	def makeJDLdata(self, jobNumList, module):
+#>>jobnumList: List of jobnums for which to define tasks in this JDL
+	def makeJDLdata(self, jobnumList, module):
 		self.debugOut('VVVVV')
-		self.debugOut('Started preparing: %s ' % jobNumList)
+		self.debugOut('Started preparing: %s ' % jobnumList)
 		(gcExec, transferFiles) = self.getExecAndTansfers(module)
 		self.debugOut('o Creating Header')
 		# header for all jobs
@@ -417,26 +417,26 @@ class Condor(BasicWMS):
 
 		self.debugOut("o Creating Job Data")
 		# job specific data
-		for jobNum in jobNumList:
-			self.debugOut("  o Adding Job %s" % jobNum)
-			workdir = self.getWorkdirPath(jobNum)
+		for jobnum in jobnumList:
+			self.debugOut("  o Adding Job %s" % jobnum)
+			workdir = self.getWorkdirPath(jobnum)
 			output_files = ",".join([target for (desc, src, target) in self._getSandboxFilesOut(module) if ((src != 'gc.stdout') and (src != 'gc.stderr'))])
 			jdlData.extend([
 				# store matching Grid-Control and Condor ID
-				'+GridControl_GCtoWMSID = "%s@$(Cluster).$(Process)"' % module.getDescription(jobNum).job_name,
-				'+GridControl_GCIDtoWMSID = "%s@$(Cluster).$(Process)"' % jobNum,
+				'+GridControl_GCtoWMSID = "%s@$(Cluster).$(Process)"' % module.getDescription(jobnum).job_name,
+				'+GridControl_GCIDtoWMSID = "%s@$(Cluster).$(Process)"' % jobnum,
 				# publish the WMS id for Dashboard
 				'environment = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self._name,
 				# condor doesn"t execute the job directly. actual job data, files and arguments are accessed by the GC scripts (but need to be copied to the worker)
-				'transfer_input_files = ' + ",".join(transferFiles + [os.path.join(workdir, 'job_%d.var' % jobNum)]),
+				'transfer_input_files = ' + ",".join(transferFiles + [os.path.join(workdir, 'job_%d.var' % jobnum)]),
 				# only copy important files +++ stdout and stderr get remapped but transferred automatically, so don't request them as they would not be found
 				'transfer_output_files = ' + output_files,
 				'initialdir = ' + workdir,
 				'Output = ' + os.path.join(workdir, "gc.stdout"),
 				'Error = '  + os.path.join(workdir, "gc.stderr"),
-				'arguments = %s '  % jobNum
+				'arguments = %s '  % jobnum
 				])
-			jdlData.extend( self._getFormattedRequirements(jobNum, module) )
+			jdlData.extend( self._getFormattedRequirements(jobnum, module) )
 			jdlData.append('Queue\n')
 
 		# combine JDL and add line breaks
@@ -447,10 +447,10 @@ class Condor(BasicWMS):
 		return jdlData
 
 	# helper for converting GC requirements to Condor requirements
-	def _getFormattedRequirements(self, jobNum, task):
+	def _getFormattedRequirements(self, jobnum, task):
 		jdlReq=[]
 		# get requirements from task and broker WMS sites
-		reqs = self.brokerSite.brokerAdd(task.getRequirements(jobNum), WMS.SITES)
+		reqs = self.brokerSite.brokerAdd(task.getRequirements(jobnum), WMS.SITES)
 		for reqType, reqValue in reqs:
 
 			if reqType == WMS.SITES:
@@ -499,16 +499,16 @@ class Condor(BasicWMS):
 
 		# (HPDA) file location service
 		if "dataFiles" in self.poolReqs:
-			jdlReq.extend(self._getRequirementsFileList(jobNum, task))
+			jdlReq.extend(self._getRequirementsFileList(jobnum, task))
 		return jdlReq
 
-	def _getRequirementsFileList(self, jobNum, task):
+	def _getRequirementsFileList(self, jobnum, task):
 		#TODO: Replace with a dedictaed PartitionProcessor to split HDPA file lists.
 		jdlFileList = []
 		# as per ``formatFileList``
 		# UserMod filelists are space separated                              'File1 File2 File3'
 		# CMSSW filelists are individually quoted and comma+space separated  '"File1", "File2", "File3"'
-		file_list = task.getJobConfig(jobNum).get('FILE_NAMES','').strip()
+		file_list = task.get_job_dict(jobnum).get('FILE_NAMES','').strip()
 		if '", "' in file_list:  # CMSSW style
 			file_list = file_list.strip('"').split('", "')
 		else:  # UserMod style
@@ -516,7 +516,7 @@ class Condor(BasicWMS):
 
 		if len(file_list) > 1 or len(file_list[0]) > 1:
 			arg_key = self.poolReqs["dataFiles"]
-			data_file = os.path.join(self.getSandboxPath(jobNum),'job_%d_files.txt' % jobNum)
+			data_file = os.path.join(self.getSandboxPath(jobnum),'job_%d_files.txt' % jobnum)
 			data_file_list = open(data_file,"w")
 			try:
 				data_file_list.writelines(lmap(lambda line: line + "\n",file_list))

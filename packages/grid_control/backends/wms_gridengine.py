@@ -66,7 +66,7 @@ class GridEngine_CheckJobs(CheckJobsWithProcess):
 						continue
 					if node.hasChildNodes():
 						job_info[str(node.nodeName)] = str(node.childNodes[0].nodeValue)
-				job_info[CheckInfo.WMSID] = job_info.pop('JB_job_number')
+				job_info[CheckInfo.WMSID] = job_info.pop('JB_jobnumber')
 				job_info[CheckInfo.RAW_STATUS] = job_info.pop('state')
 				if 'queue_name' in job_info:
 					queue, node = job_info['queue_name'].split('@')
@@ -77,11 +77,11 @@ class GridEngine_CheckJobs(CheckJobsWithProcess):
 			yield job_info
 
 	def _parse_status(self, value, default):
-		if any(imap(lambda x: x in value, ['E', 'e'])):
+		if any(imap(value.__contains__, ['E', 'e'])):
 			return Job.UNKNOWN
-		if any(imap(lambda x: x in value, ['h', 's', 'S', 'T', 'w'])):
+		if any(imap(value.__contains__, ['h', 's', 'S', 'T', 'w'])):
 			return Job.QUEUED
-		if any(imap(lambda x: x in value, ['r', 't'])):
+		if any(imap(value.__contains__, ['r', 't'])):
 			return Job.RUNNING
 		return Job.READY
 
@@ -144,7 +144,7 @@ class GridEngine(PBSGECommon):
 		self._configExec = utils.resolve_install_path('qconf')
 
 
-	def getSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		timeStr = lambda s: '%02d:%02d:%02d' % (s / 3600, (s / 60) % 60, s % 60)
 		reqMap = { WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
 			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
@@ -160,7 +160,7 @@ class GridEngine(PBSGECommon):
 			params += ' -q %s' % str.join(',', imap(lambda node: '%s@%s' % (queue, node), nodes))
 		elif nodes:
 			raise ConfigError('Please also specify queue when selecting nodes!')
-		return params + PBSGECommon.getCommonSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr, reqMap)
+		return params + PBSGECommon.getCommonSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr, reqMap)
 
 
 	def parseSubmitOutput(self, data):

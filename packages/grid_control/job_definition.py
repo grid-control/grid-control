@@ -13,10 +13,10 @@
 # | limitations under the License.
 
 class JobDef(object):
-	def __init__(self, jobNum):
+	def __init__(self, jobnum):
 		self.variables = {}
 		self.active = True
-		self.jobNum = jobNum
+		self.jobnum = jobnum
 		(self.files, self.software, self.storage) = ([], None, None)
 		(self.memory, self.time_wall, self.time_cpu, self.cores) = (None, None, None, None)
 

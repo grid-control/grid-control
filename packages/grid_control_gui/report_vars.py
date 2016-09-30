@@ -27,13 +27,13 @@ class VariablesReport(Report):
 		self._selector = JobSelector.create(configString, task = task)
 
 	def show_report(self, job_db):
-		taskConfig = self._task.getTaskConfig()
+		taskConfig = self._task.get_task_dict()
 		header = lzip(taskConfig, taskConfig)
 		header.extend(imap(lambda key: (key, '<%s>' % key), self._task.getTransientVars()))
 		variables = set()
 		entries = []
-		for jobNum in job_db.getJobs(self._selector):
-			jobConfig = self._task.getJobConfig(jobNum)
+		for jobnum in job_db.getJobs(self._selector):
+			jobConfig = self._task.get_job_dict(jobnum)
 			variables.update(jobConfig)
 			entry = dict(taskConfig)
 			entry.update(self._task.getTransientVars())

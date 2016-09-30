@@ -83,7 +83,7 @@ class DataTask(TaskModule):
 			return data_ps
 
 
-	def getVarMapping(self):
+	def get_var_alias_map(self):
 		if self._has_dataset: # create alias NICK for DATASETNICK
-			return utils.merge_dict_list([TaskModule.getVarMapping(self), {'NICK': 'DATASETNICK'}])
-		return TaskModule.getVarMapping(self)
+			return utils.merge_dict_list([TaskModule.get_var_alias_map(self), {'NICK': 'DATASETNICK'}])
+		return TaskModule.get_var_alias_map(self)

@@ -65,8 +65,8 @@ class WMS(NamedPlugin):
 	def deployTask(self, task, monitor, transferSE, transferSB):
 		raise AbstractError
 
-	def submitJobs(self, jobNumList, task): # jobNumList = [1, 2, ...]
-		raise AbstractError # Return (jobNum, gcID, data) for successfully submitted jobs
+	def submitJobs(self, jobnumList, task): # jobnumList = [1, 2, ...]
+		raise AbstractError # Return (jobnum, gcID, data) for successfully submitted jobs
 
 	def checkJobs(self, gcIDs): # Check status and return (gcID, job_state, job_info) for active jobs
 		raise AbstractError
@@ -74,8 +74,8 @@ class WMS(NamedPlugin):
 	def cancelJobs(self, gcIDs): # Cancel jobs and return list of successfully cancelled gcIDs
 		raise AbstractError
 
-	def retrieveJobs(self, gcID_jobNum_List):
-		raise AbstractError # Return (jobNum, retCode, data, outputdir) for retrived jobs
+	def retrieveJobs(self, gcID_jobnum_List):
+		raise AbstractError # Return (jobnum, retCode, data, outputdir) for retrived jobs
 
 	def _createId(self, wmsID):
 		return 'WMSID.%s.%s' % (self._name, wmsID)
@@ -83,8 +83,8 @@ class WMS(NamedPlugin):
 	def _splitId(self, gcID):
 		return tuple(gcID.split('.', 2)[1:])
 
-	def _getRawIDs(self, gcID_jobNum_List):
-		for (gcID, _) in gcID_jobNum_List:
+	def _getRawIDs(self, gcID_jobnum_List):
+		for (gcID, _) in gcID_jobnum_List:
 			yield self._splitId(gcID)[1]
 
 	def _get_map_wmsID_gcID(self, gcIDs):
@@ -170,11 +170,11 @@ class BasicWMS(WMS):
 			utils.create_tarball(sandbox, convert(self._getSandboxFiles(task, monitor, [self.smSEIn, self.smSEOut])))
 
 
-	def submitJobs(self, jobNumList, task):
-		for jobNum in jobNumList:
+	def submitJobs(self, jobnumList, task):
+		for jobnum in jobnumList:
 			if utils.abort():
 				break
-			yield self._submitJob(jobNum, task)
+			yield self._submitJob(jobnum, task)
 
 
 	def _run_executor(self, desc, executor, fmt, gcIDs, *args):
@@ -207,7 +207,7 @@ class BasicWMS(WMS):
 		return self._run_executor('cancelling jobs', self._cancel_executor, identity, gcIDs, self._name)
 
 
-	def retrieveJobs(self, gcID_jobNum_List): # Process output sandboxes returned by getJobsOutput
+	def retrieveJobs(self, gcID_jobnum_List): # Process output sandboxes returned by getJobsOutput
 		# Function to force moving a directory
 		def forceMove(source, target):
 			try:
@@ -225,7 +225,7 @@ class BasicWMS(WMS):
 
 		retrievedJobs = []
 
-		for inJobNum, pathName in self._getJobsOutput(gcID_jobNum_List):
+		for inJobNum, pathName in self._getJobsOutput(gcID_jobnum_List):
 			# inJobNum != None, pathName == None => Job could not be retrieved
 			if pathName is None:
 				if inJobNum not in retrievedJobs:
@@ -244,14 +244,14 @@ class BasicWMS(WMS):
 				self._log.exception('Unable to parse job.info')
 				job_info = None
 			if job_info:
-				jobNum = job_info[JobResult.JOBNUM]
-				if jobNum != inJobNum:
+				jobnum = job_info[JobResult.JOBNUM]
+				if jobnum != inJobNum:
 					raise BackendError('Invalid job id in job file %s' % jobFile)
-				if forceMove(pathName, os.path.join(self._outputPath, 'job_%d' % jobNum)):
+				if forceMove(pathName, os.path.join(self._outputPath, 'job_%d' % jobnum)):
 					retrievedJobs.append(inJobNum)
-					yield (jobNum, job_info[JobResult.EXITCODE], job_info[JobResult.RAW], pathName)
+					yield (jobnum, job_info[JobResult.EXITCODE], job_info[JobResult.RAW], pathName)
 				else:
-					yield (jobNum, -1, {}, None)
+					yield (jobnum, -1, {}, None)
 				continue
 
 			# Clean empty pathNames
@@ -294,12 +294,12 @@ class BasicWMS(WMS):
 		depList = set(ichain(imap(lambda x: x.getDependencies(), [task] + smList)))
 		depPaths = lmap(lambda pkg: utils.get_path_share('', pkg = pkg), os.listdir(utils.get_path_pkg()))
 		depFiles = lmap(lambda dep: utils.resolve_path('env.%s.sh' % dep, depPaths), depList)
-		taskEnv = utils.merge_dict_list(imap(lambda x: x.getTaskConfig(), [monitor, task] + smList))
+		taskEnv = utils.merge_dict_list(imap(lambda x: x.get_task_dict(), [monitor, task] + smList))
 		taskEnv.update({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
 			'GC_WMS_NAME': self._name})
 		taskConfig = sorted(utils.DictFormat(escape_strings = True).format(taskEnv, format = 'export %s%s%s\n'))
-		varMappingDict = dict(izip(monitor.getTaskConfig().keys(), monitor.getTaskConfig().keys()))
-		varMappingDict.update(task.getVarMapping())
+		varMappingDict = dict(izip(monitor.get_task_dict().keys(), monitor.get_task_dict().keys()))
+		varMappingDict.update(task.get_var_alias_map())
 		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(varMappingDict, format = '%s%s%s\n'))
 		# Resolve wildcards in task input files
 		def getTaskFiles():
@@ -314,22 +314,22 @@ class BasicWMS(WMS):
 			[VirtualFile('_config.sh', taskConfig), VirtualFile('_varmap.dat', varMapping)]])
 
 
-	def _writeJobConfig(self, cfgPath, jobNum, task, extras):
+	def _writeJobConfig(self, cfgPath, jobnum, task, extras):
 		try:
-			jobEnv = utils.merge_dict_list([task.getJobConfig(jobNum), extras])
-			jobEnv['GC_ARGS'] = task.getJobArguments(jobNum).strip()
+			jobEnv = utils.merge_dict_list([task.get_job_dict(jobnum), extras])
+			jobEnv['GC_ARGS'] = task.getJobArguments(jobnum).strip()
 			content = utils.DictFormat(escape_strings = True).format(jobEnv, format = 'export %s%s%s\n')
 			utils.safe_write(open(cfgPath, 'w'), content)
 		except Exception:
 			raise BackendError('Could not write job config data to %s.' % cfgPath)
 
 
-	def _submitJob(self, jobNum, task):
-		raise AbstractError # Return (jobNum, gcID, data) for successfully submitted jobs
+	def _submitJob(self, jobnum, task):
+		raise AbstractError # Return (jobnum, gcID, data) for successfully submitted jobs
 
 
-	def _getJobsOutput(self, gcID_jobNum_List):
-		raise AbstractError # Return (jobNum, sandbox) for finished jobs
+	def _getJobsOutput(self, gcID_jobnum_List):
+		raise AbstractError # Return (jobnum, sandbox) for finished jobs
 
 
 class Grid(WMS): # redirector - used to avoid loading the whole grid module just for the default

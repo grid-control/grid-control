@@ -105,12 +105,12 @@ class JobDB(ConfigurablePlugin):
 		elif jobSelector or self._alwaysSelector:
 			select = jobSelector or self._alwaysSelector
 		else:
-			for jobNum in subset:
-				yield jobNum
+			for jobnum in subset:
+				yield jobnum
 		if jobSelector or self._alwaysSelector:
-			for jobNum in subset:
-				if select(jobNum, self.getJobTransient(jobNum)):
-					yield jobNum
+			for jobnum in subset:
+				if select(jobnum, self.getJobTransient(jobnum)):
+					yield jobnum
 
 	def getJobs(self, jobSelector = None, subset = None):
 		return list(self.getJobsIter(jobSelector, subset))
@@ -118,14 +118,14 @@ class JobDB(ConfigurablePlugin):
 	def getJobsN(self, jobSelector = None, subset = None):
 		return len(self.getJobs(jobSelector, subset)) # fastest method! (iter->list written in C)
 
-	def getJob(self, jobNum):
+	def getJob(self, jobnum):
 		raise AbstractError
 
-	def getJobTransient(self, jobNum):
+	def getJobTransient(self, jobnum):
 		raise AbstractError
 
-	def getJobPersistent(self, jobNum):
+	def getJobPersistent(self, jobnum):
 		raise AbstractError
 
-	def commit(self, jobNum, jobObj):
+	def commit(self, jobnum, jobObj):
 		raise AbstractError

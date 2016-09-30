@@ -24,7 +24,7 @@ class FileClassSplitter(FileLevelSplitter):
 	def divide_blocks(self, block_iter):
 		for block in block_iter:
 			fi_list = block[DataProvider.FileList]
-			sort_inplace(fi_list, key = lambda fi: self._get_fi_class(fi, block))
+			sort_inplace(fi_list, key=lambda fi: self._get_fi_class(fi, block))
 			partition_fi_list = []
 			if fi_list:
 				fi_class_active = self._get_fi_class(fi_list[0], block)
@@ -49,7 +49,8 @@ class UserMetadataSplitter(FileClassSplitter):
 	def _get_fi_class(self, fi, block):
 		metadata_name_list = block.get(DataProvider.Metadata, [])
 		metadata_name_list_selected = self._setup(self._metadata_user_list, block)
-		metadata_idx_list = lmap(lambda metadata_name: safe_index(metadata_name_list, metadata_name), metadata_name_list_selected)
+		metadata_idx_list = lmap(lambda metadata_name: safe_index(metadata_name_list, metadata_name),
+			metadata_name_list_selected)
 
 		def query_metadata(idx):
 			if (idx is not None) and (idx < len(fi[DataProvider.Metadata])):

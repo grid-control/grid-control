@@ -125,12 +125,12 @@ class SCRAMTask(DataTask):
 
 
 	# Get job requirements
-	def getRequirements(self, jobNum):
-		return DataTask.getRequirements(self, jobNum) + self._scramReqs
+	def getRequirements(self, jobnum):
+		return DataTask.getRequirements(self, jobnum) + self._scramReqs
 
 
-	def getTaskConfig(self):
-		data = DataTask.getTaskConfig(self)
+	def get_task_dict(self):
+		data = DataTask.get_task_dict(self)
 		data['SCRAM_VERSION'] = self._scramVersion
 		data['SCRAM_ARCH'] = self._scramArch
 		data['SCRAM_PROJECTNAME'] = self._scramProject
@@ -329,8 +329,8 @@ class CMSSW(SCRAMTask):
 
 
 	# Get environment variables for gc_config.sh
-	def getTaskConfig(self):
-		data = SCRAMTask.getTaskConfig(self)
+	def get_task_dict(self):
+		data = SCRAMTask.get_task_dict(self)
 		data.update(dict(self.searchLoc))
 		data['GZIP_OUT'] = utils.QM(self.gzipOut, 'yes', 'no')
 		data['SE_RUNTIME'] = utils.QM(self._projectAreaTarballSE, 'yes', 'no')
@@ -378,8 +378,8 @@ class CMSSW(SCRAMTask):
 		return './gc-run.cmssw.sh $@'
 
 
-	def getJobArguments(self, jobNum):
-		return SCRAMTask.getJobArguments(self, jobNum) + ' ' + self.arguments
+	def getJobArguments(self, jobnum):
+		return SCRAMTask.getJobArguments(self, jobnum) + ' ' + self.arguments
 
 
 	def getVarNames(self):
@@ -390,15 +390,15 @@ class CMSSW(SCRAMTask):
 
 
 	# Get job dependent environment variables
-	def getJobConfig(self, jobNum):
-		data = SCRAMTask.getJobConfig(self, jobNum)
+	def get_job_dict(self, jobnum):
+		data = SCRAMTask.get_job_dict(self, jobnum)
 		if not self._has_dataset:
 			data['MAX_EVENTS'] = self.eventsPerJob
 		return data
 
 
-	def getDescription(self, jobNum): # (task name, job name, type)
-		result = SCRAMTask.getDescription(self, jobNum)
+	def getDescription(self, jobnum): # (task name, job name, type)
+		result = SCRAMTask.getDescription(self, jobnum)
 		if not result.jobType:
 			result.jobType = 'analysis'
 		return result

@@ -45,9 +45,8 @@ class DataProcessor(ConfigurablePlugin):
 				if self._log_debug:
 					self._log_debug.debug('%s process result: %s' % (self, repr(result)))
 			except Exception:
-				from grid_control.datasets.provider_base import DataProvider
-				block_id = DataProvider.get_block_id(block)
-				raise DataProcessorError('Error while processing dataset block %s' % block_id)
+				err_msg = 'Error while processing dataset block in datasource %s'
+				raise DataProcessorError(err_msg % repr(self._datasource_name))
 		self._finished()
 
 	def process_block(self, block):

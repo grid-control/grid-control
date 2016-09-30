@@ -93,42 +93,42 @@ class TextFileJobDB(JobDB):
 		candidates = []
 		for jobFile in fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt'):
 			try: # 2xsplit is faster than regex
-				jobNum = int(jobFile.split(".")[0].split("_")[1])
+				jobnum = int(jobFile.split(".")[0].split("_")[1])
 			except Exception:
 				continue
-			candidates.append((jobNum, jobFile))
+			candidates.append((jobnum, jobFile))
 
 		(jobMap, maxJobs) = ({}, len(candidates))
 		activity = Activity('Reading job infos')
 		idx = 0
-		for (jobNum, jobFile) in sorted(candidates):
+		for (jobnum, jobFile) in sorted(candidates):
 			idx += 1
-			if (jobLimit >= 0) and (jobNum >= jobLimit):
+			if (jobLimit >= 0) and (jobnum >= jobLimit):
 				self._log.info('Stopped reading job infos at job #%d out of %d available job files, since the limit of %d jobs is reached',
-					jobNum, len(candidates), jobLimit)
+					jobnum, len(candidates), jobLimit)
 				break
 			jobObj = self._load_job(os.path.join(self._dbPath, jobFile))
-			jobMap[jobNum] = jobObj
+			jobMap[jobnum] = jobObj
 			if idx % 100 == 0:
 				activity.update('Reading job infos %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
 		activity.finish()
 		return jobMap
 
 
-	def getJob(self, jobNum):
-		return self._jobMap.get(jobNum)
+	def getJob(self, jobnum):
+		return self._jobMap.get(jobnum)
 
 
-	def getJobTransient(self, jobNum):
-		return self._jobMap.get(jobNum, self._defaultJob)
+	def getJobTransient(self, jobnum):
+		return self._jobMap.get(jobnum, self._defaultJob)
 
 
-	def getJobPersistent(self, jobNum):
-		return self._jobMap.get(jobNum, Job())
+	def getJobPersistent(self, jobnum):
+		return self._jobMap.get(jobnum, Job())
 
 
-	def commit(self, jobNum, jobObj):
-		fp = SafeFile(os.path.join(self._dbPath, 'job_%d.txt' % jobNum), 'w')
+	def commit(self, jobnum, jobObj):
+		fp = SafeFile(os.path.join(self._dbPath, 'job_%d.txt' % jobnum), 'w')
 		fp.writelines(self._fmt.format(self._serialize_job_obj(jobObj)))
 		fp.close()
-		self._jobMap[jobNum] = jobObj
+		self._jobMap[jobnum] = jobObj

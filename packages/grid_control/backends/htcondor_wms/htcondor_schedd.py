@@ -78,7 +78,7 @@ class HTCScheddBase(Plugin):
 		return self._URI
 
 	# public interfaces for HTC Pool/WMS
-	def submitJobs(self, jobNumList, task, queryArguments):
+	def submitJobs(self, jobnumList, task, queryArguments):
 		"""
 		Submit a batch of jobs from the sandbox
 		
@@ -187,10 +187,10 @@ class HTCScheddBase(Plugin):
 		return jdlData
 		return jdlData
 
-	def _getRequirementJdlData(self, task, jobNum):
+	def _getRequirementJdlData(self, task, jobnum):
 		"""Create JDL attributes corresponding to job requirements"""
 		jdlData      = []
-		requirements = task.getRequirements(jobNum)
+		requirements = task.getRequirements(jobnum)
 		poolRequMap  = self.parentPool.jdlRequirementMap
 		for reqType, reqValue in requirements:
 			# ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
@@ -248,8 +248,8 @@ class HTCScheddPyBase(HTCScheddBase):
 # Schedd interfaced via CLI
 class HTCScheddCLIBase(HTCScheddBase):
 	# public interfaces for HTC Pool/WMS
-	def submitJobs(self, jobNumList, task, queryArguments):
-		jdlFilePath = self._prepareSubmit(task, jobNumList, queryArguments)
+	def submitJobs(self, jobnumList, task, queryArguments):
+		jdlFilePath = self._prepareSubmit(task, jobnumList, queryArguments)
 		submitProc = self._condor_submit(jdlFilePath)
 		if submitProc.wait(timeout = self._adapterMaxWait):
 			submitProc.logError(self.parentPool.errorLog, brief=True)
@@ -313,7 +313,7 @@ class HTCScheddCLIBase(HTCScheddBase):
 		return None
 	getHTCVersion = singleQueryCache(defReturnItem = (0,0,0))(getHTCVersion)
 
-	def _prepareSubmit(self, task, jobNumList):
+	def _prepareSubmit(self, task, jobnumList):
 		raise AbstractError
 
 	def _condor_submit(self, jdlFilePath):
@@ -363,16 +363,16 @@ class HTCScheddLocal(HTCScheddCLIBase):
 	def getJobsOutput(self, htcIDs):
 		return htcIDs
 
-	def _stageTaskFiles(self, jobNumList, task):
-		return jobNumList
+	def _stageTaskFiles(self, jobnumList, task):
+		return jobnumList
 
-	def _prepareSubmit(self, task, jobNumList, queryArguments):
+	def _prepareSubmit(self, task, jobnumList, queryArguments):
 		jdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wmsName,md5(self.getURI()).hexdigest()))
 		utils.safe_write(open(jdlFilePath, 'w'),
-			lmap(lambda line: line + '\n', self._getJDLData(task, jobNumList, queryArguments)))
+			lmap(lambda line: line + '\n', self._getJDLData(task, jobnumList, queryArguments)))
 		return jdlFilePath
 
-	def _getJDLData(self, task, jobNumList, queryArguments):
+	def _getJDLData(self, task, jobnumList, queryArguments):
 		jdlData = self._getBaseJDLData(task, queryArguments)
 		jdlData.extend([
 			'Executable              = %s' % self.parentPool._getSandboxFilesIn(task)[0][1],
@@ -385,12 +385,12 @@ class HTCScheddLocal(HTCScheddCLIBase):
 				])
 		except Exception:
 			clear_current_exception()
-		for jobNum in jobNumList:
-			jdlData.extend(self._getRequirementJdlData(task, jobNum))
-			jobStageDir = self.getStagingDir(htcID = HTCJobID(gcJobNum=jobNum, gcTaskID=task.taskID))
+		for jobnum in jobnumList:
+			jdlData.extend(self._getRequirementJdlData(task, jobnum))
+			jobStageDir = self.getStagingDir(htcID = HTCJobID(gcJobNum=jobnum, gcTaskID=task.taskID))
 			jdlData.extend([
-			'+GcJobNum               = "%s"' % jobNum,
-			'arguments               = %s' % jobNum,
+			'+GcJobNum               = "%s"' % jobnum,
+			'arguments               = %s' % jobnum,
 			'initialdir              = %s' % jobStageDir,
 			'Output                  = %s' % os.path.join(jobStageDir, 'gc.stdout'),
 			'Error                   = %s' % os.path.join(jobStageDir, 'gc.stderr'),
@@ -398,13 +398,13 @@ class HTCScheddLocal(HTCScheddCLIBase):
 			'transfer_input_files    = %s' % ','.join(
 				[ src for descr, src, trg in self.parentPool._getSandboxFilesIn(task)[1:]]
 				+
-				[ self.parentPool.getJobCfgPath(jobNum)[0] ]
+				[ self.parentPool.getJobCfgPath(jobnum)[0] ]
 				),
 			'transfer_output_files   = %s' % ','.join(
 				[ src for descr, src, trg in self.parentPool._getSandboxFilesOut(task)[2:] ]
 				),
 			'+rawID                   = "%s"' % HTCJobID(
-													gcJobNum  = jobNum,
+													gcJobNum  = jobnum,
 													gcTaskID  = task.taskID,
 													clusterID = '$(Cluster)',
 													procID    = '$(Process)',
@@ -499,7 +499,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		retrievedJobs = []
 		for index, htcID in enumerate(htcIDs):
 			self._log(logging.DEBUG3, "Retrieving job files (%d/%d): %s" %( index, len(htcIDs), jobData[0]) )
-			getProcess = self._adapter.LoggedGet(self.getStagingDir(htcID), self.parentPool.getSandboxPath(htcID.jobNum))
+			getProcess = self._adapter.LoggedGet(self.getStagingDir(htcID), self.parentPool.getSandboxPath(htcID.jobnum))
 			if getProcess.wait(timeout = self._adapterMaxWait):
 				getProcess.logError(self.parentPool.errorLog, brief=True)
 				self._log(logging.INFO1, "Retrieval failed for job %d." %(jobData[0]) )
@@ -521,16 +521,16 @@ class HTCScheddSSH(HTCScheddCLIBase):
 			self._log( logging.DEFAULT, 'unable to clean task dir')
 		return retrievedJobs
 
-	def _prepareSubmit(self, task, jobNumList, queryArguments):
+	def _prepareSubmit(self, task, jobnumList, queryArguments):
 		localJdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wmsName,md5(self.getURI()).hexdigest()))
-		readyJobNumList  = self._stageSubmitFiles(task, jobNumList)
+		readyJobNumList  = self._stageSubmitFiles(task, jobnumList)
 		utils.safe_write(open(localJdlFilePath, 'w'),
 			lmap(lambda line: line + '\n', self._getJDLData(task, readyJobNumList, queryArguments)))
 		raise NotImplementedError('JDL must get moved to remote')
 		return jdlFilePath
 
-	def _getJDLData(self, task, jobNumList, queryArguments):
-		taskFiles, proxyFile, jobFileMap = self._getSubmitFileMap(task, jobNumList)
+	def _getJDLData(self, task, jobnumList, queryArguments):
+		taskFiles, proxyFile, jobFileMap = self._getSubmitFileMap(task, jobnumList)
 		jdlData = self._getBaseJDLData(task, queryArguments)
 		jdlData.extend([
 			'Executable              = %s' % taskFiles[0][2],
@@ -540,24 +540,24 @@ class HTCScheddSSH(HTCScheddCLIBase):
 			'use_x509userproxy       = True',
 			'x509userproxy           = %s' % proxyFile[2],
 			])
-		for jobNum in jobNumList:
-			jdlData.extend(self._getRequirementJdlData(task, jobNum))
-			jobStageDir = self.getStagingDir(htcID = HTCJobID(gcJobNum=jobNum, gcTaskID=task.taskID))
+		for jobnum in jobnumList:
+			jdlData.extend(self._getRequirementJdlData(task, jobnum))
+			jobStageDir = self.getStagingDir(htcID = HTCJobID(gcJobNum=jobnum, gcTaskID=task.taskID))
 			jdlData.extend([
-			'+GcJobNum               = "%s"' % jobNum,
-			'arguments               = %s' % jobNum,
+			'+GcJobNum               = "%s"' % jobnum,
+			'arguments               = %s' % jobnum,
 			'initialdir              = %s' % jobStageDir,
 			'Output                  = %s' % os.path.join(jobStageDir, 'gc.stdout'),
 			'Error                   = %s' % os.path.join(jobStageDir, 'gc.stderr'),
 			# HACK: ignore executable (In[0]), stdout (Out[0]) and stderr (Out[1])
 			'transfer_input_files    = %s' % ','.join(
-				[ schd for descr, gc, schd in taskFiles[1:] + jobFileMap[jobNum] ]
+				[ schd for descr, gc, schd in taskFiles[1:] + jobFileMap[jobnum] ]
 				),
 			'transfer_output_files   = %s' % ','.join(
 				[ src for descr, src, trg in self.parentPool._getSandboxFilesOut(task)[2:] ]
 				),
 			'+rawID                   = "%s"' % HTCJobID(
-													gcJobNum  = jobNum,
+													gcJobNum  = jobnum,
 													gcTaskID  = task.taskID,
 													clusterID = '$(Cluster)',
 													procID    = '$(Process)',
@@ -567,14 +567,14 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		return jdlData
 
 	# internal interfaces for HTC Pool/Schedds
-	def _getSubmitFileMap(self, task, jobNumList):
+	def _getSubmitFileMap(self, task, jobnumList):
 		"""
 		Get listed files for submission
 		
 		Returns:
 		taskFiles           iterable as (descr, gcPath, scheddPath)
 		       files shared by all jobs
-		jobsFileMap         map of jobNum to iterable as (descr, gcPath, scheddPath)
+		jobsFileMap         map of jobnum to iterable as (descr, gcPath, scheddPath)
 		       files per individual job
 		"""
 		taskFiles = []
@@ -588,16 +588,16 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		except Exception:
 			clear_current_exception()
 		jobFileMap = {}
-		for jobNum in jobNumList:
-			jcFull, jcBase = self.getJobCfgPath(jobNum)
-			jobsFileMap[jobNum] = ('Job Config %d' % jobNum, jcFull, os.path.join(self.getStagingDir(taskID = task.taskID), jcBase))
+		for jobnum in jobnumList:
+			jcFull, jcBase = self.getJobCfgPath(jobnum)
+			jobsFileMap[jobnum] = ('Job Config %d' % jobnum, jcFull, os.path.join(self.getStagingDir(taskID = task.taskID), jcBase))
 		return taskFiles, proxyFile, jobFileMap
 
-	def _stageSubmitFiles(self, task, jobNumList):
+	def _stageSubmitFiles(self, task, jobnumList):
 		"""
 		Stage submission files at scheduler.
 		"""
-		taskFiles, proxyFile, jobFileMap = self._getSubmitFileMap(task, jobNumList)
+		taskFiles, proxyFile, jobFileMap = self._getSubmitFileMap(task, jobnumList)
 		self._log(logging.DEBUG1, "Staging task files.")
 		stagedJobs = []
 		if proxyFile:
@@ -609,7 +609,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 				putProcess.logError(self.parentPool.errorLog, brief=True)
 				self._log(logging.INFO1, "Staging failure. Aborting submit." %(fileInfoBlob[0]) )
 				return stagedJobs
-		for jobNum, jobFiles in jobFileMap:
+		for jobnum, jobFiles in jobFileMap:
 			try:
 				for fileInfoBlob in jobFiles:
 					self._log(logging.DEBUG3, "Staging job files: %s" %(fileInfoBlob[0]) )
@@ -617,14 +617,14 @@ class HTCScheddSSH(HTCScheddCLIBase):
 					if putProcess.wait(timeout = self._adapterMaxWait):
 						putProcess.logError(self.parentPool.errorLog, brief=True)
 						try:
-							self.cleanStagingDir( htcID = HTCJobID(jobNum, task.taskID))
+							self.cleanStagingDir( htcID = HTCJobID(jobnum, task.taskID))
 						except Exception:
 							self._log( logging.INFO1, 'unable to clean staging dir')
 						raise BackendError
 			except BackendError:
 				continue
 			else:
-				stagedJobs.append(jobNum)
+				stagedJobs.append(jobnum)
 		return stagedJobs
 
 	def _getStagingToken(self, htcID = None, taskID = None):

@@ -82,7 +82,7 @@ def getNodeLabel(instance):
 def getNodeParent(cls):
 	cls_old = None
 	while True:
-		if (cls == cls_old) or any(imap(lambda x: x in cls.__bases__, [Plugin, ConfigurablePlugin, NamedPlugin])):
+		if (cls == cls_old) or any(imap(cls.__bases__.__contains__, [Plugin, ConfigurablePlugin, NamedPlugin])):
 			break
 		try:
 			cls = cls.__bases__[0]

@@ -191,12 +191,12 @@ class GliteWMS(GridWMS):
 		return (self._submitParams.get('-d', None) is not None)
 
 
-	def submitJobs(self, jobNumList, module):
+	def submitJobs(self, jobnumList, module):
 		if not self.bulkSubmissionBegin(): # Trying to delegate proxy failed
 			if self._forceDelegate: # User switched on forcing delegation => exception
 				raise BackendError('Unable to delegate proxy!')
 			self._log.error('Unable to delegate proxy! Continue with automatic delegation...')
 			self._submitParams.update({ '-a': ' ' })
 			self._useDelegate = False
-		for submitInfo in GridWMS.submitJobs(self, jobNumList, module):
+		for submitInfo in GridWMS.submitJobs(self, jobnumList, module):
 			yield submitInfo

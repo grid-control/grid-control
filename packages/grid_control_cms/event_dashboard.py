@@ -40,9 +40,9 @@ class DashBoard(Monitoring):
 		yield get_path_share('mon.dashboard.sh', pkg = 'grid_control_cms')
 
 
-	def getTaskConfig(self):
+	def get_task_dict(self):
 		result = {'TASK_NAME': self._taskname, 'DB_EXEC': self._app, 'DATASETNICK': ''}
-		result.update(Monitoring.getTaskConfig(self))
+		result.update(Monitoring.get_task_dict(self))
 		return result
 
 
@@ -52,27 +52,27 @@ class DashBoard(Monitoring):
 			yield get_path_share('..', 'DashboardAPI', fn, pkg = 'grid_control_cms')
 
 
-	def _publish(self, jobObj, jobNum, taskId, usermsg):
+	def _publish(self, jobObj, jobnum, taskId, usermsg):
 		(_, backend, rawId) = jobObj.gcID.split('.', 2)
-		dashId = '%s_%s' % (jobNum, rawId)
+		dashId = '%s_%s' % (jobnum, rawId)
 		if 'http' not in jobObj.gcID:
-			dashId = '%s_https://%s:/%s' % (jobNum, backend, rawId)
+			dashId = '%s_https://%s:/%s' % (jobnum, backend, rawId)
 		msg = merge_dict_list([{'taskId': taskId, 'jobId': dashId, 'sid': rawId}] + usermsg)
 		DashboardAPI(taskId, dashId).publish(**filter_dict(msg, value_filter = identity))
 
 
-	def _start_publish(self, jobObj, jobNum, desc, message):
-		taskId = self._task.substVars('dashboard task id', self._taskname, jobNum,
+	def _start_publish(self, jobObj, jobnum, desc, message):
+		taskId = self._task.substVars('dashboard task id', self._taskname, jobnum,
 			addDict = {'DATASETNICK': ''}).strip('_')
-		self._tp.start_daemon('Notifying dashboard about %s of job %d' % (desc, jobNum),
-			self._publish, jobObj, jobNum, taskId, message)
+		self._tp.start_daemon('Notifying dashboard about %s of job %d' % (desc, jobnum),
+			self._publish, jobObj, jobnum, taskId, message)
 
 
 	# Called on job submission
-	def onJobSubmit(self, wms, jobObj, jobNum):
+	def onJobSubmit(self, wms, jobObj, jobnum):
 		token = wms.getAccessToken(jobObj.gcID)
-		jobInfo = self._task.getJobConfig(jobNum)
-		self._start_publish(jobObj, jobNum, 'submission', [{
+		jobInfo = self._task.get_job_dict(jobnum)
+		self._start_publish(jobObj, jobnum, 'submission', [{
 			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
 			'tool': 'grid-control', 'JSToolVersion': get_version(),
 			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
@@ -84,21 +84,21 @@ class DashBoard(Monitoring):
 
 
 	# Called on job status update and output
-	def _updateDashboard(self, wms, jobObj, jobNum, data, addMsg):
+	def _updateDashboard(self, wms, jobObj, jobnum, data, addMsg):
 		# Translate status into dashboard status message
 		statusDashboard = self._statusMap.get(jobObj.state, 'PENDING')
-		self._start_publish(jobObj, jobNum, 'status', [{'StatusValue': statusDashboard,
+		self._start_publish(jobObj, jobnum, 'status', [{'StatusValue': statusDashboard,
 			'StatusValueReason': data.get('reason', statusDashboard).upper(),
 			'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),
 			'StatusDestination': data.get('dest', '') }, addMsg])
 
 
-	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		self._updateDashboard(wms, jobObj, jobNum, jobObj, {})
+	def onJobUpdate(self, wms, jobObj, jobnum, data):
+		self._updateDashboard(wms, jobObj, jobnum, jobObj, {})
 
 
-	def onJobOutput(self, wms, jobObj, jobNum, retCode):
-		self._updateDashboard(wms, jobObj, jobNum, jobObj, {'ExeExitCode': retCode})
+	def onJobOutput(self, wms, jobObj, jobnum, retCode):
+		self._updateDashboard(wms, jobObj, jobnum, jobObj, {'ExeExitCode': retCode})
 
 
 	def onFinish(self):

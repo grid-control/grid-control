@@ -31,8 +31,8 @@ class UserTask(DataTask):
 		return '(%s) > job.stdout 2> job.stderr' % self._exeWrap.get_command()
 
 
-	def getJobArguments(self, jobNum):
-		return DataTask.getJobArguments(self, jobNum) + ' ' + self._exeWrap.getArguments()
+	def getJobArguments(self, jobnum):
+		return DataTask.getJobArguments(self, jobnum) + ' ' + self._exeWrap.getArguments()
 
 
 	def getSBInFiles(self):

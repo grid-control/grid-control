@@ -87,8 +87,8 @@ class BasicReport(Report):
 	def show_report(self, job_db):
 		njobs_total = len(job_db)
 		summary = dict(imap(lambda x: (x, 0.0), Job.enum_value_list))
-		for jobNum in self._jobs:
-			summary[job_db.getJobTransient(jobNum).state] += 1
+		for jobnum in self._jobs:
+			summary[job_db.getJobTransient(jobnum).state] += 1
 		makeSum = lambda *states: sum(imap(lambda z: summary[z], states))
 		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / max(1, njobs_total) * 100.0)]
 
@@ -125,10 +125,10 @@ class LocationReport(Report):
 
 	def show_report(self, job_db):
 		reports = []
-		for jobNum in self._jobs:
-			jobObj = job_db.getJob(jobNum)
+		for jobnum in self._jobs:
+			jobObj = job_db.getJob(jobnum)
 			if not jobObj or (jobObj.state == Job.INIT):
 				continue
-			reports.append({0: jobNum, 1: Job.enum2str(jobObj.state), 2: jobObj.gcID})
+			reports.append({0: jobnum, 1: Job.enum2str(jobObj.state), 2: jobObj.gcID})
 			self._add_details(reports, jobObj)
 		utils.display_table(lzip(irange(3), ['Job', 'Status / Attempt', 'Id / Destination']), reports, 'rcl')

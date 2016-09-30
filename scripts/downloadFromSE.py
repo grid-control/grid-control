@@ -139,11 +139,11 @@ def transfer_monitor(output, fileIdx, path, lock, abort):
 	lock.release()
 
 
-def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, target_path):
+def download_monitored(jobnum, output, fileIdx, checkPath, sourcePath, target_path):
 	copyAbortLock = GCLock()
 	monitorLock = GCLock()
 	monitorLock.acquire()
-	monitor = start_daemon('Download monitor %s' % jobNum, transfer_monitor, output, fileIdx, checkPath, monitorLock, copyAbortLock)
+	monitor = start_daemon('Download monitor %s' % jobnum, transfer_monitor, output, fileIdx, checkPath, monitorLock, copyAbortLock)
 	result = -1
 	procCP = se_copy(sourcePath, target_path, tmp = checkPath)
 	while True:
@@ -165,7 +165,7 @@ def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, target_pa
 	return True
 
 
-def download_file(opts, output, jobNum, fileIdx, fileInfo):
+def download_file(opts, output, jobnum, fileIdx, fileInfo):
 	(hash, _, name_dest, pathSE) = fileInfo
 	output.update_progress(fileIdx)
 
@@ -185,7 +185,7 @@ def download_file(opts, output, jobNum, fileIdx, fileInfo):
 	if 'file://' in outFilePath:
 		checkPath = outFilePath
 
-	if not download_monitored(jobNum, output, fileIdx, checkPath, os.path.join(pathSE, name_dest), outFilePath):
+	if not download_monitored(jobnum, output, fileIdx, checkPath, os.path.join(pathSE, name_dest), outFilePath):
 		return False
 
 	# Verify => compute md5hash
@@ -222,9 +222,9 @@ def cleanup_files(opts, files, failJob, output):
 		output.update_status(fileIdx, None)
 
 
-def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
-	output.init(jobNum)
-	jobObj = jobDB.getJob(jobNum)
+def download_job_output(opts, incInfo, workDir, jobDB, token, jobnum, output):
+	output.init(jobnum)
+	jobObj = jobDB.getJob(jobnum)
 	# Only run over finished and not yet downloaded jobs
 	if jobObj.state != Job.SUCCESS:
 		output.error('Job has not yet finished successfully!')
@@ -241,7 +241,7 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 		sys.exit(os.EX_UNAVAILABLE)
 
 	# Read the file hash entries from job info file
-	files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum)) or []
+	files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobnum)) or []
 	if files:
 		files = lmap(lambda fi: (fi[FileInfoProcessor.Hash], fi[FileInfoProcessor.NameLocal],
 			fi[FileInfoProcessor.NameDest], fi[FileInfoProcessor.Path]), files)
@@ -253,13 +253,13 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 			return incInfo('Job without output files')
 
 	for (fileIdx, fileInfo) in enumerate(files):
-		failJob = failJob or not download_file(opts, output, jobNum, fileIdx, fileInfo)
+		failJob = failJob or not download_file(opts, output, jobnum, fileIdx, fileInfo)
 
 	# Ignore the first opts.retry number of failed jobs
 	if failJob and opts.retry and (retry < int(opts.retry)):
 		output.error('Download attempt #%d failed!' % (retry + 1))
 		jobObj.set('download attempt', str(retry + 1))
-		jobDB.commit(jobNum, jobObj)
+		jobDB.commit(jobnum, jobObj)
 		return incInfo('Download attempts')
 
 	cleanup_files(opts, files, failJob, output)
@@ -276,7 +276,7 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 			jobObj.set('download', 'True')
 
 	# Save new job status infos
-	jobDB.commit(jobNum, jobObj)
+	jobDB.commit(jobnum, jobObj)
 	output.finish()
 	time.sleep(float(opts.slowdown))
 
@@ -309,11 +309,11 @@ def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
 	class ThreadDisplay:
 		def __init__(self):
 			self.output = []
-		def init(self, jobNum):
-			self.jobNum = jobNum
-			self.output = ['Job %5d' % jobNum, '']
+		def init(self, jobnum):
+			self.jobnum = jobnum
+			self.output = ['Job %5d' % jobnum, '']
 		def _infoline(self, fileIdx, msg = ''):
-			return 'Job %5d [%i/%i] %s %s' % (self.jobNum, fileIdx + 1, len(self._files), self._files[fileIdx][2], msg)
+			return 'Job %5d [%i/%i] %s %s' % (self.jobnum, fileIdx + 1, len(self._files), self._files[fileIdx][2], msg)
 		def update_files(self, files):
 			(self._files, self.output, self.tr) = (files, self.output[1:], ['']*len(files))
 			for x in irange(len(files)):
@@ -341,7 +341,7 @@ def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
 		def update_status(self, idx, msg):
 			self.output[2*idx] = str.join(' ', [self._infoline(idx, '(%s)' % self.tr[idx])] + (msg or '').split())
 		def finish(self):
-#			self.output.append(str(self.jobNum) + 'FINISHED')
+#			self.output.append(str(self.jobnum) + 'FINISHED')
 			pass
 
 	download_multithreaded_main(opts, workDir, jobList, incInfo, jobDB, token, ThreadDisplay, Console(sys.stdout), errorOutput)
@@ -349,8 +349,8 @@ def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
 
 def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 	class DefaultDisplay:
-		def init(self, jobNum):
-			sys.stdout.write('Job %d: ' % jobNum)
+		def init(self, jobnum):
+			sys.stdout.write('Job %d: ' % jobnum)
 		def update_files(self, files):
 			self._files = files
 			sys.stdout.write('The job wrote %d file%s to the SE\n' % (len(files), ('s', '')[len(files) == 1]))
@@ -373,7 +373,7 @@ def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 			self._write('\t\tRemote site: %s\n' % file_hash)
 			self._write('\t\t Local site: %s\n' % hashLocal)
 		def error(self, msg):
-			sys.stdout.write('\nJob %d: %s' % (jobNum, msg.strip()))
+			sys.stdout.write('\nJob %d: %s' % (jobnum, msg.strip()))
 		def update_status(self, idx, msg):
 			if msg:
 				self._write('\t' + msg + '\r')
@@ -384,8 +384,8 @@ def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 		def finish(self):
 			sys.stdout.write('\n')
 
-	for jobNum in jobList:
-		download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, DefaultDisplay())
+	for jobnum in jobList:
+		download_job_output(opts, incInfo, workDir, jobDB, token, jobnum, DefaultDisplay())
 
 
 def loop_download(opts, args):

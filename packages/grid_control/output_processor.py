@@ -46,9 +46,9 @@ class JobInfoProcessor(OutputProcessor):
 				raise JobResultError('Job result file %r is empty' % fn)
 			data = self._df.parse(info_content, key_parser = {None: str}) # impossible to fail
 			try:
-				jobNum = data.pop('JOBID')
+				jobnum = data.pop('JOBID')
 				exitCode = data.pop('EXITCODE')
-				return {JobResult.JOBNUM: jobNum, JobResult.EXITCODE: exitCode, JobResult.RAW: data}
+				return {JobResult.JOBNUM: jobnum, JobResult.EXITCODE: exitCode, JobResult.RAW: data}
 			except Exception:
 				raise JobResultError('Job result file %r is incomplete' % fn)
 		except Exception:

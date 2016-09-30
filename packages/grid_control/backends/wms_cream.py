@@ -95,8 +95,8 @@ class CreamWMS(GridWMS):
 		if self._useDelegate is False:
 			self._submitParams.update({ '-a': ' ' })
 
-	def makeJDL(self, jobNum, module):
-		return ['[\n'] + GridWMS.makeJDL(self, jobNum, module) + ['OutputSandboxBaseDestUri = "gsiftp://localhost";\n]']
+	def makeJDL(self, jobnum, module):
+		return ['[\n'] + GridWMS.makeJDL(self, jobnum, module) + ['OutputSandboxBaseDestUri = "gsiftp://localhost";\n]']
 
 	# Get output of jobs and yield output dirs
 	def _getJobsOutput(self, allIds):
@@ -114,20 +114,20 @@ class CreamWMS(GridWMS):
 		
 		activity = Activity('retrieving %d job outputs' % len(allIds))
 		for ids in imap(lambda x: allIds[x:x+self._nJobsPerChunk], irange(0, len(allIds), self._nJobsPerChunk)):
-			jobNumMap = dict(ids)
+			jobnumMap = dict(ids)
 			jobs = ' '.join(self._getRawIDs(ids))
 			log = tempfile.mktemp('.log')
 
 			proc = LocalProcess(self._outputExec, '--noint', '--logfile', log, '--dir', basePath, jobs)
 
 			# yield output dirs
-			todo = jobNumMap.values()
+			todo = jobnumMap.values()
 			done = []
 			currentJobNum = None
 			for line in imap(str.strip, proc.stdout.iter(timeout = 20)):
 				match = re.match(self._outputRegex, line)
 				if match:
-					currentJobNum = jobNumMap.get(self._createId(match.groupdict()['rawId']))
+					currentJobNum = jobnumMap.get(self._createId(match.groupdict()['rawId']))
 					todo.remove(currentJobNum)
 					done.append(match.groupdict()['rawId'])
 					outputDir = match.groupdict()['outputDir']
@@ -155,8 +155,8 @@ class CreamWMS(GridWMS):
 		activity.finish()
 
 		# return unretrievable jobs
-		for jobNum in todo:
-			yield (jobNum, None)
+		for jobnum in todo:
+			yield (jobnum, None)
 
 		purgeLog = tempfile.mktemp('.log')
 		purgeProc = LocalProcess(utils.resolve_install_path('glite-ce-job-purge'),

@@ -24,9 +24,10 @@ class EventBoundarySplitter(DataSplitter):
 		return [DataSplitter.FileList, DataSplitter.Skipped, DataSplitter.NEntries]
 	get_needed_enums = classmethod(get_needed_enums)
 
-	def partition_blocks_raw(self, block_iter, event_first = 0):
+	def partition_blocks_raw(self, block_iter, event_first=0):
 		for block in block_iter:
-			for proto_partition in self._partition_block(block[DataProvider.FileList], self._setup(self._events_per_job, block), event_first):
+			for proto_partition in self._partition_block(block[DataProvider.FileList],
+					self._setup(self._events_per_job, block), event_first):
 				event_first = 0
 				yield self._finish_partition(block, proto_partition)
 
@@ -51,7 +52,8 @@ class EventBoundarySplitter(DataSplitter):
 
 				event_count = fi[DataProvider.NEntries]
 				if event_count < 0:
-					raise DatasetError('EventBoundarySplitter does not support files with a negative number of events!')
+					raise DatasetError('%s does not support files with a negative number of events!' %
+						self.__class__.__name__)
 				event_current = event_prev
 				event_prev = event_current + event_count
 				skip_current = 0

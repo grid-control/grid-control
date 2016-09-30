@@ -40,7 +40,7 @@ class ZippedJobDB(TextFileJobDB):
 				remove_files([self._dbFile + '.broken'])
 				brokenList = []
 				for idx, fnTarInfo in enumerate(tar.namelist()):
-					(jobNum, tid) = tuple(imap(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
+					(jobnum, tid) = tuple(imap(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
 					try:
 						fp = tar.open(fnTarInfo)
 						try:
@@ -56,30 +56,30 @@ class ZippedJobDB(TextFileJobDB):
 			maxJobs = len(tar.namelist())
 			tMap = {}
 			for idx, fnTarInfo in enumerate(tar.namelist()):
-				(jobNum, tid) = tuple(imap(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
-				if tid < tMap.get(jobNum, 0):
+				(jobnum, tid) = tuple(imap(lambda s: int(s[1:]), fnTarInfo.split('_', 1)))
+				if tid < tMap.get(jobnum, 0):
 					continue
 				try:
 					data = self._fmt.parse(tar.open(fnTarInfo).read())
 				except Exception:
 					continue
-				jobMap[jobNum] = self._create_job_obj(fnTarInfo, data)
-				tMap[jobNum] = tid
+				jobMap[jobnum] = self._create_job_obj(fnTarInfo, data)
+				tMap[jobnum] = tid
 				if idx % 100 == 0:
 					activity.update('Reading job transactions %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
 			activity.finish()
 		self._serial = maxJobs
 		return jobMap
 
-	def commit(self, jobNum, jobObj):
+	def commit(self, jobnum, jobObj):
 		jobData = str.join('', self._fmt.format(self._serialize_job_obj(jobObj)))
 		tar = zipfile.ZipFile(self._dbFile, 'a', zipfile.ZIP_DEFLATED)
 		try:
-			tar.writestr('J%06d_T%06d' % (jobNum, self._serial), jobData)
+			tar.writestr('J%06d_T%06d' % (jobnum, self._serial), jobData)
 		finally:
 			tar.close()
 		self._serial += 1
-		self._jobMap[jobNum] = jobObj
+		self._jobMap[jobnum] = jobObj
 
 
 class Migrate2ZippedJobDB(ZippedJobDB):
@@ -91,8 +91,8 @@ class Migrate2ZippedJobDB(ZippedJobDB):
 			self._serial = 0
 			try:
 				oldDB = TextFileJobDB(config)
-				for jobNum in oldDB.getJobs():
-					self.commit(jobNum, oldDB.get(jobNum))
+				for jobnum in oldDB.getJobs():
+					self.commit(jobnum, oldDB.get(jobnum))
 			except Exception:
 				remove_files([self._dbFile])
 				raise

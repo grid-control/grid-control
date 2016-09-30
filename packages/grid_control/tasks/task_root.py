@@ -45,8 +45,8 @@ class ROOTTask(UserTask):
 		self.libFiles = []
 
 
-	def getTaskConfig(self):
-		return utils.merge_dict_list([UserTask.getTaskConfig(self), {'GC_ROOTSYS': self._rootpath}])
+	def get_task_dict(self):
+		return utils.merge_dict_list([UserTask.get_task_dict(self), {'GC_ROOTSYS': self._rootpath}])
 
 
 	def get_command(self):

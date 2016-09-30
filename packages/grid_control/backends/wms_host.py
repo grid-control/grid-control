@@ -64,12 +64,12 @@ class Host(LocalWMS):
 			cancelExecutor = Host_CancelJobs(config))
 
 
-	def getJobArguments(self, jobNum, sandbox):
+	def getJobArguments(self, jobnum, sandbox):
 		return ''
 
 
-	def getSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr):
-		return '%d "%s" "%s" "%s"' % (jobNum, sandbox, stdout, stderr)
+	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
+		return '%d "%s" "%s" "%s"' % (jobnum, sandbox, stdout, stderr)
 
 
 	def parseSubmitOutput(self, data):

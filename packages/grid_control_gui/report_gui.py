@@ -30,15 +30,15 @@ class CategoryBaseReport(Report):
 		# Assignment of jobs to categories (depending on variables and using datasetnick if available)
 		jobConfig = {}
 		varList = []
-		for jobNum in self._jobs:
+		for jobnum in self._jobs:
 			if task:
-				jobConfig = task.getJobConfig(jobNum)
+				jobConfig = task.get_job_dict(jobnum)
 			varList = sorted(ifilter(lambda var: '!' not in repr(var), jobConfig.keys()))
 			if 'DATASETSPLIT' in varList:
 				varList.remove('DATASETSPLIT')
 				varList.append('DATASETNICK')
 			catKey = str.join('|', imap(lambda var: '%s=%s' % (var, jobConfig[var]), varList))
-			catJobs.setdefault(catKey, []).append(jobNum)
+			catJobs.setdefault(catKey, []).append(jobnum)
 			if catKey not in catDescDict:
 				catDescDict[catKey] = dict(imap(lambda var: (var, jobConfig[var]), varList))
 		# Kill redundant keys from description
@@ -74,9 +74,9 @@ class CategoryBaseReport(Report):
 
 	def _getCategoryStateSummary(self, job_db):
 		catStateDict = {}
-		for jobNum in self._jobs:
-			jobState = job_db.getJobTransient(jobNum).state
-			catKey = self._job2cat[jobNum]
+		for jobnum in self._jobs:
+			jobState = job_db.getJobTransient(jobnum).state
+			catKey = self._job2cat[jobnum]
 			catStateDict[catKey][jobState] = catStateDict.setdefault(catKey, dict()).get(jobState, 0) + 1
 		return (catStateDict, dict(self._catDescDict), {}) # (<state overview>, <descriptions>, <#subcategories>)
 

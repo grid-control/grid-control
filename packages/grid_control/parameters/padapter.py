@@ -36,16 +36,16 @@ class ParameterAdapter(ConfigurablePlugin):
 	def can_finish(self):
 		return self._psrc.can_finish()
 
-	def can_submit(self, job_num):
-		return self.get_job_content(job_num)[ParameterInfo.ACTIVE]
+	def can_submit(self, jobnum):
+		return self.get_job_content(jobnum)[ParameterInfo.ACTIVE]
 
-	def get_job_content(self, job_num, pnum=None):
+	def get_job_content(self, jobnum, pnum=None):
 		if pnum is None:
-			pnum = job_num
-		if job_num is None:
+			pnum = jobnum
+		if jobnum is None:
 			raise APIError('Unable to process job number None!')
 		result = {ParameterInfo.ACTIVE: True, ParameterInfo.REQS: []}
-		result['GC_JOB_ID'] = job_num
+		result['GC_JOB_ID'] = jobnum
 		result['GC_PARAM'] = pnum
 		self._psrc.fill_parameter_content(pnum, result)
 		return utils.filter_dict(result, value_filter=lambda x: x != '')
@@ -62,8 +62,8 @@ class ParameterAdapter(ConfigurablePlugin):
 		return self._psrc.get_used_psrc_list()
 
 	def iter_jobs(self):
-		for job_num in irange(self.get_job_len() or 0):
-			yield self.get_job_content(job_num)
+		for jobnum in irange(self.get_job_len() or 0):
+			yield self.get_job_content(jobnum)
 
 	def resync(self, force=False):
 		return self._psrc.resync_psrc()
@@ -106,10 +106,10 @@ class BasicParameterAdapter(ResyncParameterAdapter):
 		ResyncParameterAdapter.__init__(self, config, source)
 		self._can_submit_map = {}
 
-	def can_submit(self, job_num):  # Use caching to speed up job manager operations
-		if job_num not in self._can_submit_map:
-			self._can_submit_map[job_num] = ParameterAdapter.can_submit(self, job_num)
-		return self._can_submit_map[job_num]
+	def can_submit(self, jobnum):  # Use caching to speed up job manager operations
+		if jobnum not in self._can_submit_map:
+			self._can_submit_map[jobnum] = ParameterAdapter.can_submit(self, jobnum)
+		return self._can_submit_map[jobnum]
 
 	def resync(self, force=False):
 		result = ResyncParameterAdapter.resync(self, force)
@@ -122,13 +122,13 @@ class BasicParameterAdapter(ResyncParameterAdapter):
 TrackingInfo = make_enum(['ACTIVE', 'HASH', 'pnum'], use_hash=False)
 
 
-def create_placeholder_psrc(pa_old, pa_new, map_job_num2pnum, pspi_list_missing, result_disable):
+def create_placeholder_psrc(pa_old, pa_new, map_jobnum2pnum, pspi_list_missing, result_disable):
 	# Construct placeholder parameter source with missing parameter entries and intervention state
 	psp_list_missing = []
 	missing_pnum_start = pa_new.get_job_len()
 	sort_inplace(pspi_list_missing, key=itemgetter(TrackingInfo.pnum))
 	for (idx, pspi_missing) in enumerate(pspi_list_missing):
-		map_job_num2pnum[pspi_missing[TrackingInfo.pnum]] = missing_pnum_start + idx
+		map_jobnum2pnum[pspi_missing[TrackingInfo.pnum]] = missing_pnum_start + idx
 		psp_missing = pa_old.get_job_content(missing_pnum_start + idx, pspi_missing[TrackingInfo.pnum])
 		psp_missing.pop('GC_PARAM')
 		if psp_missing[ParameterInfo.ACTIVE]:
@@ -144,10 +144,10 @@ def create_placeholder_psrc(pa_old, pa_new, map_job_num2pnum, pspi_list_missing,
 
 
 def diff_pspi_list(pa_old, pa_new, result_redo, result_disable):
-	map_job_num2pnum = {}
+	map_jobnum2pnum = {}
 
 	def handle_matching_pspi(pspi_list_added, pspi_list_missing, pspi_list_same, pspi_old, pspi_new):
-		map_job_num2pnum[pspi_old[TrackingInfo.pnum]] = pspi_new[TrackingInfo.pnum]
+		map_jobnum2pnum[pspi_old[TrackingInfo.pnum]] = pspi_new[TrackingInfo.pnum]
 		if not pspi_old[TrackingInfo.ACTIVE] and pspi_new[TrackingInfo.ACTIVE]:
 			result_redo.add(pspi_new[TrackingInfo.pnum])
 		if pspi_old[TrackingInfo.ACTIVE] and not pspi_new[TrackingInfo.ACTIVE]:
@@ -156,15 +156,15 @@ def diff_pspi_list(pa_old, pa_new, result_redo, result_disable):
 	(pspi_list_added, pspi_list_missing, _) = utils.get_list_difference(
 		translate_pa2pspi_list(pa_old), translate_pa2pspi_list(pa_new),
 		itemgetter(TrackingInfo.HASH), handle_matching_pspi)
-	return (map_job_num2pnum, pspi_list_added, pspi_list_missing)
+	return (map_jobnum2pnum, pspi_list_added, pspi_list_missing)
 
 
-def extend_map_job_num2pnum(map_job_num2pnum, job_num_start, pspi_list_added):
+def extend_map_jobnum2pnum(map_jobnum2pnum, jobnum_start, pspi_list_added):
 	# assign sequential job numbers to the added parameter entries
 	sort_inplace(pspi_list_added, key=itemgetter(TrackingInfo.pnum))
 	for (pspi_idx, pspi_added) in enumerate(pspi_list_added):
-		if job_num_start + pspi_idx != pspi_added[TrackingInfo.pnum]:
-			map_job_num2pnum[job_num_start + pspi_idx] = pspi_added[TrackingInfo.pnum]
+		if jobnum_start + pspi_idx != pspi_added[TrackingInfo.pnum]:
+			map_jobnum2pnum[jobnum_start + pspi_idx] = pspi_added[TrackingInfo.pnum]
 
 
 def translate_pa2pspi_list(padapter):
@@ -182,15 +182,15 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 	def __init__(self, config, source):
 		self._psrc_raw = source
 		BasicParameterAdapter.__init__(self, config, source)
-		self._map_job_num2pnum = {}
+		self._map_jobnum2pnum = {}
 		utils.ensure_dir_exists(config.get_work_path(), 'parameter storage directory', ParameterError)
-		self._path_job_num2pnum = config.get_work_path('params.map.gz')
+		self._path_jobnum2pnum = config.get_work_path('params.map.gz')
 		self._path_params = config.get_work_path('params.dat.gz')
 
 		# Find out if init should be performed - overrides resync_requested!
 		init_requested = config.get_state('init', detail='parameters')
 		init_needed = False
-		if not (os.path.exists(self._path_params) and os.path.exists(self._path_job_num2pnum)):
+		if not (os.path.exists(self._path_params) and os.path.exists(self._path_jobnum2pnum)):
 			init_needed = True  # Init needed if no parameter log exists
 		if init_requested and not init_needed and (source.get_parameter_len() is not None):
 			self._log.warning('Re-Initialization will overwrite the current mapping ' +
@@ -217,37 +217,37 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 
 		if not (do_resync or do_init):  # Reuse old mapping
 			activity = Activity('Loading cached parameter information')
-			self._read_job_num2pnum()
+			self._read_jobnum2pnum()
 			activity.finish()
 			return
 		elif do_resync:  # Perform sync
 			self._psrc_hash_stored = None
 			self._resync_state = self.resync(force=True)
 		elif do_init:  # Write current state
-			self._write_job_num2pnum(self._path_job_num2pnum)
+			self._write_jobnum2pnum(self._path_jobnum2pnum)
 			ParameterSource.get_class('GCDumpParameterSource').write(self._path_params,
 				self.get_job_len(), self.get_job_metadata(), self.iter_jobs())
 		config.set('parameter hash', self._psrc_raw.get_psrc_hash())
 
-	def get_job_content(self, job_num, pnum=None):
-		# Perform mapping between job_num and parameter number
-		pnum = self._map_job_num2pnum.get(job_num, job_num)
+	def get_job_content(self, jobnum, pnum=None):
+		# Perform mapping between jobnum and parameter number
+		pnum = self._map_jobnum2pnum.get(jobnum, jobnum)
 		if (self._psrc.get_parameter_len() is None) or (pnum < self._psrc.get_parameter_len()):
-			result = BasicParameterAdapter.get_job_content(self, job_num, pnum)
+			result = BasicParameterAdapter.get_job_content(self, jobnum, pnum)
 		else:
 			result = {ParameterInfo.ACTIVE: False}
-		result['GC_JOB_ID'] = job_num
+		result['GC_JOB_ID'] = jobnum
 		return result
 
-	def _read_job_num2pnum(self):
-		fp = ZipFile(self._path_job_num2pnum, 'r')
+	def _read_jobnum2pnum(self):
+		fp = ZipFile(self._path_jobnum2pnum, 'r')
 		try:
-			def translate_info(job_num_pnum_info):
-				return tuple(imap(lambda x: int(x.lstrip('!')), job_num_pnum_info.split(':', 1)))
+			def translate_info(jobnum_pnum_info):
+				return tuple(imap(lambda x: int(x.lstrip('!')), jobnum_pnum_info.split(':', 1)))
 
 			int(fp.readline())  # max number of jobs
-			job_num_pnum_info_iter = ifilter(identity, imap(str.strip, fp.readline().split(',')))
-			self._map_job_num2pnum = dict(imap(translate_info, job_num_pnum_info_iter))
+			jobnum_pnum_info_iter = ifilter(identity, imap(str.strip, fp.readline().split(',')))
+			self._map_jobnum2pnum = dict(imap(translate_info, jobnum_pnum_info_iter))
 			self._can_submit_map = {}
 		finally:
 			fp.close()
@@ -267,46 +267,46 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		return self._resync_adapter(pa_old, pa_new, result_redo, result_disable, size_change)
 
 	def _resync_adapter(self, pa_old, pa_new, result_redo, result_disable, size_change):
-		(map_job_num2pnum, pspi_list_added, pspi_list_missing) = diff_pspi_list(pa_old, pa_new,
+		(map_jobnum2pnum, pspi_list_added, pspi_list_missing) = diff_pspi_list(pa_old, pa_new,
 			result_redo, result_disable)
 		# Reorder and reconstruct parameter space with the following layout:
 		# NNNNNNNNNNNNN OOOOOOOOO | source: NEW (==self) and OLD (==from file)
 		# <same><added> <missing> | same: both in NEW and OLD, added: only in NEW, missing: only in OLD
 		if pspi_list_added:
-			extend_map_job_num2pnum(map_job_num2pnum, pa_old.get_job_len(), pspi_list_added)
+			extend_map_jobnum2pnum(map_jobnum2pnum, pa_old.get_job_len(), pspi_list_added)
 		if pspi_list_missing:
 			# extend the parameter source by placeholders for the missing parameter space points
 			psrc_missing = create_placeholder_psrc(pa_old, pa_new,
-				map_job_num2pnum, pspi_list_missing, result_disable)
+				map_jobnum2pnum, pspi_list_missing, result_disable)
 			self._psrc = ParameterSource.create_instance('ChainParameterSource',
 				self._psrc_raw, psrc_missing)
 
-		self._map_job_num2pnum = map_job_num2pnum  # Update Job2PID map
+		self._map_jobnum2pnum = map_jobnum2pnum  # Update Job2PID map
 		# Write resynced state
-		self._write_job_num2pnum(self._path_job_num2pnum + '.tmp')
+		self._write_jobnum2pnum(self._path_jobnum2pnum + '.tmp')
 		ParameterSource.get_class('GCDumpParameterSource').write(self._path_params + '.tmp',
 			self.get_job_len(), self.get_job_metadata(), self.iter_jobs())
-		os.rename(self._path_job_num2pnum + '.tmp', self._path_job_num2pnum)
+		os.rename(self._path_jobnum2pnum + '.tmp', self._path_jobnum2pnum)
 		os.rename(self._path_params + '.tmp', self._path_params)
 
 		result_redo = result_redo.difference(result_disable)
 		if result_redo or result_disable:
-			map_pnum2job_num = dict(ismap(utils.swap, self._map_job_num2pnum.items()))
+			map_pnum2jobnum = dict(ismap(utils.swap, self._map_jobnum2pnum.items()))
 
 			def translate_pnum(pnum):
-				return map_pnum2job_num.get(pnum, pnum)
+				return map_pnum2jobnum.get(pnum, pnum)
 			result_redo = set(imap(translate_pnum, result_redo))
 			result_disable = set(imap(translate_pnum, result_disable))
 			return (result_redo, result_disable, size_change)
 		return (set(), set(), size_change)
 
-	def _write_job_num2pnum(self, fn):
+	def _write_jobnum2pnum(self, fn):
 		fp = ZipFile(fn, 'w')
 		try:
 			fp.write('%d\n' % (self._psrc_raw.get_parameter_len() or 0))
-			data = ifilter(lambda job_num_pnum: job_num_pnum[0] != job_num_pnum[1],
-				self._map_job_num2pnum.items())
-			datastr = lmap(lambda job_num_pnum: '%d:%d' % job_num_pnum, data)
+			data = ifilter(lambda jobnum_pnum: jobnum_pnum[0] != jobnum_pnum[1],
+				self._map_jobnum2pnum.items())
+			datastr = lmap(lambda jobnum_pnum: '%d:%d' % jobnum_pnum, data)
 			fp.write('%s\n' % str.join(',', datastr))
 		finally:
 			fp.close()

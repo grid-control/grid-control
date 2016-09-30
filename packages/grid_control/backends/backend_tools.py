@@ -74,7 +74,7 @@ class BackendExecutor(ConfigurablePlugin):
 		blacklist = lmap(str.lower, blacklist or [])
 		discardlist = lmap(str.lower, discardlist or [])
 		def is_on_list(line, lst):
-			return any(imap(lambda entry: entry in line, lst))
+			return any(imap(line.__contains__, lst))
 		do_log = log_empty # log if stderr is empty
 		for line in ifilter(identity, imap(str.lower, proc.stderr.read_log().splitlines())):
 			if is_on_list(line, discardlist): # line on discard list -> dont log

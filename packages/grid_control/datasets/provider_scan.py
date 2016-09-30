@@ -13,152 +13,216 @@
 # | limitations under the License.
 
 import os, sys
-from grid_control import utils
-from grid_control.config import add_config_suffix, create_config
+from grid_control.config import TriggerResync, add_config_suffix, create_config
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
+from grid_control.utils import filter_dict, get_user_bool, intersect_first_dict, replace_with_dict, split_opt  # pylint:disable=line-too-long
 from grid_control.utils.data_structures import UniqueList
 from hpfwk import Plugin, PluginError
-from python_compat import identity, ifilter, imap, itemgetter, lchain, lmap, lsmap, md5_hex, sorted
+from python_compat import ifilter, imap, itemgetter, lchain, lmap, lsmap, md5_hex, sorted
 
 
 class ScanProviderBase(DataProvider):
-	def __init__(self, config, datasource_name, dataset_expr, datasetNick, dataset_proc, sList):
-		DataProvider.__init__(self, config, datasource_name, dataset_expr, datasetNick, dataset_proc)
-		(self._ds_select, self._ds_name, self._ds_keys_user, self._ds_keys_guard) = self._setup(config, 'dataset')
-		(self._b_select, self._b_name, self._b_keys_user, self._b_keys_guard) = self._setup(config, 'block')
-		scanList = config.get_list('scanner', sList) + ['NullScanner']
+	def __init__(self, config, datasource_name, dataset_expr,
+			dataset_nick, dataset_proc, scanner_list_default):
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
+		# Configure scanners
 		scanner_config = config.change_view(default_on_change=TriggerResync(['datasets', 'parameters']))
-		self._scanner = lmap(lambda cls: InfoScanner.create_instance(cls, scanner_config, datasource_name), scanList)
+		self._interactive_assignment = config.is_interactive('dataset name assignment', True)
 
+		def create_scanner(scanner_name):
+			return InfoScanner.create_instance(scanner_name, scanner_config, datasource_name)
+		scanner_list = config.get_list('scanner', scanner_list_default) + ['NullScanner']
+		self._scanner_list = lmap(create_scanner, scanner_list)
 
-	def _setup(self, config, prefix):
-		select = config.get_list(add_config_suffix(prefix, 'key select'), [])
-		name = config.get(add_config_suffix(prefix, 'name pattern'), '')
-		kuser = config.get_list(add_config_suffix(prefix, 'hash keys'), [])
-		kguard = config.get_list(add_config_suffix(prefix, 'guard override'), [])
-		return (select, name, kuser, kguard)
+		# Configure dataset / block naming and selection
+		def _setup(prefix):
+			selected_hash_list = config.get_list(add_config_suffix(prefix, 'key select'), [])
+			name = config.get(add_config_suffix(prefix, 'name pattern'), '')
+			return (selected_hash_list, name)
+		(self._selected_hash_list_dataset, self._dataset_pattern) = _setup('dataset')
+		(self._selected_hash_list_block, self._block_pattern) = _setup('block')
 
+		# Configure hash input for separation of files into datasets / blocks
+		def _get_active_hash_input(prefix, guard_entry_idx):
+			hash_input_list_user = config.get_list(add_config_suffix(prefix, 'hash keys'), [])
+			hash_input_list_guard = config.get_list(add_config_suffix(prefix, 'guard override'),
+				lchain(imap(lambda scanner: scanner.get_guard_keysets()[guard_entry_idx], self._scanner_list)))
+			return hash_input_list_user + hash_input_list_guard
+		self._hash_input_set_dataset = _get_active_hash_input('dataset', 0)
+		self._hash_input_set_block = _get_active_hash_input('block', 1)
 
-	def _collectFiles(self):
-		def recurse(level, collectorList, args):
-			if collectorList:
-				for data in recurse(level - 1, collectorList[:-1], args):
-					for (path, metadata, nEvents, location_list, obj_dict) in collectorList[-1](level, *data):
-						yield (path, dict(metadata), nEvents, location_list, obj_dict)
+	def _assign_dataset_block(self, map_key2fm_list, map_key2metadata_dict, file_metadata_iter):
+		# Split files into blocks/datasets via key functions and determine metadata intersection
+		for (url, metadata_dict, entries, location_list, obj_dict) in file_metadata_iter:
+			# Dataset hash always includes dataset expr and nickname override
+			hash_dataset = self._get_hash(self._hash_input_set_dataset, metadata_dict,
+				md5_hex(repr(self._dataset_expr)) + md5_hex(repr(self._dataset_nick_override)))
+			# Block hash always includes the dataset hash and location list
+			hash_block = self._get_hash(self._hash_input_set_block, metadata_dict,
+				hash_dataset + md5_hex(repr(location_list)))
+
+			if not self._selected_hash_list_dataset or (hash_dataset in self._selected_hash_list_dataset):
+				if not self._selected_hash_list_block or (hash_block in self._selected_hash_list_block):
+					metadata_dict.update({'DS_KEY': hash_dataset, 'BLOCK_KEY': hash_block})
+					self._assign_dataset_block_selected(map_key2fm_list, map_key2metadata_dict,
+						(url, metadata_dict, entries, location_list, obj_dict),
+						hash_dataset, hash_block, metadata_dict)
+
+	def _assign_dataset_block_selected(self, map_key2fm_list, map_key2metadata_dict,
+			file_metadata, hash_dataset, hash_block, metadata_dict):
+		key_dataset = (hash_dataset,)  # The used key conventions are very important!
+		key_block = (hash_dataset, hash_block)
+		fm_list = map_key2fm_list.setdefault(key_block, [])
+		fm_list.append(file_metadata)
+		# prune metadata dict down to infos common for all hashes
+		metadata_dict_dataset = map_key2metadata_dict.setdefault(key_dataset, dict(metadata_dict))
+		metadata_dict_block = map_key2metadata_dict.setdefault(key_block, dict(metadata_dict))
+		intersect_first_dict(metadata_dict_dataset, metadata_dict)
+		intersect_first_dict(metadata_dict_block, metadata_dict)
+
+	def _build_blocks(self, map_key2fm_list, map_key2name, map_key2metadata_dict):
+		# Return named dataset
+		for key in sorted(map_key2fm_list):
+			result = {
+				DataProvider.Dataset: map_key2name[key[:1]],
+				DataProvider.BlockName: map_key2name[key[:2]],
+			}
+			fm_list = map_key2fm_list[key]
+
+			# Determine location_list
+			location_list = None
+			for file_location_list in ifilter(lambda s: s is not None, imap(itemgetter(3), fm_list)):
+				location_list = location_list or []
+				location_list.extend(file_location_list)
+			if location_list is not None:
+				result[DataProvider.Locations] = list(UniqueList(location_list))
+
+			# use first file [0] to get the initial metadata_dict [1]
+			metadata_name_list = list(fm_list[0][1].keys())
+			result[DataProvider.Metadata] = metadata_name_list
+
+			# translate file metadata into data provider file info entries
+			def _translate_fm2fi(url, metadata_dict, entries, location_list, obj_dict):
+				if entries is None:
+					entries = -1
+				return {DataProvider.URL: url, DataProvider.NEntries: entries,
+					DataProvider.Metadata: lmap(metadata_dict.get, metadata_name_list)}
+			result[DataProvider.FileList] = lsmap(_translate_fm2fi, fm_list)
+			yield result
+
+	def _check_map_name2key(self, map_key2name, map_key2metadata_dict):
+		# Find name <-> key collisions
+		map_type2name2key_list = {}
+		for (key, name) in map_key2name.items():
+			if len(key) == 1:
+				key_type = 'dataset'
+			else:
+				key_type = 'block'
+			map_type2name2key_list.setdefault(key_type, {}).setdefault(name, []).append(key)
+		collision = False
+		map_key_type2vn_list = {
+			'dataset': self._hash_input_set_dataset,
+			'block': self._hash_input_set_dataset + self._hash_input_set_block
+		}
+		for (key_type, vn_list) in map_key_type2vn_list.items():
+			for (name, key_list) in map_type2name2key_list.get(key_type, {}).items():
+				if len(key_list) > 1:
+					self._log.warn('Multiple %s keys are mapped to the name %s!', key_type, repr(name))
+					for idx, key in enumerate(sorted(key_list)):
+						self._log.warn('\tCandidate #%d with key %r:', idx + 1, str.join('#', key))
+						metadata_dict = map_key2metadata_dict[key]
+						for (vn, value) in filter_dict(metadata_dict, key_filter=vn_list.__contains__).items():
+							self._log.warn('\t\t%s = %s', vn, value)
+					collision = True
+		if self._interactive_assignment and collision:
+			if not get_user_bool('Do you want to continue?', False):
+				sys.exit(os.EX_OK)
+
+	def _get_block_name(self, metadata_dict, hash_block):
+		return replace_with_dict(self._block_pattern or hash_block[:8], metadata_dict)
+
+	def _get_dataset_name(self, metadata_dict, hash_dataset):
+		dataset_pattern_default = '/PRIVATE/Dataset_%s' % hash_dataset
+		if 'SE_OUTPUT_BASE' in metadata_dict:
+			dataset_pattern_default = '/PRIVATE/@SE_OUTPUT_BASE@'
+		return replace_with_dict(self._dataset_pattern or dataset_pattern_default, metadata_dict)
+
+	def _get_hash(self, keys, metadata_dict, hash_seed):
+		return md5_hex(repr(hash_seed) + repr(lmap(metadata_dict.get, keys)))
+
+	def _iter_blocks_raw(self):
+		# Handling dataset and block information separately leads to nasty, nested code
+		(map_key2fm_list, map_key2metadata_dict) = ({}, {})
+		self._assign_dataset_block(map_key2fm_list, map_key2metadata_dict,
+			ifilter(itemgetter(0), self._iter_file_infos()))
+		# Generate names for blocks/datasets using common metadata - creating map id -> name
+		map_key2name = {}
+		for (key, metadata_dict) in map_key2metadata_dict.items():
+			if len(key) == 1:
+				map_key2name[key] = self._get_dataset_name(metadata_dict, hash_dataset=key[0])
+			else:
+				map_key2name[key] = self._get_block_name(metadata_dict, hash_block=key[1])
+		# Check for bijective mapping id <-> name:
+		self._check_map_name2key(map_key2name, map_key2metadata_dict)
+		# Yield finished dataset blocks
+		for block in self._build_blocks(map_key2fm_list, map_key2name, map_key2metadata_dict):
+			yield block
+
+	def _iter_file_infos(self):
+		def _recurse(level, scanner_iter_list, args):
+			if scanner_iter_list:
+				for data in _recurse(level - 1, scanner_iter_list[:-1], args):
+					for (path, metadata, entries, location_list, obj_dict) in scanner_iter_list[-1](level, *data):
+						yield (path, dict(metadata), entries, location_list, obj_dict)
 						self._raise_on_abort()
 			else:
 				yield args
-		return recurse(len(self._scanner), lmap(lambda x: x.iter_datasource_items, self._scanner), (None, {}, None, None, {}))
+		scanner_iter_list_start = lmap(lambda x: x.iter_datasource_items, self._scanner_list)
+		return _recurse(len(self._scanner_list), scanner_iter_list_start, (None, {}, None, None, {}))
 
 
-	def _generateKey(self, keys, base, path, metadata, events, location_list, obj_dict):
-		return md5_hex(repr(base) + repr(lmap(metadata.get, keys)))
+class GCProvider(ScanProviderBase):
+	# Get dataset information just from grid-control instance
+	# required format: <path to config file / workdir> [%<job selector]
+	alias_list = ['gc']
+
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None, dataset_proc=None):
+		ds_config = config.change_view(view_class='TaggedConfigView', addNames=[md5_hex(dataset_expr)])
+		if os.path.isdir(dataset_expr):
+			scanner_list = ['OutputDirsFromWork']
+			ds_config.set('source directory', dataset_expr)
+			dataset_expr = os.path.join(dataset_expr, 'work.conf')
+		else:
+			scanner_list = ['OutputDirsFromConfig', 'MetadataFromTask']
+			dataset_expr, selector = split_opt(dataset_expr, '%')
+			ds_config.set('source config', dataset_expr)
+			ds_config.set('source job selector', selector)
+		ext_config = create_config(dataset_expr)
+		ext_task_name = ext_config.change_view(setSections=['global']).get(['module', 'task'])
+		if 'ParaMod' in ext_task_name:  # handle old config files
+			ext_task_name = ext_config.change_view(setSections=['ParaMod']).get('module')
+		ext_task_cls = Plugin.get_class(ext_task_name)
+		for ext_task_cls in Plugin.get_class(ext_task_name).iter_class_bases():
+			try:
+				scan_holder = GCProviderSetup.get_class('GCProviderSetup_' + ext_task_cls.__name__)
+			except PluginError:
+				continue
+			scanner_list += scan_holder.scanner_list
+			break
+		ScanProviderBase.__init__(self, ds_config, datasource_name, dataset_expr,
+			dataset_nick, dataset_proc, scanner_list)
 
 
-	def _generateDatasetName(self, key, data):
-		if 'SE_OUTPUT_BASE' in data:
-			return utils.replace_with_dict(self._ds_name or '/PRIVATE/@SE_OUTPUT_BASE@', data)
-		return utils.replace_with_dict(self._ds_name or ('/PRIVATE/Dataset_%s' % key), data)
-
-
-	def _generateBlockName(self, key, data):
-		return utils.replace_with_dict(self._b_name or key[:8], data)
-
-
-	def _get_filteredVarDict(self, varDict, varDictKeyComponents, hashKeys):
-		tmp = varDict
-		for key_component in varDictKeyComponents:
-			tmp = tmp[key_component]
-		result = {}
-		for key, value in ifilter(lambda k_v: k_v[0] in hashKeys, tmp.items()):
-			result[key] = value
-		return result
-
-
-	# Find name <-> key collisions
-	def _findCollision(self, tName, nameDict, varDict, hashKeys, keyFmt, nameFmt = identity):
-		dupesDict = {}
-		for (key, name) in nameDict.items():
-			dupesDict.setdefault(nameFmt(name), []).append(keyFmt(name, key))
-		ask = True
-		for name, key_list in sorted(dupesDict.items()):
-			if len(key_list) > 1:
-				self._log.warn('Multiple %s keys are mapped to the name %s!', tName, repr(name))
-				for key in sorted(key_list):
-					self._log.warn('\t%s hash %s using:', tName, str.join('#', key))
-					for var, value in self._get_filteredVarDict(varDict, key, hashKeys).items():
-						self._log.warn('\t\t%s = %s', var, value)
-				if ask and not utils.get_user_bool('Do you want to continue?', False):
-					sys.exit(os.EX_OK)
-				ask = False
-
-
-	def _buildBlocks(self, protoBlocks, hashNameDictDS, hashNameDictB):
-		# Return named dataset
-		for hashDS in sorted(protoBlocks):
-			for hashB in sorted(protoBlocks[hashDS]):
-				blockSEList = None
-				for location_list in ifilter(lambda s: s is not None, imap(lambda x: x[3], protoBlocks[hashDS][hashB])):
-					blockSEList = blockSEList or []
-					blockSEList.extend(location_list)
-				if blockSEList is not None:
-					blockSEList = list(UniqueList(blockSEList))
-				metaKeys = protoBlocks[hashDS][hashB][0][1].keys()
-				def fnProps(path, metadata, events, location_list, obj_dict):
-					if events is None:
-						events = -1
-					return {DataProvider.URL: path, DataProvider.NEntries: events,
-						DataProvider.Metadata: lmap(metadata.get, metaKeys)}
-				yield {
-					DataProvider.Dataset: hashNameDictDS[hashDS],
-					DataProvider.BlockName: hashNameDictB[hashB][1],
-					DataProvider.Locations: blockSEList,
-					DataProvider.Metadata: list(metaKeys),
-					DataProvider.FileList: lsmap(fnProps, protoBlocks[hashDS][hashB])
-				}
-
-
-	def _iter_blocks_raw(self):
-		# Split files into blocks/datasets via key functions and determine metadata intersection
-		(protoBlocks, commonDS, commonB) = ({}, {}, {})
-		def getActiveKeys(kUser, kGuard, gIdx):
-			return kUser + (kGuard or lchain(imap(lambda x: x.get_ds_block_class_keys()[gIdx], self._scanner)))
-		keysDS = getActiveKeys(self._ds_keys_user, self._ds_keys_guard, 0)
-		keysB = getActiveKeys(self._b_keys_user, self._b_keys_guard, 1)
-		for fileInfo in ifilter(itemgetter(0), self._collectFiles()):
-			hashDS = self._generateKey(keysDS, md5_hex(repr(self._dataset_expr)) + md5_hex(repr(self._dataset_nick_override)), *fileInfo)
-			hashB = self._generateKey(keysB, hashDS + md5_hex(repr(fileInfo[3])), *fileInfo) # [3] == SE list
-			if not self._ds_select or (hashDS in self._ds_select):
-				if not self._b_select or (hashB in self._b_select):
-					fileInfo[1].update({'DS_KEY': hashDS, 'BLOCK_KEY': hashB})
-					protoBlocks.setdefault(hashDS, {}).setdefault(hashB, []).append(fileInfo)
-					utils.intersect_first_dict(commonDS.setdefault(hashDS, dict(fileInfo[1])), fileInfo[1])
-					utils.intersect_first_dict(commonB.setdefault(hashDS, {}).setdefault(hashB, dict(fileInfo[1])), fileInfo[1])
-
-		# Generate names for blocks/datasets using common metadata
-		(hashNameDictDS, hashNameDictB) = ({}, {})
-		for hashDS in protoBlocks:
-			hashNameDictDS[hashDS] = self._generateDatasetName(hashDS, commonDS[hashDS])
-			for hashB in protoBlocks[hashDS]:
-				hashNameDictB[hashB] = (hashDS, self._generateBlockName(hashB, commonB[hashDS][hashB]))
-
-		self._findCollision('dataset', hashNameDictDS, commonDS, keysDS, lambda name, key: [key])
-		self._findCollision('block', hashNameDictB, commonB, keysDS + keysB, lambda name, key: [name[0], key], lambda name: name[1])
-
-		for block in self._buildBlocks(protoBlocks, hashNameDictDS, hashNameDictB):
-			yield block
-
-
-# Get dataset information from storage url
-# required format: <storage url>
 class ScanProvider(ScanProviderBase):
+	# Get dataset information from storage url
+	# required format: <storage url>
 	alias_list = ['scan']
 
-	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
-		ds_config = config.change_view(view_class = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None, dataset_proc=None):
+		ds_config = config.change_view(view_class='TaggedConfigView', addNames=[md5_hex(dataset_expr)])
 		basename = os.path.basename(dataset_expr)
-		firstScanner = 'FilesFromLS'
+		scanner_first = 'FilesFromLS'
 		if '*' in basename:
 			ds_config.set('source directory', dataset_expr.replace(basename, ''))
 			ds_config.set('filename filter', basename)
@@ -167,43 +231,16 @@ class ScanProvider(ScanProviderBase):
 		else:
 			ds_config.set('source dataset path', dataset_expr)
 			ds_config.set('filename filter', '')
-			firstScanner = 'FilesFromDataProvider'
-		defScanner = [firstScanner, 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
-		ScanProviderBase.__init__(self, ds_config, datasource_name, dataset_expr, datasetNick, dataset_proc, defScanner)
+			scanner_first = 'FilesFromDataProvider'
+		scanner_list_default = [scanner_first, 'MatchOnFilename', 'MatchDelimeter',
+			'DetermineEvents', 'AddFilePrefix']
+		ScanProviderBase.__init__(self, ds_config, datasource_name, dataset_expr,
+			dataset_nick, dataset_proc, scanner_list_default)
 
 
-# This class is used to disentangle the TaskModule and GCProvider class - without any direct dependencies / imports
 class GCProviderSetup(Plugin):
+	# This class is used to disentangle the TaskModule and GCProvider class
+	#  - without any direct dependencies / imports
 	alias_list = ['GCProviderSetup_TaskModule']
-	scan_pipeline = ['JobInfoFromOutputDir', 'FilesFromJobInfo', 'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']
-
-
-# Get dataset information just from grid-control instance
-# required format: <path to config file / workdir> [%<job selector]
-class GCProvider(ScanProviderBase):
-	alias_list = ['gc']
-
-	def __init__(self, config, datasource_name, dataset_expr, datasetNick = None, dataset_proc = None):
-		ds_config = config.change_view(view_class = 'TaggedConfigView', addNames = [md5_hex(dataset_expr)])
-		if os.path.isdir(dataset_expr):
-			scan_pipeline = ['OutputDirsFromWork']
-			ds_config.set('source directory', dataset_expr)
-			dataset_expr = os.path.join(dataset_expr, 'work.conf')
-		else:
-			scan_pipeline = ['OutputDirsFromConfig', 'MetadataFromTask']
-			dataset_expr, selector = utils.split_opt(dataset_expr, '%')
-			ds_config.set('source config', dataset_expr)
-			ds_config.set('source job selector', selector)
-		ext_config = create_config(dataset_expr)
-		ext_task_name = ext_config.change_view(setSections = ['global']).get(['module', 'task'])
-		if 'ParaMod' in ext_task_name: # handle old config files
-			ext_task_name = ext_config.change_view(setSections = ['ParaMod']).get('module')
-		ext_task_cls = Plugin.get_class(ext_task_name)
-		for ext_task_cls in Plugin.get_class(ext_task_name).iter_class_bases():
-			try:
-				scan_holder = GCProviderSetup.get_class('GCProviderSetup_' + ext_task_cls.__name__)
-			except PluginError:
-				continue
-			scan_pipeline += scan_holder.scan_pipeline
-			break
-		ScanProviderBase.__init__(self, ds_config, datasource_name, dataset_expr, datasetNick, dataset_proc, scan_pipeline)
+	scanner_list = ['JobInfoFromOutputDir', 'FilesFromJobInfo',
+		'MatchOnFilename', 'MatchDelimeter', 'DetermineEvents', 'AddFilePrefix']

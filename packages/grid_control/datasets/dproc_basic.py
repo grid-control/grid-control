@@ -90,10 +90,11 @@ class LocationDataProcessor(DataProcessor):
 		if block[DataProvider.Locations] is not None:
 			sites = self._location_filter.filter_list(block[DataProvider.Locations])
 			if (sites is not None) and (len(sites) == 0) and (len(block[DataProvider.FileList]) != 0):
+				err_msg = 'Block %s is not available ' % DataProvider.get_block_id(block)
 				if not len(block[DataProvider.Locations]):
-					self._log.warning('Block %s is not available at any site!', DataProvider.get_block_id(block))
+					self._log.warning(err_msg + 'at any site!')
 				elif not len(sites):
-					self._log.warning('Block %s is not available at any selected site!', DataProvider.get_block_id(block))
+					self._log.warning(err_msg + 'at any selected site!')
 			block[DataProvider.Locations] = sites
 		return block
 

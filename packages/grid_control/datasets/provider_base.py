@@ -13,14 +13,14 @@
 # | limitations under the License.
 
 import os, copy, logging
-from grid_control import utils
 from grid_control.config import TriggerResync, create_config
 from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
+from grid_control.utils import abort, ensure_dir_exists, get_list_difference, split_list
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, InstanceFactory, NestedException
-from python_compat import StringBuffer, identity, ifilter, imap, irange, itemgetter, json, lmap, lrange, md5_hex, set, sort_inplace
+from python_compat import StringBuffer, identity, ifilter, imap, irange, itemgetter, json, lmap, lrange, md5_hex, set, sort_inplace  # pylint:disable=line-too-long
 
 
 class DatasetError(NestedException):
@@ -108,7 +108,7 @@ class DataProvider(ConfigurablePlugin):
 			self._cache_dataset = set()
 			for block in self.get_block_list_cached(show_stats=True):
 				self._cache_dataset.add(block[DataProvider.Dataset])
-				if utils.abort():
+				if abort():
 					raise DatasetError('Received abort request during dataset name retrieval!')
 		return list(self._cache_dataset)
 
@@ -186,7 +186,7 @@ class DataProvider(ConfigurablePlugin):
 			def handle_matching_fi(fi_list_added, fi_list_missing, fi_list_matched, fi_old, fi_new):
 				fi_list_matched.append((fi_old, fi_new))
 
-			(fi_list_added, fi_list_missing, fi_list_matched) = utils.get_list_difference(
+			(fi_list_added, fi_list_missing, fi_list_matched) = get_list_difference(
 				block_old[DataProvider.FileList], block_new[DataProvider.FileList],
 				get_file_key, handle_matching_fi, is_sorted=True)
 			if fi_list_added:  # Create new block for added files in an existing block
@@ -196,14 +196,14 @@ class DataProvider(ConfigurablePlugin):
 				block_list_added.append(block_added)
 			block_list_matching.append((block_old, block_new, fi_list_missing, fi_list_matched))
 
-		return utils.get_list_difference(block_list_old, block_list_new,
+		return get_list_difference(block_list_old, block_list_new,
 			get_block_key, handle_matching_block, is_sorted=True)
 	resync_blocks = staticmethod(resync_blocks)
 
 	def save_to_file(path, block_iter, strip_metadata=False):
 		# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
 		if os.path.dirname(path):
-			utils.ensure_dir_exists(os.path.dirname(path), 'dataset cache directory')
+			ensure_dir_exists(os.path.dirname(path), 'dataset cache directory')
 		fp = open(path, 'w')
 		try:
 			for _ in DataProvider.save_to_stream(fp, block_iter, strip_metadata):
@@ -260,18 +260,23 @@ class DataProvider(ConfigurablePlugin):
 	save_to_stream = staticmethod(save_to_stream)
 
 	def _create_block_cache(self, show_stats, iter_fun):
+		def _iter_blocks():
+			for block in iter_fun():
+				yield block
+				self._raise_on_abort()
 		# Cached access to list of block dicts, does also the validation checks
-		stats_processor = NullDataProcessor()
-		if show_stats:
-			stats_processor = self._stats
 		if self._cache_block is None:
 			try:
-				self._cache_block = list(stats_processor.process(self._dataset_processor.process(iter_fun())))
+				block_iter_processed = self._dataset_processor.process(_iter_blocks())
+				if show_stats:
+					block_iter_processed = self._stats.process(block_iter_processed)
+				self._cache_block = list(block_iter_processed)
 			except DatasetRetrievalError:  # skip dataset processing pipeline error message
 				raise
 			except Exception:
 				raise DatasetError('Unable to run dataset %s ' % repr(self._dataset_expr) +
 					'through processing pipeline!')
+		self._raise_on_abort()
 		return self._cache_block
 
 	def _iter_blocks_raw(self):
@@ -281,7 +286,7 @@ class DataProvider(ConfigurablePlugin):
 		raise AbstractError
 
 	def _raise_on_abort(self):
-		if utils.abort():
+		if abort():
 			raise DatasetError('Received abort request during retrieval of %r' % self.get_dataset_expr())
 
 # To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise
@@ -302,6 +307,6 @@ def _split_metadata_idx_list(block):
 		for idx in common_metadata_idx_list:
 			if get_metadata_hash(fi, idx) != common_metadata_hash_list[idx]:
 				common_metadata_idx_list.remove(idx)
-	return utils.split_list(irange(len(block[DataProvider.Metadata])),
+	return split_list(irange(len(block[DataProvider.Metadata])),
 		fun=common_metadata_idx_list.__contains__,
 		sort_key=lambda idx: block[DataProvider.Metadata][idx])

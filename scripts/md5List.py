@@ -23,9 +23,9 @@ def main():
 	fip = FileInfoProcessor()
 	(config, jobDB) = initGC(sys.argv[1:])
 	workDir = config.get_work_path()
-	for jobNum in sorted(jobDB.getJobs()):
-		if jip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))[JobResult.EXITCODE] == 0:
-			for fileInfo in fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum)):
+	for jobnum in sorted(jobDB.getJobs()):
+		if jip.process(os.path.join(workDir, 'output', 'job_%d' % jobnum))[JobResult.EXITCODE] == 0:
+			for fileInfo in fip.process(os.path.join(workDir, 'output', 'job_%d' % jobnum)):
 				pathSE = fileInfo[FileInfoProcessor.Path].replace('file://', '').replace('dir://', '')
 				print('%s  %s/%s' % (fileInfo[FileInfoProcessor.Hash], pathSE, fileInfo[FileInfoProcessor.NameDest]))
 

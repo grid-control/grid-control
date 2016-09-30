@@ -56,7 +56,7 @@ class StorageManager(NamedPlugin):
 	def addFiles(self, files):
 		pass
 
-	def getTaskConfig(self):
+	def get_task_dict(self):
 		return {}
 
 	def getDependencies(self):
@@ -94,7 +94,7 @@ class SEStorageManager(StorageManager):
 	def addFiles(self, files):
 		self._storage_files.extend(files)
 
-	def getTaskConfig(self):
+	def get_task_dict(self):
 		return {
 			'%s_PATH' % self._storage_var_prefix: str.join(' ', self._storage_paths),
 			'%s_FILES' % self._storage_var_prefix: str.join(' ', self._storage_files),

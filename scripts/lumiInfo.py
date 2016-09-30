@@ -78,18 +78,18 @@ def lumi_expr(opts, args):
 def iter_jobs(opts, workDir, jobList, splitter):
 	(splitInfo, fip) = ({}, FileInfoProcessor())
 	activity = Activity('Reading job logs')
-	for jobNum in jobList:
-		activity.update('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
+	for jobnum in jobList:
+		activity.update('Reading job logs - [%d / %d]' % (jobnum, jobList[-1]))
 
 		if opts.parameterized:
-			fi = fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
+			fi = fip.process(os.path.join(workDir, 'output', 'job_%d' % jobnum))
 			outputName = fi[0][FileInfoProcessor.NameDest].split('.')[0]
-			outputName = outputName.replace(opts.replace % jobNum, '_').replace('/', '_').replace('__', '_').strip('_')
+			outputName = outputName.replace(opts.replace % jobnum, '_').replace('/', '_').replace('__', '_').strip('_')
 		else:
 			if splitter:
-				splitInfo = splitter.get_partition(jobNum)
+				splitInfo = splitter.get_partition(jobnum)
 			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.Dataset, '').replace('/', '_'))
-		yield (jobNum, outputName)
+		yield (jobnum, outputName)
 	activity.finish()
 
 def process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict):
@@ -110,16 +110,16 @@ def process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict):
 
 def process_jobs(opts, workDir, jobList, splitter):
 	(lumiDict, readDict, writeDict) = ({}, {}, {})
-	for (jobNum, outputName) in iter_jobs(opts, workDir, jobList, splitter):
+	for (jobnum, outputName) in iter_jobs(opts, workDir, jobList, splitter):
 		# Read framework report files to get number of events
 		try:
-			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobNum))
+			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobnum))
 			for fwkXML in getCMSSWInfo(os.path.join(outputDir, 'cmssw.dbs.tar.gz')):
 				process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict)
 		except KeyboardInterrupt:
 			sys.exit(os.EX_OK)
 		except Exception:
-			print('Error while parsing framework output of job %s!' % jobNum)
+			print('Error while parsing framework output of job %s!' % jobnum)
 			continue
 	return (lumiDict, readDict, writeDict)
 

@@ -13,8 +13,8 @@
 # | limitations under the License.
 
 import os, sys, logging
-from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError
+from grid_control.utils import PersistentDict, exec_wrapper, get_file_name, get_path_pkg, resolve_path  # pylint:disable=line-too-long
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.parsing import parse_list
@@ -46,7 +46,7 @@ class CompatConfigFiller(ConfigFiller):
 	def __init__(self, persistency_file):
 		self._persistency_dict = {}
 		if os.path.exists(persistency_file):
-			self._persistency_dict = utils.PersistentDict(persistency_file, ' = ')
+			self._persistency_dict = PersistentDict(persistency_file, ' = ')
 
 	def fill(self, container):
 		def set_persistent_setting(section, key):
@@ -77,7 +77,7 @@ class PythonConfigFiller(DictConfigFiller):
 		for config_fn in config_fn_list:
 			fp = SafeFile(config_fn)
 			try:
-				utils.exec_wrapper(fp.read(), {'Settings': Settings})
+				exec_wrapper(fp.read(), {'Settings': Settings})
 			finally:
 				fp.close()
 		DictConfigFiller.__init__(self, Settings.get_config_dict())
@@ -105,9 +105,9 @@ class FileConfigFiller(ConfigFiller):
 			self._add_entry(container, 'global', 'plugin paths+', search_path_str, plugin_paths_source)
 
 	def _fill_content_deep(self, config_fn, search_path_list, content_configfile):
-		log = logging.getLogger(('config.%s' % utils.get_file_name(config_fn)).rstrip('.').lower())
+		log = logging.getLogger(('config.%s' % get_file_name(config_fn)).rstrip('.').lower())
 		log.log(logging.INFO1, 'Reading config file %s', config_fn)
-		config_fn = utils.resolve_path(config_fn, search_path_list, exception_type=ConfigError)
+		config_fn = resolve_path(config_fn, search_path_list, exception_type=ConfigError)
 		config_str_list = SafeFile(config_fn).readlines()
 
 		# Single pass, non-recursive list retrieval
@@ -228,17 +228,17 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 		def get_default_config_fn_iter():  # return possible default config files
 			if hostname:  # host / domain specific
 				for part_idx in irange(hostname.count('.') + 1, -1, -1):
-					yield utils.get_path_pkg('../config/%s.conf' % hostname.split('.', part_idx)[-1])
+					yield get_path_pkg('../config/%s.conf' % hostname.split('.', part_idx)[-1])
 			yield '/etc/grid-control.conf'  # system specific
 			yield '~/.grid-control.conf'  # user specific
-			yield utils.get_path_pkg('../config/default.conf')  # installation specific
+			yield get_path_pkg('../config/default.conf')  # installation specific
 			if os.environ.get('GC_CONFIG'):
 				yield '$GC_CONFIG'  # environment specific
 
 		config_fn_list = list(get_default_config_fn_iter())
 		log = logging.getLogger('config.sources.default')
 		log.log(logging.DEBUG1, 'Possible default config files: %s', str.join(', ', config_fn_list))
-		config_fn_iter = imap(lambda fn: utils.resolve_path(fn, must_exist=False), config_fn_list)
+		config_fn_iter = imap(lambda fn: resolve_path(fn, must_exist=False), config_fn_list)
 		FileConfigFiller.__init__(self, lfilter(os.path.exists, config_fn_iter), add_search_path=False)
 
 

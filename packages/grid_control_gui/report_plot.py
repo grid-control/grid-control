@@ -58,7 +58,7 @@ JobResultEnum = make_enum([
 
 def extractJobTiming(jInfo, task):
 	jobResult = dict()
-	jobNum = jInfo[JobResult.JOBNUM]
+	jobnum = jInfo[JobResult.JOBNUM]
 
 	# intialize all with None
 	for key in JobResultEnum.enum_name_list:
@@ -83,7 +83,7 @@ def extractJobTiming(jInfo, task):
 
 	# look for processed events, if available
 	if task is not None:
-		jobConfig = task.getJobConfig(jobNum)
+		jobConfig = task.get_job_dict(jobnum)
 		jobResult[JobResultEnum.EVENT_COUNT] = int(jobConfig["MAX_EVENTS"])
 		# make sure an undefined max event count (-1 in cmssw) is treated
 		# as unkown event count

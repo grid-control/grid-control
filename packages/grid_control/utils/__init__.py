@@ -20,7 +20,7 @@ from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import NestedException, clear_current_exception
-from python_compat import exit_without_cleanup, get_user_input, identity, ifilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sort_inplace, sorted, tarfile, unspecified
+from python_compat import exit_without_cleanup, get_user_input, identity, ifilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sort_inplace, sorted, tarfile, unspecified  # pylint:disable=line-too-long
 
 
 class GCIOError(NestedException):
@@ -127,13 +127,14 @@ def display_selection(log, items_before, items_after, message, formatter, log_le
 
 
 def display_table(head, data, fmt_string='', fmt=None):
-	if display_table.mode == 'parseable':
+	wraplen = get_default_property(display_table, 'wraplen', 100)
+	table_mode = get_default_property(display_table, 'mode', 'default')
+
+	if table_mode == 'parseable':
 		return ParseableTable(head, data, '|')
-	elif display_table.mode == 'longlist':
-		return RowTable(head, data, fmt, display_table.wraplen)
-	return ColumnTable(head, data, fmt_string, fmt, display_table.wraplen)
-display_table.wraplen = 100
-display_table.mode = 'default'
+	elif table_mode == 'longlist':
+		return RowTable(head, data, fmt, wraplen)
+	return ColumnTable(head, data, fmt_string, fmt, wraplen)
 
 
 def ensure_dir_exists(dn, name='directory', exception_type=PathError):
@@ -175,6 +176,14 @@ def filter_processors(processor_list, id_fun=lambda proc: proc.__class__.__name_
 			result.append(proc)
 			processor_id_list.append(id_fun(proc))
 	return result
+
+
+def get_default_property(obj, attr_name, default, default_delayed=False):
+	if not hasattr(obj, attr_name):
+		if default_delayed:
+			default = default()
+		setattr(obj, attr_name, default)
+	return getattr(obj, attr_name)
 
 
 def get_file_name(fn):  # Return file name without extension
@@ -221,7 +230,7 @@ def get_path_share(*args, **kw):
 
 
 def get_user_bool(text, default):
-	def _get_user_input(text, default, choices, parser=identity):
+	def _get_user_input(text, default, choices, parser=parse_bool):
 		log = logging.getLogger('console')
 		while True:
 			handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -237,7 +246,9 @@ def get_user_bool(text, default):
 				return parser(userinput)
 			valid = str.join(', ', imap(lambda x: '"%s"' % x, choices[:-1]))
 			log.critical('Invalid input! Answer with %s or "%s"', valid, choices[-1])
-	return _get_user_input(text, QM(default, 'yes', 'no'), ['yes', 'no'], parse_bool)
+
+	ask_user_fun = get_default_property(get_user_bool, 'ask_user_fun', _get_user_input)
+	return ask_user_fun(text, QM(default, 'yes', 'no'), ['yes', 'no'])
 
 
 def get_version():
@@ -253,9 +264,7 @@ def get_version():
 		except Exception:
 			clear_current_exception()
 		return __import__('grid_control').__version__ + ' or later'
-	if not hasattr(get_version, 'cache'):
-		get_version.cache = _get_version()
-	return get_version.cache
+	return get_default_property(get_version, 'version_cache', _get_version, default_delayed=True)
 
 
 def intersect_first_dict(dict1, dict2):

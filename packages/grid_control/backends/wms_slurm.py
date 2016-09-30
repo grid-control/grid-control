@@ -59,11 +59,11 @@ class SLURM(LocalWMS):
 			cancelExecutor = CancelJobsWithProcessBlind(config, 'scancel', unknownID = 'not in queue !'))
 
 
-	def getJobArguments(self, jobNum, sandbox):
+	def getJobArguments(self, jobnum, sandbox):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
 		params = ' -J "%s"' % job_name
 		# processes and IO paths

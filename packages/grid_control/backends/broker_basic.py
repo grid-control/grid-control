@@ -110,7 +110,7 @@ class SimpleBroker(FilterBroker):
 			return True
 		# Apply sort order and give matching entries as preselection to FilterBroker
 		items = lfilter(lambda x: matcher(self._itemsDiscovered[x]), self._itemsStart or self._itemsSorted)
-		return FilterBroker._broker(self, reqs, lfilter(lambda x: x in items, self._itemsSorted))
+		return FilterBroker._broker(self, reqs, lfilter(items.__contains__, self._itemsSorted))
 
 
 class StorageBroker(Broker):

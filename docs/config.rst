@@ -631,6 +631,20 @@ ConfigDataProvider options
   * ``se list`` = <text> (default: '')
     Specify list of locations where the dataset is available
 
+ScanProviderBase options
+------------------------
+
+  * ``<prefix> guard override`` = <list of values> (default: <taken from the selected info scanners>)
+    Override the list of guard keys that are preventing files from being in the same datasets or block
+  * ``<prefix> hash keys`` = <list of values> (default: '')
+    Specify list of keys that are used to determine the datasets or block assigment of files
+  * ``<prefix> key select`` = <list of values> (default: '')
+    Specify list of dataset or block hashes that are selected for this data source
+  * ``<prefix> name pattern`` = <text> (default: '')
+    Specify the name pattern for the dataset or block (using variables that are common to all files in the dataset or block)
+  * ``scanner`` = <list of values> (default: <depends on other configuration options>)
+    Specify list of info scanner plugins to retrieve dataset informations
+
 DASProvider options
 -------------------
 
@@ -659,10 +673,10 @@ DASProvider options
   * ``phedex sites order`` = <enum: source|matcher> (Default: source)
     Specifiy the order of the filtered list
 
-ScanProvider options
---------------------
+DBSInfoProvider options
+-----------------------
 
-  * ``<prefix> guard override`` = <list of values> (default: '')
+  * ``<prefix> guard override`` = <list of values> (default: <taken from the selected info scanners>)
     Override the list of guard keys that are preventing files from being in the same datasets or block
   * ``<prefix> hash keys`` = <list of values> (default: '')
     Specify list of keys that are used to determine the datasets or block assigment of files
@@ -670,12 +684,6 @@ ScanProvider options
     Specify list of dataset or block hashes that are selected for this data source
   * ``<prefix> name pattern`` = <text> (default: '')
     Specify the name pattern for the dataset or block (using variables that are common to all files in the dataset or block)
-  * ``scanner`` = <list of values> (default: <depends on other configuration options>)
-    Specify list of info scanner plugins to retrieve dataset informations
-
-DBSInfoProvider options
------------------------
-
   * ``discovery`` = <boolean> (default: False)
     Toggle discovery only mode (without DBS consistency checks)
   * ``scanner`` = <list of values> (default: <depends on other configuration options>)

@@ -96,13 +96,13 @@ class GCDumpParameterSource(ParameterSource): # Reader for grid-control dump fil
 			vn_list = sorted(lmap(lambda p: p.value, ifilter(lambda p: not p.untracked, ps_metadata)))
 			fp.write('# %s\n' % json.dumps(vn_list))
 			activity = Activity('Writing parameter dump')
-			for job_num, psp in enumerate(psp_iter):
-				activity.update('Writing parameter dump [%d/%d]' % (job_num + 1, ps_len))
+			for jobnum, psp in enumerate(psp_iter):
+				activity.update('Writing parameter dump [%d/%d]' % (jobnum + 1, ps_len))
 				psp_str = str.join('\t', imap(lambda k: json.dumps(psp.get(k, '')), vn_list))
 				if psp.get(ParameterInfo.ACTIVE, True):
-					fp.write('%d\t%s\n' % (job_num, psp_str))
+					fp.write('%d\t%s\n' % (jobnum, psp_str))
 				else:
-					fp.write('%d!\t%s\n' % (job_num, psp_str))
+					fp.write('%d!\t%s\n' % (jobnum, psp_str))
 			activity.finish()
 		finally:
 			fp.close()

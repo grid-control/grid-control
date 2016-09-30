@@ -12,9 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets.provider_base import DataProvider, DatasetError
+from grid_control.utils import split_opt
 from grid_control.utils.parsing import parse_json, parse_list
 from python_compat import lmap, rsplit
 
@@ -27,7 +27,7 @@ class FileProvider(DataProvider):
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None, dataset_proc=None):
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 
-		(self._path, self._events, selist) = utils.split_opt(dataset_expr, '|@')
+		(self._path, self._events, selist) = split_opt(dataset_expr, '|@')
 		self._selist = parse_list(selist, ',') or None
 		if not (self._path and self._events):
 			raise ConfigError('Invalid dataset expression!\nCorrect: /local/path/to/file|events[@SE1,SE2]')
@@ -62,7 +62,7 @@ class ListProvider(DataProvider):
 			'se list': (DataProvider.Locations, lambda value: parse_list(value, ','), 'block location'),
 		}
 
-		(path, self._forced_prefix, self._filter) = utils.split_opt(dataset_expr, '@%')
+		(path, self._forced_prefix, self._filter) = split_opt(dataset_expr, '@%')
 		self._filename = config.resolve_path(path, True, 'Error resolving dataset file: %s' % path)
 
 	def _create_block(self, block_name):
@@ -74,6 +74,58 @@ class ListProvider(DataProvider):
 		}
 		result.update(DataProvider.parse_block_id(block_name.lstrip('[').rstrip(']')))
 		return result
+
+	def _create_blocks(self, iterable):
+		block = None
+		for idx, line in enumerate(iterable):
+			try:
+				# Found start of block:
+				line = line.strip()
+				if line.startswith(';'):
+					continue
+				elif line.startswith('['):
+					if block:
+						yield self._finish_block(block)
+					block = self._create_block(line)
+				elif line != '':
+					if '[' in line:  # metadata on this line -> enforce whitespace '/path/file = ...'
+						tmp = lmap(str.strip, line.split(' = ', 1))
+					else:  # loose whitespace convention (allow: '/path/file_var=B_test=1')
+						tmp = lmap(str.strip, rsplit(line, '=', 1))
+					if len(tmp) != 2:
+						raise DatasetError('Malformed entry in dataset file:\n%s' % line)
+					self._fill_block(block, *tmp)
+			except Exception:
+				raise DatasetError('Unable to parse %s:%d\n\t%s' % (repr(self._filename), idx, repr(line)))
+		if block:
+			yield self._finish_block(block)
+
+	def _create_fi(self, block, url, value):
+		if self._forced_prefix:
+			url = '%s/%s' % (self._forced_prefix, url)
+		elif block[self._common_prefix]:
+			url = '%s/%s' % (block[self._common_prefix], url)
+		value = value.split('[', 1)
+		result = {
+			DataProvider.URL: url,
+			DataProvider.NEntries: _try_apply(value[0], int, 'entries of file %s' % repr(url))
+		}
+		if len(value) > 1:
+			file_metadata_list = _try_apply('[' + value[1], parse_json, 'metadata of file %s' % repr(url))
+		else:
+			file_metadata_list = []
+		if block[self._common_metadata] or file_metadata_list:
+			result[DataProvider.Metadata] = block[self._common_metadata] + file_metadata_list
+		return result
+
+	def _fill_block(self, block, key, value):
+		handler_info = self._entry_handler_info.get(key.lower())
+		if handler_info:
+			(prop, parser, msg) = handler_info
+			if prop is not None:
+				block[prop] = _try_apply(value, parser, msg)
+		else:
+			block[DataProvider.FileList].append(self._create_fi(block, key, value))
 
 	def _finish_block(self, block):
 		block.pop(self._common_prefix)
@@ -90,7 +142,7 @@ class ListProvider(DataProvider):
 		except Exception:
 			raise DatasetError('Unable to open dataset file %s' % repr(self._filename))
 		try:
-			for block in self._parse_file(fp):
+			for block in self._create_blocks(fp):
 				if _filter_block(block):
 					self._raise_on_abort()
 					yield block
@@ -98,53 +150,6 @@ class ListProvider(DataProvider):
 		except Exception:
 			fp.close()
 			raise
-
-	def _parse_entry(self, block, url, value):
-		if self._forced_prefix:
-			url = '%s/%s' % (self._forced_prefix, url)
-		elif block[self._common_prefix]:
-			url = '%s/%s' % (block[self._common_prefix], url)
-		value = value.split(' ', 1)
-		result = {
-			DataProvider.URL: url,
-			DataProvider.NEntries: _try_apply(value[0], int, 'entries of file %s' % repr(url))
-		}
-		if len(value) > 1:
-			file_metadata_list = _try_apply(value[1], parse_json, 'metadata of file %s' % repr(url))
-		else:
-			file_metadata_list = []
-		if block[self._common_metadata] or file_metadata_list:
-			result[DataProvider.Metadata] = block[self._common_metadata] + file_metadata_list
-		return result
-
-	def _parse_file(self, iterable):
-		block = None
-		for idx, line in enumerate(iterable):
-			try:
-				# Found start of block:
-				line = line.strip()
-				if line.startswith(';'):
-					continue
-				elif line.startswith('['):
-					if block:
-						yield self._finish_block(block)
-					block = self._create_block(line)
-				elif line != '':  # TODO: improve parsing for files not following the conventions
-					tmp = lmap(str.strip, utils.QM('[' in line, line.split(' = ', 1), rsplit(line, '=', 1)))
-					if len(tmp) != 2:
-						raise DatasetError('Malformed entry in dataset file:\n%s' % line)
-					(key, value) = (tmp[0], tmp[1])  # avoid false positives for unpacking checkers
-					handler_info = self._entry_handler_info.get(key.lower())
-					if handler_info:
-						(prop, parser, msg) = handler_info
-						if prop is not None:
-							block[prop] = _try_apply(value, parser, msg)
-					else:
-						block[DataProvider.FileList].append(self._parse_entry(block, key, value))
-			except Exception:
-				raise DatasetError('Unable to parse %s:%d\n\t%s' % (repr(self._filename), idx, repr(line)))
-		if block:
-			yield self._finish_block(block)
 
 
 def _try_apply(value, fun, desc):

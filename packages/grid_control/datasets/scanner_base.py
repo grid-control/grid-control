@@ -23,7 +23,7 @@ class InfoScanner(ConfigurablePlugin):
 		self._log = logging.getLogger('%s.provider.infoscanner' % datasource_name)
 		self._datasource_name = datasource_name
 
-	def get_ds_block_class_keys(self):
+	def get_guard_keysets(self):
 		return ([], [])
 
 	def iter_datasource_items(self, depth, item, metadata_dict, entries, location_list, obj_dict):

@@ -36,7 +36,7 @@ handles interaction with all other components.
 Conventions:
   o Job Identification/accounting
 Internal components uniquely identify jobs via blobs of
-  jobData = (int(jobNum), str(taskID), int(clusterID), int(processID))
+  jobData = (int(jobnum), str(taskID), int(clusterID), int(processID))
 while job activities are directed via job data maps of
   {ScheddURI : [jobData,jobData,jobData,...] }
 
@@ -70,7 +70,7 @@ class HTCondor(BasicWMS):
 	_queueQueryMapDef = {
 			'clusterId' : [ 'ClusterId'] ,
 			'processId' : [ 'ProcId' ],
-			'jobNum'    : [ 'GcJobNum' ],
+			'jobnum'    : [ 'GcJobNum' ],
 			'wmsID'     : [ 'GcID' ],
 			'rawID'     : [ 'rawID' ],
 			'state'     : [ 'JobStatus' ],
@@ -152,8 +152,8 @@ class HTCondor(BasicWMS):
 		return self._schedd.getTimings()
 
 	# path functions shared with schedds
-	def getJobCfgPath(self, jobNum = "%d"):
-		cfgName = 'job_%s.var' % jobNum
+	def getJobCfgPath(self, jobnum = "%d"):
+		cfgName = 'job_%s.var' % jobnum
 		return os.path.join(self.config.get_work_path('jobs'), cfgName), cfgName
 
 	def getSandboxPath(self, subdirToken=""):
@@ -161,17 +161,17 @@ class HTCondor(BasicWMS):
 		return utils.ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
 
 	# Primary backend actions
-	def submitJobs(self, jobNumList, task):
-		requestLen = len(jobNumList)
+	def submitJobs(self, jobnumList, task):
+		requestLen = len(jobnumList)
 		activity = Activity('Submitting jobs (--%)')
-		while jobNumList:
-			jobSubmitNumList = jobNumList[-self._schedd.getSubmitScale():]
-			del jobNumList[-self._schedd.getSubmitScale():]
-			activity = Activity('Submitting jobs (%2d%%)'%(100*(requestLen-len(jobNumList))/requestLen))
-			for jobNum in jobSubmitNumList:
+		while jobnumList:
+			jobSubmitNumList = jobnumList[-self._schedd.getSubmitScale():]
+			del jobnumList[-self._schedd.getSubmitScale():]
+			activity = Activity('Submitting jobs (%2d%%)'%(100*(requestLen-len(jobnumList))/requestLen))
+			for jobnum in jobSubmitNumList:
 				self._writeJobConfig(
-					self.getJobCfgPath(jobNum)[0],
-					jobNum,
+					self.getJobCfgPath(jobnum)[0],
+					jobnum,
 					task, {}
 					)
 			rawJobInfoMaps = self._schedd.submitJobs(
@@ -179,7 +179,7 @@ class HTCondor(BasicWMS):
 				task,
 				self._getQueryArgs()
 				)
-			# Yield (jobNum, gcID, other data) per jobZ
+			# Yield (jobnum, gcID, other data) per jobZ
 			jobInfoMaps = self._digestQueueInfoMaps(rawJobInfoMaps)
 			for htcID in jobInfoMaps:
 				yield (
@@ -198,7 +198,7 @@ class HTCondor(BasicWMS):
 			self._splitGcRequests(wmsJobIdList),
 			self._getQueryArgs()
 			)
-		# Yield (jobNum, gcID, state, other data) per active jobs
+		# Yield (jobnum, gcID, state, other data) per active jobs
 		jobInfoMaps = self._digestQueueInfoMaps(rawJobInfoMaps)
 		for htcID in jobInfoMaps:
 			yield (
@@ -217,7 +217,7 @@ class HTCondor(BasicWMS):
 		returnedJobs = self._schedd.getJobsOutput(
 			self._splitGcRequests(wmsJobIdList)
 			)
-		# Yield (jobNum, outputPath) per retrieved job
+		# Yield (jobnum, outputPath) per retrieved job
 		for htcID in returnedJobs:
 			yield (
 				htcID.gcJobNum,
@@ -233,7 +233,7 @@ class HTCondor(BasicWMS):
 		canceledJobs = self._schedd.cancelJobs(
 			self._splitGcRequests(wmsJobIdList)
 			)
-		# Yield ( jobNum, wmsID) for canceled jobs
+		# Yield ( jobnum, wmsID) for canceled jobs
 		for htcJobID in canceledJobs:
 			yield (
 				htcJobID.gcJobNum,
@@ -249,15 +249,15 @@ class HTCondor(BasicWMS):
 		"""Split a GcId, returning wmsName and htcJobID"""
 		wmsName, rawId = self._splitId(gcId)
 		return (wmsName, HTCJobID(rawID = rawId))
-	def _splitGcRequests(self, jobNumGcIdList):
-		"""Process sequence of (GcId, jobNum), returning sequence of htcIDs"""
-		return [ self._splitGcId(gcId)[1] for gcId, jobNum in jobNumGcIdList ]
-	def _getJobDataMap(self, jobNumGcIdList):
-		"""Process list of (jobNum, GcId), returning {ScheddURI : [(jobNum, taskID, clusterID, processID),...] }"""
+	def _splitGcRequests(self, jobnumGcIdList):
+		"""Process sequence of (GcId, jobnum), returning sequence of htcIDs"""
+		return [ self._splitGcId(gcId)[1] for gcId, jobnum in jobnumGcIdList ]
+	def _getJobDataMap(self, jobnumGcIdList):
+		"""Process list of (jobnum, GcId), returning {ScheddURI : [(jobnum, taskID, clusterID, processID),...] }"""
 		scheddJobMap = {}
-		for jobNum, GcId in jobNumGcIdList:
+		for jobnum, GcId in jobnumGcIdList:
 			_, scheddURI, taskID, clusterID, processID = _splitGcId(GcId)
-			scheddJobMap.setdefault(scheddURI, []).append(tuple(jobNum, taskID, clusterID, processID))
+			scheddJobMap.setdefault(scheddURI, []).append(tuple(jobnum, taskID, clusterID, processID))
 		return scheddJobMap
 
 	# Queue queries and status processing

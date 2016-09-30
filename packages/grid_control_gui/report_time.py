@@ -29,7 +29,7 @@ class TimeReport(Report):
 		return 1
 
 	def show_report(self, job_db):
-		job_runtimes = imap(lambda jobNum: job_db.getJobTransient(jobNum).get('runtime', 0), self._jobs)
+		job_runtimes = imap(lambda jobnum: job_db.getJobTransient(jobnum).get('runtime', 0), self._jobs)
 		cpuTime = sum(ifilter(lambda rt: rt > 0, job_runtimes))
 		msg = 'Consumed wall time: %-20s' % str_time_long(cpuTime)
 		msg += 'Estimated cost: $%.2f\n' % ((cpuTime / 60. / 60.) * self._dollar_per_hour)

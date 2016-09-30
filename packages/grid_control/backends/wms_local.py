@@ -109,12 +109,12 @@ class LocalWMS(BasicWMS):
 		self.memory = config.get_int('memory', -1, on_change = None)
 
 
-	# Submit job and yield (jobNum, WMS ID, other data)
-	def _submitJob(self, jobNum, module):
-		activity = Activity('submitting job %d' % jobNum)
+	# Submit job and yield (jobnum, WMS ID, other data)
+	def _submitJob(self, jobnum, module):
+		activity = Activity('submitting job %d' % jobnum)
 
 		try:
-			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobNum), self._sandbox_helper.get_path())
+			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (module.taskID, jobnum), self._sandbox_helper.get_path())
 		except Exception:
 			raise BackendError('Unable to create sandbox directory "%s"!' % sandbox)
 		sbPrefix = sandbox.replace(self._sandbox_helper.get_path(), '').lstrip('/')
@@ -122,19 +122,19 @@ class LocalWMS(BasicWMS):
 			return (d, s, os.path.join(sbPrefix, t))
 		self.smSBIn.doTransfer(ismap(translateTarget, self._getSandboxFilesIn(module)))
 
-		self._writeJobConfig(os.path.join(sandbox, '_jobconfig.sh'), jobNum, module, {
+		self._writeJobConfig(os.path.join(sandbox, '_jobconfig.sh'), jobnum, module, {
 			'GC_SANDBOX': sandbox, 'GC_SCRATCH_SEARCH': str.join(' ', self.scratchPath)})
-		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)
+		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobnum), WMS.SITES)
 		reqs = dict(self.brokerQueue.brokerAdd(reqs, WMS.QUEUES))
 		if (self.memory > 0) and (reqs.get(WMS.MEMORY, 0) < self.memory):
 			reqs[WMS.MEMORY] = self.memory # local jobs need higher (more realistic) memory requirements
 
 		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
-		job_name = module.getDescription(jobNum).job_name
+		job_name = module.getDescription(jobnum).job_name
 		submit_args = shlex.split(self.submitOpts)
-		submit_args.extend(shlex.split(self.getSubmitArguments(jobNum, job_name, reqs, sandbox, stdout, stderr)))
+		submit_args.extend(shlex.split(self.getSubmitArguments(jobnum, job_name, reqs, sandbox, stdout, stderr)))
 		submit_args.append(utils.get_path_share('gc-local.sh'))
-		submit_args.extend(shlex.split(self.getJobArguments(jobNum, sandbox)))
+		submit_args.extend(shlex.split(self.getJobArguments(jobnum, sandbox)))
 		proc = LocalProcess(self.submitExec, *submit_args)
 		retCode = proc.status(timeout = 20, terminate = True)
 		gcIDText = proc.stdout.read(timeout = 0).strip().strip('\n')
@@ -154,7 +154,7 @@ class LocalWMS(BasicWMS):
 			open(os.path.join(sandbox, gcID), 'w')
 		else:
 			self._log.log_process(proc)
-		return (jobNum, utils.QM(gcID, gcID, None), {'sandbox': sandbox})
+		return (jobnum, utils.QM(gcID, gcID, None), {'sandbox': sandbox})
 
 
 	def _getJobsOutput(self, ids):
@@ -162,17 +162,17 @@ class LocalWMS(BasicWMS):
 			raise StopIteration
 
 		activity = Activity('retrieving %d job outputs' % len(ids))
-		for gcID, jobNum in ids:
+		for gcID, jobnum in ids:
 			path = self._sandbox_helper.get_sandbox(gcID)
 			if path is None:
-				yield (jobNum, None)
+				yield (jobnum, None)
 				continue
 
 			# Cleanup sandbox
 			outFiles = lchain(imap(lambda pat: glob.glob(os.path.join(path, pat)), self.outputFiles))
 			utils.remove_files(ifilter(lambda x: x not in outFiles, imap(lambda fn: os.path.join(path, fn), os.listdir(path))))
 
-			yield (jobNum, path)
+			yield (jobnum, path)
 		activity.finish()
 
 
@@ -188,10 +188,10 @@ class LocalWMS(BasicWMS):
 			return test(reqs[req])
 		return False
 
-	def getJobArguments(self, jobNum, sandbox):
+	def getJobArguments(self, jobnum, sandbox):
 		raise AbstractError
 
-	def getSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		raise AbstractError
 
 	def parseSubmitOutput(self, data):

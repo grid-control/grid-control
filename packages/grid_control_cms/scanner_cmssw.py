@@ -21,9 +21,9 @@ from python_compat import all, bytes2str, ifilter, imap, lfilter, tarfile
 
 
 class GCProviderSetup_CMSSW(GCProviderSetup):
-	scan_pipeline = ['ObjectsFromCMSSW', 'JobInfoFromOutputDir', 'FilesFromJobInfo',
+	scanner_list = ['ObjectsFromCMSSW', 'JobInfoFromOutputDir', 'FilesFromJobInfo',
 		'MatchOnFilename', 'MatchDelimeter', 'MetadataFromCMSSW', 'SEListFromPath',
-		'LFNFromPath', 'Determineentries', 'AddFilePrefix']
+		'LFNFromPath', 'DetermineEvents', 'AddFilePrefix']
 
 
 def readTag(base, tag, default = None):
@@ -80,12 +80,12 @@ class ObjectsFromCMSSW(InfoScanner):
 		searchConfigFile('CMSSW_ANNOTATION', self._regex_annotation, None)
 		searchConfigFile('CMSSW_DATATIER', self._regex_datatier, 'USER')
 		cfgReport = xml.dom.minidom.parseString(bytes2str(tar.extractfile('%s/report.xml' % cfg).read()))
-		evRead = sum(imap(lambda x: int(readTag(x, 'entriesRead')), cfgReport.getElementsByTagName('InputFile')))
+		evRead = sum(imap(lambda x: int(readTag(x, 'EventsRead')), cfgReport.getElementsByTagName('InputFile')))
 		return (cfgSummary, cfgReport, evRead)
 
 	def _processOutputFile(self, cfgReport, outputFile):
 		fileSummary = {'CMSSW_DATATYPE': readTag(outputFile, 'DataType'),
-			'CMSSW_entries_WRITE': int(readTag(outputFile, 'Totalentries'))}
+			'CMSSW_EVENTS_WRITE': int(readTag(outputFile, 'TotalEvents'))}
 		# Read lumisection infos
 		lumis = []
 		for run in readList(outputFile, 'Runs', 'Run'):
@@ -110,7 +110,7 @@ class ObjectsFromCMSSW(InfoScanner):
 		pfn = readTag(outputFile, 'PFN').split(':')[-1]
 		return (fileSummary, pfn)
 
-	def _processSteps(self, jobNum, tar, cfgSummaryMap, fileSummaryMap):
+	def _processSteps(self, jobnum, tar, cfgSummaryMap, fileSummaryMap):
 		cmsswVersion = bytes2str(tar.extractfile('version').read()).strip()
 		for cfg in ifilter(lambda x: ('/' not in x) and (x not in ['version', 'files']), tar.getnames()):
 			try:
@@ -118,16 +118,16 @@ class ObjectsFromCMSSW(InfoScanner):
 				cfgSummary['CMSSW_VERSION'] = cmsswVersion
 				cfgSummaryMap[cfg] = cfgSummary
 			except Exception:
-				raise DatasetError('Could not read config infos about %s in job %d' % (cfg, jobNum))
+				raise DatasetError('Could not read config infos about %s in job %d' % (cfg, jobnum))
 
 			for outputFile in cfgReport.getElementsByTagName('File'):
 				(fileSummary, pfn) = self._processOutputFile(cfgReport, outputFile)
-				fileSummary['CMSSW_entries_READ'] = evRead
+				fileSummary['CMSSW_EVENTS_READ'] = evRead
 				fileSummary['CMSSW_CONFIG_FILE'] = cfg
 				fileSummaryMap.setdefault(pfn, {}).update(fileSummary)
 
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
-		jobNum = metadata_dict['GC_JOBNUM']
+		jobnum = metadata_dict['GC_JOBNUM']
 		cmsRunLog = os.path.join(item, 'cmssw.dbs.tar.gz')
 		if os.path.exists(cmsRunLog):
 			tar = tarfile.open(cmsRunLog, 'r')
@@ -138,10 +138,10 @@ class ObjectsFromCMSSW(InfoScanner):
 					fileSummaryMap[rawdata[2]] = {'SE_OUTPUT_HASH_CRC32': rawdata[0], 'SE_OUTPUT_SIZE': int(rawdata[1])}
 				obj_dict['CMSSW_FILES'] = fileSummaryMap
 			except Exception:
-				raise DatasetError('Could not read CMSSW file infos for job %d!' % jobNum)
+				raise DatasetError('Could not read CMSSW file infos for job %d!' % jobnum)
 			# Collect infos about CMSSW processing steps
 			cfgSummaryMap = {}
-			self._processSteps(jobNum, tar, cfgSummaryMap, fileSummaryMap)
+			self._processSteps(jobnum, tar, cfgSummaryMap, fileSummaryMap)
 			for cfg in cfgSummaryMap:
 				metadata_dict.setdefault('CMSSW_CONFIG_JOBHASH', []).append(cfgSummaryMap[cfg]['CMSSW_CONFIG_HASH'])
 			obj_dict.update({'CMSSW_CONFIG': cfgSummaryMap, 'CMSSW_FILES': fileSummaryMap})
@@ -196,5 +196,5 @@ class LFNFromPath(InfoScanner):
 
 class FilterEDMFiles(InfoScanner):
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
-		if all(imap(lambda x: x in metadata_dict, ['CMSSW_entries_WRITE', 'CMSSW_CONFIG_FILE'])):
+		if all(imap(metadata_dict.__contains__, ['CMSSW_EVENTS_WRITE', 'CMSSW_CONFIG_FILE'])):
 			yield (item, metadata_dict, entries, location_list, obj_dict)

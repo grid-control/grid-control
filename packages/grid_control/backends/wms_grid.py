@@ -146,16 +146,16 @@ class GridWMS(BasicWMS):
 		return None
 
 
-	def makeJDL(self, jobNum, module):
-		cfgPath = os.path.join(self._jobPath, 'job_%d.var' % jobNum)
+	def makeJDL(self, jobnum, module):
+		cfgPath = os.path.join(self._jobPath, 'job_%d.var' % jobnum)
 		sbIn = lmap(lambda d_s_t: d_s_t[1], self._getSandboxFilesIn(module))
 		sbOut = lmap(lambda d_s_t: d_s_t[2], self._getSandboxFilesOut(module))
 		wcList = lfilter(lambda x: '*' in x, sbOut)
 		if len(wcList):
-			self._writeJobConfig(cfgPath, jobNum, module, {'GC_WC': str.join(' ', wcList)})
+			self._writeJobConfig(cfgPath, jobnum, module, {'GC_WC': str.join(' ', wcList)})
 			sandboxOutJDL = lfilter(lambda x: x not in wcList, sbOut) + ['GC_WC.tar.gz']
 		else:
-			self._writeJobConfig(cfgPath, jobNum, module, {})
+			self._writeJobConfig(cfgPath, jobnum, module, {})
 			sandboxOutJDL = sbOut
 		# Warn about too large sandboxes
 		sbSizes = lmap(os.path.getsize, sbIn)
@@ -164,11 +164,11 @@ class GridWMS(BasicWMS):
 				sys.exit(os.EX_OK)
 			self._warnSBSize = 0
 
-		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobNum), WMS.SITES)
+		reqs = self.brokerSite.brokerAdd(module.getRequirements(jobnum), WMS.SITES)
 		formatStrList = lambda strList: '{ %s }' % str.join(', ', imap(lambda x: '"%s"' % x, strList))
 		contents = {
 			'Executable': '"gc-run.sh"',
-			'Arguments': '"%d"' % jobNum,
+			'Arguments': '"%d"' % jobnum,
 			'StdOutput': '"gc.stdout"',
 			'StdError': '"gc.stderr"',
 			'InputSandbox': formatStrList(sbIn + [cfgPath]),
@@ -195,11 +195,11 @@ class GridWMS(BasicWMS):
 		return False
 
 
-	# Submit job and yield (jobNum, WMS ID, other data)
-	def _submitJob(self, jobNum, module):
+	# Submit job and yield (jobnum, WMS ID, other data)
+	def _submitJob(self, jobnum, module):
 		fd, jdl = tempfile.mkstemp('.jdl')
 		try:
-			jdlData = self.makeJDL(jobNum, module)
+			jdlData = self.makeJDL(jobnum, module)
 			utils.safe_write(os.fdopen(fd, 'w'), jdlData)
 		except Exception:
 			utils.remove_files([jdl])
@@ -211,7 +211,7 @@ class GridWMS(BasicWMS):
 				submitArgs.extend(key_value)
 			submitArgs.append(jdl)
 
-			activity = Activity('submitting job %d' % jobNum)
+			activity = Activity('submitting job %d' % jobnum)
 			proc = LocalProcess(self._submitExec, '--nomsg', '--noint', '--logfile', '/dev/stderr', *submitArgs)
 
 			gcID = None
@@ -228,7 +228,7 @@ class GridWMS(BasicWMS):
 					self._log.log_process(proc, files = {'jdl': SafeFile(jdl).read()})
 		finally:
 			utils.remove_files([jdl])
-		return (jobNum, utils.QM(gcID, self._createId(gcID), None), {'jdl': str.join('', jdlData)})
+		return (jobnum, utils.QM(gcID, self._createId(gcID), None), {'jdl': str.join('', jdlData)})
 
 
 	# Get output of jobs and yield output dirs
@@ -247,14 +247,14 @@ class GridWMS(BasicWMS):
 		except Exception:
 			raise BackendError('Temporary path "%s" could not be created.' % tmpPath, BackendError)
 
-		jobNumMap = dict(ids)
+		jobnumMap = dict(ids)
 		jobs = self.writeWMSIds(ids)
 
 		activity = Activity('retrieving %d job outputs' % len(ids))
 		proc = LocalProcess(self._outputExec, '--noint', '--logfile', '/dev/stderr', '-i', jobs, '--dir', tmpPath)
 
 		# yield output dirs
-		todo = jobNumMap.values()
+		todo = jobnumMap.values()
 		currentJobNum = None
 		for line in imap(str.strip, proc.stdout.iter(timeout = 60)):
 			if line.startswith(tmpPath):
@@ -271,7 +271,7 @@ class GridWMS(BasicWMS):
 				yield (currentJobNum, line.strip())
 				currentJobNum = None
 			else:
-				currentJobNum = jobNumMap.get(self._createId(line), currentJobNum)
+				currentJobNum = jobnumMap.get(self._createId(line), currentJobNum)
 		retCode = proc.status(timeout = 0, terminate = True)
 		activity.finish()
 
@@ -286,7 +286,7 @@ class GridWMS(BasicWMS):
 				yield (None, os.path.join(basePath, dirName))
 
 		# return unretrievable jobs
-		for jobNum in todo:
-			yield (jobNum, None)
+		for jobnum in todo:
+			yield (jobnum, None)
 
 		utils.remove_files([jobs, basePath])

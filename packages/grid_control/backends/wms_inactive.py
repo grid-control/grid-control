@@ -32,8 +32,8 @@ class InactiveWMS(WMS):
 	def deployTask(self, task, monitor, transferSE, transferSB):
 		return
 
-	def submitJobs(self, jobNumList, task): # jobNumList = [1, 2, ...]
-		self._log.warning('Discarded submission of %d jobs', len(jobNumList))
+	def submitJobs(self, jobnumList, task): # jobnumList = [1, 2, ...]
+		self._log.warning('Discarded submission of %d jobs', len(jobnumList))
 
 	def checkJobs(self, gcIDs): # Check status and return (gcID, job_state, job_info) for active jobs
 		self._log.warning('Discarded check of %d jobs', len(gcIDs))

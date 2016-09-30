@@ -85,15 +85,15 @@ class CMSSW_Advanced(CMSSW):
 			utils.display_table(head, report, 'cl')
 
 
-	def getTaskConfig(self):
+	def get_task_dict(self):
 		# Remove config file variable from the global settings
-		data = CMSSW.getTaskConfig(self)
+		data = CMSSW.get_task_dict(self)
 		data.pop('CMSSW_CONFIG')
 		return data
 
 
-	def getJobConfig(self, jobNum):
-		data = CMSSW.getJobConfig(self, jobNum)
+	def get_job_dict(self, jobnum):
+		data = CMSSW.get_job_dict(self, jobnum)
 		config_file_list = self._nmCfg.lookup(data.get('DATASETNICK'), [], is_selector = False)
 		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, config_file_list))
 		return data

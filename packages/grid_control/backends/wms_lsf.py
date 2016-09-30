@@ -65,11 +65,11 @@ class LSF(LocalWMS):
 			checkExecutor = CheckJobsMissingState(config, LSF_CheckJobs(config)))
 
 
-	def getJobArguments(self, jobNum, sandbox):
+	def getJobArguments(self, jobnum, sandbox):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
 		params = ' -J %s' % job_name
 		# Job requirements

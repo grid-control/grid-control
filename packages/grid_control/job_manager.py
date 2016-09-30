@@ -101,16 +101,16 @@ class JobManager(NamedPlugin):
 			self._log.log_time(logging.DEBUG, 'Please refer to %s for a complete list of disabled jobs.', self._disabled_jobs_logfile)
 
 
-	def _update(self, jobObj, jobNum, state, showWMS = False, message = None):
+	def _update(self, jobObj, jobnum, state, showWMS = False, message = None):
 		if jobObj.state == state:
 			return
 
 		oldState = jobObj.state
 		jobObj.update(state)
-		self.jobDB.commit(jobNum, jobObj)
+		self.jobDB.commit(jobnum, jobObj)
 
-		jobNumLen = int(math.log10(max(1, len(self.jobDB))) + 1)
-		jobStatus = ['Job %s state changed from %s to %s ' % (str(jobNum).ljust(jobNumLen), Job.enum2str(oldState), Job.enum2str(state))]
+		jobnumLen = int(math.log10(max(1, len(self.jobDB))) + 1)
+		jobStatus = ['Job %s state changed from %s to %s ' % (str(jobnum).ljust(jobnumLen), Job.enum2str(oldState), Job.enum2str(state))]
 		if message is not None:
 			jobStatus.append(message)
 		if showWMS and jobObj.gcID:
@@ -234,23 +234,23 @@ class JobManager(NamedPlugin):
 		(change, timeoutList, reported) = (False, [], [])
 		if not jobList:
 			return (change, timeoutList, reported)
-		for (jobNum, jobObj, state, info) in self._check_jobs_raw(wms, jobList):
+		for (jobnum, jobObj, state, info) in self._check_jobs_raw(wms, jobList):
 			if state != Job.UNKNOWN:
-				reported.append(jobNum)
+				reported.append(jobnum)
 			if state != jobObj.state:
 				change = True
 				for (key, value) in info.items():
 					jobObj.set(key, value)
-				self._update(jobObj, jobNum, state)
-				self._eventhandler.onJobUpdate(wms, jobObj, jobNum, info)
+				self._update(jobObj, jobnum, state)
+				self._eventhandler.onJobUpdate(wms, jobObj, jobnum, info)
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if jobObj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
 					if self._timeout_queue > 0 and time.time() - jobObj.submitted > self._timeout_queue:
-						timeoutList.append(jobNum)
+						timeoutList.append(jobnum)
 				if jobObj.state == Job.UNKNOWN:
 					if self._timeout_unknown > 0 and time.time() - jobObj.submitted > self._timeout_unknown:
-						timeoutList.append(jobNum)
+						timeoutList.append(jobnum)
 			if utils.abort():
 				return (None, timeoutList, reported)
 		return (change, timeoutList, reported)
@@ -288,15 +288,15 @@ class JobManager(NamedPlugin):
 
 
 	def _wmsArgs(self, jobList):
-		return lmap(lambda jobNum: (self.jobDB.getJob(jobNum).gcID, jobNum), jobList)
+		return lmap(lambda jobnum: (self.jobDB.getJob(jobnum).gcID, jobnum), jobList)
 
 
 	def retrieve(self, task, wms):
 		change = False
 		jobList = self._sample(self.jobDB.getJobs(ClassSelector(JobClass.DONE)), utils.QM(self._chunks_enabled, self._chunks_retrieve, -1))
 
-		for (jobNum, retCode, data, outputdir) in wms.retrieveJobs(self._wmsArgs(jobList)):
-			jobObj = self.jobDB.getJob(jobNum)
+		for (jobnum, retCode, data, outputdir) in wms.retrieveJobs(self._wmsArgs(jobList)):
+			jobObj = self.jobDB.getJob(jobnum)
 			if jobObj is None:
 				continue
 
@@ -316,8 +316,8 @@ class JobManager(NamedPlugin):
 				change = True
 				jobObj.set('retcode', retCode)
 				jobObj.set('runtime', data.get('TIME', -1))
-				self._update(jobObj, jobNum, state)
-				self._eventhandler.onJobOutput(wms, jobObj, jobNum, retCode)
+				self._update(jobObj, jobnum, state)
+				self._eventhandler.onJobOutput(wms, jobObj, jobnum, retCode)
 
 			if utils.abort():
 				return False
@@ -333,12 +333,12 @@ class JobManager(NamedPlugin):
 		if interactive and not utils.get_user_bool('Do you really want to cancel these jobs?', True):
 			return
 
-		def mark_cancelled(jobNum):
-			jobObj = self.jobDB.getJob(jobNum)
+		def mark_cancelled(jobnum):
+			jobObj = self.jobDB.getJob(jobnum)
 			if jobObj is None:
 				return
-			self._update(jobObj, jobNum, Job.CANCELLED)
-			self._eventhandler.onJobUpdate(wms, jobObj, jobNum, {'reason': 'cancelled'})
+			self._update(jobObj, jobnum, Job.CANCELLED)
+			self._eventhandler.onJobUpdate(wms, jobObj, jobnum, {'reason': 'cancelled'})
 
 		jobnum_list.reverse()
 		gcID_jobnum_map = self._get_map_gcID_jobnum(jobnum_list)
@@ -372,19 +372,19 @@ class JobManager(NamedPlugin):
 			self._reportClass(self.jobDB, task, jobs).show_report(self.jobDB)
 			if self._interactive_reset or utils.get_user_bool('Are you sure you want to reset the state of these jobs?', False):
 				self.cancel(task, wms, self.jobDB.getJobs(ClassSelector(JobClass.PROCESSING), jobs), interactive = False, showJobs = False)
-				for jobNum in jobs:
-					self.jobDB.commit(jobNum, Job())
+				for jobnum in jobs:
+					self.jobDB.commit(jobnum, Job())
 
 
 	# Process changes of job states requested by task module
 	def _processIntervention(self, task, wms):
 		def reset_state(jobs, newState):
 			jobSet = set(jobs)
-			for jobNum in jobs:
-				jobObj = self.jobDB.getJobPersistent(jobNum)
+			for jobnum in jobs:
+				jobObj = self.jobDB.getJobPersistent(jobnum)
 				if jobObj.state in [Job.INIT, Job.DISABLED, Job.ABORTED, Job.CANCELLED, Job.DONE, Job.FAILED, Job.SUCCESS]:
-					self._update(jobObj, jobNum, newState)
-					jobSet.remove(jobNum)
+					self._update(jobObj, jobnum, newState)
+					jobSet.remove(jobnum)
 					jobObj.attempt = 0
 
 			if len(jobSet) > 0:
@@ -477,16 +477,16 @@ class SimpleJobManager(JobManager):
 			jobList = lfilter(lambda x: x not in waitList, jobList)
 
 		(change, timeoutList, reported) = JobManager._checkJobList(self, wms, jobList)
-		for jobNum in reported:
-			self._defect_counter.pop(jobNum, None)
+		for jobnum in reported:
+			self._defect_counter.pop(jobnum, None)
 
 		if self._defect_tries and (change is not None):
 			self._defect_raster = utils.QM(reported, 1, self._defect_raster + 1) # make 'raster' iteratively smaller
-			for jobNum in ifilter(lambda x: x not in reported, jobList):
-				self._defect_counter[jobNum] = self._defect_counter.get(jobNum, 0) + 1
-			kickList = lfilter(lambda jobNum: self._defect_counter[jobNum] >= self._defect_tries, self._defect_counter)
-			for jobNum in set(kickList + utils.QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
-				timeoutList.append(jobNum)
-				self._defect_counter.pop(jobNum)
+			for jobnum in ifilter(lambda x: x not in reported, jobList):
+				self._defect_counter[jobnum] = self._defect_counter.get(jobnum, 0) + 1
+			kickList = lfilter(lambda jobnum: self._defect_counter[jobnum] >= self._defect_tries, self._defect_counter)
+			for jobnum in set(kickList + utils.QM((len(reported) == 0) and (len(jobList) == 1), jobList, [])):
+				timeoutList.append(jobnum)
+				self._defect_counter.pop(jobnum)
 
 		return (change, timeoutList, reported)

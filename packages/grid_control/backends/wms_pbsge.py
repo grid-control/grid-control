@@ -29,11 +29,11 @@ class PBSGECommon(LocalWMS):
 		self._softwareReqs = config.get_lookup('software requirement map', {}, single = False, on_change = None)
 
 
-	def getJobArguments(self, jobNum, sandbox):
+	def getJobArguments(self, jobnum, sandbox):
 		return ''
 
 
-	def getCommonSubmitArguments(self, jobNum, job_name, reqs, sandbox, stdout, stderr, reqMap):
+	def getCommonSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr, reqMap):
 		# Job name
 		params = ' -N "%s"' % job_name
 		# Job accounting

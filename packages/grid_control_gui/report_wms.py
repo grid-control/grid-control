@@ -50,8 +50,8 @@ class BackendReport(Report):
 	def _getReportInfos(self, job_db):
 		result = []
 		t_now = time.time()
-		for jobNum in self._jobs:
-			jobObj = job_db.getJobTransient(jobNum)
+		for jobnum in self._jobs:
+			jobObj = job_db.getJobTransient(jobnum)
 			runtime = parse_str(jobObj.get('runtime'), int, 0)
 			for attempt in jobObj.history:
 				if (attempt != jobObj.attempt) and not self._useHistory:

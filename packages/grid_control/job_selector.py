@@ -28,7 +28,7 @@ class JobSelector(Plugin):
 		return None
 	create = staticmethod(create)
 
-	def __call__(self, jobNum, jobObj):
+	def __call__(self, jobnum, jobObj):
 		raise AbstractError
 
 
@@ -36,15 +36,15 @@ class AndJobSelector(JobSelector): # Internally used
 	def __init__(self, *args):
 		self._selectors = args
 
-	def __call__(self, jobNum, jobObj):
-		return reduce(operator.and_, imap(lambda selector: selector(jobNum, jobObj), self._selectors))
+	def __call__(self, jobnum, jobObj):
+		return reduce(operator.and_, imap(lambda selector: selector(jobnum, jobObj), self._selectors))
 
 
 class ClassSelector(JobSelector):
 	def __init__(self, arg, **kwargs):
 		self._states = arg.states
 
-	def __call__(self, jobNum, jobObj):
+	def __call__(self, jobnum, jobObj):
 		return jobObj.state in self._states
 
 
@@ -54,7 +54,7 @@ class StuckSelector(JobSelector):
 	def __init__(self, arg, **kwargs):
 		self._time_threshold = parse_time(arg)
 
-	def __call__(self, jobNum, jobObj):
+	def __call__(self, jobnum, jobObj):
 		return (jobObj.changed > 0) and (time.time() - jobObj.changed) > self._time_threshold
 
 
@@ -69,10 +69,10 @@ class IDSelector(JobSelector):
 		except Exception:
 			raise UserError('Job identifiers must be integers or ranges.')
 
-	def __call__(self, jobNum, jobObj):
+	def __call__(self, jobnum, jobObj):
 		def checkID(jobRange):
-			if (jobRange[0] == '') or (jobNum >= jobRange[0]):
-				if (jobRange[1] == '') or (jobNum <= jobRange[1]):
+			if (jobRange[0] == '') or (jobnum >= jobRange[0]):
+				if (jobRange[1] == '') or (jobnum <= jobRange[1]):
 					return True
 			return False
 		return reduce(operator.or_, imap(checkID, self._ranges))
@@ -83,9 +83,9 @@ class RegExSelector(JobSelector):
 		self._rxList = lmap(lambda x: re.compile(regexParser(x)), arg.split(','))
 		self._objParser = objParser
 
-	def __call__(self, jobNum, jobObj):
+	def __call__(self, jobnum, jobObj):
 		for regex in self._rxList:
-			if regex.search(self._objParser(jobNum, jobObj)):
+			if regex.search(self._objParser(jobnum, jobObj)):
 				return True
 		return False
 
@@ -124,7 +124,7 @@ class StateSelector(RegExSelector):
 		stateList = reduce(operator.add, imap(lambda x: lfilter(x.match, Job.enum_name_list), self._rxList))
 		self._states = lmap(Job.str2enum, stateList)
 
-	def __call__(self, jobNum, jobObj):
+	def __call__(self, jobnum, jobObj):
 		return jobObj.state in self._states
 
 
@@ -133,11 +133,11 @@ class VarSelector(JobSelector):
 
 	def __init__(self, arg, **kwargs):
 		self._rxDict = lmap(lambda x: (x.split('=', 1)[0], re.compile(x.split('=', 1)[1])), arg.split(','))
-		self._jobCfg = lambda jobNum, var: str(kwargs['task'].getJobConfig(jobNum).get(var, ''))
+		self._jobCfg = lambda jobnum, var: str(kwargs['task'].get_job_dict(jobnum).get(var, ''))
 
-	def __call__(self, jobNum, jobObj):
+	def __call__(self, jobnum, jobObj):
 		def match(var, rx):
-			return rx.search(self._jobCfg(jobNum, var)) is not None
+			return rx.search(self._jobCfg(jobnum, var)) is not None
 		return reduce(operator.and_, ismap(match, self._rxDict))
 
 
@@ -145,7 +145,7 @@ class NickSelector(RegExSelector):
 	alias_list = ['nick']
 
 	def __init__(self, arg, **kwargs):
-		RegExSelector.__init__(self, arg, lambda jobNum, jobObj: kwargs['task'].getJobConfig(jobNum).get('DATASETNICK', ''))
+		RegExSelector.__init__(self, arg, lambda jobnum, jobObj: kwargs['task'].get_job_dict(jobnum).get('DATASETNICK', ''))
 
 
 class MultiJobSelector(JobSelector):
@@ -158,12 +158,12 @@ class MultiJobSelector(JobSelector):
 				selectorType = term.split(':', 1)[0]
 			selector = JobSelector.create_instance(selectorType, term.split(':', 1)[-1], **kwargs)
 			if negate:
-				return lambda jobNum, jobObj: not selector.__call__(jobNum, jobObj)
+				return lambda jobnum, jobObj: not selector.__call__(jobnum, jobObj)
 			return selector.__call__
 		orTerms = str.join('+', imap(str.strip, arg.split('+'))).split()
 		self._js = lmap(lambda orTerm: lmap(parseTerm, orTerm.split('+')), orTerms)
 
-	def __call__(self, jobNum, jobObj):
+	def __call__(self, jobnum, jobObj):
 		def onTerm(term):
-			return term(jobNum, jobObj) # [[f1], [f2,f3]] => f1(...) || (f2(...) && f3(...))
+			return term(jobnum, jobObj) # [[f1], [f2,f3]] => f1(...) || (f2(...) && f3(...))
 		return reduce(operator.or_, imap(lambda andTerm: reduce(operator.and_, imap(onTerm, andTerm)), self._js))

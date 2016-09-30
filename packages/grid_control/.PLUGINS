@@ -406,9 +406,9 @@
 
     * grid_control.datasets.splitter_io DataSplitterIOBase
 
-     * grid_control.datasets.splitter_io DataSplitterIO_V1
+     * grid_control.datasets.splitter_io DataSplitterIOV1
 
-     * grid_control.datasets.splitter_io DataSplitterIO_V2
+     * grid_control.datasets.splitter_io DataSplitterIOV2
 
    * grid_control.config.matcher_base DictLookup
 

@@ -87,22 +87,22 @@ class CPWebserver(GUI):
 		result = '<body>'
 		result += str(CPProgressBar(0, min(100, self.counter), 100, 300))
 		if 'job' in kw:
-			jobNum = int(kw['job'])
-			info = self._workflow.task.getJobConfig(jobNum)
+			jobnum = int(kw['job'])
+			info = self._workflow.task.get_job_dict(jobnum)
 			result += str(TabularHTML(lzip(sorted(info), sorted(info)), [info], top = False))
 		def getJobObjs():
-			for jobNum in self._workflow.jobManager.jobDB.getJobs():
-				result = self._workflow.jobManager.jobDB.getJobTransient(jobNum).__dict__
-				result['jobNum'] = jobNum
+			for jobnum in self._workflow.jobManager.jobDB.getJobs():
+				result = self._workflow.jobManager.jobDB.getJobTransient(jobnum).__dict__
+				result['jobnum'] = jobnum
 				result.update(result['dict'])
 				yield result
 		fmtTime = lambda t: time.strftime('%Y-%m-%d %T', time.localtime(t))
 		result += str(TabularHTML([
-				('jobNum', 'Job'), ('state', 'Status'), ('attempt', 'Attempt'),
+				('jobnum', 'Job'), ('state', 'Status'), ('attempt', 'Attempt'),
 				('gcID', 'WMS ID'), ('dest', 'Destination'), ('submitted', 'Submitted')
 			], getJobObjs(),
 			fmt = {
-				'jobNum': lambda x: '<a href="jobs?job=%s">%s</a>' % (x, x),
+				'jobnum': lambda x: '<a href="jobs?job=%s">%s</a>' % (x, x),
 				'state': Job.enum2str, 'submitted': fmtTime
 			}, top = True))
 		result += '</body>'
