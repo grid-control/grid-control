@@ -24,7 +24,7 @@ from python_compat import identity, ifilter, imap, irange, lfilter, lmap, sorted
 class ParameterFactory(ConfigurablePlugin):
 	config_tag_name = 'parameters'
 
-	def get_source(self, repository):
+	def get_psrc(self, repository):
 		raise AbstractError
 
 
@@ -63,14 +63,14 @@ class BasicParameterFactory(ParameterFactory):
 		self._pfactory = param_config.get_plugin('parameter factory', 'SimpleParameterFactory',
 			cls=ParameterFactory)
 
-	def get_source(self, repository):
+	def get_psrc(self, repository):
 		source_list = []
 		for name in self._random_variables:
 			source_list.append(_create_psrc('RNGParameterSource', name))
 		for (idx, seed) in enumerate(self._random_seeds):
 			source_list.append(_create_psrc('CounterParameterSource', 'SEED_%d' % idx, int(seed)))
 		source_list.extend(self._psrc_list_const)
-		source_list.append(self._pfactory.get_source(repository))
+		source_list.append(self._pfactory.get_psrc(repository))
 		source_list.extend(self._psrc_list_lookup)
 		source = _create_psrc('ZipLongParameterSource', *source_list)
 		for (psrc_type, args) in self._psrc_list_nested:
@@ -117,18 +117,18 @@ class UserParameterFactory(ParameterFactory):
 		self._parameter_config = ParameterConfig(config)
 		self._pexpr = config.get('parameters', '', on_change=None)
 
-	def get_source(self, respository):
+	def get_psrc(self, respository):
 		if not self._pexpr:
 			return _create_psrc('NullParameterSource')
 		self._log.debug('Parsing parameter expression: %s', repr(self._pexpr))
 		try:
-			source = self._get_source_user(self._pexpr, respository)
+			source = self._get_psrc_user(self._pexpr, respository)
 		except:
 			raise ParameterError('Unable to parse parameter expression %r' % self._pexpr)
 		self._log.debug('Parsed parameter source: %s', repr(source))
 		return source
 
-	def _get_source_user(self, pexpr, respository):
+	def _get_psrc_user(self, pexpr, respository):
 		raise AbstractError
 
 

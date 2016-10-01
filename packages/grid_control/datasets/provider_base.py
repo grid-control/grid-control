@@ -20,7 +20,7 @@ from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, InstanceFactory, NestedException
-from python_compat import StringBuffer, identity, ifilter, imap, irange, json, lmap, lrange, md5_hex, set, sort_inplace, itemgetter
+from python_compat import StringBuffer, identity, ifilter, imap, irange, itemgetter, json, lmap, lrange, md5_hex, set, sort_inplace
 
 
 class DatasetError(NestedException):

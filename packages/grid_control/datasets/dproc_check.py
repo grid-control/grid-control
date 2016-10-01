@@ -15,7 +15,7 @@
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils.data_structures import make_enum
-from python_compat import imap, md5_hex, set, itemgetter
+from python_compat import imap, itemgetter, md5_hex, set
 
 
 # Enum to specify how to react to multiple occurences of something

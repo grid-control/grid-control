@@ -181,7 +181,7 @@ class SimpleParameterFactory(UserParameterFactory):
 		# Optimize away unnecessary cross operations
 		return ParameterSource.create_instance('CrossParameterSource', *psrc_list)
 
-	def _get_source_user(self, pexpr, repository):
+	def _get_psrc_user(self, pexpr, repository):
 		token_iter = tokenize(pexpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
 		token_list = list(tok2inlinetok(token_iter, list(self._precedence.keys())))
 		self._log.debug('Parsing parameter string: "%s"', str.join(' ', imap(str, token_list)))

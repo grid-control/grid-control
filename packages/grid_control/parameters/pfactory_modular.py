@@ -21,7 +21,7 @@ from python_compat import ifilter, sorted
 class ModularParameterFactory(UserParameterFactory):
 	alias_list = ['modular']
 
-	def _get_source_user(self, pexpr, repository):
+	def _get_psrc_user(self, pexpr, repository):
 		# Wrap psource factory functions
 		def create_wrapper(cls_name):
 			def wrapper(*args):

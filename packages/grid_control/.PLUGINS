@@ -186,9 +186,9 @@
 
     * grid_control.datasets.scanner_base InfoScanner
 
-     * grid_control.datasets.scanner_basic AddFilePrefix
+     * grid_control.datasets.scanner_basic AddFilePrefix prefix
 
-     * grid_control.datasets.scanner_basic DetermineEvents
+     * grid_control.datasets.scanner_basic DetermineEntries DetermineEvents events
 
      * grid_control.datasets.scanner_basic FilesFromDataProvider
 
@@ -198,19 +198,19 @@
 
      * grid_control.datasets.scanner_basic JobInfoFromOutputDir
 
-     * grid_control.datasets.scanner_basic MatchDelimeter
+     * grid_control.datasets.scanner_basic MatchDelimeter delimeter
 
-     * grid_control.datasets.scanner_basic MatchOnFilename
+     * grid_control.datasets.scanner_basic MatchOnFilename match
 
      * grid_control.datasets.scanner_basic MetadataFromTask
 
-     * grid_control.datasets.scanner_basic NullScanner
+     * grid_control.datasets.scanner_base NullScanner
 
      * grid_control.datasets.scanner_basic OutputDirsFromConfig
 
      * grid_control.datasets.scanner_basic OutputDirsFromWork
 
-     * grid_control.datasets.scanner_basic ParentLookup
+     * grid_control.datasets.scanner_basic ParentLookup parent
 
     * grid_control.job_db JobDB
 

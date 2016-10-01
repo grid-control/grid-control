@@ -24,10 +24,10 @@ class BasicPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._vn_file_names = config.get(self._get_opt('variable file names'), 'FILE_NAMES')
-		self._vn_max_events = config.get(self._get_opt('variable max events'), 'MAX_EVENTS')
-		self._vn_skip_events = config.get(self._get_opt('variable skip events'), 'SKIP_EVENTS')
-		self._vn_prefix = config.get(self._get_opt('variable prefix'), datasource_name.upper())
+		self._vn_file_names = config.get(self._get_pproc_opt('variable file names'), 'FILE_NAMES')
+		self._vn_max_events = config.get(self._get_pproc_opt('variable max events'), 'MAX_EVENTS')
+		self._vn_skip_events = config.get(self._get_pproc_opt('variable skip events'), 'SKIP_EVENTS')
+		self._vn_prefix = config.get(self._get_pproc_opt('variable prefix'), datasource_name.upper())
 
 	def get_needed_vn_list(self, splitter):
 		map_splitter_enum2vn = {
@@ -69,11 +69,11 @@ class LocationPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._filter = config.get_filter(self._get_opt('location filter'),
+		self._filter = config.get_filter(self._get_pproc_opt('location filter'),
 			default='', default_matcher='blackwhite', default_filter='weak')
-		self._preference = config.get_list(self._get_opt('location preference'), [])
-		self._reqs = config.get_bool(self._get_opt('location requirement'), True)
-		self._disable = config.get_bool(self._get_opt('location check'), True)
+		self._preference = config.get_list(self._get_pproc_opt('location preference'), [])
+		self._reqs = config.get_bool(self._get_pproc_opt('location requirement'), True)
+		self._disable = config.get_bool(self._get_pproc_opt('location check'), True)
 
 	def enabled(self):
 		return self._filter.get_selector() or self._preference or self._reqs or self._disable
@@ -98,7 +98,7 @@ class MetaPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._metadata_list = config.get_list(self._get_opt('metadata'), [])
+		self._metadata_list = config.get_list(self._get_pproc_opt('metadata'), [])
 
 	def enabled(self):
 		return self._metadata_list != []
@@ -124,12 +124,12 @@ class RequirementsPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._wt_offset = config.get_float(self._get_opt('walltime offset'), 0.)
-		self._wt_factor = config.get_float(self._get_opt('walltime factor'), 0.)
-		self._ct_offset = config.get_float(self._get_opt('cputime offset'), 0.)
-		self._ct_factor = config.get_float(self._get_opt('cputime factor'), 0.)
-		self._mem_offset = config.get_float(self._get_opt('memory offset'), 0.)
-		self._mem_factor = config.get_float(self._get_opt('memory factor'), 0.)
+		self._wt_offset = config.get_float(self._get_pproc_opt('walltime offset'), 0.)
+		self._wt_factor = config.get_float(self._get_pproc_opt('walltime factor'), 0.)
+		self._ct_offset = config.get_float(self._get_pproc_opt('cputime offset'), 0.)
+		self._ct_factor = config.get_float(self._get_pproc_opt('cputime factor'), 0.)
+		self._mem_offset = config.get_float(self._get_pproc_opt('memory offset'), 0.)
+		self._mem_factor = config.get_float(self._get_pproc_opt('memory factor'), 0.)
 
 	def enabled(self):
 		return any(imap(lambda x: x > 0, [self._wt_factor, self._ct_factor, self._mem_factor,
@@ -153,7 +153,7 @@ class TFCPartitionProcessor(PartitionProcessor):
 
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
-		self._tfc = config.get_lookup(self._get_opt('tfc'), {})
+		self._tfc = config.get_lookup(self._get_pproc_opt('tfc'), {})
 
 	def enabled(self):
 		return not self._tfc.empty()

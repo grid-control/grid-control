@@ -23,7 +23,7 @@ from python_compat import all, bytes2str, ifilter, imap, lfilter, tarfile
 class GCProviderSetup_CMSSW(GCProviderSetup):
 	scan_pipeline = ['ObjectsFromCMSSW', 'JobInfoFromOutputDir', 'FilesFromJobInfo',
 		'MatchOnFilename', 'MatchDelimeter', 'MetadataFromCMSSW', 'SEListFromPath',
-		'LFNFromPath', 'DetermineEvents', 'AddFilePrefix']
+		'LFNFromPath', 'Determineentries', 'AddFilePrefix']
 
 
 def readTag(base, tag, default = None):
@@ -80,12 +80,12 @@ class ObjectsFromCMSSW(InfoScanner):
 		searchConfigFile('CMSSW_ANNOTATION', self._regex_annotation, None)
 		searchConfigFile('CMSSW_DATATIER', self._regex_datatier, 'USER')
 		cfgReport = xml.dom.minidom.parseString(bytes2str(tar.extractfile('%s/report.xml' % cfg).read()))
-		evRead = sum(imap(lambda x: int(readTag(x, 'EventsRead')), cfgReport.getElementsByTagName('InputFile')))
+		evRead = sum(imap(lambda x: int(readTag(x, 'entriesRead')), cfgReport.getElementsByTagName('InputFile')))
 		return (cfgSummary, cfgReport, evRead)
 
 	def _processOutputFile(self, cfgReport, outputFile):
 		fileSummary = {'CMSSW_DATATYPE': readTag(outputFile, 'DataType'),
-			'CMSSW_EVENTS_WRITE': int(readTag(outputFile, 'TotalEvents'))}
+			'CMSSW_entries_WRITE': int(readTag(outputFile, 'Totalentries'))}
 		# Read lumisection infos
 		lumis = []
 		for run in readList(outputFile, 'Runs', 'Run'):
@@ -122,13 +122,13 @@ class ObjectsFromCMSSW(InfoScanner):
 
 			for outputFile in cfgReport.getElementsByTagName('File'):
 				(fileSummary, pfn) = self._processOutputFile(cfgReport, outputFile)
-				fileSummary['CMSSW_EVENTS_READ'] = evRead
+				fileSummary['CMSSW_entries_READ'] = evRead
 				fileSummary['CMSSW_CONFIG_FILE'] = cfg
 				fileSummaryMap.setdefault(pfn, {}).update(fileSummary)
 
-	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
-		jobNum = metadata['GC_JOBNUM']
-		cmsRunLog = os.path.join(path, 'cmssw.dbs.tar.gz')
+	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
+		jobNum = metadata_dict['GC_JOBNUM']
+		cmsRunLog = os.path.join(item, 'cmssw.dbs.tar.gz')
 		if os.path.exists(cmsRunLog):
 			tar = tarfile.open(cmsRunLog, 'r')
 			# Collect infos about transferred files
@@ -136,17 +136,17 @@ class ObjectsFromCMSSW(InfoScanner):
 			try:
 				for rawdata in imap(lambda value: bytes2str(value).split(), tar.extractfile('files').readlines()):
 					fileSummaryMap[rawdata[2]] = {'SE_OUTPUT_HASH_CRC32': rawdata[0], 'SE_OUTPUT_SIZE': int(rawdata[1])}
-				objStore['CMSSW_FILES'] = fileSummaryMap
+				obj_dict['CMSSW_FILES'] = fileSummaryMap
 			except Exception:
 				raise DatasetError('Could not read CMSSW file infos for job %d!' % jobNum)
 			# Collect infos about CMSSW processing steps
 			cfgSummaryMap = {}
 			self._processSteps(jobNum, tar, cfgSummaryMap, fileSummaryMap)
 			for cfg in cfgSummaryMap:
-				metadata.setdefault('CMSSW_CONFIG_JOBHASH', []).append(cfgSummaryMap[cfg]['CMSSW_CONFIG_HASH'])
-			objStore.update({'CMSSW_CONFIG': cfgSummaryMap, 'CMSSW_FILES': fileSummaryMap})
+				metadata_dict.setdefault('CMSSW_CONFIG_JOBHASH', []).append(cfgSummaryMap[cfg]['CMSSW_CONFIG_HASH'])
+			obj_dict.update({'CMSSW_CONFIG': cfgSummaryMap, 'CMSSW_FILES': fileSummaryMap})
 			tar.close()
-		yield (path, metadata, events, seList, objStore)
+		yield (item, metadata_dict, entries, location_list, obj_dict)
 
 
 class MetadataFromCMSSW(InfoScanner):
@@ -154,32 +154,32 @@ class MetadataFromCMSSW(InfoScanner):
 		InfoScanner.__init__(self, config, datasource_name)
 		self._include_config = config.get_bool('include config infos', False)
 
-	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
-		cmssw_files_dict = objStore.get('CMSSW_FILES', {})
-		metadata.update(cmssw_files_dict.get(metadata.get('SE_OUTPUT_FILE'), {}))
+	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
+		cmssw_files_dict = obj_dict.get('CMSSW_FILES', {})
+		metadata_dict.update(cmssw_files_dict.get(metadata_dict.get('SE_OUTPUT_FILE'), {}))
 		if self._include_config:
-			cmssw_config_dict = objStore.get('CMSSW_CONFIG', {})
-			metadata.update(cmssw_config_dict.get(metadata.get('CMSSW_CONFIG_FILE'), {}))
-		yield (path, metadata, events, seList, objStore)
+			cmssw_config_dict = obj_dict.get('CMSSW_CONFIG', {})
+			metadata_dict.update(cmssw_config_dict.get(metadata_dict.get('CMSSW_CONFIG_FILE'), {}))
+		yield (item, metadata_dict, entries, location_list, obj_dict)
 
 
 class SEListFromPath(InfoScanner):
-	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
-		tmp = path.split(':', 1)
+	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
+		tmp = item.split(':', 1)
 		if len(tmp) == 1:
 			tmp = ['dir', tmp[0]]
 		proto, fn = tmp
 		if proto in ['dir', 'file']:
-			yield (path, metadata, events, ['localhost'], objStore)
+			yield (item, metadata_dict, entries, ['localhost'], obj_dict)
 		elif proto in ['rfio']:
-			if 'cern.ch' in path:
-				yield (path, metadata, events, ['caf.cern.ch'], objStore)
+			if 'cern.ch' in item:
+				yield (item, metadata_dict, entries, ['caf.cern.ch'], obj_dict)
 			else:
-				yield (path, metadata, events, [fn.lstrip('/').split('/')[1]], objStore)
+				yield (item, metadata_dict, entries, [fn.lstrip('/').split('/')[1]], obj_dict)
 		elif proto in ['srm', 'gsiftp']:
-			yield (path, metadata, events, [fn.split(':')[0].lstrip('/').split('/')[0]], objStore)
+			yield (item, metadata_dict, entries, [fn.split(':')[0].lstrip('/').split('/')[0]], obj_dict)
 		else:
-			yield (path, metadata, events, seList, objStore)
+			yield (item, metadata_dict, entries, location_list, obj_dict)
 
 
 class LFNFromPath(InfoScanner):
@@ -187,14 +187,14 @@ class LFNFromPath(InfoScanner):
 		InfoScanner.__init__(self, config, datasource_name)
 		self._strip_path = config.get('lfn marker', '/store/')
 
-	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
-		if self._strip_path and self._strip_path in path:
-			yield (self._strip_path + path.split(self._strip_path, 1)[1], metadata, events, seList, objStore)
+	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
+		if self._strip_path and self._strip_path in item:
+			yield (self._strip_path + item.split(self._strip_path, 1)[1], metadata_dict, entries, location_list, obj_dict)
 		else:
-			yield (path, metadata, events, seList, objStore)
+			yield (item, metadata_dict, entries, location_list, obj_dict)
 
 
 class FilterEDMFiles(InfoScanner):
-	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
-		if all(imap(lambda x: x in metadata, ['CMSSW_EVENTS_WRITE', 'CMSSW_CONFIG_FILE'])):
-			yield (path, metadata, events, seList, objStore)
+	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
+		if all(imap(lambda x: x in metadata_dict, ['CMSSW_entries_WRITE', 'CMSSW_CONFIG_FILE'])):
+			yield (item, metadata_dict, entries, location_list, obj_dict)

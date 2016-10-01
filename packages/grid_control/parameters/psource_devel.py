@@ -14,7 +14,7 @@
 
 from grid_control.parameters.psource_meta import ZipLongParameterSource
 from hpfwk import AbstractError
-from python_compat import irange, sort_inplace
+from python_compat import irange
 
 
 class CombineParameterSource(ZipLongParameterSource):

@@ -28,7 +28,7 @@ class ScanProviderBase(DataProvider):
 		(self._ds_select, self._ds_name, self._ds_keys_user, self._ds_keys_guard) = self._setup(config, 'dataset')
 		(self._b_select, self._b_name, self._b_keys_user, self._b_keys_guard) = self._setup(config, 'block')
 		scanList = config.get_list('scanner', sList) + ['NullScanner']
-		scanner_config = config.change_view(default_on_change=TriggerResync(['datasets', 'parameters'])
+		scanner_config = config.change_view(default_on_change=TriggerResync(['datasets', 'parameters']))
 		self._scanner = lmap(lambda cls: InfoScanner.create_instance(cls, scanner_config, datasource_name), scanList)
 
 
@@ -44,15 +44,15 @@ class ScanProviderBase(DataProvider):
 		def recurse(level, collectorList, args):
 			if collectorList:
 				for data in recurse(level - 1, collectorList[:-1], args):
-					for (path, metadata, nEvents, seList, objStore) in collectorList[-1](level, *data):
-						yield (path, dict(metadata), nEvents, seList, objStore)
+					for (path, metadata, nEvents, location_list, obj_dict) in collectorList[-1](level, *data):
+						yield (path, dict(metadata), nEvents, location_list, obj_dict)
 						self._raise_on_abort()
 			else:
 				yield args
-		return recurse(len(self._scanner), lmap(lambda x: x._iter_datasource_entriesVerbose, self._scanner), (None, {}, None, None, {}))
+		return recurse(len(self._scanner), lmap(lambda x: x.iter_datasource_items, self._scanner), (None, {}, None, None, {}))
 
 
-	def _generateKey(self, keys, base, path, metadata, events, seList, objStore):
+	def _generateKey(self, keys, base, path, metadata, events, location_list, obj_dict):
 		return md5_hex(repr(base) + repr(lmap(metadata.get, keys)))
 
 
@@ -99,13 +99,13 @@ class ScanProviderBase(DataProvider):
 		for hashDS in sorted(protoBlocks):
 			for hashB in sorted(protoBlocks[hashDS]):
 				blockSEList = None
-				for seList in ifilter(lambda s: s is not None, imap(lambda x: x[3], protoBlocks[hashDS][hashB])):
+				for location_list in ifilter(lambda s: s is not None, imap(lambda x: x[3], protoBlocks[hashDS][hashB])):
 					blockSEList = blockSEList or []
-					blockSEList.extend(seList)
+					blockSEList.extend(location_list)
 				if blockSEList is not None:
 					blockSEList = list(UniqueList(blockSEList))
 				metaKeys = protoBlocks[hashDS][hashB][0][1].keys()
-				def fnProps(path, metadata, events, seList, objStore):
+				def fnProps(path, metadata, events, location_list, obj_dict):
 					if events is None:
 						events = -1
 					return {DataProvider.URL: path, DataProvider.NEntries: events,

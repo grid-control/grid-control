@@ -84,10 +84,10 @@ class ParameterConfig(object):
 		(self._map_vn2varexpr, self._map_varexpr_suffix2opt) = parse_parameter_option_list(option_list)
 
 	def get(self, varexpr, suffix=None, default=unspecified):
-		return self._config.get(self._get_opt(varexpr, suffix), default, on_change=self._on_change)
+		return self._config.get(self._get_var_opt(varexpr, suffix), default, on_change=self._on_change)
 
 	def get_bool(self, varexpr, suffix=None, default=unspecified):  # needed for Matcher configuration
-		return self._config.get_bool(self._get_opt(varexpr, suffix), default, on_change=self._on_change)
+		return self._config.get_bool(self._get_var_opt(varexpr, suffix), default, on_change=self._on_change)
 
 	def get_config(self, *args, **kwargs):
 		return self._config.change_view(*args, **kwargs)
@@ -117,7 +117,7 @@ class ParameterConfig(object):
 	def show_changes(self):
 		pass
 
-	def _get_opt(self, varexpr, suffix=None):
+	def _get_var_opt(self, varexpr, suffix=None):
 		opt_default = ('%s %s' % (varexpr, suffix or '')).replace('\'', '')
 		return self._map_varexpr_suffix2opt.get((varexpr, suffix), opt_default)
 

@@ -12,7 +12,6 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config import TriggerResync
 from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor
 from grid_control.parameters import ParameterMetadata
 from grid_control.utils import safe_index

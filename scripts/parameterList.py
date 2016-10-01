@@ -150,7 +150,7 @@ def get_psrc(opts, args):
 	adapter = 'BasicParameterAdapter'
 	if opts.persistent:
 		adapter = 'TrackedParameterAdapter'
-	return ParameterAdapter.create_instance(adapter, config, pm.get_source(repository))
+	return ParameterAdapter.create_instance(adapter, config, pm.get_psrc(repository))
 
 def get_parameters(opts, psource):
 	result = []

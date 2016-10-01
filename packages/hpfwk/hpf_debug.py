@@ -148,7 +148,7 @@ def _format_stack(frame_list, code_context, truncate_var_repr):
 
 		def get_source_code(line_num):
 			return linecache.getline(frame['file'], line_num).rstrip().replace('\t', '  ')
-		for delta_line_num in range(-code_context, code_context + 1):
+		for delta_line_num in range(-code_context, code_context + 1):  # pylint:disable=bad-builtin
 			if delta_line_num == 0:
 				yield '\t=>| %s' % get_source_code(frame['line'] + delta_line_num)
 			else:

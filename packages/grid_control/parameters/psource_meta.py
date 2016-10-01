@@ -121,7 +121,7 @@ class SubSpaceParameterSource(ForwardingParameterSource):
 
 	def __init__(self, name, factory, repository):
 		(self._name, self._factory_name) = (name, factory.__class__.__name__)
-		ForwardingParameterSource.__init__(self, factory.get_source(repository))
+		ForwardingParameterSource.__init__(self, factory.get_psrc(repository))
 
 	def __repr__(self):
 		if self._factory_name == 'SimpleParameterFactory':

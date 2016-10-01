@@ -102,7 +102,7 @@ class TaskModule(NamedPlugin):
 		pfactory = config.get_plugin('internal parameter factory', 'BasicParameterFactory',
 			cls = ParameterFactory, tags = [self], inherit = True)
 		self.source = config.get_plugin('parameter adapter', 'TrackedParameterAdapter',
-			cls = ParameterAdapter, pargs = (pfactory.get_source(psrc_repository),))
+			cls = ParameterAdapter, pargs = (pfactory.get_psrc(psrc_repository),))
 		self._log.log(logging.DEBUG3, 'Using parameter adapter %s', repr(self.source))
 
 

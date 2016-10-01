@@ -19,7 +19,7 @@ from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
 from grid_control.utils import resolve_path, resolve_paths
 from grid_control.utils.data_structures import make_enum
-from grid_control.utils.parsing import parse_bool, parse_dict, parse_list, parse_time, str_dict_cfg, str_time_short
+from grid_control.utils.parsing import parse_bool, parse_dict, parse_list, parse_time, str_dict_cfg, str_time_short  # pylint:disable=line-too-long
 from grid_control.utils.thread_tools import GCEvent
 from hpfwk import APIError, ExceptionCollector, Plugin
 from python_compat import any, get_user_input, identity, ifilter, imap, lmap, sorted, unspecified

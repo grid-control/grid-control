@@ -166,7 +166,7 @@ UserTask options
     List of files that will be subjected to variable substituion
   * ``task date`` = <text> (default: current date: YYYY-MM-DD)
     Persistent date when the task was started.
-  * ``task id`` = <text> (default: GCxxxxxxxxxxxx)
+  * ``task id`` = <text> (default: 'GC <manual>)
     Persistent task identifier that is generated at the start of the task
 
 CMSSW options
@@ -252,7 +252,7 @@ CMSSW options
     List of files that will be subjected to variable substituion
   * ``task date`` = <text> (default: current date: YYYY-MM-DD)
     Persistent date when the task was started.
-  * ``task id`` = <text> (default: GCxxxxxxxxxxxx)
+  * ``task id`` = <text> (default: 'GC <manual>)
     Persistent task identifier that is generated at the start of the task
   * ``vo software dir / cmssw dir`` = <text> (default: '')
     This option allows to override of the VO_CMS_SW_DIR environment variable
@@ -348,7 +348,7 @@ CMSSW_Advanced options
     List of files that will be subjected to variable substituion
   * ``task date`` = <text> (default: current date: YYYY-MM-DD)
     Persistent date when the task was started.
-  * ``task id`` = <text> (default: GCxxxxxxxxxxxx)
+  * ``task id`` = <text> (default: 'GC <manual>)
     Persistent task identifier that is generated at the start of the task
   * ``vo software dir / cmssw dir`` = <text> (default: '')
     This option allows to override of the VO_CMS_SW_DIR environment variable
@@ -360,7 +360,7 @@ dataset options
     Specify the default limit for the dataset query interval
   * ``<datasource> nickname source / nickname source`` = <plugin> (default: 'SimpleNickNameProducer')
     Specify nickname plugin that determines the nickname for datasets
-  * ``<datasource> processor`` = <list of plugins> (default: 'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' 'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor')
+  * ``<datasource> processor`` = <list of plugins> (default: 'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor  URLCountDataProcessor EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor  LocationDataProcessor')
     Specify list of plugins that process datasets before the partitioning
   * <datasource> processor manager = <plugin> (Default: 'MultiDataProcessor')
     Specifiy compositor class to merge the different plugins given in ``<datasource> processor``
@@ -723,17 +723,17 @@ AddFilePrefix options
   * ``filename prefix`` = <text> (default: '')
     Specify prefix that is prepended to the dataset file names
 
-DetermineEvents options
------------------------
+DetermineEntries options
+------------------------
 
-  * ``events command`` = <text> (default: '')
-    Specify command that, given the file name as argument, returns with the number of events in the file
-  * ``events default`` = <integer> (default: -1)
-    Specify the default number of events in a dataset file
-  * ``events key`` = <text> (default: '')
-    Specify a variable from the available metadata that contains the number of events in a dataset file
-  * ``events per key value`` = <float> (default: 1.0)
-    Specify the conversion factor between the number of events in a dataset file and the metadata key
+  * ``entries command / events command`` = <text> (default: '')
+    Specify command that, given the file name as argument, returns with the number of entries in the file
+  * ``entries default / events default`` = <integer> (default: -1)
+    Specify the default number of entries in a dataset file
+  * ``entries key / events key`` = <text> (default: '')
+    Specify a variable from the available metadata that contains the number of entries in a dataset file
+  * ``entries per key value / events per key value`` = <float> (default: 1.0)
+    Specify the conversion factor between the number of entries in a dataset file and the metadata key
 
 FilesFromDataProvider options
 -----------------------------
@@ -1054,7 +1054,7 @@ ROOTTask options
     List of files that will be subjected to variable substituion
   * ``task date`` = <text> (default: current date: YYYY-MM-DD)
     Persistent date when the task was started.
-  * ``task id`` = <text> (default: GCxxxxxxxxxxxx)
+  * ``task id`` = <text> (default: 'GC <manual>)
     Persistent task identifier that is generated at the start of the task
 
 InactiveWMS options

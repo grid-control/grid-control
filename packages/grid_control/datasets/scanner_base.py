@@ -26,20 +26,25 @@ class InfoScanner(ConfigurablePlugin):
 	def get_ds_block_class_keys(self):
 		return ([], [])
 
-	def _iter_datasource_entriesVerbose(self, depth, path, metadata, events, seList, objStore):
+	def iter_datasource_items(self, depth, item, metadata_dict, entries, location_list, obj_dict):
 		if self._log.isEnabledFor(logging.DEBUG):
 			self._log.log(logging.DEBUG, '    ' * depth +
 				'Collecting information with %s...', self.__class__.__name__)
 			logging_info_list = [
-				(logging.DEBUG, path, 'Path'),
-				(logging.DEBUG1, metadata, 'Metadata'),
-				(logging.DEBUG, events, 'Events'),
-				(logging.DEBUG1, seList, 'SE list'),
-				(logging.DEBUG1, objStore, 'Objects')
+				(logging.DEBUG, item, 'Item'),
+				(logging.DEBUG1, metadata_dict, 'Metadata'),
+				(logging.DEBUG, entries, 'entries'),
+				(logging.DEBUG1, location_list, 'SE list'),
+				(logging.DEBUG1, obj_dict, 'Objects')
 			]
 			for (level, content, name) in logging_info_list:
 				self._log.log(level, '    ' * depth + '  %s: %s', name, content)
-		return self._iter_datasource_entries(path, metadata, events, seList, objStore)
+		return self._iter_datasource_items(item, metadata_dict, entries, location_list, obj_dict)
 
-	def _iter_datasource_entries(self, path, metadata, events, seList, objStore):
+	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		raise AbstractError
+
+
+class NullScanner(InfoScanner):
+	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
+		yield (item, metadata_dict, entries, location_list, obj_dict)
