@@ -21,111 +21,6 @@ from hpfwk import APIError
 from python_compat import imap, irange, lchain, lfilter, lmap, next, reduce
 
 
-def clear_operator_stack(operator_list, operator_stack, token_stack):
-	while len(operator_stack) and (operator_stack[-1][0] in operator_list):
-		operator = operator_stack.pop()
-		tmp = []
-		for dummy in irange(len(operator) + 1):
-			tmp.append(token_stack.pop())
-		tmp.reverse()
-		token_stack.append((operator[0], tmp))
-
-
-def tok2inlinetok(token_iter, operator_list):
-	token = next(token_iter, None)
-	prev_token_was_expr = None
-	while token:
-		# insert '*' between two expressions - but not between "<expr> ["
-		if prev_token_was_expr and token not in (['[', ']', ')', '>', '}'] + operator_list):
-			yield '*'
-		yield token
-		prev_token_was_expr = token not in (['[', '(', '<', '{'] + operator_list)
-		token = next(token_iter, None)
-
-
-def tok2tree(value, precedence):
-	value = list(value)
-	error_template = str.join('', imap(str, value))
-	token_iter = iter(value)
-	token = next(token_iter, None)
-	token_stack = []
-	operator_stack = []
-
-	def collect_nested_tokens(token_iter, left, right, error_msg):
-		level = 1
-		token = next(token_iter, None)
-		while token:
-			if token == left:
-				level += 1
-			elif token == right:
-				level -= 1
-				if level == 0:
-					break
-			yield token
-			token = next(token_iter, None)
-		if level != 0:
-			raise ConfigError(error_msg)
-
-	while token:
-		if token == '(':
-			tmp = list(collect_nested_tokens(token_iter, '(', ')', "Parenthesis error: " + error_template))
-			token_stack.append(tok2tree(tmp, precedence))
-		elif token == '<':
-			tmp = list(collect_nested_tokens(token_iter, '<', '>', "Parenthesis error: " + error_template))
-			token_stack.append(('ref', tmp))
-		elif token == '[':
-			tmp = list(collect_nested_tokens(token_iter, '[', ']', "Parenthesis error: " + error_template))
-			token_stack.append(('lookup', [token_stack.pop(), tok2tree(tmp, precedence)]))
-		elif token == '{':
-			tmp = list(collect_nested_tokens(token_iter, '{', '}', "Parenthesis error: " + error_template))
-			token_stack.append(('pspace', tmp))
-		elif token in precedence:
-			clear_operator_stack(precedence[token], operator_stack, token_stack)
-			if operator_stack and operator_stack[-1].startswith(token):
-				operator_stack[-1] = operator_stack[-1] + token
-			else:
-				operator_stack.append(token)
-		else:
-			token_stack.append(token)
-		token = next(token_iter, None)
-
-	clear_operator_stack(precedence.keys(), operator_stack, token_stack)
-	if len(token_stack) != 1:
-		raise Exception('Invalid stack state detected: %s' % repr(token_stack))
-	return token_stack[0]
-
-
-def tokenize(value, token_list):
-	(pos, start) = (0, 0)
-	while pos < len(value):
-		start = pos
-		if (value[pos] == '!') or value[pos].isalpha():
-			pos += 1
-			while (pos < len(value)) and is_valid_parameter_char(value[pos]):
-				pos += 1
-			yield value[start:pos]
-			continue
-		if value[pos].isdigit():
-			while (pos < len(value)) and value[pos].isdigit():
-				pos += 1
-			yield int(value[start:pos])
-			continue
-		if value[pos] in token_list:
-			yield value[pos]
-		pos += 1
-
-
-def tree2names(node):  # return list of referenced variable names in tree
-	if isinstance(node, tuple):
-		result = []
-		for op_args in node[1:]:
-			for arg in op_args:
-				result.extend(tree2names(arg))
-		return result
-	else:
-		return [node]
-
-
 class SimpleParameterFactory(UserParameterFactory):
 	alias_list = ['simple']
 
@@ -172,8 +67,8 @@ class SimpleParameterFactory(UserParameterFactory):
 
 	def _create_psrc_var(self, var_list, lookup_list):  # create variable source
 		psrc_list = []
-		psrc_info_list = parse_lookup_factory_args(self._parameter_config, var_list, lookup_list)
-		for (is_nested, psrc_type, args) in psrc_info_list:
+		psrc_info_iter = parse_lookup_factory_args(self._parameter_config, var_list, lookup_list)
+		for (is_nested, psrc_type, args) in psrc_info_iter:
 			if is_nested:  # switch needs elevation beyond local scope
 				self._psrc_list_nested.append((psrc_type, args))
 			else:
@@ -182,10 +77,10 @@ class SimpleParameterFactory(UserParameterFactory):
 		return ParameterSource.create_instance('CrossParameterSource', *psrc_list)
 
 	def _get_psrc_user(self, pexpr, repository):
-		token_iter = tokenize(pexpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
-		token_list = list(tok2inlinetok(token_iter, list(self._precedence.keys())))
+		token_iter = _tokenize(pexpr, lchain([self._precedence.keys(), list('()[]<>{}')]))
+		token_list = list(_tok2inlinetok(token_iter, list(self._precedence.keys())))
 		self._log.debug('Parsing parameter string: "%s"', str.join(' ', imap(str, token_list)))
-		tree = tok2tree(token_list, self._precedence)
+		tree = _tok2tree(token_list, self._precedence)
 		psrc = self._tree2expr(tree, repository)
 		for (psrc_type, args) in self._psrc_list_nested:
 			psrc = psrc_type.create_instance(psrc_type.__name__, psrc, *args)
@@ -197,7 +92,7 @@ class SimpleParameterFactory(UserParameterFactory):
 			if operator == 'lookup':
 				if len(args) != 2:
 					raise ParameterError('Invalid arguments for lookup: %s' % repr(args))
-				result = self._create_psrc_var(tree2names(args[0]), tree2names(args[1]))
+				result = self._create_psrc_var(_tree2names(args[0]), _tree2names(args[1]))
 			elif operator == 'ref':
 				if len(args) != 1:
 					raise ParameterError('Invalid arguments for reference: %s' % repr(args))
@@ -218,3 +113,108 @@ class SimpleParameterFactory(UserParameterFactory):
 			return node
 		else:
 			return self._create_psrc_var([node], None)
+
+
+def _clear_operator_stack(operator_list, operator_stack, token_stack):
+	while len(operator_stack) and (operator_stack[-1][0] in operator_list):
+		operator = operator_stack.pop()
+		tmp = []
+		for dummy in irange(len(operator) + 1):
+			tmp.append(token_stack.pop())
+		tmp.reverse()
+		token_stack.append((operator[0], tmp))
+
+
+def _tok2inlinetok(token_iter, operator_list):
+	token = next(token_iter, None)
+	prev_token_was_expr = None
+	while token:
+		# insert '*' between two expressions - but not between "<expr> ["
+		if prev_token_was_expr and token not in (['[', ']', ')', '>', '}'] + operator_list):
+			yield '*'
+		yield token
+		prev_token_was_expr = token not in (['[', '(', '<', '{'] + operator_list)
+		token = next(token_iter, None)
+
+
+def _tok2tree(value, precedence):
+	value = list(value)
+	error_template = str.join('', imap(str, value))
+	token_iter = iter(value)
+	token = next(token_iter, None)
+	token_stack = []
+	operator_stack = []
+
+	def _collect_nested_tokens(token_iter, left, right, error_msg):
+		level = 1
+		token = next(token_iter, None)
+		while token:
+			if token == left:
+				level += 1
+			elif token == right:
+				level -= 1
+				if level == 0:
+					break
+			yield token
+			token = next(token_iter, None)
+		if level != 0:
+			raise ConfigError(error_msg)
+
+	while token:
+		if token == '(':
+			tmp = list(_collect_nested_tokens(token_iter, '(', ')', "Parenthesis error: " + error_template))
+			token_stack.append(_tok2tree(tmp, precedence))
+		elif token == '<':
+			tmp = list(_collect_nested_tokens(token_iter, '<', '>', "Parenthesis error: " + error_template))
+			token_stack.append(('ref', tmp))
+		elif token == '[':
+			tmp = list(_collect_nested_tokens(token_iter, '[', ']', "Parenthesis error: " + error_template))
+			token_stack.append(('lookup', [token_stack.pop(), _tok2tree(tmp, precedence)]))
+		elif token == '{':
+			tmp = list(_collect_nested_tokens(token_iter, '{', '}', "Parenthesis error: " + error_template))
+			token_stack.append(('pspace', tmp))
+		elif token in precedence:
+			_clear_operator_stack(precedence[token], operator_stack, token_stack)
+			if operator_stack and operator_stack[-1].startswith(token):
+				operator_stack[-1] = operator_stack[-1] + token
+			else:
+				operator_stack.append(token)
+		else:
+			token_stack.append(token)
+		token = next(token_iter, None)
+
+	_clear_operator_stack(precedence.keys(), operator_stack, token_stack)
+	if len(token_stack) != 1:
+		raise Exception('Invalid stack state detected: %s' % repr(token_stack))
+	return token_stack[0]
+
+
+def _tokenize(value, token_list):
+	(pos, start) = (0, 0)
+	while pos < len(value):
+		start = pos
+		if (value[pos] == '!') or value[pos].isalpha():
+			pos += 1
+			while (pos < len(value)) and is_valid_parameter_char(value[pos]):
+				pos += 1
+			yield value[start:pos]
+			continue
+		if value[pos].isdigit():
+			while (pos < len(value)) and value[pos].isdigit():
+				pos += 1
+			yield int(value[start:pos])
+			continue
+		if value[pos] in token_list:
+			yield value[pos]
+		pos += 1
+
+
+def _tree2names(node):  # return list of referenced variable names in tree
+	if isinstance(node, tuple):
+		result = []
+		for op_args in node[1:]:
+			for arg in op_args:
+				result.extend(_tree2names(arg))
+		return result
+	else:
+		return [node]

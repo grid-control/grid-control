@@ -166,30 +166,30 @@ class HistoricalConfigView(ConfigView):
 		if option_list is not None:
 			key_list = lfilter(key_list.__contains__, option_list)
 
-		def get_entry_key_ordered(entry):
-			return (tuple(imap(remove_none, get_section_key_filtered(entry))), entry.order)
+		def _get_entry_key_ordered(entry):
+			return (tuple(imap(_remove_none, _get_section_key_filtered(entry))), entry.order)
 
-		def get_section_key_filtered(entry):
+		def _get_section_key_filtered(entry):
 			return self._get_section_key(entry.section.replace('!', '').strip())
 
-		def remove_none(key):
+		def _remove_none(key):
 			if key is None:
 				return -1
 			return key
 
-		def select_sections(entry):
-			return get_section_key_filtered(entry) is not None
+		def _select_sections(entry):
+			return _get_section_key_filtered(entry) is not None
 
 		result = []
 		for key in key_list:
 			(entries, entries_reverse) = ([], [])
-			for entry in container.iter_config_entries(key, select_sections):
+			for entry in container.iter_config_entries(key, _select_sections):
 				if entry.section.endswith('!'):
 					entries_reverse.append(entry)
 				else:
 					entries.append(entry)
-			result.extend(sorted(entries_reverse, key=get_entry_key_ordered, reverse=True))
-			result.extend(sorted(entries, key=get_entry_key_ordered))
+			result.extend(sorted(entries_reverse, key=_get_entry_key_ordered, reverse=True))
+			result.extend(sorted(entries, key=_get_entry_key_ordered))
 		return result
 
 
@@ -219,7 +219,7 @@ class SimpleConfigView(HistoricalConfigView):
 
 	def _init_variable(self, parent, member_name, default,
 			set_value, add_value, norm_values, parse_value=lambda x: [x]):
-		def collect(value):
+		def _collect(value):
 			return list(ichain(imap(parse_value, value)))
 		# Setting initial value of variable
 		result = default
@@ -228,11 +228,11 @@ class SimpleConfigView(HistoricalConfigView):
 		if set_value is None:
 			result = set_value
 		elif not unspecified(set_value):
-			result = norm_values(list(collect(set_value)))
+			result = norm_values(list(_collect(set_value)))
 		# Add to settings
 		if add_value and (result is not None):
-			result = result + norm_values(list(collect(add_value)))
+			result = result + norm_values(list(_collect(add_value)))
 		elif add_value:
-			result = norm_values(list(collect(add_value)))
+			result = norm_values(list(_collect(add_value)))
 		setattr(self, member_name, result)
 		return result

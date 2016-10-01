@@ -39,25 +39,25 @@ class ColumnTable(ConsoleTable):
 		(entries, lendict, just) = self._format_data(head, data, just_fun, fmt or {})
 		(headwrap, lendict) = self._wrap_head(head, lendict)
 
-		def get_key_padded_name(key, name):
+		def _get_key_padded_name(key, name):
 			return (key, name.center(lendict[key]))
-		headentry = dict(ismap(get_key_padded_name, head))
+		headentry = dict(ismap(_get_key_padded_name, head))
 		self._log.info('')
 		self._print_table(headwrap, headentry, entries, just, lendict)
 		self._log.info('')
 
 	def _format_data(self, head, data, just_fun, fmt):
 		# adjust to lendict of column (considering escape sequence correction)
-		def get_key_len(key, name):
+		def _get_key_len(key, name):
 			return (key, len(name))
 
-		def just(key, value):
-			return just_fun.get(key, str.rjust)(value, lendict[key] + len(value) - stripped_len(value))
+		def _just(key, value):
+			return just_fun.get(key, str.rjust)(value, lendict[key] + len(value) - _stripped_len(value))
 
-		def stripped_len(value):
+		def _stripped_len(value):
 			return len(re.sub('\033\\[\\d*(;\\d*)*m', '', value))
 
-		lendict = dict(ismap(get_key_len, head))
+		lendict = dict(ismap(_get_key_len, head))
 
 		result = []
 		for entry in data:
@@ -65,14 +65,14 @@ class ColumnTable(ConsoleTable):
 				tmp = {}
 				for key, _ in head:
 					tmp[key] = str(fmt.get(key, str)(entry.get(key, '')))
-					lendict[key] = max(lendict[key], stripped_len(tmp[key]))
+					lendict[key] = max(lendict[key], _stripped_len(tmp[key]))
 				result.append(tmp)
 			else:
 				result.append(entry)
-		return (result, lendict, just)
+		return (result, lendict, _just)
 
 	def _get_good_partition(self, keys, lendict, maxlen):  # BestPartition => NP complete
-		def get_fitting_keys(leftkeys):
+		def _get_fitting_keys(leftkeys):
 			current = 0
 			for key in leftkeys:
 				if current + lendict[key] <= maxlen:
@@ -82,7 +82,7 @@ class ColumnTable(ConsoleTable):
 				yield leftkeys[0]
 		unused = list(keys)
 		while len(unused) != 0:
-			for key in list(get_fitting_keys(unused)):  # list(...) => get fitting keys at once!
+			for key in list(_get_fitting_keys(unused)):  # list(...) => get fitting keys at once!
 				if key in unused:
 					unused.remove(key)
 				yield key
@@ -92,23 +92,23 @@ class ColumnTable(ConsoleTable):
 		just_fun_dict = {'l': str.ljust, 'r': str.rjust, 'c': str.center}
 		# just_fun = {id1: str.center, id2: str.rjust, ...}
 
-		def get_key_format(head_entry, fmt_string):
+		def _get_key_format(head_entry, fmt_string):
 			return (head_entry[0], just_fun_dict[fmt_string])
-		return dict(ismap(get_key_format, izip(head, fmt_string)))
+		return dict(ismap(_get_key_format, izip(head, fmt_string)))
 
 	def _print_table(self, headwrap, headentry, entries, just, lendict):
 		for (keys, entry) in self._wrap_formatted_data(headwrap, [headentry, '='] + entries):
 			if isinstance(entry, str):
-				def decor(value):
+				def _decor(value):
 					return '%s%s%s' % (entry, value, entry)
-				value = decor(str.join(decor('+'), lmap(lambda key: entry * lendict[key], keys)))
+				value = _decor(str.join(_decor('+'), lmap(lambda key: entry * lendict[key], keys)))
 			else:
 				value = ' %s ' % str.join(' | ', imap(lambda key: just(key, entry.get(key, '')), keys))
 			self._write_line(value)
 
 	def _wrap_formatted_data(self, headwrap, entries):  # Wrap rows
 		for idx, entry in enumerate(entries):
-			def process_entry(entry):
+			def _process_entry(entry):
 				tmp = []
 				for key in headwrap:
 					if key is None:
@@ -117,16 +117,16 @@ class ColumnTable(ConsoleTable):
 					else:
 						tmp.append(key)
 			if not isinstance(entry, str):
-				for proc_entry in process_entry(entry):
+				for proc_entry in _process_entry(entry):
 					yield proc_entry
 				if (idx != 0) and (idx != len(entries) - 1):
 					if None in headwrap[:-1]:
-						yield list(process_entry('~'))[0]
+						yield list(_process_entry('~'))[0]
 			else:
-				yield list(process_entry(entry))[0]
+				yield list(_process_entry(entry))[0]
 
 	def _wrap_head(self, head, lendict):
-		def get_aligned_dict(keys, lendict, maxlen):
+		def _get_aligned_dict(keys, lendict, maxlen):
 			edges = []
 			while len(keys):
 				offset = 2
@@ -142,14 +142,14 @@ class ColumnTable(ConsoleTable):
 					offset += lendict[key] + 3
 			return lendict
 
-		def get_head_key(key, name):  # Wrap and align columns
+		def _get_head_key(key, name):  # Wrap and align columns
 			return key
 
-		def get_padded_key_len(key, length):
+		def _get_padded_key_len(key, length):
 			return (key, length + 2)
-		headwrap = list(self._get_good_partition(ismap(get_head_key, head),
-			dict(ismap(get_padded_key_len, lendict.items())), self._wrap_len))
-		lendict = get_aligned_dict(headwrap, lendict, self._wrap_len)
+		headwrap = list(self._get_good_partition(ismap(_get_head_key, head),
+			dict(ismap(_get_padded_key_len, lendict.items())), self._wrap_len))
+		lendict = _get_aligned_dict(headwrap, lendict, self._wrap_len)
 		return (headwrap, lendict)
 
 
@@ -176,10 +176,10 @@ class RowTable(ConsoleTable):
 		self._log.info('')
 		head = list(head)
 
-		def get_header_name(key, name):
+		def _get_header_name(key, name):
 			return name
 
-		maxhead = max(imap(len, ismap(get_header_name, head)))
+		maxhead = max(imap(len, ismap(_get_header_name, head)))
 		fmt = fmt or {}
 		show_line = False
 		for entry in data:

@@ -267,13 +267,13 @@ class ListFilter(Plugin):
 		if not self._match_function:
 			return entries
 		if key is None:
-			match_function = self._match_function
+			_match_function = self._match_function
 		else:
-			def match_function(item):
+			def _match_function(item):
 				return self._match_function(key(item))
 		if self._order == ListOrder.matcher:
-			entries = sorted(entries, key=match_function)
-		return self._filter_list(entries, match_function)
+			entries = sorted(entries, key=_match_function)
+		return self._filter_list(entries, _match_function)
 
 	def get_selector(self):
 		return self._selector

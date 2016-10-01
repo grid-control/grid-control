@@ -36,14 +36,14 @@ class TaggedConfigView(SimpleConfigView):
 		self._section_name_list = self._init_variable(parent, '_section_name_list', [],
 			setNames, addNames, norm_config_locations)
 
-		def get_tag_tuple(tag_obj):
+		def _get_tag_tuple(tag_obj):
 			try:
 				config_tag_name = tag_obj.config_tag_name.lower()
 			except Exception:
 				raise APIError('Class %r does not define a valid tag name!' % tag_obj.__class__.__name__)
 			return [(config_tag_name, tag_obj.getObjectName().lower())]
 		self._section_tag_list = self._init_variable(parent, '_section_tag_list', [],
-			setTags, addTags, identity, get_tag_tuple)
+			setTags, addTags, identity, _get_tag_tuple)
 		self._section_tag_order = lmap(itemgetter(0), self._section_tag_list)
 
 	def __str__(self):

@@ -30,22 +30,22 @@ class ImmutableParameterSource(ParameterSource):
 
 
 class InternalParameterSource(ImmutableParameterSource):
-	def __init__(self, values, metas):
-		(self._values, self._metas) = (values, metas)
-		self._keys = lmap(lambda pm: pm.get_value(), metas)
-		ImmutableParameterSource.__init__(self, (lmap(str_dict, values), self._keys))
+	def __init__(self, value_list, meta_list):
+		(self._value_list, self._meta_list) = (value_list, meta_list)
+		self._keys = lmap(lambda pm: pm.get_value(), meta_list)
+		ImmutableParameterSource.__init__(self, (lmap(str_dict, value_list), self._keys))
 
 	def __repr__(self):
 		return '<internal:%s=%s>' % (str.join('|', self._keys), self.get_psrc_hash())
 
-	def fill_parameter_content(self, pNum, result):
-		result.update(self._values[pNum])
+	def fill_parameter_content(self, pnum, result):
+		result.update(self._value_list[pnum])
 
 	def fill_parameter_metadata(self, result):
-		result.extend(self._metas)
+		result.extend(self._meta_list)
 
 	def get_parameter_len(self):
-		return len(self._values)
+		return len(self._value_list)
 
 
 class SingleParameterSource(ImmutableParameterSource):
@@ -66,7 +66,7 @@ class CollectParameterSource(SingleParameterSource):  # Merge parameter values
 		self._vn_list_plain = vn_list
 		self._vn_list = lmap(lambda regex: re.compile('^%s$' % regex.replace('...', '.*')), list(vn_list))
 
-	def fill_parameter_content(self, pNum, result):
+	def fill_parameter_content(self, pnum, result):
 		for src in self._vn_list:
 			for key in result:
 				if src.search(str(key)):
@@ -90,7 +90,7 @@ class ConstParameterSource(SingleParameterSource):
 		return ConstParameterSource(key, value)
 	create_psrc = classmethod(create_psrc)
 
-	def fill_parameter_content(self, pNum, result):
+	def fill_parameter_content(self, pnum, result):
 		result[self._key] = self._value
 
 	def show_psrc(self):
@@ -107,7 +107,7 @@ class CounterParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'counter(%r, %s)' % (self._meta.get_value(), self._seed)
 
-	def fill_parameter_content(self, pNum, result):
+	def fill_parameter_content(self, pnum, result):
 		result[self._key] = self._seed + result['GC_JOB_ID']
 
 	def show_psrc(self):
@@ -124,7 +124,7 @@ class FormatterParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'format(%r, %r, %r, %r)' % (self._key, self._fmt, self._source, self._default)
 
-	def fill_parameter_content(self, pNum, result):
+	def fill_parameter_content(self, pnum, result):
 		src = parse_type(str(result.get(self._source, self._default)))
 		result[self._key] = self._fmt % src
 
@@ -143,7 +143,7 @@ class RNGParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'rng(%r)' % self._meta.get_value()
 
-	def fill_parameter_content(self, pNum, result):
+	def fill_parameter_content(self, pnum, result):
 		result[self._key] = random.randint(self._low, self._high)
 
 	def show_psrc(self):
@@ -154,11 +154,11 @@ class RNGParameterSource(SingleParameterSource):
 class SimpleParameterSource(SingleParameterSource):
 	alias_list = ['var']
 
-	def __init__(self, key, values):
-		SingleParameterSource.__init__(self, key, [key, values])
-		if values is None:
+	def __init__(self, key, value_list):
+		SingleParameterSource.__init__(self, key, [key, value_list])
+		if value_list is None:
 			raise ConfigError('Missing values for %s' % key)
-		self._values = values
+		self._value_list = value_list
 
 	def __repr__(self):
 		return 'var(%r)' % self._meta.get_value()
@@ -167,14 +167,14 @@ class SimpleParameterSource(SingleParameterSource):
 		return SimpleParameterSource(key, pconfig.get_parameter(key.lstrip('!')))
 	create_psrc = classmethod(create_psrc)
 
-	def fill_parameter_content(self, pNum, result):
-		result[self._key] = self._values[pNum]
+	def fill_parameter_content(self, pnum, result):
+		result[self._key] = self._value_list[pnum]
 
 	def get_parameter_len(self):
-		return len(self._values)
+		return len(self._value_list)
 
 	def show_psrc(self):
-		return ['%s: var = %s, len = %d' % (self.__class__.__name__, self._key, len(self._values))]
+		return ['%s: var = %s, len = %d' % (self.__class__.__name__, self._key, len(self._value_list))]
 
 
 class TransformParameterSource(SingleParameterSource):
@@ -187,7 +187,7 @@ class TransformParameterSource(SingleParameterSource):
 	def __repr__(self):
 		return 'transform(%r, %r, %r)' % (self._key, self._fmt, self._default)
 
-	def fill_parameter_content(self, pNum, result):
+	def fill_parameter_content(self, pnum, result):
 		tmp = dict(imap(lambda k_v: (str(k_v[0]), parse_type(str(k_v[1]))), result.items()))
 		try:
 			result[self._key] = eval(self._fmt, tmp)  # pylint:disable=eval-used
@@ -220,7 +220,7 @@ class RequirementParameterSource(ParameterSource):
 	def __repr__(self):
 		return 'req()'
 
-	def fill_parameter_content(self, pNum, result):
+	def fill_parameter_content(self, pnum, result):
 		if 'WALLTIME' in result:
 			result[ParameterInfo.REQS].append((WMS.WALLTIME, parse_time(result.pop('WALLTIME'))))
 		if 'CPUTIME' in result:

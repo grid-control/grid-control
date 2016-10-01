@@ -52,8 +52,8 @@ class UserMetadataSplitter(FileClassSplitter):
 		metadata_idx_list = lmap(lambda metadata_name: safe_index(metadata_name_list, metadata_name),
 			metadata_name_list_selected)
 
-		def query_metadata(idx):
+		def _query_metadata(idx):
 			if (idx is not None) and (idx < len(fi[DataProvider.Metadata])):
 				return fi[DataProvider.Metadata][idx]
 			return ''
-		return tuple(imap(query_metadata, metadata_idx_list))
+		return tuple(imap(_query_metadata, metadata_idx_list))

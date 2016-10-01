@@ -46,11 +46,11 @@ class FLSplitStacker(FileLevelSplitter):
 	alias_list = ['pipeline']
 
 	def partition_blocks_raw(self, block_iter, event_first=0):
-		def create_fls(fls_name):
+		def _create_fls(fls_name):
 			return FileLevelSplitter.create_instance(fls_name, self._config, self._datasource_name)
 		for block in block_iter:
 			splitter_name_list = self._setup(self._splitter_name_list, block)
-			splitter_iter = imap(create_fls, splitter_name_list[:-1])
+			splitter_iter = imap(_create_fls, splitter_name_list[:-1])
 			splitter_final = DataSplitter.create_instance(splitter_name_list[-1],
 				self._config, self._datasource_name)
 			for sub_block in reduce(lambda x, y: y.divide_blocks(x), splitter_iter, [block]):

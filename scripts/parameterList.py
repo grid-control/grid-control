@@ -63,12 +63,12 @@ class DataSplitProcessorTest:
 		return lmap(lambda k: ParameterMetadata(k, untracked=True),
 			['DATASETINFO', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 
-	def process(self, pNum, splitInfo, result):
+	def process(self, pNum, partition, result):
 		result.update({
 			'DATASETINFO': '',
-			'DATASETPATH': splitInfo.get(DataSplitter.Dataset, None),
-			'DATASETBLOCK': splitInfo.get(DataSplitter.BlockName, None),
-			'DATASETNICK': splitInfo.get(DataSplitter.Nickname, None),
+			'DATASETPATH': partition.get(DataSplitter.Dataset, None),
+			'DATASETBLOCK': partition.get(DataSplitter.BlockName, None),
+			'DATASETNICK': partition.get(DataSplitter.Nickname, None),
 			'DATASETSPLIT': pNum,
 		})
 

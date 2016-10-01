@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 from hpfwk import APIError
-from python_compat import imap, izip, lsmap, md5_hex, set
+from python_compat import imap, izip, lsmap, md5_hex, set, unspecified
 
 
 def make_enum(members=None, cls=None, use_hash=True):
@@ -24,12 +24,12 @@ def make_enum(members=None, cls=None, use_hash=True):
 		enum_id = md5_hex(str(members))[:4]
 		cls = type('Enum_%s_%s' % (enum_id, str.join('_', members)), (), {})
 
-	def get_value(idx, name):
+	def _get_value(idx, name):
 		if use_hash:
 			return idx + int(enum_id, 16)
 		else:
 			return idx
-	values = lsmap(get_value, enumerate(members))
+	values = lsmap(_get_value, enumerate(members))
 
 	cls.enum_name_list = members
 	cls.enum_value_list = values
@@ -38,10 +38,27 @@ def make_enum(members=None, cls=None, use_hash=True):
 	if len(_map_name2value) != len(_map_value2name):
 		raise APIError('Invalid enum definition!')
 
-	def str2enum(cls, value, *args):
-		return _map_name2value.get(value.lower(), *args)
+	def _intstr2enum(cls, value, default=unspecified):
+		try:
+			enum = int(value)
+		except Exception:
+			if unspecified(default):
+				raise
+			enum = default
+		if enum not in cls.enum_value_list:
+			allowed_str = str.join(', ', imap(lambda nv: '%s=%s', _map_name2value.items()))
+			raise Exception('Invalid enum value %s (allowed are %r)' % (repr(value), allowed_str))
+		return enum
+
+	def _str2enum(cls, value, *args):
+		try:
+			return _map_name2value.get(value.lower(), *args)
+		except Exception:
+			allowed_str = str.join(', ', cls.enum_name_list)
+			raise Exception('Invalid enum string %s (allowed are %r)' % (repr(value), allowed_str))
 	cls.enum2str = _map_value2name.get
-	cls.str2enum = classmethod(str2enum)
+	cls.str2enum = classmethod(_str2enum)
+	cls.intstr2enum = classmethod(_intstr2enum)
 	for name, value in izip(cls.enum_name_list, cls.enum_value_list):
 		setattr(cls, name, value)
 	return cls

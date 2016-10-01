@@ -76,7 +76,7 @@ def lumi_expr(opts, args):
 		print(result)
 
 def iter_jobs(opts, workDir, jobList, splitter):
-	(splitInfo, fip) = ({}, FileInfoProcessor())
+	(partition, fip) = ({}, FileInfoProcessor())
 	activity = Activity('Reading job logs')
 	for jobnum in jobList:
 		activity.update('Reading job logs - [%d / %d]' % (jobnum, jobList[-1]))
@@ -87,8 +87,8 @@ def iter_jobs(opts, workDir, jobList, splitter):
 			outputName = outputName.replace(opts.replace % jobnum, '_').replace('/', '_').replace('__', '_').strip('_')
 		else:
 			if splitter:
-				splitInfo = splitter.get_partition(jobnum)
-			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.Dataset, '').replace('/', '_'))
+				partition = splitter.get_partition(jobnum)
+			outputName = partition.get(DataSplitter.Nickname, partition.get(DataSplitter.Dataset, '').replace('/', '_'))
 		yield (jobnum, outputName)
 	activity.finish()
 

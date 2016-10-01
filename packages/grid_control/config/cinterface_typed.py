@@ -29,12 +29,12 @@ class TypedConfigInterface(ConfigInterface):
 	# Config interface class accessing typed data using an string interface provided by configView
 	def get_bool(self, option, default=unspecified, **kwargs):
 		# Getting boolean config options - feature: true and false are not the only valid expressions
-		def str2obj(value):
+		def _str2obj(value):
 			result = parse_bool(value)
 			if result is None:
 				raise ConfigError('Valid boolean expressions are: "true", "false"')
 			return result
-		return self._get_internal('bool', bool.__str__, str2obj, None, option, default, **kwargs)
+		return self._get_internal('bool', bool.__str__, _str2obj, None, option, default, **kwargs)
 
 	def get_composited_plugin(self, option, default=unspecified,
 			default_compositor=unspecified, option_compositor=None,
@@ -80,16 +80,16 @@ class TypedConfigInterface(ConfigInterface):
 
 	def get_path(self, option, default=unspecified, must_exist=True, **kwargs):
 		# Return resolved path (search paths given in config_vault['path:search'])
-		def parse_path(value):
+		def _parse_path(value):
 			if value == '':
 				return ''
 			return self.resolve_path(value, must_exist, 'Error resolving path %s' % value)
-		return self._get_internal('path', obj2str=str.__str__, str2obj=parse_path, def2obj=None,
+		return self._get_internal('path', obj2str=str.__str__, str2obj=_parse_path, def2obj=None,
 			option=option, default_obj=default, **kwargs)
 
 	def get_path_list(self, option, default=unspecified, must_exist=True, **kwargs):
 		# Return multiple resolved paths (each line processed same as get_path)
-		def patlist2pathlist(value, must_exist):
+		def _patlist2pathlist(value, must_exist):
 			exc = ExceptionCollector()
 			search_path_list = self._config_view.config_vault.get('path:search', [])
 			for pattern in value:
@@ -100,8 +100,8 @@ class TypedConfigInterface(ConfigInterface):
 					exc.collect()
 			exc.raise_any(ConfigError('Error resolving paths'))
 		return self._get_internal('paths',
-			obj2str=lambda value: '\n' + str.join('\n', patlist2pathlist(value, False)),
-			str2obj=lambda value: list(patlist2pathlist(parse_list(value, None), must_exist)),
+			obj2str=lambda value: '\n' + str.join('\n', _patlist2pathlist(value, False)),
+			str2obj=lambda value: list(_patlist2pathlist(parse_list(value, None), must_exist)),
 			def2obj=None, option=option, default_obj=default, **kwargs)
 
 	def get_plugin(self, option, default=unspecified,
@@ -114,12 +114,12 @@ class TypedConfigInterface(ConfigInterface):
 
 	def get_time(self, option, default=unspecified, **kwargs):
 		# Get time in seconds - input base is hours
-		def str2obj(value):
+		def _str2obj(value):
 			try:
 				return parse_time(value)  # empty or negative values are mapped to -1
 			except Exception:
 				raise ConfigError('Valid time expressions have the format: hh[:mm[:ss]]')
-		return self._get_internal('time', str_time_short, str2obj, None, option, default, **kwargs)
+		return self._get_internal('time', str_time_short, _str2obj, None, option, default, **kwargs)
 
 	def resolve_path(self, value, must_exist, error_msg):
 		# Resolve path
@@ -181,12 +181,12 @@ class SimpleConfigInterface(TypedConfigInterface):
 		if 'interactive_msg' in kwargs:
 			kwargs['interactive_msg'] += (' [%s]' % choices_str)
 
-		def checked_str2obj(value):
+		def _checked_str2obj(value):
 			obj = str2obj(value)
 			if obj not in choices:
 				raise ConfigError('Invalid choice "%s" [%s]!' % (value, choices_str))
 			return obj
-		return self._get_internal('choice', obj2str, checked_str2obj, def2obj, option, default,
+		return self._get_internal('choice', obj2str, _checked_str2obj, def2obj, option, default,
 			interactive_msg_append_default=False, **kwargs)
 
 	def get_choice_yes_no(self, option, default=unspecified, **kwargs):

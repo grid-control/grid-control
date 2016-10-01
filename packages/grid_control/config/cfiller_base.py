@@ -49,14 +49,14 @@ class CompatConfigFiller(ConfigFiller):
 			self._persistency_dict = PersistentDict(persistency_file, ' = ')
 
 	def fill(self, container):
-		def set_persistent_setting(section, key):
+		def _set_persistent_setting(section, key):
 			if key in self._persistency_dict:
 				value = self._persistency_dict.get(key)
 				self._add_entry(container, section, key, value, '<persistency file>')
-		set_persistent_setting('task', 'task id')
-		set_persistent_setting('task', 'task date')
-		set_persistent_setting('parameters', 'parameter hash')
-		set_persistent_setting('jobs', 'seeds')
+		_set_persistent_setting('task', 'task id')
+		_set_persistent_setting('task', 'task date')
+		_set_persistent_setting('parameters', 'parameter hash')
+		_set_persistent_setting('jobs', 'seeds')
 
 
 class DictConfigFiller(ConfigFiller):
@@ -115,7 +115,7 @@ class FileConfigFiller(ConfigFiller):
 		self._fill_content_shallow(config_fn, config_str_list,
 			search_path_list, tmp_content_configfile)
 
-		def get_list_shallow(section, option):
+		def _get_list_shallow(section, option):
 			for (opt, value, _) in tmp_content_configfile.get(section, []):
 				if opt == option:
 					for entry in parse_list(value, None):
@@ -123,18 +123,18 @@ class FileConfigFiller(ConfigFiller):
 
 		search_path_list_new = [os.path.dirname(config_fn)]
 		# Add entries from include statement recursively
-		for include_fn in get_list_shallow('global', 'include'):
+		for include_fn in _get_list_shallow('global', 'include'):
 			self._fill_content_deep(include_fn, search_path_list + search_path_list_new, content_configfile)
 		# Process all other entries in current file
 		self._fill_content_shallow(config_fn, config_str_list, search_path_list, content_configfile)
 		# Override entries in current config file
-		for override_fn in get_list_shallow('global', 'include override'):
+		for override_fn in _get_list_shallow('global', 'include override'):
 			self._fill_content_deep(override_fn, search_path_list + search_path_list_new, content_configfile)
 		# Filter special global options
 		if content_configfile.get('global', []):
-			def ignore_includes(opt_v_s_tuple):
+			def _ignore_includes(opt_v_s_tuple):
 				return opt_v_s_tuple[0] not in ['include', 'include override']
-			content_configfile['global'] = lfilter(ignore_includes, content_configfile['global'])
+			content_configfile['global'] = lfilter(_ignore_includes, content_configfile['global'])
 		return search_path_list + search_path_list_new
 
 	def _fill_content_shallow(self, config_fn, config_str_list, search_path_list, content_configfile):
@@ -167,37 +167,37 @@ class FileConfigFiller(ConfigFiller):
 
 	# Not using ConfigParser anymore! Ability to read duplicate options is needed
 	def _parse_line(self, exception_intro, content_configfile, config_fn, idx, line):
-		def protected_call(fun, exception_msg, line):
+		def _protected_call(fun, exception_msg, line):
 			try:
 				return fun(exception_intro, content_configfile, config_fn, idx, line)
 			except Exception:
 				raise ConfigError(exception_intro + ':%d\n\t%r\n' % (idx, line) + exception_msg)
 
-		line = protected_call(self._parse_line_strip_comments, 'Unable to strip comments!', line)
+		line = _protected_call(self._parse_line_strip_comments, 'Unable to strip comments!', line)
 		exception_intro_ext = exception_intro + ':%d\n\t%r\n' % (idx, line)
 		if line.lstrip().startswith(';') or line.lstrip().startswith('#') or not line.strip():
 			return  # skip empty lines or comment lines
 		elif line[0].isspace():
-			protected_call(self._parse_line_option_continued, 'Invalid indentation!', line)
+			_protected_call(self._parse_line_option_continued, 'Invalid indentation!', line)
 		elif line.startswith('['):
 			if self._cur_option:
 				self._store_option(exception_intro_ext, content_configfile, config_fn)
-			protected_call(self._parse_line_section, 'Unable to parse config section!', line)
+			_protected_call(self._parse_line_section, 'Unable to parse config section!', line)
 		elif '=' in line:
 			if self._cur_option:
 				self._store_option(exception_intro_ext, content_configfile, config_fn)
-			protected_call(self._parse_line_option, 'Unable to parse config option!', line)
+			_protected_call(self._parse_line_option, 'Unable to parse config option!', line)
 		else:
 			raise ConfigError(exception_intro_ext + '\nPlease use "key = value" syntax or indent values!')
 
 	def _store_option(self, exception_intro, content_configfile, config_fn):
-		def assert_set(cond, msg):
+		def _assert_set(cond, msg):
 			if not cond:
 				raise ConfigError(exception_intro + '\n' + msg)
-		assert_set(self._cur_section, 'Found config option outside of config section!')
-		assert_set(self._cur_option, 'Config option is not set!')
-		assert_set(self._cur_value is not None, 'Config value is not set!')
-		assert_set(self._cur_indices, 'Config source not set!')
+		_assert_set(self._cur_section, 'Found config option outside of config section!')
+		_assert_set(self._cur_option, 'Config option is not set!')
+		_assert_set(self._cur_value is not None, 'Config value is not set!')
+		_assert_set(self._cur_indices, 'Config source not set!')
 		content_section = content_configfile.setdefault(self._cur_section, [])
 		self._cur_value = self._cur_value.replace('$GC_CONFIG_DIR', os.path.dirname(config_fn))
 		self._cur_value = self._cur_value.replace('$GC_CONFIG_FILE', config_fn)
@@ -210,7 +210,7 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 	# Config filler which collects data from default config files
 	def __init__(self):
 		# Collect host / user / installation specific config files
-		def resolve_hostname():
+		def _resolve_hostname():
 			import socket
 			host = socket.gethostname()
 			try:
@@ -219,7 +219,7 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 				return host
 
 		try:
-			hostname = hang_protection(resolve_hostname, timeout=5)
+			hostname = hang_protection(_resolve_hostname, timeout=5)
 		except TimeoutException:
 			hostname = None
 			sys.stderr.write('System call to resolve hostname is hanging!\n')

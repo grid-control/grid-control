@@ -18,7 +18,7 @@ from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import md5_hex, set
 
 
-ParameterInfo = make_enum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
+ParameterInfo = make_enum(['ACTIVE', 'HASH', 'REQS', 'FILES'])  # pylint:disable=invalid-name
 
 
 class ParameterError(NestedException):

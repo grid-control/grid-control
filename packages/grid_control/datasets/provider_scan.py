@@ -30,10 +30,10 @@ class ScanProviderBase(DataProvider):
 		scanner_config = config.change_view(default_on_change=TriggerResync(['datasets', 'parameters']))
 		self._interactive_assignment = config.is_interactive('dataset name assignment', True)
 
-		def create_scanner(scanner_name):
+		def _create_scanner(scanner_name):
 			return InfoScanner.create_instance(scanner_name, scanner_config, datasource_name)
 		scanner_list = config.get_list('scanner', scanner_list_default) + ['NullScanner']
-		self._scanner_list = lmap(create_scanner, scanner_list)
+		self._scanner_list = lmap(_create_scanner, scanner_list)
 
 		# Configure dataset / block naming and selection
 		def _setup(prefix):

@@ -109,10 +109,10 @@ class MetaPartitionProcessor(PartitionProcessor):
 	def process(self, pnum, partition_info, result):
 		for idx, metadata_name in enumerate(partition_info.get(DataSplitter.MetadataHeader, [])):
 			if metadata_name in self._metadata_list:
-				def get_metadata_protected(metadata_list):
+				def _get_metadata_protected(metadata_list):
 					if idx < len(metadata_list):
 						return metadata_list[idx]
-				tmp = set(imap(get_metadata_protected, partition_info[DataSplitter.Metadata]))
+				tmp = set(imap(_get_metadata_protected, partition_info[DataSplitter.Metadata]))
 				if len(tmp) == 1:
 					value = tmp.pop()
 					if value is not None:

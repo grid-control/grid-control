@@ -119,7 +119,7 @@ class ConfigInterface(object):
 
 	def _process_entries(self, old_entry, cur_entry, desc, obj2str, str2obj, on_change, on_valid):
 		# Wrap parsing of object
-		def parse_entry(entry, entry_desc=''):
+		def _parse_entry(entry, entry_desc=''):
 			try:
 				obj = str2obj(entry.value)
 				entry.value = obj2str(obj)  # Update value of entry with formatted data
@@ -129,11 +129,11 @@ class ConfigInterface(object):
 			except Exception:
 				raise ConfigError('Unable to parse %s: %s' % (entry_desc + desc,
 					entry.format(print_section=True)))
-		cur_obj = parse_entry(cur_entry)
+		cur_obj = _parse_entry(cur_entry)
 
 		# Notify about changes
 		if on_change and old_entry:
-			old_obj = parse_entry(old_entry, 'stored ')
+			old_obj = _parse_entry(old_entry, 'stored ')
 			if (old_obj == cur_obj) is False:
 				# Passing self as first argument allows to limit reinits to current config view
 				cur_obj = on_change(self, old_obj, cur_obj, cur_entry, obj2str)

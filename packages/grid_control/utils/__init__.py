@@ -322,10 +322,10 @@ def ping_host(host):
 
 
 def prune_processors(do_prune, processor_list, log, message, formatter=None, id_fun=None):
-	def get_class_name(proc):
+	def _get_class_name(proc):
 		return proc.__class__.__name__
-	selected = filter_processors(processor_list, id_fun or get_class_name)
-	display_selection(log, processor_list, selected, message, formatter or get_class_name)
+	selected = filter_processors(processor_list, id_fun or _get_class_name)
+	display_selection(log, processor_list, selected, message, formatter or _get_class_name)
 	return selected
 
 
@@ -438,7 +438,7 @@ def split_opt(opt, delim, empty=''):
 	>>> split_opt('abc:def', '::')
 	('abc', 'def', '')
 	"""
-	def get_delimeter_part(old_result, prefix):
+	def _get_delimeter_part(old_result, prefix):
 		try:
 			tmp = old_result[0].split(prefix)
 			new = tmp.pop(1)
@@ -450,7 +450,7 @@ def split_opt(opt, delim, empty=''):
 			return [str.join(prefix, tmp)] + old_result[1:] + [new[:other_delim]]
 		except Exception:
 			return old_result + ['']
-	result = imap(str.strip, reduce(get_delimeter_part, delim, [opt]))
+	result = imap(str.strip, reduce(_get_delimeter_part, delim, [opt]))
 	return tuple(imap(lambda x: QM(x == '', empty, x), result))
 
 
@@ -471,9 +471,9 @@ def wait(timeout):
 
 
 def wrap_list(value, length, delim_lines=',\n', delim_entries=', '):
-	def counter(item, buffer):
+	def _counter(item, buffer):
 		return len(item) + sum(imap(len, buffer)) + 2 * len(buffer) > length
-	wrapped = accumulate(value, [], counter, add_fun=lambda x, y: x + [y])
+	wrapped = accumulate(value, [], _counter, add_fun=lambda x, y: x + [y])
 	return str.join(delim_lines, imap(lambda x: str.join(delim_entries, x), wrapped))
 
 

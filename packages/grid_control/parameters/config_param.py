@@ -54,20 +54,6 @@ def parse_parameter_option(option):
 	return tuple(result)
 
 
-def parse_parameter_option_list(option_list):
-	(map_vn2varexpr, map_varexpr_suffix2opt) = ({}, {})
-	for opt in option_list:
-		(varexpr, suffix) = parse_parameter_option(opt)
-		map_varexpr_suffix2opt[(varexpr, suffix)] = opt
-		if suffix is None:
-			if isinstance(varexpr, tuple):
-				for vn in varexpr:
-					map_vn2varexpr[vn] = varexpr
-			else:
-				map_vn2varexpr[varexpr] = varexpr
-	return (map_vn2varexpr, map_varexpr_suffix2opt)
-
-
 def parse_tuple(token, delimeter):
 	token = token.strip()
 	if token.startswith('('):
@@ -81,13 +67,15 @@ class ParameterConfig(object):
 	def __init__(self, config):
 		(self._config, self._changes) = (config, [])
 		option_list = config.get_option_list()
-		(self._map_vn2varexpr, self._map_varexpr_suffix2opt) = parse_parameter_option_list(option_list)
+		(self._map_vn2varexpr, self._map_varexpr_suffix2opt) = _parse_parameter_option_list(option_list)
 
 	def get(self, varexpr, suffix=None, default=unspecified):
-		return self._config.get(self._get_var_opt(varexpr, suffix), default, on_change=self._on_change)
+		return self._config.get(self._get_var_opt(varexpr, suffix), default,
+			on_change=self._on_change)
 
 	def get_bool(self, varexpr, suffix=None, default=unspecified):  # needed for Matcher configuration
-		return self._config.get_bool(self._get_var_opt(varexpr, suffix), default, on_change=self._on_change)
+		return self._config.get_bool(self._get_var_opt(varexpr, suffix), default,
+			on_change=self._on_change)
 
 	def get_config(self, *args, **kwargs):
 		return self._config.change_view(*args, **kwargs)
@@ -101,18 +89,18 @@ class ParameterConfig(object):
 			outer_type = self.get(varexpr, 'type', 'tuple')
 			inner_type = self.get(vn, 'type', 'verbatim')
 
-			def parse_value(value):  # extract the outer_idx-nth variable and parse it as usual
+			def _parse_value(value):  # extract the outer_idx-nth variable and parse it as usual
 				return self._process_parameter_list(vn,
 					self._parse_parameter_tuple(vn, value, outer_type, inner_type, outer_idx))
-			return self._handle_dict(vn, outer_value, parse_value)
+			return self._handle_dict(vn, outer_value, _parse_value)
 		else:
 			parameter_value = self.get(vn, None, '')
 			parameter_type = self.get(vn, 'type', 'default')
 
-			def parse_value(value):  # parse the parameter value - using the specified interpretation
+			def _parse_value(value):  # parse the parameter value - using the specified interpretation
 				return self._process_parameter_list(vn,
 					self._parse_parameter(vn, value, parameter_type))
-			return self._handle_dict(vn, parameter_value, parse_value)
+			return self._handle_dict(vn, parameter_value, _parse_value)
 
 	def show_changes(self):
 		pass
@@ -173,8 +161,8 @@ class ParameterConfig(object):
 				raise ConfigError('[Variable: %s] Unable to parse %r' % (vn, (tuple_entry, tuple_token_list)))
 			if isinstance(tmp, list):
 				if len(tmp) != 1:
-					err_msg = '[Variable: %s] Tuple entry (%s) expands to multiple variable entries (%s)!'
-					raise ConfigError(err_msg % (vn, tuple_entry[outer_idx], tmp))
+					error_msg = '[Variable: %s] Tuple entry (%s) expands to multiple variable entries (%s)!'
+					raise ConfigError(error_msg % (vn, tuple_entry[outer_idx], tmp))
 				result.append(tmp[0])
 			else:
 				result.append(tmp)
@@ -246,3 +234,17 @@ class VerbatimParameterParser(ParameterParser):
 
 	def parse_value(self, pconfig, varexpr, vn, value):
 		return [value]
+
+
+def _parse_parameter_option_list(option_list):
+	(map_vn2varexpr, map_varexpr_suffix2opt) = ({}, {})
+	for opt in option_list:
+		(varexpr, suffix) = parse_parameter_option(opt)
+		map_varexpr_suffix2opt[(varexpr, suffix)] = opt
+		if suffix is None:
+			if isinstance(varexpr, tuple):
+				for vn in varexpr:
+					map_vn2varexpr[vn] = varexpr
+			else:
+				map_vn2varexpr[varexpr] = varexpr
+	return (map_vn2varexpr, map_varexpr_suffix2opt)

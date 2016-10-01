@@ -19,22 +19,22 @@ from python_compat import unspecified
 
 
 class TaskExecutableWrapper:
-	def __init__(self, config, prefix = '', exeDefault = unspecified):
+	def __init__(self, config, prefix='', executable_default=unspecified):
 		initSandbox = TriggerInit('sandbox')
-		self._executableSend = config.get_bool('%s send executable' % prefix, True, on_change = initSandbox)
-		if self._executableSend:
-			self._executable = config.get_path('%s executable' % prefix, exeDefault, on_change = initSandbox)
+		self._executable_send = config.get_bool('%s send executable' % prefix, True, on_change=initSandbox)
+		if self._executable_send:
+			self._executable = config.get_path('%s executable' % prefix, executable_default, on_change=initSandbox)
 		else:
-			self._executable = config.get('%s executable' % prefix, exeDefault, on_change = initSandbox)
-		self._arguments = config.get('%s arguments' % prefix, '', on_change = initSandbox)
+			self._executable = config.get('%s executable' % prefix, executable_default, on_change=initSandbox)
+		self._arguments = config.get('%s arguments' % prefix, '', on_change=initSandbox)
 
 
-	def isActive(self):
+	def is_active(self):
 		return self._executable != ''
 
 
 	def get_command(self):
-		if self._executableSend:
+		if self._executable_send:
 			cmd = os.path.basename(self._executable)
 			return 'chmod u+x %s; ./%s $@' % (cmd, cmd)
 		return '%s $@' % str.join('; ', self._executable.splitlines())
@@ -45,6 +45,6 @@ class TaskExecutableWrapper:
 
 
 	def getSBInFiles(self):
-		if self._executableSend and self._executable:
-			return [utils.Result(path_abs = self._executable, path_rel = os.path.basename(self._executable))]
+		if self._executable_send and self._executable:
+			return [utils.Result(path_abs=self._executable, path_rel=os.path.basename(self._executable))]
 		return []

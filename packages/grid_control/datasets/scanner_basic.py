@@ -19,7 +19,7 @@ from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.job_db import Job
 from grid_control.job_selector import JobSelector
 from grid_control.utils import DictFormat, clean_path, filter_dict, split_opt
-from grid_control.utils.activity import Activity
+from grid_control.utils.activity import ProgressActivity
 from grid_control.utils.parsing import parse_str
 from python_compat import identity, ifilter, imap, irange, izip, lfilter, lmap, set, sorted
 
@@ -108,13 +108,11 @@ class FilesFromLS(InfoScanner):
 
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		metadata_dict['GC_SOURCE_DIR'] = self._path
-		counter = 0
-		activity = Activity('Reading source directory')
-		for fn in self._iter_path():
-			activity.update('Reading source directory - [%d]' % counter)
+		progress = ProgressActivity('Reading source directory')
+		for counter, fn in enumerate(self._iter_path()):
+			progress.update_progress(counter)
 			yield (os.path.join(self._path, fn.strip()), metadata_dict, entries, location_list, obj_dict)
-			counter += 1
-		activity.finish()
+		progress.finish()
 
 	def _iter_path(self):
 		if self._recurse:
@@ -244,14 +242,17 @@ class OutputDirsFromConfig(InfoScanner):
 		self._selected = sorted(ext_job_db.getJobs(JobSelector.create(selector, task=self._ext_task)))
 
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
-		activity = Activity('Reading job logs')
+		progress_max = None
+		if self._selected:
+			progress_max = self._selected[-1]
+		progress = ProgressActivity('Reading job logs', progress_max)
 		for jobnum in self._selected:
-			activity.update('Reading job logs - [%d / %d]' % (jobnum, self._selected[-1]))
+			progress.update_progress(jobnum)
 			metadata_dict['GC_JOBNUM'] = jobnum
 			obj_dict.update({'GC_TASK': self._ext_task, 'GC_WORKDIR': self._ext_workdir})
 			job_output_dn = os.path.join(self._ext_workdir, 'output', 'job_%d' % jobnum)
 			yield (job_output_dn, metadata_dict, entries, location_list, obj_dict)
-		activity.finish()
+		progress.finish()
 
 
 class OutputDirsFromWork(InfoScanner):
@@ -265,9 +266,9 @@ class OutputDirsFromWork(InfoScanner):
 
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		dn_list = lfilter(lambda fn: fn.startswith('job_'), os.listdir(self._ext_output_dir))
-		activity = Activity('Reading job logs')
+		progress = ProgressActivity('Reading job logs', len(dn_list))
 		for idx, dn in enumerate(dn_list):
-			activity.update('Reading job logs - [%d / %d]' % (idx, len(dn_list)))
+			progress.update_progress(idx)
 			try:
 				metadata_dict['GC_JOBNUM'] = int(dn.split('_')[1])
 			except Exception:
@@ -277,7 +278,7 @@ class OutputDirsFromWork(InfoScanner):
 				continue
 			job_output_dn = os.path.join(self._ext_output_dir, dn)
 			yield (job_output_dn, metadata_dict, entries, location_list, obj_dict)
-		activity.finish()
+		progress.finish()
 
 
 class ParentLookup(InfoScanner):

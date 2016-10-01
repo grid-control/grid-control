@@ -171,24 +171,24 @@ class DataProvider(ConfigurablePlugin):
 	def resync_blocks(block_list_old, block_list_new):
 		# Returns changes between two sets of blocks in terms of added, missing and changed blocks
 		# Only the affected files are returned in the block file list
-		def get_block_key(block):  # Compare different blocks according to their name - NOT full content
+		def _get_block_key(block):  # Compare different blocks according to their name - NOT full content
 			return (block[DataProvider.Dataset], block[DataProvider.BlockName])
-		sort_inplace(block_list_old, key=get_block_key)
-		sort_inplace(block_list_new, key=get_block_key)
+		sort_inplace(block_list_old, key=_get_block_key)
+		sort_inplace(block_list_new, key=_get_block_key)
 
-		def handle_matching_block(block_list_added, block_list_missing, block_list_matching,
+		def _handle_matching_block(block_list_added, block_list_missing, block_list_matching,
 				block_old, block_new):
 			# Compare different files according to their name - NOT full content
 			get_file_key = itemgetter(DataProvider.URL)
 			sort_inplace(block_old[DataProvider.FileList], key=get_file_key)
 			sort_inplace(block_new[DataProvider.FileList], key=get_file_key)
 
-			def handle_matching_fi(fi_list_added, fi_list_missing, fi_list_matched, fi_old, fi_new):
+			def _handle_matching_fi(fi_list_added, fi_list_missing, fi_list_matched, fi_old, fi_new):
 				fi_list_matched.append((fi_old, fi_new))
 
 			(fi_list_added, fi_list_missing, fi_list_matched) = get_list_difference(
 				block_old[DataProvider.FileList], block_new[DataProvider.FileList],
-				get_file_key, handle_matching_fi, is_sorted=True)
+				get_file_key, _handle_matching_fi, is_sorted=True)
 			if fi_list_added:  # Create new block for added files in an existing block
 				block_added = copy.copy(block_new)
 				block_added[DataProvider.FileList] = fi_list_added
@@ -197,7 +197,7 @@ class DataProvider(ConfigurablePlugin):
 			block_list_matching.append((block_old, block_new, fi_list_missing, fi_list_matched))
 
 		return get_list_difference(block_list_old, block_list_new,
-			get_block_key, handle_matching_block, is_sorted=True)
+			_get_block_key, _handle_matching_block, is_sorted=True)
 	resync_blocks = staticmethod(resync_blocks)
 
 	def save_to_file(path, block_iter, strip_metadata=False):
@@ -229,15 +229,15 @@ class DataProvider(ConfigurablePlugin):
 				block[DataProvider.FileList]))
 			common_prefix = str.join('/', common_prefix.split('/')[:-1])
 			if len(common_prefix) > 6:
-				def formatter(value):
+				def _formatter(value):
 					return value.replace(common_prefix + '/', '')
 				writer.write('prefix = %s\n' % common_prefix)
 			else:
-				formatter = identity
+				_formatter = identity
 
 			do_write_metadata = (DataProvider.Metadata in block) and not strip_metadata
 			if do_write_metadata:
-				def get_metadata_str(fi, idx_list):
+				def _get_metadata_str(fi, idx_list):
 					idx_list = ifilter(lambda idx: idx < len(fi[DataProvider.Metadata]), idx_list)
 					return json.dumps(lmap(lambda idx: fi[DataProvider.Metadata][idx], idx_list))
 				(metadata_idx_list_block, metadata_idx_list_file) = _split_metadata_idx_list(block)
@@ -245,12 +245,12 @@ class DataProvider(ConfigurablePlugin):
 					metadata_idx_list_block + metadata_idx_list_file))
 				writer.write('metadata = %s\n' % metadata_header_str)
 				if metadata_idx_list_block:
-					metadata_str = get_metadata_str(block[DataProvider.FileList][0], metadata_idx_list_block)
+					metadata_str = _get_metadata_str(block[DataProvider.FileList][0], metadata_idx_list_block)
 					writer.write('metadata common = %s\n' % metadata_str)
 			for fi in block[DataProvider.FileList]:
-				writer.write('%s = %d' % (formatter(fi[DataProvider.URL]), fi[DataProvider.NEntries]))
+				writer.write('%s = %d' % (_formatter(fi[DataProvider.URL]), fi[DataProvider.NEntries]))
 				if do_write_metadata and metadata_idx_list_file:
-					writer.write(' %s' % get_metadata_str(fi, metadata_idx_list_file))
+					writer.write(' %s' % _get_metadata_str(fi, metadata_idx_list_file))
 				writer.write('\n')
 			stream.write(writer.getvalue())
 			writer.seek(0)
@@ -295,17 +295,17 @@ make_enum(['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
 
 
 def _split_metadata_idx_list(block):
-	def get_metadata_hash(fi, idx):
+	def _get_metadata_hash(fi, idx):
 		if idx < len(fi[DataProvider.Metadata]):
 			return md5_hex(repr(fi[DataProvider.Metadata][idx]))
 	fi_list = block[DataProvider.FileList]
 	common_metadata_idx_list = lrange(len(block[DataProvider.Metadata]))
 	if fi_list:
-		common_metadata_hash_list = lmap(lambda idx: get_metadata_hash(fi_list[0], idx),
+		common_metadata_hash_list = lmap(lambda idx: _get_metadata_hash(fi_list[0], idx),
 			common_metadata_idx_list)
 	for fi in fi_list:  # Identify common metadata
 		for idx in common_metadata_idx_list:
-			if get_metadata_hash(fi, idx) != common_metadata_hash_list[idx]:
+			if _get_metadata_hash(fi, idx) != common_metadata_hash_list[idx]:
 				common_metadata_idx_list.remove(idx)
 	return split_list(irange(len(block[DataProvider.Metadata])),
 		fun=common_metadata_idx_list.__contains__,

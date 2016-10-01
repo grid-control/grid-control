@@ -60,18 +60,18 @@ if opts.backend_list_nodes or opts.backend_list_queues:
 # DATASET PARTITION
 
 def partition_invalid(splitter):
-	for (partition_num, splitInfo) in enumerate(splitter.iter_partitions()):
-		if splitInfo.get(DataSplitter.Invalid, False):
+	for (partition_num, partition) in enumerate(splitter.iter_partitions()):
+		if partition.get(DataSplitter.Invalid, False):
 			yield {0: partition_num}
 
 def partition_list(splitter, keyList):
-	for (partition_num, splitInfo) in enumerate(splitter.iter_partitions()):
-		tmp = lmap(lambda k: (k, splitInfo.get(k, '')), keyList)
+	for (partition_num, partition) in enumerate(splitter.iter_partitions()):
+		tmp = lmap(lambda k: (k, partition.get(k, '')), keyList)
 		yield dict([('partition_num', partition_num)] + tmp)
 
 def partition_check(splitter):
 	fail = utils.set()
-	for (partition_num, splitInfo) in enumerate(splitter.iter_partitions()):
+	for (partition_num, partition) in enumerate(splitter.iter_partitions()):
 		try:
 			(events, skip, files) = (0, 0, [])
 			for line in open(os.path.join(opts.checkSplitting, 'jobs', 'job_%d.var' % partition_num)).readlines():
@@ -86,9 +86,9 @@ def partition_check(splitter):
 				if curJ != curS:
 					logging.warning('%s in job %d (j:%s != s:%s)', msg, partition_num, curJ, curS)
 					fail.add(partition_num)
-			printError(events, splitInfo[DataSplitter.NEntries], 'Inconsistent number of events')
-			printError(skip, splitInfo[DataSplitter.Skipped], 'Inconsistent number of skipped events')
-			printError(files, splitInfo[DataSplitter.FileList], 'Inconsistent list of files')
+			printError(events, partition[DataSplitter.NEntries], 'Inconsistent number of events')
+			printError(skip, partition[DataSplitter.Skipped], 'Inconsistent number of skipped events')
+			printError(files, partition[DataSplitter.FileList], 'Inconsistent list of files')
 		except Exception:
 			logging.warning('Job %d was never initialized!', partition_num)
 	if fail:

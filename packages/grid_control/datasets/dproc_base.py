@@ -45,8 +45,8 @@ class DataProcessor(ConfigurablePlugin):
 				if self._log_debug:
 					self._log_debug.debug('%s process result: %s' % (self, repr(result)))
 			except Exception:
-				err_msg = 'Error while processing dataset block in datasource %s'
-				raise DataProcessorError(err_msg % repr(self._datasource_name))
+				error_msg = 'Error while processing dataset block in datasource %s'
+				raise DataProcessorError(error_msg % repr(self._datasource_name))
 		self._finished()
 
 	def process_block(self, block):

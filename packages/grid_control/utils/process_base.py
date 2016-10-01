@@ -195,7 +195,7 @@ class LocalProcess(Process):
 	_handle_input = classmethod(_handle_input)
 
 	def _handle_output(cls, fd_read, buffer, event_shutdown):
-		def read_to_buffer():
+		def _read_to_buffer():
 			while True:
 				try:
 					tmp = bytes2str(os.read(fd_read, 32 * 1024))
@@ -206,8 +206,8 @@ class LocalProcess(Process):
 				buffer.put(tmp)
 		while not event_shutdown.is_set():
 			wait_fd(fd_read_list=[fd_read])
-			read_to_buffer()
-		read_to_buffer()  # Final readout after process finished
+			_read_to_buffer()
+		_read_to_buffer()  # Final readout after process finished
 	_handle_output = classmethod(_handle_output)
 
 	def _interact_with_child(self, pid, fd_parent_stdin, fd_parent_stdout, fd_parent_stderr):

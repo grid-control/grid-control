@@ -184,14 +184,14 @@ def str_dict(mapping, keys_order=None):
 
 
 def str_dict_cfg(value, parser=identity, strfun=str):
-	def getmax(src):
+	def _getmax(src):
 		return max(lmap(lambda x: len(str(x)), src) + [0])
 
 	(srcdict, srckeys) = value
 	result = ''
 	if srcdict.get(None) is not None:
 		result = strfun(srcdict.get(None, parser('')))
-	fmt = '\n\t%%%ds => %%%ds' % (getmax(srckeys), getmax(srcdict.values()))
+	fmt = '\n\t%%%ds => %%%ds' % (_getmax(srckeys), _getmax(srcdict.values()))
 	return result + str.join('', imap(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
 
 

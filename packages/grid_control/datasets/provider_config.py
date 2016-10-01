@@ -31,10 +31,10 @@ class ConfigDataProvider(DataProvider):
 			setSections=['datasource %s' % dataset_expr])
 		self._block = self._read_block(ds_config, dataset_expr, dataset_nick)
 
-		def on_change(config, old_obj, cur_obj, cur_entry, obj2str):
+		def _on_change(config, old_obj, cur_obj, cur_entry, obj2str):
 			self._log.critical('Dataset %r changed', dataset_expr)
 			return TriggerResync(['datasets', 'parameters'])(config, old_obj, cur_obj, cur_entry, obj2str)
-		ds_config.get('%s hash' % datasource_name, self.get_hash(), persistent=True, on_change=on_change)
+		ds_config.get('%s hash' % datasource_name, self.get_hash(), persistent=True, on_change=_on_change)
 
 	def _iter_blocks_raw(self):
 		yield copy.deepcopy(self._block)  # dataset processors might modify metadata inplace

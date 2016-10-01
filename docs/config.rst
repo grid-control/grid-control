@@ -406,6 +406,8 @@ interactive options
     Toggle to switch interactive questions on and off
   * ``<datasource> partition resync / partition resync`` = <boolean> (default: False)
     Toggle interactivity of dataset resyncs
+  * ``dataset name assignment`` = <boolean> (default: True)
+    Toggle interactive question about issues with the bijectivity of the dataset / block name assignments in the scan provider
   * ``delete jobs`` = <boolean> (default: True)
     Toggle interactivity of job deletion requests
   * ``reset jobs`` = <boolean> (default: True)

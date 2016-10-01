@@ -44,7 +44,7 @@ def create_config(config_file=None, config_dict=None, use_default_files=False,
 class ConfigFactory(object):
 	# Main config interface
 	def __init__(self, filler=None, config_file_path=None):
-		def get_name(prefix=''):
+		def _get_name(prefix=''):
 			if config_file_path:
 				return ('%s.%s' % (prefix, get_file_name(config_file_path))).strip('.')
 			elif prefix:
@@ -70,13 +70,13 @@ class ConfigFactory(object):
 		container_old.enabled = False
 
 		# Create config view and temporary config interface
-		self._view = SimpleConfigView(get_name(), container_old, self._container_cur)
+		self._view = SimpleConfigView(_get_name(), container_old, self._container_cur)
 		self._view.config_vault['path:search'] = UniqueList([os.getcwd(), path_main])
 
 		# Determine work directory using config interface with "global" scope
 		tmp_config = SimpleConfigInterface(self._view.get_view(setSections=['global']))
 		workdir_base = tmp_config.get_path('workdir base', path_main, must_exist=False)
-		workdir_default = os.path.join(workdir_base, get_name('work'))
+		workdir_default = os.path.join(workdir_base, _get_name('work'))
 		workdir_path = tmp_config.get_path('workdir', workdir_default, must_exist=False)
 		self._view.config_vault['path:workdir'] = workdir_path  # tmp_config still has undefinied
 		# Set dynamic plugin search path
@@ -98,14 +98,14 @@ class ConfigFactory(object):
 			container_old.set_read_only()
 
 		# Get persistent variables - only possible after container_old was enabled
-		self._view.set_config_name(tmp_config.get('config id', get_name(), persistent=True))
+		self._view.set_config_name(tmp_config.get('config id', _get_name(), persistent=True))
 
 	def freeze(self, write_config=True):
 		# Inform the user about unused options
-		def match_unused_entries(entry):
+		def _match_unused_entries(entry):
 			return ('!' not in entry.section) and not entry.accessed
 		self._container_cur.set_read_only()
-		unused = lfilter(match_unused_entries, self._view.iter_entries())
+		unused = lfilter(_match_unused_entries, self._view.iter_entries())
 		log = logging.getLogger('config.freeze')
 		if unused:
 			log.log(logging.INFO1, 'There are %s unused config options!', len(unused))

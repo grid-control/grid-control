@@ -44,12 +44,12 @@ class Options(object):
 		return self._add(group, short_pair[1], option_pair[1], default, 'store_false', help_pair[1], dest)
 
 	def add_fset(self, group, short, option, help, flag_set):
-		def is_default(opt):
+		def _is_default(opt):
 			opt_obj = self._parser.get_option(opt)
 			return (opt_obj.default and opt_obj.action == 'store_true') or \
 				(not opt_obj.default and opt_obj.action == 'store_false')
 		if '%s' in help:
-			help = help % str.join(' ', ifilter(lambda x: not is_default(x), flag_set.split()))
+			help = help % str.join(' ', ifilter(lambda x: not _is_default(x), flag_set.split()))
 		flag_set_id = len(self._flag_set)
 		self._flag_set[flag_set_id] = flag_set
 		return self._add(group, short, option, False, 'store_true', help,

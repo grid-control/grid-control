@@ -28,12 +28,12 @@ def hang_protection(fun, timeout=5):
 	# Function to protect against hanging system calls
 	result = {}
 
-	def hang_protection_wrapper():
+	def _hang_protection_wrapper():
 		try:
 			result[None] = fun()
 		except Exception:
 			result[None] = None
-	thread = start_thread('hang protection for %s' % fun, hang_protection_wrapper)
+	thread = start_thread('hang protection for %s' % fun, _hang_protection_wrapper)
 	thread.join(timeout)
 	if None not in result:
 		raise TimeoutException
@@ -55,7 +55,7 @@ def tchain(iterable_list, timeout=None,
 	result = GCQueue()
 	exc = ExceptionCollector()
 	for idx, iterable in enumerate(iterable_list):
-		def generator_thread(iterable):  # TODO: Python 3.5 hickup related to pep 479?
+		def _generator_thread(iterable):  # TODO: Python 3.5 hickup related to pep 479?
 			try:
 				try:
 					for item in iterable:
@@ -64,7 +64,7 @@ def tchain(iterable_list, timeout=None,
 					result.put(GCQueue)  # Use GCQueue as end-of-generator marker
 			except Exception:
 				exc.collect()
-		threads.append(start_daemon('generator thread %d' % idx, generator_thread, iterable))
+		threads.append(start_daemon('generator thread %d' % idx, _generator_thread, iterable))
 
 	if timeout is not None:
 		t_end = time.time() + timeout

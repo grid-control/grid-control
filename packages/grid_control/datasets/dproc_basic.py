@@ -65,7 +65,7 @@ class EntriesCountDataProcessor(DataProcessor):
 		if self.enabled():
 			block[DataProvider.NEntries] = 0
 
-			def filter_events(fi):
+			def _filter_events(fi):
 				if self._limit_entries == 0:  # already got all requested events
 					return False
 				# truncate file to requested #entries if file has more events than needed
@@ -74,7 +74,7 @@ class EntriesCountDataProcessor(DataProcessor):
 				block[DataProvider.NEntries] += fi[DataProvider.NEntries]
 				self._limit_entries -= fi[DataProvider.NEntries]
 				return True
-			block[DataProvider.FileList] = lfilter(filter_events, block[DataProvider.FileList])
+			block[DataProvider.FileList] = lfilter(_filter_events, block[DataProvider.FileList])
 		return block
 
 
@@ -90,11 +90,11 @@ class LocationDataProcessor(DataProcessor):
 		if block[DataProvider.Locations] is not None:
 			sites = self._location_filter.filter_list(block[DataProvider.Locations])
 			if (sites is not None) and (len(sites) == 0) and (len(block[DataProvider.FileList]) != 0):
-				err_msg = 'Block %s is not available ' % DataProvider.get_block_id(block)
+				error_msg = 'Block %s is not available ' % DataProvider.get_block_id(block)
 				if not len(block[DataProvider.Locations]):
-					self._log.warning(err_msg + 'at any site!')
+					self._log.warning(error_msg + 'at any site!')
 				elif not len(sites):
-					self._log.warning(err_msg + 'at any selected site!')
+					self._log.warning(error_msg + 'at any selected site!')
 			block[DataProvider.Locations] = sites
 		return block
 
@@ -144,7 +144,7 @@ class URLDataProcessor(DataProcessor):
 		return block
 
 	def _parse_filter(self, config, value):
-		def get_filter_entries():
+		def _get_filter_entries():
 			for pat in value.split():
 				if ':' not in pat.lstrip(':'):
 					yield pat
@@ -152,4 +152,4 @@ class URLDataProcessor(DataProcessor):
 					for block in DataProvider.iter_blocks_from_expr(config, ':%s' % pat.lstrip(':')):
 						for fi in block[DataProvider.FileList]:
 							yield fi[DataProvider.URL]
-		return str.join('\n', get_filter_entries())
+		return str.join('\n', _get_filter_entries())

@@ -52,12 +52,12 @@ class PartitionEstimator(DataProcessor):
 		return block_iter
 
 	def process_block(self, block):
-		def inc(key):
+		def _inc(key):
 			self._files[key] = self._files.get(key, 0) + len(block[DataProvider.FileList])
 			self._entries[key] = self._entries.get(key, 0) + block[DataProvider.NEntries]
-		inc(None)
+		_inc(None)
 		if block.get(DataProvider.Nickname):
-			inc(block.get(DataProvider.Nickname))
+			_inc(block.get(DataProvider.Nickname))
 		return block
 
 	def _set_split_opt(self, config, name, work_units, target_partitions):

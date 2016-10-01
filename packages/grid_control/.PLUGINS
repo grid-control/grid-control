@@ -388,6 +388,8 @@
 
      * grid_control.datasets.pproc_basic TFCPartitionProcessor tfc
 
+    * grid_control.datasets.splitter_base PartitionResyncHandler
+
     * grid_control.backends.backend_tools ProcessCreator
 
      * grid_control.backends.backend_tools ProcessCreatorViaArguments
@@ -406,9 +408,9 @@
 
     * grid_control.datasets.splitter_io DataSplitterIOBase
 
-     * grid_control.datasets.splitter_io DataSplitterIOV1
+     * grid_control.datasets.splitter_io DataSplitterIOV1 version_1
 
-     * grid_control.datasets.splitter_io DataSplitterIOV2
+     * grid_control.datasets.splitter_io DataSplitterIOV2 version_2
 
    * grid_control.config.matcher_base DictLookup
 

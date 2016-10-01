@@ -121,11 +121,11 @@ class LumiPartitionProcessor(PartitionProcessor):
 		if self.enabled():
 			return ['LUMI_RANGE']
 
-	def process(self, pNum, splitInfo, result):
+	def process(self, pNum, partition, result):
 		if self.enabled():
-			lumi_filter = self._lumi_filter.lookup(splitInfo[DataSplitter.Nickname], is_selector = False)
+			lumi_filter = self._lumi_filter.lookup(partition[DataSplitter.Nickname], is_selector = False)
 			if lumi_filter:
-				idxRuns = splitInfo[DataSplitter.MetadataHeader].index('Runs')
-				iterRuns = ichain(imap(lambda m: m[idxRuns], splitInfo[DataSplitter.Metadata]))
+				idxRuns = partition[DataSplitter.MetadataHeader].index('Runs')
+				iterRuns = ichain(imap(lambda m: m[idxRuns], partition[DataSplitter.Metadata]))
 				short_lumi_filter = filterLumiFilter(list(iterRuns), lumi_filter)
 				result['LUMI_RANGE'] = str.join(',', imap(lambda lr: '"%s"' % lr, formatLumi(short_lumi_filter)))

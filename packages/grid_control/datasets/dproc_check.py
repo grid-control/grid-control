@@ -46,9 +46,9 @@ class EntriesConsistencyDataProcessor(DataChecker):
 		# Check entry consistency
 		events = sum(imap(itemgetter(DataProvider.NEntries), block[DataProvider.FileList]))
 		if block.setdefault(DataProvider.NEntries, events) != events:
-			err_msg = 'Inconsistency in block %s: Number of events doesn\'t match (b:%d != f:%d)'
-			err_msg = err_msg % (DataProvider.get_block_id(block), block[DataProvider.NEntries], events)
-			self._handle_error(err_msg, self._mode)
+			error_msg = 'Inconsistency in block %s: Number of events doesn\'t match (b:%d != f:%d)'
+			error_msg = error_msg % (DataProvider.get_block_id(block), block[DataProvider.NEntries], events)
+			self._handle_error(error_msg, self._mode)
 		return block
 
 
@@ -107,7 +107,7 @@ class UniqueDataProcessor(DataChecker):
 		# Check uniqueness of URLs
 		url_hash_list = []
 		if self._check_url != DatasetUniqueMode.ignore:
-			def process_fi_list(fi_list):
+			def _process_fi_list(fi_list):
 				for fi in fi_list:
 					url_hash = md5_hex(repr((fi[DataProvider.URL], fi[DataProvider.NEntries],
 						fi.get(DataProvider.Metadata))))
@@ -123,7 +123,7 @@ class UniqueDataProcessor(DataChecker):
 					self._recorded_url.add(url_hash)
 					url_hash_list.append(url_hash)
 					yield fi
-			block[DataProvider.FileList] = list(process_fi_list(block[DataProvider.FileList]))
+			block[DataProvider.FileList] = list(_process_fi_list(block[DataProvider.FileList]))
 			url_hash_list.sort()
 
 		# Check uniqueness of blocks

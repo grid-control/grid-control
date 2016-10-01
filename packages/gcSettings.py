@@ -50,7 +50,7 @@ class Settings(object):
 				result[section][opt + mod] = str(val)
 		return result
 	get_config_dict = classmethod(get_config_dict)
-	getConfigDict = classmethod(get_config_dict)
+	getConfigDict = get_config_dict
 
 	def section(self, section, name='', **tags):
 		section_parts = [section]

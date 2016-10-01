@@ -23,19 +23,19 @@ class ModularParameterFactory(UserParameterFactory):
 
 	def _get_psrc_user(self, pexpr, repository):
 		# Wrap psource factory functions
-		def create_wrapper(cls_name):
-			def wrapper(*args):
+		def _create_wrapper(cls_name):
+			def _wrapper(*args):
 				psrc_type = ParameterSource.get_class(cls_name)
 				try:
 					return psrc_type.create_psrc(self._parameter_config, repository, *args)
 				except Exception:
-					err_msg = 'Error while creating %r with arguments %r'
-					raise ParameterError(err_msg % (psrc_type.__name__, args))
-			return wrapper
+					error_msg = 'Error while creating %r with arguments %r'
+					raise ParameterError(error_msg % (psrc_type.__name__, args))
+			return _wrapper
 		user_functions = {}
 		for cls_info in ParameterSource.get_class_info_list():
 			for cls_name in ifilter(lambda name: name != 'depth', cls_info.keys()):
-				user_functions[cls_name] = create_wrapper(cls_name)
+				user_functions[cls_name] = _create_wrapper(cls_name)
 		try:
 			return eval(pexpr, dict(user_functions))  # pylint:disable=eval-used
 		except Exception:

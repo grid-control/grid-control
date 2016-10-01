@@ -125,3 +125,27 @@ Activity.counter = 0
 Activity.running_by_thread_name = {}
 Activity.callbacks = []
 Activity.root = Activity('Running grid-control', name='root')
+
+
+class ProgressActivity(Activity):
+	def __init__(self, message=None, progress_max=None, progress=None,
+			level=logging.INFO, name=None, parent=None):
+		(self._progress, self._progress_max, self._progress_message) = (progress, progress_max, message)
+		Activity.__init__(self, self._get_progress_message(), level, name, parent)
+
+	def update_progress(self, progress, progress_max=None):
+		if progress_max is not None:
+			self._progress_max = progress_max
+		self._progress = progress
+		self.update(self._get_progress_message())
+
+	def _get_progress_message(self):
+		if self._progress is None:
+			return self._progress_message
+		if self._progress_max:
+			progress_str = '[%d / %d]' % (self._progress, self._progress_max)
+		else:
+			progress_str = '[%d]' % self._progress
+		if self._progress_message is None:
+			return progress_str
+		return str.join(' ', [self._progress_message, progress_str]).strip()

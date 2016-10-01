@@ -48,7 +48,7 @@ class SimpleStatsDataProcessor(StatsDataProcessor):
 	def _get_stats(self):
 		stats = []
 
-		def add_stat(value, singular, plural):
+		def _add_stat(value, singular, plural):
 			if stats:
 				stats.append('with')
 			if value > 0:
@@ -58,7 +58,7 @@ class SimpleStatsDataProcessor(StatsDataProcessor):
 				else:
 					stats.append(plural)
 
-		add_stat(self._blocks, 'block', 'blocks')
-		add_stat(self._files, 'file', 'files')
-		add_stat(self._entries, 'entry', 'entries')
+		_add_stat(self._blocks, 'block', 'blocks')
+		_add_stat(self._files, 'file', 'files')
+		_add_stat(self._entries, 'entry', 'entries')
 		return str.join(' ', stats)

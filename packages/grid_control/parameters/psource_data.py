@@ -67,8 +67,8 @@ class DataParameterSource(LimitedResyncParameterSource):
 	create_psrc = classmethod(create_psrc)
 
 	def fill_parameter_content(self, pnum, result):
-		splitInfo = self._data_splitter.get_partition(pnum)
-		self._part_proc.process(pnum, splitInfo, result)
+		partition = self._data_splitter.get_partition(pnum)
+		self._part_proc.process(pnum, partition, result)
 
 	def fill_parameter_metadata(self, result):
 		result.extend(self._part_proc.get_partition_metadata() or [])
@@ -98,24 +98,27 @@ class DataParameterSource(LimitedResyncParameterSource):
 		if self._data_provider:
 			activity = Activity('Performing resync of datasource %r' % self._name)
 			# Get old and new dataset information
-			ds_old = DataProvider.load_from_file(self._get_data_path('cache.dat')).get_block_list_cached(show_stats=False)
+			provider_old = DataProvider.load_from_file(self._get_data_path('cache.dat'))
+			block_list_old = provider_old.get_block_list_cached(show_stats=False)
 			self._data_provider.clear_cache()
-			ds_new = self._data_provider.get_block_list_cached(show_stats=False)
-			self._data_provider.save_to_file(self._get_data_path('cache-new.dat'), ds_new)
+			block_list_new = self._data_provider.get_block_list_cached(show_stats=False)
+			self._data_provider.save_to_file(self._get_data_path('cache-new.dat'), block_list_new)
 
 			# Use old splitting information to synchronize with new dataset infos
-			old_len = self._data_splitter.get_partition_len()
-			jobChanges = self._data_splitter.resync_partitions(self._get_data_path('map-new.tar'), ds_old, ds_new)
+			partition_len_old = self._data_splitter.get_partition_len()
+			partition_changes = self._data_splitter.resync_partitions(
+				self._get_data_path('map-new.tar'), block_list_old, block_list_new)
 			activity.finish()
-			if jobChanges is not None:
+			if partition_changes is not None:
 				# Move current splitting to backup and use the new splitting from now on
-				def backupRename(old, cur, new):
+				def _rename_with_backup(old, cur, new):
 					if self._keep_old:
 						os.rename(self._get_data_path(cur), self._get_data_path(old))
 					os.rename(self._get_data_path(new), self._get_data_path(cur))
-				backupRename('map-old-%d.tar' % time.time(), 'map.tar', 'map-new.tar')
-				backupRename('cache-old-%d.dat' % time.time(), 'cache.dat', 'cache-new.dat')
+				_rename_with_backup('map-old-%d.tar' % time.time(), 'map.tar', 'map-new.tar')
+				_rename_with_backup('cache-old-%d.dat' % time.time(), 'cache.dat', 'cache-new.dat')
 				self._data_splitter.import_partitions(self._get_data_path('map.tar'))
 				self._len = self._data_splitter.get_partition_len()
-				self._log.debug('Dataset resync finished: %d -> %d partitions', old_len, self._len)
-				return (set(jobChanges[0]), set(jobChanges[1]), old_len != self._len)
+				self._log.debug('Dataset resync finished: %d -> %d partitions', partition_len_old, self._len)
+				(pnum_list_redo, pnum_list_disable) = partition_changes
+				return (set(pnum_list_redo), set(pnum_list_disable), partition_len_old != self._len)

@@ -55,16 +55,16 @@ class LFNPartitionProcessor(PartitionProcessor):
 	def get_partition_metadata(self):
 		return lmap(lambda k: ParameterMetadata(k, untracked = True), ['DATASET_SRM_FILES'])
 
-	def process(self, pNum, splitInfo, result):
+	def process(self, pNum, partition, result):
 		def modify_filelist_for_srm(filelist):
 			return lmap(lambda f: 'file://' + f.split('/')[-1], filelist)
 		def prefix_lfn(lfn):
 			return self._prefix + lfn.split('/store/', 1)[-1]
 		if self._prefix:
-			splitInfo[DataSplitter.FileList] = lmap(prefix_lfn, splitInfo[DataSplitter.FileList])
+			partition[DataSplitter.FileList] = lmap(prefix_lfn, partition[DataSplitter.FileList])
 			if 'srm' in self._prefix:
-				result.update({'DATASET_SRM_FILES': str.join(' ', splitInfo[DataSplitter.FileList])})
-				splitInfo[DataSplitter.FileList] = modify_filelist_for_srm(splitInfo[DataSplitter.FileList])
+				result.update({'DATASET_SRM_FILES': str.join(' ', partition[DataSplitter.FileList])})
+				partition[DataSplitter.FileList] = modify_filelist_for_srm(partition[DataSplitter.FileList])
 
 
 class CMSSWPartitionProcessor(PartitionProcessor.get_class('BasicPartitionProcessor')):
@@ -242,7 +242,7 @@ class CMSSW(SCRAMTask):
 
 
 	def _getConfigFiles(self, config):
-		cfgDefault = utils.QM(self.prolog.isActive() or self.epilog.isActive(), [], unspecified)
+		cfgDefault = utils.QM(self.prolog.is_active() or self.epilog.is_active(), [], unspecified)
 		for cfgFile in config.get_path_list('config file', cfgDefault, must_exist = False):
 			if not os.path.exists(cfgFile):
 				raise ConfigError('Config file %r not found.' % cfgFile)
@@ -338,11 +338,11 @@ class CMSSW(SCRAMTask):
 		data['CMSSW_EXEC'] = 'cmsRun'
 		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self._config_file_list))
 		data['CMSSW_OLD_RELEASETOP'] = self._oldReleaseTop
-		if self.prolog.isActive():
+		if self.prolog.is_active():
 			data['CMSSW_PROLOG_EXEC'] = self.prolog.get_command()
 			data['CMSSW_PROLOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.path_rel, self.prolog.getSBInFiles()))
 			data['CMSSW_PROLOG_ARGS'] = self.prolog.getArguments()
-		if self.epilog.isActive():
+		if self.epilog.is_active():
 			data['CMSSW_EPILOG_EXEC'] = self.epilog.get_command()
 			data['CMSSW_EPILOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.path_rel, self.epilog.getSBInFiles()))
 			data['CMSSW_EPILOG_ARGS'] = self.epilog.getArguments()

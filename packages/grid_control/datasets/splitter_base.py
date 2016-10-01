@@ -16,8 +16,8 @@ import os, copy
 from grid_control.config import create_config
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.utils import get_user_bool, TwoSidedIterator
-from grid_control.utils.activity import Activity
+from grid_control.utils import TwoSidedIterator, get_user_bool
+from grid_control.utils.activity import Activity, ProgressActivity
 from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import imap, irange, itemgetter, lmap, next, sort_inplace, unspecified
@@ -99,10 +99,10 @@ class DataSplitter(ConfigurablePlugin):
 		raise AbstractError  # this method is public for FLSplitStacker
 
 	def resync_partitions(self, path, block_list_old, block_list_new):
-		(result_redo, result_disable) = ([], [])
+		(pnum_list_redo, pnum_list_disable) = ([], [])
 		try:
 			resync_partition_iter = self._partition_resync_handler.resync(
-				block_list_old, block_list_new, result_redo, result_disable)
+				block_list_old, block_list_new, pnum_list_redo, pnum_list_disable)
 			path_tmp = path + '.tmp'
 			self.save_partitions(path_tmp,
 				resync_partition_iter, partition_len_hint=self.get_partition_len(),
@@ -113,10 +113,10 @@ class DataSplitter(ConfigurablePlugin):
 			if not get_user_bool('Do you want to use the new dataset partition?', False):
 				return
 		os.rename(path_tmp, path)
-		return (result_redo, result_disable)
+		return (pnum_list_redo, pnum_list_disable)
 
-	def save_partitions(self, path, partition_iter=None,
-			partition_len_hint=None, message='Writing job mapping file'):
+	def save_partitions(self, path, partition_iter=None, partition_len_hint=None,
+			message='Writing job mapping file'):
 		# Save as tar file to allow random access to mapping data with little memory overhead
 		if partition_iter and not partition_len_hint:
 			partition_iter = list(partition_iter)
@@ -124,11 +124,12 @@ class DataSplitter(ConfigurablePlugin):
 		elif not partition_iter:
 			(partition_iter, partition_len_hint) = (self._partition_source, self.get_partition_len())
 		# Write splitter_info_dict to allow reconstruction of data splitter
-		splitter_info_dict_dict = {'ClassName': self.__class__.__name__}
-		splitter_info_dict_dict.update(self._config_protocol)
+		splitter_info_dict = {'ClassName': self.__class__.__name__}
+		splitter_info_dict.update(self._config_protocol)
+		progress = ProgressActivity(message=message, progress_max=partition_len_hint)
 		splitter_io = DataSplitterIO.create_instance('DataSplitterIOAuto')
-		splitter_io.save_partition_source(path, splitter_info_dict_dict,
-			partition_iter, partition_len_hint, message)
+		splitter_io.save_partitions_and_info(progress, path, partition_iter, splitter_info_dict)
+		progress.finish()
 
 	def set_state(self, partition_source, config_protocol):
 		self._partition_source = partition_source
@@ -194,7 +195,7 @@ class PartitionResyncHandler(ConfigurablePlugin):
 		#  - disable changed jobs, preserve job number of changed jobs or reorder
 		self._order = config.get_enum('resync jobs', ResyncOrder, ResyncOrder.append)
 
-	def resync(self, block_list_old, block_list_new, result_redo, result_disable):
+	def resync(self, block_list_old, block_list_new, pnum_list_redo, pnum_list_disable):
 		activity = Activity('Performing resynchronization of dataset')
 		(block_list_added, block_list_missing, block_list_matching) = DataProvider.resync_blocks(
 			block_list_old, block_list_new)
@@ -205,7 +206,19 @@ class PartitionResyncHandler(ConfigurablePlugin):
 		# User overview and setup starts here
 		resync_info_iter = self._iter_resync_infos(block_list_added,
 			block_list_missing, block_list_matching)
-		return self._iter_partitions(resync_info_iter, result_redo, result_disable)
+		return self._iter_partitions(resync_info_iter, pnum_list_redo, pnum_list_disable)
+
+	def _expand_outside(self, fi_idx, partition_num, size_list,
+			fi_old, fi_new, block_new, partition_list_added):
+		fi_list = block_new.pop(DataProvider.FileList)
+		block_new[DataProvider.FileList] = [fi_new]
+		iter_partitions_added = self._splitter.partition_blocks_raw([block_new],
+			event_first=fi_old[DataProvider.NEntries])
+		for partition_added in iter_partitions_added:
+			partition_added[DataSplitter.Comment] = 'src: %d [ext_1]' % partition_num
+			partition_list_added.append(partition_added)
+		block_new[DataProvider.FileList] = fi_list
+		size_list[fi_idx] = fi_new[DataProvider.NEntries]
 
 	def _files(self, partition_mod, partition_num, size_list,
 			fi_list_missing, fi_list_matched, block_new, metadata_setup_list, partition_list_added):
@@ -233,14 +246,14 @@ class PartitionResyncHandler(ConfigurablePlugin):
 	def _get_block_change_info(self, partition, block_list_missing, block_list_matching):
 		# Get block information (block_old, block_new, fi_list_missing, fi_list_matched)
 		# which partition is based on. Search for block in missing and matched blocks
-		def get_block_key(block):
+		def _get_block_key(block):
 			return (block[DataProvider.Dataset], block[DataProvider.BlockName])
 		partition_key = (partition[DataSplitter.Dataset], partition[DataSplitter.BlockName])
-		block_missing = _fast_search(block_list_missing, get_block_key, partition_key)
+		block_missing = _fast_search(block_list_missing, _get_block_key, partition_key)
 		if block_missing:
 			return (block_missing, None, block_missing[DataProvider.FileList], [])
 		# compare with old block
-		return _fast_search(block_list_matching, lambda x: get_block_key(x[0]), partition_key)
+		return _fast_search(block_list_matching, lambda x: _get_block_key(x[0]), partition_key)
 
 	def _get_metadata_setup_list(self, block_old, block_new):
 		# Get list of matching metadata indices
@@ -255,59 +268,28 @@ class PartitionResyncHandler(ConfigurablePlugin):
 				metadata_setup_list.append((metadata_idx_old, metadata_idx_new, metadata_proc_mode))
 		return metadata_setup_list
 
-	def _handle_changed_file(self, proc_mode, fi_idx, partition_mod, partition_num, size_list,
-			block_new, partition_list_added, fi_old, fi_new, metadata_list_new, metadata_setup_list):
-		if DataProvider.Metadata in fi_new:
-			proc_mode = self._handle_changed_file_metadata(fi_old, fi_new,
-				metadata_setup_list, metadata_list_new, proc_mode)
-		if fi_old[DataProvider.NEntries] == fi_new[DataProvider.NEntries]:
-			return (proc_mode, fi_idx + 1)  # go to next file
-		elif fi_old[DataProvider.NEntries] * fi_new[DataProvider.NEntries] < 0:
-			raise PartitionError('Unable to change %r from %d to %d entries!' % (fi_new[DataProvider.URL],
-				fi_old[DataProvider.NEntries], fi_new[DataProvider.NEntries]))
-		elif fi_new[DataProvider.NEntries] < 0:
-			return (proc_mode, fi_idx + 1)  # go to next file
-		old_entries = partition_mod[DataSplitter.NEntries]
-		old_skip = partition_mod.get(DataSplitter.Skipped)
-
-		if self._handle_changed_entries(fi_idx, partition_mod, partition_num,
-				size_list, fi_old, fi_new, block_new, partition_list_added):
-			fi_idx += 1  # True => file index should be increased
-
-		if fi_old[DataProvider.NEntries] < fi_new[DataProvider.NEntries]:
-			file_proc_mode = self._mode_expanded
-		else:
-			file_proc_mode = self._mode_shrunken
-		if file_proc_mode == ResyncMode.changed:
-			file_proc_mode = ResyncMode.ignore
-			if old_entries != partition_mod[DataSplitter.NEntries]:
-				file_proc_mode = ResyncMode.complete
-			elif old_skip != partition_mod.get(DataSplitter.Skipped):
-				file_proc_mode = ResyncMode.complete
-		proc_mode = min(proc_mode, file_proc_mode)
-		return (proc_mode, fi_idx)  # go to next file
-
-	def _expand_outside(self, fi_idx, partition_num, size_list,
+	def _handle_changed_entries(self, fi_idx, partition_mod, partition_num, size_list,
 			fi_old, fi_new, block_new, partition_list_added):
-		fi_list = block_new.pop(DataProvider.FileList)
-		block_new[DataProvider.FileList] = [fi_new]
-		iter_partitions_added = self._splitter.partition_blocks_raw([block_new],
-			event_first=fi_old[DataProvider.NEntries])
-		for partition_added in iter_partitions_added:
-			partition_added[DataSplitter.Comment] = 'src: %d [ext_1]' % partition_num
-			partition_list_added.append(partition_added)
-		block_new[DataProvider.FileList] = fi_list
-		size_list[fi_idx] = fi_new[DataProvider.NEntries]
+		# Process changed files in partition - returns True if file index should be increased
+		partition_mod[DataSplitter.Comment] += ' [changed] ' + fi_old[DataProvider.URL]
+		partition_mod[DataSplitter.Comment] += (' -%d ' % fi_old[DataProvider.NEntries])
+		partition_mod[DataSplitter.Comment] += (' +%d ' % fi_new[DataProvider.NEntries])
 
-	def _remove_complete_file(self, fi_idx, partition_mod, size_list, fi_old):
-		partition_mod[DataSplitter.NEntries] -= fi_old[DataProvider.NEntries]
-		partition_mod[DataSplitter.FileList].pop(fi_idx)
-		size_list.pop(fi_idx)
+		if fi_idx == len(partition_mod[DataSplitter.FileList]) - 1:
+			self._handle_changed_entries_last(fi_idx, partition_num, partition_mod, size_list,
+				fi_old, fi_new, block_new, partition_list_added)
 
-	def _replace_complete_file(self, fi_idx, partition_mod, size_list, fi_old, fi_new):
-		partition_mod[DataSplitter.NEntries] += fi_new[DataProvider.NEntries]
-		partition_mod[DataSplitter.NEntries] -= fi_old[DataProvider.NEntries]
-		size_list[fi_idx] = fi_new[DataProvider.NEntries]
+		elif fi_idx == 0:
+			# First file is affected
+			self._handle_changed_entries_first(fi_idx, partition_mod,
+				size_list, fi_old, fi_new)
+		else:
+			# File in the middle is affected - solution very simple :)
+			# Replace file - expanding files could be swapped to the (fully contained) end
+			# to allow expansion via adding only the expanding part
+			self._replace_complete_file(fi_idx, partition_mod, size_list, fi_old, fi_new)
+			partition_mod[DataSplitter.Comment] += '[middle_add_1] '
+		return True
 
 	def _handle_changed_entries_first(self, fi_idx, partition_mod, size_list, fi_old, fi_new):
 		if fi_new[DataProvider.NEntries] > partition_mod.get(DataSplitter.Skipped, 0):
@@ -366,28 +348,37 @@ class PartitionResyncHandler(ConfigurablePlugin):
 			size_list[fi_idx] = fi_new[DataProvider.NEntries]
 			partition_mod[DataSplitter.Comment] += '[last_add_4] '
 
-	def _handle_changed_entries(self, fi_idx, partition_mod, partition_num, size_list,
-			fi_old, fi_new, block_new, partition_list_added):
-		# Process changed files in partition - returns True if file index should be increased
-		partition_mod[DataSplitter.Comment] += ' [changed] ' + fi_old[DataProvider.URL]
-		partition_mod[DataSplitter.Comment] += (' -%d ' % fi_old[DataProvider.NEntries])
-		partition_mod[DataSplitter.Comment] += (' +%d ' % fi_new[DataProvider.NEntries])
+	def _handle_changed_file(self, proc_mode, fi_idx, partition_mod, partition_num, size_list,
+			block_new, partition_list_added, fi_old, fi_new, metadata_list_new, metadata_setup_list):
+		if DataProvider.Metadata in fi_new:
+			proc_mode = self._handle_changed_file_metadata(fi_old, fi_new,
+				metadata_setup_list, metadata_list_new, proc_mode)
+		if fi_old[DataProvider.NEntries] == fi_new[DataProvider.NEntries]:
+			return (proc_mode, fi_idx + 1)  # go to next file
+		elif fi_old[DataProvider.NEntries] * fi_new[DataProvider.NEntries] < 0:
+			raise PartitionError('Unable to change %r from %d to %d entries!' % (fi_new[DataProvider.URL],
+				fi_old[DataProvider.NEntries], fi_new[DataProvider.NEntries]))
+		elif fi_new[DataProvider.NEntries] < 0:
+			return (proc_mode, fi_idx + 1)  # go to next file
+		old_entries = partition_mod[DataSplitter.NEntries]
+		old_skip = partition_mod.get(DataSplitter.Skipped)
 
-		if fi_idx == len(partition_mod[DataSplitter.FileList]) - 1:
-			self._handle_changed_entries_last(fi_idx, partition_num, partition_mod, size_list,
-				fi_old, fi_new, block_new, partition_list_added)
+		if self._handle_changed_entries(fi_idx, partition_mod, partition_num,
+				size_list, fi_old, fi_new, block_new, partition_list_added):
+			fi_idx += 1  # True => file index should be increased
 
-		elif fi_idx == 0:
-			# First file is affected
-			self._handle_changed_entries_first(fi_idx, partition_mod,
-				size_list, fi_old, fi_new)
+		if fi_old[DataProvider.NEntries] < fi_new[DataProvider.NEntries]:
+			file_proc_mode = self._mode_expanded
 		else:
-			# File in the middle is affected - solution very simple :)
-			# Replace file - expanding files could be swapped to the (fully contained) end
-			# to allow expansion via adding only the expanding part
-			self._replace_complete_file(fi_idx, partition_mod, size_list, fi_old, fi_new)
-			partition_mod[DataSplitter.Comment] += '[middle_add_1] '
-		return True
+			file_proc_mode = self._mode_shrunken
+		if file_proc_mode == ResyncMode.changed:
+			file_proc_mode = ResyncMode.ignore
+			if old_entries != partition_mod[DataSplitter.NEntries]:
+				file_proc_mode = ResyncMode.complete
+			elif old_skip != partition_mod.get(DataSplitter.Skipped):
+				file_proc_mode = ResyncMode.complete
+		proc_mode = min(proc_mode, file_proc_mode)
+		return (proc_mode, fi_idx)  # go to next file
 
 	def _handle_changed_file_metadata(self, fi_old, fi_new,
 			metadata_setup_list, metadata_list_current, proc_mode):
@@ -434,7 +425,7 @@ class PartitionResyncHandler(ConfigurablePlugin):
 			proc_mode = min(proc_mode, self._metadata_option.get(meta, ResyncMode.ignore))
 		return proc_mode
 
-	def _iter_partitions(self, resync_info_iter, result_redo, result_disable):
+	def _iter_partitions(self, resync_info_iter, pnum_list_redo, pnum_list_disable):
 		# Use reordering if setup - log interventions (disable, redo) according to proc_mode
 		if self._order == ResyncOrder.fillgap:
 			(partition_list_updated, partition_list_added) = _sort_resync_info_list(resync_info_iter)
@@ -448,9 +439,9 @@ class PartitionResyncHandler(ConfigurablePlugin):
 		for (partition_num, partition, proc_mode) in resync_info_iter:
 			if partition_num:
 				if proc_mode == ResyncMode.complete:
-					result_redo.append(partition_num)
+					pnum_list_redo.append(partition_num)
 				elif proc_mode == ResyncMode.disable:
-					result_disable.append(partition_num)
+					pnum_list_disable.append(partition_num)
 			yield partition
 
 	def _iter_resync_infos(self, block_list_added, block_list_missing, block_list_matching):
@@ -476,6 +467,16 @@ class PartitionResyncHandler(ConfigurablePlugin):
 		if self._mode_added == ResyncMode.complete:
 			for partition_added in self._splitter.partition_blocks_raw(block_list_added):
 				yield (None, partition_added, ResyncMode.ignore)
+
+	def _remove_complete_file(self, fi_idx, partition_mod, size_list, fi_old):
+		partition_mod[DataSplitter.NEntries] -= fi_old[DataProvider.NEntries]
+		partition_mod[DataSplitter.FileList].pop(fi_idx)
+		size_list.pop(fi_idx)
+
+	def _replace_complete_file(self, fi_idx, partition_mod, size_list, fi_old, fi_new):
+		partition_mod[DataSplitter.NEntries] += fi_new[DataProvider.NEntries]
+		partition_mod[DataSplitter.NEntries] -= fi_old[DataProvider.NEntries]
+		size_list[fi_idx] = fi_new[DataProvider.NEntries]
 
 	def _resync_existing_partitions(self, partition_num, partition,
 			block_list_added, block_list_missing, block_list_matching):
@@ -536,8 +537,7 @@ class DataSplitterIO(Plugin):
 	def import_partition_source(self, path):
 		raise AbstractError
 
-	def save_partition_source(self, path, splitter_info_dict_dict,
-			partition_iter, partition_len_hint, message='Writing job mapping file'):
+	def save_partitions_and_info(self, progress, path, partition_iter, splitter_info_dict):
 		raise AbstractError
 
 

@@ -212,7 +212,7 @@ class ConfigEntry(object):
 		(result_base, entry_list_used) = cls._process_and_mark_entries(entry_iter)
 
 		# Merge subsequent += and ^= entries
-		def merge_subsequent_entries(entry_iter):
+		def _merge_subsequent_entries(entry_iter):
 			prev_entry = None
 			for entry in entry_iter:
 				if prev_entry and (entry.opttype == prev_entry.opttype):
@@ -231,7 +231,7 @@ class ConfigEntry(object):
 		if entry_list_used[0].opttype in ['*=', '!=', '?=', '=']:
 			result = [cls.combine_entries(entry_list_used)]
 		else:
-			result = list(merge_subsequent_entries(entry_list_used))
+			result = list(_merge_subsequent_entries(entry_list_used))
 
 		(result_simplified, used_simplified) = cls._process_and_mark_entries(result)
 		assert len(used_simplified) == len(result)
