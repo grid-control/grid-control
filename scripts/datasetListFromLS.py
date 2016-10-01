@@ -18,7 +18,10 @@ from datasetListFromX import addDatasetListOptions, discoverDataset
 from gcSupport import Options, scriptOptions
 
 parser = Options(usage = '%s [OPTIONS] <data path> <dataset name> <pattern (*.root) / files>')
-parser.addText(None, 'p', 'path', dest = 'dataset', default = '.', help = 'Path to dataset files')
+parser.addText(None, 'p', 'path',    dest = 'dataset',        default = '.',
+	help = 'Path to dataset files')
+parser.addBool(None, 'r', 'recurse', dest = 'source recurse', default = False,
+	help = 'Recurse into subdirectories if supported')
 addDatasetListOptions(parser)
 options = scriptOptions(parser, arg_keys = ['dataset', 'dataset name pattern', 'filename filter'])
 logging.getLogger('user').setLevel(logging.CRITICAL)
