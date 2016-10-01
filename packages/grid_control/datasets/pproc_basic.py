@@ -21,32 +21,40 @@ from python_compat import any, imap, lfilter, lmap, set
 class BasicPartitionProcessor(PartitionProcessor):
 	alias = ['basic']
 
+	def __init__(self, config):
+		PartitionProcessor.__init__(self, config)
+		self._vn_file_names = config.get('partition variable file names', 'FILE_NAMES', onChange = None)
+		self._vn_max_events = config.get('partition variable max events', 'MAX_EVENTS', onChange = None)
+		self._vn_skip_events = config.get('partition variable skip events', 'SKIP_EVENTS', onChange = None)
+		self._vn_prefix = config.get('partition variable prefix', 'DATASET', onChange = None)
+
 	def _formatFileList(self, fl):
 		return str.join(' ', fl)
 
 	def getKeys(self):
-		result = lmap(lambda k: ParameterMetadata(k, untracked = True), ['FILE_NAMES', 'MAX_EVENTS',
-			'SKIP_EVENTS', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
-		result.append(ParameterMetadata('DATASETSPLIT', untracked = False))
+		result = lmap(lambda k: ParameterMetadata(k, untracked = True), [
+			self._vn_file_names, self._vn_max_events, self._vn_skip_events,
+			self._vn_prefix + 'PATH', self._vn_prefix + 'BLOCK', self._vn_prefix + 'NICK'])
+		result.append(ParameterMetadata(self._vn_prefix + 'SPLIT', untracked = False))
 		return result
 
 	def getNeededKeys(self, splitter):
 		enumMap = {
-			DataSplitter.FileList: 'FILE_NAMES',
-			DataSplitter.NEntries: 'MAX_EVENTS',
-			DataSplitter.Skipped: 'SKIP_EVENTS'}
+			DataSplitter.FileList: self._vn_file_names,
+			DataSplitter.NEntries: self._vn_max_events,
+			DataSplitter.Skipped: self._vn_skip_events}
 		for enum in splitter.neededEnums():
 			yield enumMap[enum]
 
 	def process(self, pNum, splitInfo, result):
 		result.update({
-			'FILE_NAMES': self._formatFileList(splitInfo[DataSplitter.FileList]),
-			'MAX_EVENTS': splitInfo[DataSplitter.NEntries],
-			'SKIP_EVENTS': splitInfo.get(DataSplitter.Skipped, 0),
-			'DATASETPATH': splitInfo.get(DataSplitter.Dataset, None),
-			'DATASETBLOCK': splitInfo.get(DataSplitter.BlockName, None),
-			'DATASETNICK': splitInfo.get(DataSplitter.Nickname, None),
-			'DATASETSPLIT': pNum,
+			self._vn_file_names: self._formatFileList(splitInfo[DataSplitter.FileList]),
+			self._vn_max_events: splitInfo[DataSplitter.NEntries],
+			self._vn_skip_events: splitInfo.get(DataSplitter.Skipped, 0),
+			self._vn_prefix + 'PATH': splitInfo.get(DataSplitter.Dataset, None),
+			self._vn_prefix + 'BLOCK': splitInfo.get(DataSplitter.BlockName, None),
+			self._vn_prefix + 'NICK': splitInfo.get(DataSplitter.Nickname, None),
+			self._vn_prefix + 'SPLIT': pNum,
 		})
 		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not splitInfo.get(DataSplitter.Invalid, False)
 
