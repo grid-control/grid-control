@@ -155,13 +155,13 @@ fi
 
 # If SRM path to dataset files given, copy them to working directory
 if [ -n "$DATASET_SRM_FILES" ]; then
-        echo "==========================="
-        echo
-        echo "Copy dataset files via SRM"
-        for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
-                url_copy "$(dirname $DATASET_SRM_FILE)" "file:///$GC_SCRATCH" "$(basename $DATASET_SRM_FILE)"
-        done
-        echo
+	echo "==========================="
+	echo
+	echo "Copy dataset files via SRM"
+	for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
+		url_copy "$(dirname $DATASET_SRM_FILE)" "file:///$GC_SCRATCH" "$(basename $DATASET_SRM_FILE)"
+	done
+	echo
 fi
 
 echo "==========================="
@@ -224,28 +224,24 @@ if [ -d "$GC_SCRATCH" -a -n "$SB_OUTPUT_FILES" ]; then
 	echo
 fi
 
-timestamp "SE_OUT" "START"
-export LOG_MD5="$GC_LANDINGZONE/SE.log"
-
 # Remove dataset files copied via SRM, if copied together with se output files to scratch directory:
 if [ -n "$DATASET_SRM_FILES" ]; then
-        echo "==========================="
-        echo
-        echo "Remove dataset input files copied via SRM, if in scratch directory"
-        echo "Change to scratch directory"
-        cd $GC_SCRATCH
-        for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
-                if [ -f "$(basename $DATASET_SRM_FILE)" ] ; then
-                        echo "Removing $(basename $DATASET_SRM_FILE)"
-                        rm "$(basename $DATASET_SRM_FILE)"
-                fi
-        done
-        echo "Change back to start directory"
-        cd -
-        echo
-        checkdir "Scratch directory" "$GC_SCRATCH"
+	echo "==========================="
+	echo
+	cd "$GC_SCRATCH"
+	for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
+		if [ -f "$(basename $DATASET_SRM_FILE)" ] ; then
+			echo "Removing $(basename $DATASET_SRM_FILE)"
+			rm "$(basename $DATASET_SRM_FILE)"
+		fi
+	done
+	cd "$GC_LANDINGZONE"
+	echo
+	checkdir "Scratch directory" "$GC_SCRATCH"
 fi
 
+timestamp "SE_OUT" "START"
+export LOG_MD5="$GC_LANDINGZONE/SE.log"
 
 # Copy files to the SE
 if [ $GC_PROCESS_CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
