@@ -1367,10 +1367,12 @@
 			"user_text": "Specifies how variables are marked"
 		},
 		"verify chunks": {
-			"user_text": "List of job chunk sizes that are enabled after passing the configured verification thresholds"
+			"example": "100",
+			"user_text": "Specifies how many jobs to submit initially, and use to verify the workflow. If sufficient jobs succeed, all remaining jobs are enabled for submission."
 		},
 		"verify threshold": {
-			"user_text": "List of job verification thresholds that enable the configured job chunk sizes"
+			"example": "0.10",
+			"user_text": "Specifies the fraction of jobs in the verification chunk that must succeed."
 		},
 		"vo": {
 			"default_map": {
