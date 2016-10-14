@@ -63,8 +63,8 @@ class LFNPartitionProcessor(PartitionProcessor):
 		if self._prefix:
 			splitInfo[DataSplitter.FileList] = lmap(prefixLFN, splitInfo[DataSplitter.FileList])
 			if "srm" in self._prefix:
-                                result.update({'DATASET_SRM_FILES': str.join(' ', splitInfo[DataSplitter.FileList])})
-                                splitInfo[DataSplitter.FileList] = modify_filelist_for_srm(splitInfo[DataSplitter.FileList])
+				result.update({'DATASET_SRM_FILES': str.join(' ', splitInfo[DataSplitter.FileList])})
+				splitInfo[DataSplitter.FileList] = modify_filelist_for_srm(splitInfo[DataSplitter.FileList])
 
 
 class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcessor')):
