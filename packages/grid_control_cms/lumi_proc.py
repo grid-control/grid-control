@@ -12,119 +12,138 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config import triggerResync
-from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor
+from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor  # pylint:disable=line-too-long
 from grid_control.parameters import ParameterMetadata
-from grid_control.utils.data_structures import makeEnum
-from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter, selectLumi, selectRun, strLumi
+from grid_control.utils import safe_index
+from grid_control.utils.data_structures import make_enum
+from grid_control_cms.lumi_tools import filter_lumi_filter, format_lumi, parse_lumi_filter, select_lumi, select_run, str_lumi  # pylint:disable=line-too-long
 from python_compat import any, ichain, imap, izip, set
 
-LumiKeep = makeEnum(['RunLumi', 'Run', 'none'])
-LumiMode = makeEnum(['strict', 'weak'])
 
-def removeRunLumi(value, idxRuns, idxLumi):
-	if (idxRuns is not None) and (idxLumi is not None):
-		value.pop(max(idxRuns, idxLumi))
-		value.pop(min(idxRuns, idxLumi))
-	elif idxLumi is not None:
-		value.pop(idxLumi)
-	elif idxRuns is not None:
-		value.pop(idxRuns)
+LumiKeep = make_enum(['RunLumi', 'Run', 'none'])  # pylint:disable=invalid-name
+LumiMode = make_enum(['strict', 'weak'])  # pylint:disable=invalid-name
 
 
 class LumiDataProcessor(DataProcessor):
-	alias = ['lumi']
+	alias_list = ['lumi']
 
-	def __init__(self, config, onChange):
-		DataProcessor.__init__(self, config, onChange)
-		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = onChange)
+	def __init__(self, config, datasource_name):
+		DataProcessor.__init__(self, config, datasource_name)
+		self._lumi_filter = config.get_lookup(['lumi filter', '%s lumi filter' % datasource_name],
+			default={}, parser=parse_lumi_filter, strfun=str_lumi)
 		if self._lumi_filter.empty():
 			lumi_keep_default = LumiKeep.none
 		else:
 			lumi_keep_default = LumiKeep.Run
-			config.setBool('lumi metadata', True)
+			config.set_bool('%s lumi metadata' % datasource_name, True)
 			self._log.info('Runs/lumi section filter enabled!')
-		self._lumi_keep = config.getEnum('lumi keep', LumiKeep, lumi_keep_default, onChange = onChange)
-		self._lumi_strict = config.getEnum('lumi filter strictness', LumiMode, LumiMode.strict, onChange = onChange)
+		self._lumi_keep = config.get_enum(['lumi keep', '%s lumi keep' % datasource_name],
+			LumiKeep, lumi_keep_default)
+		self._lumi_strict = config.get_enum(
+			['lumi filter strictness', '%s lumi filter strictness' % datasource_name],
+			LumiMode, LumiMode.strict)
 
-	def _acceptRun(self, block, fi, idxRuns, lumi_filter):
-		if idxRuns is None:
-			return True
-		return any(imap(lambda run: selectRun(run, lumi_filter), fi[DataProvider.Metadata][idxRuns]))
-
-	def _acceptLumi(self, block, fi, idxRuns, idxLumi, lumi_filter):
-		if (idxRuns is None) or (idxLumi is None):
-			return True
-		return any(imap(lambda run_lumi: selectLumi(run_lumi, lumi_filter),
-			izip(fi[DataProvider.Metadata][idxRuns], fi[DataProvider.Metadata][idxLumi])))
-
-	def _processFI(self, block, idxRuns, idxLumi):
-		for fi in block[DataProvider.FileList]:
-			if not self._lumi_filter.empty(): # Filter files by run / lumi
-				lumi_filter = self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector = False)
-				if (self._lumi_strict == LumiMode.strict) and not self._acceptLumi(block, fi, idxRuns, idxLumi, lumi_filter):
-					continue
-				elif (self._lumi_strict == LumiMode.weak) and not self._acceptRun(block, fi, idxRuns, lumi_filter):
-					continue
-			# Prune metadata
-			if (self._lumi_keep == LumiKeep.Run) and (idxLumi is not None):
-				if idxRuns is not None:
-					fi[DataProvider.Metadata][idxRuns] = list(set(fi[DataProvider.Metadata][idxRuns]))
-				fi[DataProvider.Metadata].pop(idxLumi)
-			elif self._lumi_keep == LumiKeep.none:
-				removeRunLumi(fi[DataProvider.Metadata], idxRuns, idxLumi)
-			yield fi
-
-	def processBlock(self, block):
-		if self._lumi_filter.empty() and ((self._lumi_keep == LumiKeep.RunLumi) or (DataProvider.Metadata not in block)):
-			return block
-		def getMetadataIdx(key):
-			if key in block.get(DataProvider.Metadata, []):
-				return block[DataProvider.Metadata].index(key)
-		idxRuns = getMetadataIdx('Runs')
-		idxLumi = getMetadataIdx('Lumi')
+	def process_block(self, block):
+		if self._lumi_filter.empty():
+			if (self._lumi_keep == LumiKeep.RunLumi) or (DataProvider.Metadata not in block):
+				return block
+		idx_runs = safe_index(block.get(DataProvider.Metadata, []), 'Runs')
+		idx_lumi = safe_index(block.get(DataProvider.Metadata, []), 'Lumi')
 		if not self._lumi_filter.empty():
-			lumi_filter = self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector = False)
-			if lumi_filter and (self._lumi_strict == LumiMode.strict) and ((idxRuns is None) or (idxLumi is None)):
-				raise DatasetError('Strict lumi filter active but dataset %s does not provide lumi information!' % DataProvider.bName(block))
-			elif lumi_filter and (self._lumi_strict == LumiMode.weak) and (idxRuns is None):
-				raise DatasetError('Weak lumi filter active but dataset %s does not provide run information!' % DataProvider.bName(block))
+			self._check_lumi_filter(block, idx_runs, idx_lumi)
 
-		block[DataProvider.FileList] = list(self._processFI(block, idxRuns, idxLumi))
+		block[DataProvider.FileList] = list(self._process_fi(block, idx_runs, idx_lumi))
 		if not block[DataProvider.FileList]:
 			return
-		block[DataProvider.NEntries] = sum(imap(lambda fi: fi[DataProvider.NEntries], block[DataProvider.FileList]))
+		block[DataProvider.NEntries] = sum(imap(lambda fi: fi[DataProvider.NEntries],
+			block[DataProvider.FileList]))
 		# Prune metadata
 		if self._lumi_keep == LumiKeep.RunLumi:
 			return block
 		elif self._lumi_keep == LumiKeep.Run:
-			idxRuns = None
-		removeRunLumi(block[DataProvider.Metadata], idxRuns, idxLumi)
+			idx_runs = None
+		_remove_run_lumi(block[DataProvider.Metadata], idx_runs, idx_lumi)
 		return block
+
+	def _accept_lumi(self, block, fi, idx_runs, idx_lumi, lumi_filter):
+		if (idx_runs is None) or (idx_lumi is None):
+			return True
+		return any(imap(lambda run_lumi: select_lumi(run_lumi, lumi_filter),
+			izip(fi[DataProvider.Metadata][idx_runs], fi[DataProvider.Metadata][idx_lumi])))
+
+	def _accept_run(self, block, fi, idx_runs, lumi_filter):
+		if idx_runs is None:
+			return True
+		return any(imap(lambda run: select_run(run, lumi_filter), fi[DataProvider.Metadata][idx_runs]))
+
+	def _check_lumi_filter(self, block, idx_runs, idx_lumi):
+		lumi_filter = self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector=False)
+		if not lumi_filter:
+			return
+		if (self._lumi_strict == LumiMode.strict) and ((idx_runs is None) or (idx_lumi is None)):
+			raise DatasetError('Strict lumi filter active but ' +
+				'dataset %s does not provide lumi information!' % DataProvider.get_block_id(block))
+		elif (self._lumi_strict == LumiMode.weak) and (idx_runs is None):
+			raise DatasetError('Weak lumi filter active but ' +
+				'dataset %s does not provide run information!' % DataProvider.get_block_id(block))
+
+	def _process_fi(self, block, idx_runs, idx_lumi):
+		for fi in block[DataProvider.FileList]:
+			if self._skip_fi(block, idx_runs, idx_lumi, fi):
+				continue
+			# Prune metadata
+			if (self._lumi_keep == LumiKeep.Run) and (idx_lumi is not None):
+				if idx_runs is not None:
+					fi[DataProvider.Metadata][idx_runs] = list(set(fi[DataProvider.Metadata][idx_runs]))
+				fi[DataProvider.Metadata].pop(idx_lumi)
+			elif self._lumi_keep == LumiKeep.none:
+				_remove_run_lumi(fi[DataProvider.Metadata], idx_runs, idx_lumi)
+			yield fi
+
+	def _skip_fi(self, block, idx_runs, idx_lumi, fi):
+		if not self._lumi_filter.empty():  # Filter files by run / lumi
+			lumi_filter = self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector=False)
+			if self._lumi_strict == LumiMode.strict:
+				if not self._accept_lumi(block, fi, idx_runs, idx_lumi, lumi_filter):
+					return True
+			elif self._lumi_strict == LumiMode.weak:
+				if not self._accept_run(block, fi, idx_runs, lumi_filter):
+					return True
 
 
 class LumiPartitionProcessor(PartitionProcessor):
-	def __init__(self, config):
-		PartitionProcessor.__init__(self, config)
-		changeTrigger = triggerResync(['datasets', 'parameters'])
-		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = changeTrigger)
-
-	def getKeys(self):
-		if self.enabled():
-			return [ParameterMetadata('LUMI_RANGE', untracked = True)]
+	def __init__(self, config, datasource_name):
+		PartitionProcessor.__init__(self, config, datasource_name)
+		self._lumi_filter = config.get_lookup(['lumi filter', '%s lumi filter' % datasource_name],
+			default={}, parser=parse_lumi_filter, strfun=str_lumi)
 
 	def enabled(self):
 		return not self._lumi_filter.empty()
 
-	def getNeededKeys(self, splitter):
+	def get_needed_vn_list(self, splitter):
 		if self.enabled():
 			return ['LUMI_RANGE']
 
-	def process(self, pNum, splitInfo, result):
+	def get_partition_metadata(self):
 		if self.enabled():
-			lumi_filter = self._lumi_filter.lookup(splitInfo[DataSplitter.Nickname], is_selector = False)
+			return [ParameterMetadata('LUMI_RANGE', untracked=True)]
+
+	def process(self, pnum, partition, result):
+		if self.enabled():
+			lumi_filter = self._lumi_filter.lookup(partition[DataSplitter.Nickname], is_selector=False)
 			if lumi_filter:
-				idxRuns = splitInfo[DataSplitter.MetadataHeader].index("Runs")
-				iterRuns = ichain(imap(lambda m: m[idxRuns], splitInfo[DataSplitter.Metadata]))
-				short_lumi_filter = filterLumiFilter(list(iterRuns), lumi_filter)
-				result['LUMI_RANGE'] = str.join(',', imap(lambda lr: '"%s"' % lr, formatLumi(short_lumi_filter)))
+				idx_runs = partition[DataSplitter.MetadataHeader].index('Runs')
+				iter_run = ichain(imap(lambda m: m[idx_runs], partition[DataSplitter.Metadata]))
+				short_lumi_filter = filter_lumi_filter(list(iter_run), lumi_filter)
+				iter_lumi_range_str = imap(lambda lr: '"%s"' % lr, format_lumi(short_lumi_filter))
+				result['LUMI_RANGE'] = str.join(',', iter_lumi_range_str)
+
+
+def _remove_run_lumi(value, idx_runs, idx_lumi):
+	if (idx_runs is not None) and (idx_lumi is not None):
+		value.pop(max(idx_runs, idx_lumi))
+		value.pop(min(idx_runs, idx_lumi))
+	elif idx_lumi is not None:
+		value.pop(idx_lumi)
+	elif idx_runs is not None:
+		value.pop(idx_runs)

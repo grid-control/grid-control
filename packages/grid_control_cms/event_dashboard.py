@@ -15,89 +15,81 @@
 import os, time
 from grid_control.job_db import Job
 from grid_control.monitoring import Monitoring
-from grid_control.utils import filterDict, getVersion, mergeDicts, pathShare
+from grid_control.utils import filter_dict, get_path_share, get_version, merge_dict_list
 from grid_control.utils.thread_tools import GCThreadPool
 from grid_control_cms.DashboardAPI.DashboardAPI import DashboardAPI
+from python_compat import identity
+
 
 class DashBoard(Monitoring):
-	configSections = Monitoring.configSections + ['dashboard']
+	config_section_list = Monitoring.config_section_list + ['dashboard']
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
-		jobDesc = task.getDescription(None) # TODO: use the other variables for monitoring
-		self._app = config.get('application', 'shellscript', onChange = None)
-		self._runningMax = config.getTime('dashboard timeout', 5, onChange = None)
-		self._tasktype = config.get('task', jobDesc.jobType or 'analysis', onChange = None)
-		self._taskname = config.get('task name', '@GC_TASK_ID@_@DATASETNICK@', onChange = None)
-		self._statusMap = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
+		job_desc = task.get_description(None)  # TODO: use the other variables for monitoring
+		self._app = config.get('application', 'shellscript', on_change=None)
+		self._dashboard_timeout = config.get_time('dashboard timeout', 5, on_change=None)
+		self._tasktype = config.get('task', job_desc.jobType or 'analysis', on_change=None)
+		self._taskname = config.get('task name', '@GC_TASK_ID@_@DATASETNICK@', on_change=None)
+		self._map_status_job2dashboard = {Job.DONE: 'DONE', Job.FAILED: 'DONE', Job.SUCCESS: 'DONE',
 			Job.RUNNING: 'RUNNING', Job.ABORTED: 'ABORTED', Job.CANCELLED: 'CANCELLED'}
 		self._tp = GCThreadPool()
 
+	def get_file_list(self):
+		yield get_path_share('mon.dashboard.sh', pkg='grid_control_cms')
+		for fn in ('DashboardAPI.py', 'Logger.py', 'apmon.py', 'report.py'):
+			yield get_path_share('..', 'DashboardAPI', fn, pkg='grid_control_cms')
 
-	def getScript(self):
-		yield pathShare('mon.dashboard.sh', pkg = 'grid_control_cms')
+	def get_script(self):
+		yield get_path_share('mon.dashboard.sh', pkg='grid_control_cms')
 
-
-	def getTaskConfig(self):
+	def get_task_dict(self):
 		result = {'TASK_NAME': self._taskname, 'DB_EXEC': self._app, 'DATASETNICK': ''}
-		result.update(Monitoring.getTaskConfig(self))
+		result.update(Monitoring.get_task_dict(self))
 		return result
 
+	def on_job_output(self, wms, job_obj, jobnum, exit_code):
+		self._update_dashboard(wms, job_obj, jobnum, job_obj, {'ExeExitCode': exit_code})
 
-	def getFiles(self):
-		yield pathShare('mon.dashboard.sh', pkg = 'grid_control_cms')
-		for fn in ('DashboardAPI.py', 'Logger.py', 'apmon.py', 'report.py'):
-			yield pathShare('..', 'DashboardAPI', fn, pkg = 'grid_control_cms')
-
-
-	def _publish(self, jobObj, jobNum, taskId, usermsg):
-		(_, backend, rawId) = jobObj.gcID.split('.', 2)
-		dashId = '%s_%s' % (jobNum, rawId)
-		if 'http' not in jobObj.gcID:
-			dashId = '%s_https://%s:/%s' % (jobNum, backend, rawId)
-		msg = mergeDicts([{'taskId': taskId, 'jobId': dashId, 'sid': rawId}] + usermsg)
-		DashboardAPI(taskId, dashId).publish(**filterDict(msg, vF = lambda v: v is not None))
-
-
-	def _start_publish(self, jobObj, jobNum, desc, message):
-		taskId = self._task.substVars('dashboard task id', self._taskname, jobNum,
-			addDict = {'DATASETNICK': ''}).strip('_')
-		self._tp.start_thread('Notifying dashboard about %s of job %d' % (desc, jobNum),
-			self._publish, jobObj, jobNum, taskId, message)
-
-
-	# Called on job submission
-	def onJobSubmit(self, wms, jobObj, jobNum):
-		token = wms.getAccessToken(jobObj.gcID)
-		jobInfo = self._task.getJobConfig(jobNum)
-		self._start_publish(jobObj, jobNum, 'submission', [{
-			'user': os.environ['LOGNAME'], 'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
-			'tool': 'grid-control', 'JSToolVersion': getVersion(),
+	def on_job_submit(self, wms, job_obj, jobnum):
+		# Called on job submission
+		token = wms.get_access_token(job_obj.gc_id)
+		job_config_dict = self._task.get_job_dict(jobnum)
+		self._start_publish(job_obj, jobnum, 'submission', [{'user': os.environ['LOGNAME'],
+			'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
+			'tool': 'grid-control', 'JSToolVersion': get_version(),
 			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
-			'application': jobInfo.get('SCRAM_PROJECTVERSION', self._app),
-			'exe': jobInfo.get('CMSSW_EXEC', 'shellscript'), 'taskType': self._tasktype,
-			'scheduler': wms.getObjectName(), 'vo': token.getGroup(),
-			'nevtJob': jobInfo.get('MAX_EVENTS', 0),
-			'datasetFull': jobInfo.get('DATASETPATH', 'none')}])
+			'application': job_config_dict.get('SCRAM_PROJECTVERSION', self._app),
+			'exe': job_config_dict.get('CMSSW_EXEC', 'shellscript'), 'taskType': self._tasktype,
+			'scheduler': wms.get_object_name(), 'vo': token.getGroup(),
+			'nevtJob': job_config_dict.get('MAX_EVENTS', 0),
+			'datasetFull': job_config_dict.get('DATASETPATH', 'none')}])
 
+	def on_job_update(self, wms, job_obj, jobnum, data):
+		self._update_dashboard(wms, job_obj, jobnum, job_obj, {})
 
-	# Called on job status update and output
-	def _updateDashboard(self, wms, jobObj, jobNum, data, addMsg):
+	def on_workflow_finish(self):
+		self._tp.wait_and_drop(self._dashboard_timeout)
+
+	def _publish(self, job_obj, jobnum, task_id, usermsg):
+		(_, backend, wms_id) = job_obj.gc_id.split('.', 2)
+		dash_id = '%s_%s' % (jobnum, wms_id)
+		if 'http' not in job_obj.gc_id:
+			dash_id = '%s_https://%s:/%s' % (jobnum, backend, wms_id)
+		msg = merge_dict_list([{'taskId': task_id, 'jobId': dash_id, 'sid': wms_id}] + usermsg)
+		DashboardAPI(task_id, dash_id).publish(**filter_dict(msg, value_filter=identity))
+
+	def _start_publish(self, job_obj, jobnum, desc, message):
+		task_id = self._task.substitute_variables('dashboard task id', self._taskname, jobnum,
+			additional_var_dict={'DATASETNICK': ''}).strip('_')
+		self._tp.start_daemon('Notifying dashboard about %s of job %d' % (desc, jobnum),
+			self._publish, job_obj, jobnum, task_id, message)
+
+	def _update_dashboard(self, wms, job_obj, jobnum, data, add_dict):
+		# Called on job status update and output
 		# Translate status into dashboard status message
-		statusDashboard = self._statusMap.get(jobObj.state, 'PENDING')
-		self._start_publish(jobObj, jobNum, 'status', [{'StatusValue': statusDashboard,
-			'StatusValueReason': data.get('reason', statusDashboard).upper(),
+		status_dashboard = self._map_status_job2dashboard.get(job_obj.state, 'PENDING')
+		self._start_publish(job_obj, jobnum, 'status', [{'StatusValue': status_dashboard,
+			'StatusValueReason': data.get('reason', status_dashboard).upper(),
 			'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),
-			'StatusDestination': data.get('dest', '') }, addMsg])
-
-
-	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		self._updateDashboard(wms, jobObj, jobNum, jobObj, {})
-
-
-	def onJobOutput(self, wms, jobObj, jobNum, retCode):
-		self._updateDashboard(wms, jobObj, jobNum, jobObj, {'ExeExitCode': retCode})
-
-
-	def onFinish(self):
-		self._tp.wait_and_drop(self._runningMax)
+			'StatusDestination': data.get('dest', '')}, add_dict])

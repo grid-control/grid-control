@@ -14,24 +14,23 @@
 # | limitations under the License.
 
 import sys
-from gcSupport import Activity, JobSelector, Options, Plugin, displayPluginList, getConfig, getPluginList, scriptOptions, utils
+from gcSupport import Activity, JobSelector, Options, displayPluginList, getConfig, get_pluginList, scriptOptions, utils
+
 
 parser = Options(usage = '%s [OPTIONS] <config file>')
-parser.addBool(None, 'L', 'report-list',  default = False, help = 'List available report classes')
-parser.addBool(None, 'T', 'use-task',     default = False, help = 'Forward task information to report')
-parser.addText(None, 'R', 'report',       default = 'GUIReport')
-parser.addText(None, 'J', 'job-selector', default = None)
-parser.addText(None, ' ', 'string',       default = '')
+parser.add_bool(None, 'L', 'report-list',  default = False, help = 'List available report classes')
+parser.add_bool(None, 'T', 'use-task',     default = False, help = 'Forward task information to report')
+parser.add_text(None, 'R', 'report',       default = 'GUIReport')
+parser.add_text(None, 'J', 'job-selector', default = None)
+parser.add_text(None, ' ', 'string',       default = '')
 options = scriptOptions(parser)
-
-Report = Plugin.getClass('Report')
 
 if options.opts.report_list:
 	sys.stderr.write('Available report classes:\n')
-	displayPluginList(getPluginList('Report'))
+	displayPluginList(get_pluginList('Report'))
 
 if len(options.args) != 1:
-	utils.exitWithUsage(parser.usage())
+	utils.exit_with_usage(parser.usage())
 
 def main(opts, args):
 	# try to open config file
@@ -40,16 +39,17 @@ def main(opts, args):
 	# Initialise task module
 	task = None
 	if opts.use_task:
-		task = config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',)).task
+		task = config.get_plugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',)).task
 
 	# Initialise job database
-	jobDB = config.getPlugin('job database', 'TextFileJobDB', cls = 'JobDB')
+	job_db = config.get_plugin('job database', 'TextFileJobDB', cls = 'JobDB')
 	activity = Activity('Filtering job entries')
-	selected = jobDB.getJobs(JobSelector.create(opts.job_selector, task = task))
+	selected = job_db.get_job_list(JobSelector.create(opts.job_selector, task = task))
 	activity.finish()
 
-	report = Report.createInstance(opts.report, jobDB, task, selected, opts.string)
-	report.display()
+	report = config.get_composited_plugin('transient report', opts.report, 'MultiReport', cls = 'Report',
+		pargs = (job_db, task, selected, opts.string))
+	report.show_report(job_db)
 
 if __name__ == '__main__':
 	sys.exit(main(options.opts, options.args))

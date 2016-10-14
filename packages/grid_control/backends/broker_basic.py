@@ -15,46 +15,47 @@
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import WMS
 from grid_control.config import ListOrder
-from grid_control.utils.parsing import parseList
+from grid_control.utils.parsing import parse_list
 from python_compat import imap, lfilter, lmap, sorted
 
+
 class RandomBroker(Broker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
 		self._itemsStart = self._discover(discoverFun)
 
 
 class UserBroker(Broker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		self._itemsStart = config.getList(userOpt, [], onChange = None)
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
+		self._itemsStart = config.get_list(broker_prefix, [], on_change = None)
 		if not self._itemsStart:
 			self._itemsStart = None
 
 
 class FilterBroker(Broker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		userFilter = config.getFilter(userOpt, '',
-			defaultMatcher = 'blackwhite', defaultFilter = 'try_strict',
-			defaultOrder = ListOrder.matcher)
-		self._itemsStart = userFilter.getSelector()
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
+		userFilter = config.get_filter(broker_prefix, '',
+			default_matcher = 'blackwhite', default_filter = 'try_strict',
+			default_order = ListOrder.matcher)
+		self._itemsStart = userFilter.get_selector()
 		if self._itemsStart:
 			self._discover(discoverFun)
 		if self._itemsDiscovered:
-			self._itemsStart = userFilter.filterList(self._itemsDiscovered)
+			self._itemsStart = userFilter.filter_list(self._itemsDiscovered)
 
 
 class CoverageBroker(Broker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		userFilter = config.getFilter(userOpt, '',
-			defaultMatcher = 'blackwhite', defaultFilter = 'try_strict',
-			defaultOrder = ListOrder.matcher)
-		self._itemsStart = userFilter.filterList(None)
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
+		userFilter = config.get_filter(broker_prefix, '',
+			default_matcher = 'blackwhite', default_filter = 'try_strict',
+			default_order = ListOrder.matcher)
+		self._itemsStart = userFilter.filter_list(None)
 		itemsDiscover = list(self._discover(discoverFun).keys())
 		if itemsDiscover:
-			self._itemsStart = userFilter.filterList(itemsDiscover)
+			self._itemsStart = userFilter.filter_list(itemsDiscover)
 		self._nIndex = 0
 
 	def _broker(self, reqs, items):
@@ -66,8 +67,8 @@ class CoverageBroker(Broker):
 
 
 class SimpleBroker(FilterBroker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		FilterBroker.__init__(self, config, name, userOpt, itemName, discoverFun)
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		FilterBroker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
 		self._discover(discoverFun)
 
 		if self._itemsDiscovered: # Sort discovered items according to requirements
@@ -109,14 +110,14 @@ class SimpleBroker(FilterBroker):
 			return True
 		# Apply sort order and give matching entries as preselection to FilterBroker
 		items = lfilter(lambda x: matcher(self._itemsDiscovered[x]), self._itemsStart or self._itemsSorted)
-		return FilterBroker._broker(self, reqs, lfilter(lambda x: x in items, self._itemsSorted))
+		return FilterBroker._broker(self, reqs, lfilter(items.__contains__, self._itemsSorted))
 
 
 class StorageBroker(Broker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		self._storageDict = config.getLookup('%s storage access' % userOpt, {}, onChange = None,
-			parser = lambda x: parseList(x, ' '), strfun = lambda x: str.join(' ', x))
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
+		self._storageDict = config.get_lookup('%s storage access' % broker_prefix, {}, on_change = None,
+			parser = lambda x: parse_list(x, ' '), strfun = lambda x: str.join(' ', x))
 
 	def _broker(self, reqs, items):
 		result = Broker._broker(self, reqs, items)

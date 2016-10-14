@@ -12,13 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config.chandlers_base import changeImpossible, changeInitNeeded, triggerResync, validNoVar
-from grid_control.config.config_entry import ConfigError, appendOption, noDefault
+from grid_control.config.chandlers_base import NoVarCheck, TriggerAbort, TriggerInit, TriggerResync
+from grid_control.config.config_entry import ConfigError, join_config_locations
 from grid_control.config.config_factory import create_config
 from grid_control.config.matcher_base import ListFilter, ListOrder, Matcher
 
-__all__ = ['appendOption', 'changeImpossible', 'changeInitNeeded', 'ConfigError', 'create_config',
-	'ListFilter', 'ListOrder', 'Matcher', 'noDefault', 'triggerResync', 'validNoVar']
+
+__all__ = ['join_config_locations', 'TriggerAbort', 'TriggerInit', 'ConfigError', 'create_config',
+	'ListFilter', 'ListOrder', 'Matcher', 'TriggerResync', 'NoVarCheck']
 
 # At the lowest level, all config option values are represented by strings
 # which are encapsulated in the ConfigEntry class, which holds access and source
@@ -27,5 +28,5 @@ __all__ = ['appendOption', 'changeImpossible', 'changeInitNeeded', 'ConfigError'
 # These config entries are stored in an ConfigContainer, which makes the
 # entries accessible via "section" and "option" specifiers.
 
-# The type parsing config interface (getInt, getBool, getPlugin, ...) is defined
+# The type parsing config interface (get_int, get_bool, get_plugin, ...) is defined
 # in the TypedConfigInterface class

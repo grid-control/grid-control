@@ -14,6 +14,7 @@
 
 from hpfwk import clear_current_exception
 
+
 def chmodNumPerms(args = ''):
 	perm = 0
 	if 'r' in args:

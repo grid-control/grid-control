@@ -15,48 +15,49 @@
 import logging
 from hpfwk import InstanceFactory, Plugin
 
-# ConfigurablePlugin is the base class for plugins that need config as constructor parameter
+
 class ConfigurablePlugin(Plugin):
+	# ConfigurablePlugin is the base class for plugins that need config as constructor parameter
 	def __init__(self, config):
 		pass
 
 	def bind(cls, value, **kwargs):
 		config = kwargs.pop('config')
 		for entry in value.split():
-			yield InstanceFactory(entry, cls.getClass(entry), config)
+			yield InstanceFactory(entry, cls.get_class(entry), config)
 	bind = classmethod(bind)
 
 
-# NamedPlugin provides functionality to name plugin instances
 class NamedPlugin(ConfigurablePlugin):
-	tagName = None
+	# NamedPlugin provides functionality to name plugin instances
+	config_tag_name = None
 
 	def __init__(self, config, name):
 		self._name = name
-		self._log = logging.getLogger('%s.%s' % (self.tagName.lower(), name.lower()))
+		self._log = logging.getLogger('%s.%s' % (self.config_tag_name.lower(), name.lower()))
 		ConfigurablePlugin.__init__(self, config)
-
-	def getObjectName(self):
-		return self._name
 
 	def bind(cls, value, **kwargs):
 		while (': ' in value) or (' :' in value):
 			value = value.replace(' :', ':').replace(': ', ':')
 		config = kwargs.pop('config')
 		tags = kwargs.pop('tags', None)
-		inheritSections = kwargs.pop('inherit', False)
+		inherit_sections = kwargs.pop('inherit', False)
 		for entry in value.split():
-			(clsName, instanceName) = (None, None)
+			(cls_name, instance_name) = (None, None)
 			tmp = entry.split(':', 1)
 			if len(tmp) == 2:
-				(clsName, instanceName) = tmp
+				(cls_name, instance_name) = tmp
 			elif len(tmp) == 1:
-				clsName = tmp[0]
-			clsNew = cls.getClass(clsName)
-			if not instanceName:
-				instanceName = clsNew.__name__.split('.')[-1]
-			cls_config = config.changeView(viewClass = 'TaggedConfigView',
-				setClasses = [clsNew], setSections = None, setNames = [instanceName],
-				addTags = tags or [], inheritSections = inheritSections)
-			yield InstanceFactory(entry, clsNew, cls_config, instanceName)
+				cls_name = tmp[0]
+			cls_new = cls.get_class(cls_name)
+			if not instance_name:
+				instance_name = cls_new.__name__.split('.')[-1]
+			cls_config = config.change_view(view_class='TaggedConfigView',
+				set_classes=[cls_new], set_sections=None, set_names=[instance_name],
+				add_tags=tags or [], inherit_sections=inherit_sections)
+			yield InstanceFactory(entry, cls_new, cls_config, instance_name)
 	bind = classmethod(bind)
+
+	def get_object_name(self):
+		return self._name

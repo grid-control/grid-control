@@ -14,12 +14,13 @@
 
 import os, shutil
 from grid_control import utils
-from grid_control.config import ConfigError, validNoVar
+from grid_control.config import ConfigError, NoVarCheck
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import NestedException
 from python_compat import imap, set
+
 
 class StorageError(NestedException):
 	pass
@@ -29,7 +30,7 @@ class StorageError(NestedException):
 ensurePrefix = lambda fn: utils.QM('://' in fn, fn, 'file:////%s' % os.path.abspath(fn).lstrip('/'))
 
 def se_runcmd(cmd, varDict, *urls):
-	runLib = utils.pathShare('gc-run.lib')
+	runLib = utils.get_path_share('gc-run.lib')
 	args = str.join(' ', imap(lambda x: '"%s"' % ensurePrefix(x).replace('dir://', 'file://'), urls))
 	varString = str.join(' ', imap(lambda x: 'export %s="%s";' % (x, varDict[x]), varDict))
 	return LocalProcess('/bin/bash', '-c', '. %s || exit 99; %s %s %s' % (runLib, varString, cmd, args))
@@ -45,20 +46,20 @@ def se_copy(src, dst, force = True, tmp = ''):
 
 
 class StorageManager(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['storage']
-	tagName = 'storage'
+	config_section_list = NamedPlugin.config_section_list + ['storage']
+	config_tag_name = 'storage'
 
-	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
+	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
 		NamedPlugin.__init__(self, config, name)
-		(self.smOptPrefix, self.varPrefix) = (optPrefix, varPrefix)
+		(self._storage_channel, self._storage_var_prefix) = (storage_channel, storage_var_prefix)
 
-	def addFiles(self, files):
+	def add_file_list(self, files):
 		pass
 
-	def getTaskConfig(self):
+	def get_task_dict(self):
 		return {}
 
-	def getDependencies(self):
+	def get_dependency_list(self):
 		return []
 
 	def doTransfer(self, listDescSourceTarget):
@@ -66,13 +67,13 @@ class StorageManager(NamedPlugin):
 
 
 class LocalSBStorageManager(StorageManager):
-	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
-		StorageManager.__init__(self, config, name, optDefault, optPrefix, varPrefix)
-		self.sbPath = config.getPath('%s path' % optDefault, config.getWorkPath('sandbox'), mustExist = False)
+	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
+		StorageManager.__init__(self, config, name, storage_type, storage_channel, storage_var_prefix)
+		self._sandbox_path = config.get_path('%s path' % storage_type, config.get_work_path('sandbox'), must_exist = False)
 
 	def doTransfer(self, listDescSourceTarget):
 		for (desc, source, target) in listDescSourceTarget:
-			target = os.path.join(self.sbPath, target)
+			target = os.path.join(self._sandbox_path, target)
 			try:
 				shutil.copy(source, target)
 			except Exception:
@@ -80,39 +81,39 @@ class LocalSBStorageManager(StorageManager):
 
 
 class SEStorageManager(StorageManager):
-	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
-		StorageManager.__init__(self, config, name, optDefault, optPrefix, varPrefix)
+	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
+		StorageManager.__init__(self, config, name, storage_type, storage_channel, storage_var_prefix)
 		normSEPath = lambda x: utils.QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x)
-		self.defPaths = config.getList('%s path' % optDefault, [], onValid = validNoVar(config), parseItem = normSEPath)
-		self.smPaths = config.getList('%s path' % optPrefix, self.defPaths, onValid = validNoVar(config), parseItem = normSEPath)
-		self.smFiles = config.getList('%s files' % optPrefix, [])
-		self.smPattern = config.get('%s pattern' % optPrefix, '@X@')
-		self.smTimeout = config.getTime('%s timeout' % optPrefix, 2*60*60)
-		self.smForce = config.getBool('%s force' % optPrefix, True)
+		self._storage_paths = config.get_list(['%s path' % storage_type, '%s path' % storage_channel],
+			default = [], on_valid = NoVarCheck(config), parse_item = normSEPath)
+		self._storage_files = config.get_list('%s files' % storage_channel, [])
+		self._storage_pattern = config.get('%s pattern' % storage_channel, '@X@')
+		self._storage_timeout = config.get_time('%s timeout' % storage_channel, 2*60*60)
+		self._storage_force = config.get_bool('%s force' % storage_channel, True)
 
-	def addFiles(self, files):
-		self.smFiles.extend(files)
+	def add_file_list(self, files):
+		self._storage_files.extend(files)
 
-	def getTaskConfig(self):
+	def get_task_dict(self):
 		return {
-			'%s_PATH' % self.varPrefix: str.join(' ', self.smPaths),
-			'%s_FILES' % self.varPrefix: str.join(' ', self.smFiles),
-			'%s_PATTERN' % self.varPrefix: self.smPattern,
-			'%s_TIMEOUT' % self.varPrefix: self.smTimeout,
+			'%s_PATH' % self._storage_var_prefix: str.join(' ', self._storage_paths),
+			'%s_FILES' % self._storage_var_prefix: str.join(' ', self._storage_files),
+			'%s_PATTERN' % self._storage_var_prefix: self._storage_pattern,
+			'%s_TIMEOUT' % self._storage_var_prefix: self._storage_timeout,
 		}
 
-	def getDependencies(self):
-		if True in imap(lambda x: not x.startswith('dir'), self.smPaths):
+	def get_dependency_list(self):
+		if True in imap(lambda x: not x.startswith('dir'), self._storage_paths):
 			return ['glite']
 		return []
 
 	def doTransfer(self, listDescSourceTarget):
 		for (desc, source, target) in listDescSourceTarget:
-			if not self.smPaths:
-				raise ConfigError("%s can't be transferred because '%s path wasn't set" % (desc, self.smOptPrefix))
-			for idx, sePath in enumerate(set(self.smPaths)):
+			if not self._storage_paths:
+				raise ConfigError("%s can't be transferred because '%s path wasn't set" % (desc, self._storage_channel))
+			for idx, sePath in enumerate(set(self._storage_paths)):
 				activity = Activity('Copy %s to SE %d ' % (desc, idx + 1))
-				proc = se_copy(source, os.path.join(sePath, target), self.smForce)
+				proc = se_copy(source, os.path.join(sePath, target), self._storage_force)
 				proc.status(timeout = 5*60, terminate = True)
 				activity.finish()
 				if proc.status(timeout = 0) == 0:
@@ -121,5 +122,5 @@ class SEStorageManager(StorageManager):
 					self._log.info('Copy %s to SE %d failed', desc, idx + 1)
 					self._log.critical(proc.stderr.read(timeout = 0))
 					self._log.critical('Unable to copy %s! You can try to copy it manually.', desc)
-					if not utils.getUserBool('Is %s (%s) available on SE %s?' % (desc, source, sePath), False):
+					if not utils.get_user_bool('Is %s (%s) available on SE %s?' % (desc, source, sePath), False):
 						raise StorageError('%s is missing on SE %s!' % (desc, sePath))

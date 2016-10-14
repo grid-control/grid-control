@@ -16,109 +16,63 @@ import math, time
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from grid_control.report import LocationReport, Report
-from grid_control.utils import printTabular
-from grid_control.utils.parsing import parseStr, strTimeShort
+from grid_control.utils import display_table
+from grid_control.utils.parsing import parse_str, str_time_short
 from python_compat import imap, itemgetter, lmap, lzip, sorted
 
-class LocationHistoryReport(LocationReport):
-	alias = ['history']
 
-	def _add_details(self, reports, jobObj):
-		history = jobObj.history.items()
+class LocationHistoryReport(LocationReport):
+	alias_list = ['history']
+
+	def _add_details(self, reports, job_obj):
+		history = job_obj.history.items()
 		history.reverse()
-		for at, dest in history:
+		for attempt, dest in history:
 			if dest != 'N/A':
-				reports.append({1: at, 2: ' -> ' + dest})
+				reports.append({1: attempt, 2: ' -> ' + dest})
 
 
 class BackendReport(Report):
-	alias = ['backend']
+	alias_list = ['backend']
 
-	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		Report.__init__(self, jobDB, task, jobs, configString)
-		self._levelMap = {'wms': 2, 'endpoint': 3, 'site': 4, 'queue': 5}
-		self._useHistory = ('history' in configString)
-		configString = configString.replace('history', '')
-		self._idxList = lmap(lambda x: self._levelMap[x.lower()], configString.split())
-		self._idxList.reverse()
-		if not self._idxList:
+	def __init__(self, job_db, task, jobs=None, config_str=''):
+		Report.__init__(self, job_db, task, jobs, config_str)
+		self._level_map = {'wms': 2, 'endpoint': 3, 'site': 4, 'queue': 5}
+		self._use_history = ('history' in config_str)
+		config_str = config_str.replace('history', '') or 'wms'
+		self._idx_list = lmap(lambda x: self._level_map[x.lower()], config_str.split())
+		self._idx_list.reverse()
+		if not self._idx_list:
 			raise ConfigError('Backend report was not configured!')
-		self._stateMap = [(None, 'WAITING'), (Job.RUNNING, 'RUNNING'),
+		self._state_map = [(None, 'WAITING'), (Job.RUNNING, 'RUNNING'),
 			(Job.FAILED, 'FAILED'), (Job.SUCCESS, 'SUCCESS')]
 
-	def _getReportInfos(self):
-		result = []
-		t_now = time.time()
-		for jobNum in self._jobs:
-			jobObj = self._jobDB.getJobTransient(jobNum)
-			runtime = parseStr(jobObj.get('runtime'), int, 0)
-			for attempt in jobObj.history:
-				if (attempt != jobObj.attempt) and not self._useHistory:
-					continue
-				if (attempt == jobObj.attempt) and (jobObj.state == Job.SUCCESS):
-					time_info = runtime
-				elif (attempt == jobObj.attempt - 1) and (jobObj.state != Job.SUCCESS):
-					time_info = runtime
-				elif attempt == jobObj.attempt:
-					time_info = t_now - float(jobObj.submitted)
+	def show_report(self, job_db):
+		state_map = dict(self._state_map)
+
+		def _transform(data, label, level):
+			if None in data:
+				total = data.pop(None)
+				if len(data) > 1:
+					for result in self._get_entry(state_map, total, ['Total']):
+						yield result
+					yield '='
+			for idx, entry in enumerate(sorted(data)):
+				if level == 1:
+					for result in self._get_entry(state_map, data[entry], [entry] + label):
+						yield result
 				else:
-					time_info = 0
-				state = jobObj.state
-				if attempt != jobObj.attempt:
-					state = Job.FAILED
-				dest = jobObj.history[attempt]
-				if dest == 'N/A':
-					dest_info = [dest]
-				else:
-					dest_info = dest.split('/')
-				wmsName = jobObj.gcID.split('.')[1]
-				endpoint = 'N/A'
-				if 'http:' in jobObj.gcID:
-					endpoint = jobObj.gcID.split(':')[1].split('/')[0]
-				result.append([state, time_info, wmsName, endpoint] + dest_info)
-		return result
+					for result in _transform(data[entry], [entry] + label, level - 1):
+						yield result
+				if idx != len(data) - 1:
+					yield '-'
+		stats = self._get_hierachical_stats_dict(job_db)
+		displace_states_list = lmap(itemgetter(1), self._state_map)
+		header = [('', 'Category')] + lzip(displace_states_list, displace_states_list)
+		display_table(header, _transform(stats, [], len(self._idx_list)),
+			fmt_string='l' + 'c' * len(state_map), fmt={'': lambda x: str.join(' ', x)})
 
-	def _getHierachicalStats(self):
-		overview = self._getReportInfos()
-		def fillDict(result, items, idx_list = None, indent = 0):
-			if not idx_list:
-				for entry in items:
-					result.setdefault(entry[0], []).append(entry[1])
-				return result
-			def getClassKey(entry):
-				idx = idx_list[0]
-				if idx < len(entry):
-					return entry[idx]
-				return 'N/A'
-			classMap = {}
-			for entry in items:
-				classMap.setdefault(getClassKey(entry), []).append(entry)
-			tmp = {}
-			for classKey in classMap:
-				childInfo = fillDict(result.setdefault(classKey, {}), classMap[classKey], idx_list[1:], indent + 1)
-				for key in childInfo:
-					tmp.setdefault(key, []).extend(childInfo[key])
-			result[None] = tmp
-			return tmp
-		displayDict = {}
-		fillDict(displayDict, overview, self._idxList)
-		return displayDict
-
-	def _get_entry_stats(self, stateMap, data):
-		(tmp_m0, tmp_m1, tmp_m2, tmp_ma, tmp_mi) = ({}, {}, {}, {}, {})
-		for rawState in data:
-			state = stateMap.get(rawState, stateMap.get(None))
-			tmp_m0[state] = tmp_m0.get(state, 0) + len(data[rawState])
-			tmp_m1[state] = tmp_m1.get(state, 0) + sum(data[rawState])
-			tmp_m2[state] = tmp_m2.get(state, 0) + sum(imap(lambda x: x * x, data[rawState]))
-			tmp_ma[state] = max(data[rawState] + [tmp_ma.get(state, 0)])
-			tmp_mi[state] = min(data[rawState] + [tmp_ma.get(state, 1e10)])
-		for state in tmp_m0:
-			mean = tmp_m1[state] / tmp_m0[state]
-			stddev = math.sqrt(tmp_m2[state] / tmp_m0[state] - mean * mean)
-			yield (state, tmp_m0[state], mean, stddev, tmp_mi[state], tmp_ma[state])
-
-	def _get_entry(self, stateMap, data, label):
+	def _get_entry(self, state_map, data, label):
 		(result_l1, result_l2, result_l3) = ({}, {}, {})
 		if len(label) > 0:
 			result_l1[''] = [label[0]]
@@ -126,35 +80,86 @@ class BackendReport(Report):
 			result_l2[''] = ['  %s' % label[1]]
 		if len(label) > 2:
 			result_l3[''] = ['    %s' % label[2]] + label[3:]
-		for (state, cnt, time_mean, time_stddev, time_min, time_max) in self._get_entry_stats(stateMap, data):
+		entry_stats_iter = self._get_entry_stats(state_map, data)
+		for (state, cnt, time_mean, time_stddev, time_min, time_max) in entry_stats_iter:
 			result_l1[state] = cnt
-			result_l2[state] = '%s +/- %s' % (strTimeShort(time_mean), strTimeShort(time_stddev))
-			result_l3[state] = '%s ... %s' % (strTimeShort(time_min), strTimeShort(time_max))
+			result_l2[state] = '%s +/- %s' % (str_time_short(time_mean), str_time_short(time_stddev))
+			result_l3[state] = '%s ... %s' % (str_time_short(time_min), str_time_short(time_max))
 		yield result_l1
 		yield result_l2
 		yield result_l3
 
-	def display(self):
-		stateMap = dict(self._stateMap)
+	def _get_entry_stats(self, state_map, data):
+		(tmp_m0, tmp_m1, tmp_m2, tmp_ma, tmp_mi) = ({}, {}, {}, {}, {})
+		for raw_state in data:
+			state = state_map.get(raw_state, state_map.get(None))
+			tmp_m0[state] = tmp_m0.get(state, 0) + len(data[raw_state])
+			tmp_m1[state] = tmp_m1.get(state, 0) + sum(data[raw_state])
+			tmp_m2[state] = tmp_m2.get(state, 0) + sum(imap(lambda x: x * x, data[raw_state]))
+			tmp_ma[state] = max(data[raw_state] + [tmp_ma.get(state, 0)])
+			tmp_mi[state] = min(data[raw_state] + [tmp_ma.get(state, 1e10)])
+		for state in tmp_m0:
+			mean = tmp_m1[state] / tmp_m0[state]
+			stddev = math.sqrt(tmp_m2[state] / tmp_m0[state] - mean * mean)
+			yield (state, tmp_m0[state], mean, stddev, tmp_mi[state], tmp_ma[state])
 
-		def transform(data, label, level):
-			if None in data:
-				total = data.pop(None)
-				if (len(data) > 1):
-					for result in self._get_entry(stateMap, total, ['Total']):
-						yield result
-					yield '='
-			for idx, entry in enumerate(sorted(data)):
-				if level == 1:
-					for result in self._get_entry(stateMap, data[entry], [entry] + label):
-						yield result
+	def _get_hierachical_stats_dict(self, job_db):
+		overview = self._get_report_info_list(job_db)
+
+		def _fill_dict(result, items, idx_list=None, indent=0):
+			if not idx_list:
+				for entry in items:
+					result.setdefault(entry[0], []).append(entry[1])
+				return result
+
+			def _get_category_key(entry):
+				idx = idx_list[0]
+				if idx < len(entry):
+					return entry[idx]
+				return 'N/A'
+			class_map = {}
+			for entry in items:
+				class_map.setdefault(_get_category_key(entry), []).append(entry)
+			tmp = {}
+			for class_key in class_map:
+				child_info = _fill_dict(result.setdefault(class_key, {}),
+					class_map[class_key], idx_list[1:], indent + 1)
+				for key in child_info:
+					tmp.setdefault(key, []).extend(child_info[key])
+			result[None] = tmp
+			return tmp
+		display_dict = {}
+		_fill_dict(display_dict, overview, self._idx_list)
+		return display_dict
+
+	def _get_report_info_list(self, job_db):
+		result = []
+		t_now = time.time()
+		for jobnum in self._jobs:
+			job_obj = job_db.get_job_transient(jobnum)
+			runtime = parse_str(job_obj.get('runtime'), int, 0)
+			for attempt in job_obj.history:
+				if (attempt != job_obj.attempt) and not self._use_history:
+					continue
+				if (attempt == job_obj.attempt) and (job_obj.state == Job.SUCCESS):
+					time_info = runtime
+				elif (attempt == job_obj.attempt - 1) and (job_obj.state != Job.SUCCESS):
+					time_info = runtime
+				elif attempt == job_obj.attempt:
+					time_info = t_now - float(job_obj.submitted)
 				else:
-					for result in transform(data[entry], [entry] + label, level - 1):
-						yield result
-				if idx != len(data) - 1:
-					yield '-'
-		stats = self._getHierachicalStats()
-		displayStates = lmap(itemgetter(1), self._stateMap)
-		header = [('', 'Category')] + lzip(displayStates, displayStates)
-		printTabular(header, transform(stats, [], len(self._idxList)),
-			fmtString = 'l' + 'c'*len(stateMap), fmt = {'': lambda x: str.join(' ', x)})
+					time_info = 0
+				state = job_obj.state
+				if attempt != job_obj.attempt:
+					state = Job.FAILED
+				dest = job_obj.history[attempt]
+				if dest == 'N/A':
+					dest_info = [dest]
+				else:
+					dest_info = dest.split('/')
+				wms_name = job_obj.gc_id.split('.')[1]
+				endpoint = 'N/A'
+				if 'http:' in job_obj.gc_id:
+					endpoint = job_obj.gc_id.split(':')[1].split('/')[0]
+				result.append([state, time_info, wms_name, endpoint] + dest_info)
+		return result

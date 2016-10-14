@@ -17,25 +17,26 @@ import sys
 from datasetListFromX import addDatasetListOptions, discoverDataset
 from gcSupport import Options, scriptOptions, utils
 
+
 parser = Options(usage = '%s [OPTIONS] <config file / work directory>')
-parser.addText(None, 'J', 'job-selector', dest = 'external job selector', default = '',
+parser.add_text(None, 'J', 'job-selector', dest = 'external job selector', default = '',
 	help = 'Specify which jobs to process')
-parser.addText(None, 'i', 'info-scanner',
+parser.add_text(None, 'i', 'info-scanner',
 	help = 'Specify which info scanner to run')
-parser.addText(None, 'm', 'event-mode',   dest = 'mode',                  default = 'CMSSW-Out',
+parser.add_text(None, 'm', 'event-mode',   dest = 'mode',                  default = 'CMSSW-Out',
 	help = 'Specify how to determine events - available: [CMSSW-Out], CMSSW-In, DataMod')
-parser.addText(None, 'l', 'lfn',          dest = 'lfn marker',            default = '/store/',
+parser.add_text(None, 'l', 'lfn',          dest = 'lfn marker',            default = '/store/',
 	help = 'Assume everything starting with marker to be a logical file name')
-parser.addBool(None, 'c', 'config',       dest = 'include config infos',  default = False,
+parser.add_bool(None, 'c', 'config',       dest = 'include config infos',  default = False,
 	help = 'CMSSW specific: Add configuration data to metadata')
-parser.addBool(None, 'p', 'parents',      dest = 'include parent infos',  default = False,
+parser.add_bool(None, 'p', 'parents',      dest = 'include parent infos',  default = False,
 	help = 'CMSSW specific: Add parent infos to metadata')
 addDatasetListOptions(parser)
 options = scriptOptions(parser, arg_keys = ['dataset'])
 
 # Positional parameters override options
 if not options.args:
-	utils.exitWithUsage(parser.usage())
+	utils.exit_with_usage(parser.usage())
 tmp = {'cmssw-out': 'CMSSW_EVENTS_WRITE', 'cmssw-in': 'CMSSW_EVENTS_READ', 'datamod': 'MAX_EVENTS'}
 if options.opts.info_scanner:
 	options.config_dict['scanner'] = options.opts.info_scanner.replace(',', ' ')

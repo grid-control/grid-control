@@ -22,140 +22,156 @@ from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.output_processor import JobResult
 from grid_control.utils.activity import Activity
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
 from hpfwk import AbstractError, NestedException, clear_current_exception
 from python_compat import ichain, identity, imap, izip, lchain, lmap, set, sorted
 
+
 class BackendError(NestedException):
 	pass
 
-BackendJobState = makeEnum([
-	'ABORTED',   # job was aborted by the WMS
-	'CANCELLED', # job was cancelled
-	'DONE',      # job is finished
-	'QUEUED',    # job is at WMS and is assigned a place to run
-	'RUNNING',   # job is running
-	'UNKNOWN',   # job status is unknown
-	'WAITING',   # job is at WMS but was not yet assigned some place to run
+
+BackendJobState = make_enum([  # pylint:disable=invalid-name
+	'ABORTED',  # job was aborted by the WMS
+	'CANCELLED',  # job was cancelled
+	'DONE',  # job is finished
+	'QUEUED',  # job is at WMS and is assigned a place to run
+	'RUNNING',  # job is running
+	'UNKNOWN',  # job status is unknown
+	'WAITING',  # job is at WMS but was not yet assigned some place to run
 ])
 
+
 class WMS(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['wms', 'backend']
-	tagName = 'wms'
+	config_section_list = NamedPlugin.config_section_list + ['wms', 'backend']
+	config_tag_name = 'wms'
 
 	def __init__(self, config, name):
 		name = (name or self.__class__.__name__).upper().replace('.', '_')
 		NamedPlugin.__init__(self, config, name)
-		self._wait_idle = config.getInt('wait idle', 60, onChange = None)
-		self._wait_work = config.getInt('wait work', 10, onChange = None)
-		self._job_parser = config.getPlugin('job parser', 'JobInfoProcessor',
-			cls = 'JobInfoProcessor', onChange = None)
+		self._wait_idle = config.get_int('wait idle', 60, on_change=None)
+		self._wait_work = config.get_int('wait work', 10, on_change=None)
+		self._job_parser = config.get_plugin('job parser', 'JobInfoProcessor',
+			cls='JobInfoProcessor', on_change=None)
 
-	def getTimings(self): # Return (waitIdle, wait)
-		return utils.Result(waitOnIdle = self._wait_idle, waitBetweenSteps = self._wait_work)
-
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, needed_time, can_currently_submit):
 		raise AbstractError
 
-	def getAccessToken(self, gcID):
-		raise AbstractError # Return access token instance responsible for this gcID
-
-	def deployTask(self, task, monitor, transferSE, transferSB):
+	def cancel_jobs(self, gc_id_list):
+		# Cancel jobs and return list of successfully cancelled gc_id_list
 		raise AbstractError
 
-	def submitJobs(self, jobNumList, task): # jobNumList = [1, 2, ...]
-		raise AbstractError # Return (jobNum, gcID, data) for successfully submitted jobs
-
-	def checkJobs(self, gcIDs): # Check status and return (gcID, job_state, job_info) for active jobs
+	def check_jobs(self, gc_id_list):
+		# Check status and return (gc_id, job_state, job_info) for active jobs
 		raise AbstractError
 
-	def cancelJobs(self, gcIDs): # Cancel jobs and return list of successfully cancelled gcIDs
+	def deploy_task(self, task, monitor, transfer_se, transfer_sb):
 		raise AbstractError
 
-	def retrieveJobs(self, gcID_jobNum_List):
-		raise AbstractError # Return (jobNum, retCode, data, outputdir) for retrived jobs
+	def get_access_token(self, gc_id):
+		raise AbstractError  # Return access token instance responsible for this gc_id
 
-	def _createId(self, wmsID):
-		return 'WMSID.%s.%s' % (self._name, wmsID)
+	def get_interval_info(self):  # Return (waitIdle, wait)
+		return utils.Result(wait_on_idle=self._wait_idle, wait_between_steps=self._wait_work)
 
-	def _splitId(self, gcID):
-		return tuple(gcID.split('.', 2)[1:])
+	def retrieve_jobs(self, gc_id_jobnum_list):
+		raise AbstractError  # Return (jobnum, exit_code, data, outputdir) for retrived jobs
 
-	def _getRawIDs(self, gcID_jobNum_List):
-		for (gcID, _) in gcID_jobNum_List:
-			yield self._splitId(gcID)[1]
+	def submit_jobs(self, jobnum_list, task):  # jobnum_list = [1, 2, ...]
+		raise AbstractError  # Return (jobnum, gc_id, data) for successfully submitted jobs
 
-	def _get_map_wmsID_gcID(self, gcIDs):
+	def _create_gc_id(self, wms_id):
+		return 'WMSID.%s.%s' % (self._name, wms_id)
+
+	def _get_map_wms_id2gc_id(self, gc_id_list):
 		result = {}
-		for gcID in gcIDs:
-			wmsID = self._splitId(gcID)[1]
-			if wmsID in result:
-				raise BackendError('Multiple gcIDs map to the same wmsID!')
-			result[wmsID] = gcID
+		for gc_id in gc_id_list:
+			wms_id = self._split_gc_id(gc_id)[1]
+			if wms_id in result:
+				raise BackendError('Multiple gc_id_list map to the same wms_id!')
+			result[wms_id] = gc_id
 		return result
-makeEnum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
+
+	def _iter_wms_ids(self, gc_id_jobnum_list):
+		for (gc_id, _) in gc_id_jobnum_list:
+			yield self._split_gc_id(gc_id)[1]
+
+	def _split_gc_id(self, gc_id):
+		return tuple(gc_id.split('.', 2)[1:])
+
+make_enum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND',
+	'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
 
 
 class BasicWMS(WMS):
-	def __init__(self, config, name, checkExecutor, cancelExecutor):
+	def __init__(self, config, name, check_executor, cancel_executor):
 		WMS.__init__(self, config, name)
-		for executor in [checkExecutor, cancelExecutor]:
+		for executor in [check_executor, cancel_executor]:
 			executor.setup(self._log)
-		(self._check_executor, self._cancel_executor) = (checkExecutor, cancelExecutor)
+		(self._check_executor, self._cancel_executor) = (check_executor, cancel_executor)
 
 		if self._name != self.__class__.__name__.upper():
 			self._log.info('Using batch system: %s (%s)', self.__class__.__name__, self._name)
 		else:
 			self._log.info('Using batch system: %s', self._name)
 
-		self.errorLog = config.getWorkPath('error.tar')
-		self._runlib = config.getWorkPath('gc-run.lib')
+		self._runlib = config.get_work_path('gc-run.lib')
 		if not os.path.exists(self._runlib):
 			fp = SafeFile(self._runlib, 'w')
-			content = SafeFile(utils.pathShare('gc-run.lib')).read()
+			content = SafeFile(utils.get_path_share('gc-run.lib')).read()
 			fp.write(content.replace('__GC_VERSION__', __import__('grid_control').__version__))
 			fp.close()
-		self._outputPath = config.getWorkPath('output')
-		self._filecachePath = config.getWorkPath('files')
-		utils.ensureDirExists(self._outputPath, 'output directory')
-		self._failPath = config.getWorkPath('fail')
+		self._path_output = config.get_work_path('output')
+		self._path_file_cache = config.get_work_path('files')
+		utils.ensure_dir_exists(self._path_output, 'output directory')
+		self._path_fail = config.get_work_path('fail')
 
 		# Initialise access token and storage managers
 
 		# UI -> SE -> WN
-		self.smSEIn = config.getPlugin('se input manager', 'SEStorageManager', cls = StorageManager,
-			tags = [self], pargs = ('se', 'se input', 'SE_INPUT'))
-		self.smSBIn = config.getPlugin('sb input manager', 'LocalSBStorageManager', cls = StorageManager,
-			tags = [self], pargs = ('sandbox', 'sandbox', 'SB_INPUT'))
+		self._sm_se_in = config.get_plugin('se input manager', 'SEStorageManager',
+			cls=StorageManager, tags=[self], pargs=('se', 'se input', 'SE_INPUT'))
+		self._sm_sb_in = config.get_plugin('sb input manager', 'LocalSBStorageManager',
+			cls=StorageManager, tags=[self], pargs=('sandbox', 'sandbox', 'SB_INPUT'))
 		# UI <- SE <- WN
-		self.smSEOut = config.getPlugin('se output manager', 'SEStorageManager', cls = StorageManager,
-			tags = [self], pargs = ('se', 'se output', 'SE_OUTPUT'))
-		self.smSBOut = None
+		self._sm_se_out = config.get_plugin('se output manager', 'SEStorageManager',
+			cls=StorageManager, tags=[self], pargs=('se', 'se output', 'SE_OUTPUT'))
+		self._sm_sb_out = None
 
-		self._token = config.getCompositePlugin(['proxy', 'access token'], 'TrivialAccessToken',
-			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self])
+		self._token = config.get_composited_plugin(['proxy', 'access token'], 'TrivialAccessToken',
+			'MultiAccessToken', cls=AccessToken, inherit=True, tags=[self])
 
+	def can_submit(self, needed_time, can_currently_submit):
+		return self._token.can_submit(needed_time, can_currently_submit)
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
-		return self._token.canSubmit(neededTime, canCurrentlySubmit)
+	def cancel_jobs(self, gc_id_list):
+		return self._run_executor('cancelling jobs', self._cancel_executor, identity,
+			gc_id_list, self._name)
 
+	def check_jobs(self, gc_id_list):
+		# Check status and return (gc_id, job_state, job_info) for active jobs
+		def _fmt(value):  # translate CheckInfo enum values in job_info dictionary
+			job_info = value[2]  # get mutable job_info dictionary from the immutable tuple
+			for key in CheckInfo.enum_value_list:
+				if key in job_info:
+					job_info[CheckInfo.enum2str(key)] = job_info.pop(key)
+			return value
+		return self._run_executor('checking job status', self._check_executor, _fmt, gc_id_list)
 
-	def getAccessToken(self, gcID):
-		return self._token
+	def deploy_task(self, task, monitor, transfer_se, transfer_sb):
+		# HACK
+		self._output_fn_list = lmap(lambda d_s_t: d_s_t[2], self._get_out_transfer_info_list(task))
+		task.validate_variables()
 
-
-	def deployTask(self, task, monitor, transferSE, transferSB):
-		self.outputFiles = lmap(lambda d_s_t: d_s_t[2], self._getSandboxFilesOut(task)) # HACK
-		task.validateVariables()
-
-		self.smSEIn.addFiles(lmap(lambda d_s_t: d_s_t[2], task.getSEInFiles())) # add task SE files to SM
+		# add task SE files to SM
+		self._sm_se_in.add_file_list(lmap(lambda d_s_t: d_s_t[2], task.get_se_in_fn_list()))
 		# Transfer common SE files
-		if transferSE:
-			self.smSEIn.doTransfer(task.getSEInFiles())
+		if transfer_se:
+			self._sm_se_in.doTransfer(task.get_se_in_fn_list())
 
-		def convert(fnList):
-			for fn in fnList:
+		def _convert(fn_list):
+			for fn in fn_list:
 				if isinstance(fn, str):
 					yield (fn, os.path.basename(fn), False)
 				else:
@@ -163,52 +179,18 @@ class BasicWMS(WMS):
 
 		# Package sandbox tar file
 		self._log.log(logging.INFO1, 'Packing sandbox')
-		sandbox = self._getSandboxName(task)
-		utils.ensureDirExists(os.path.dirname(sandbox), 'sandbox directory')
-		if not os.path.exists(sandbox) or transferSB:
-			utils.genTarball(sandbox, convert(self._getSandboxFiles(task, monitor, [self.smSEIn, self.smSEOut])))
+		sandbox = self._get_sandbox_name(task)
+		utils.ensure_dir_exists(os.path.dirname(sandbox), 'sandbox directory')
+		if not os.path.exists(sandbox) or transfer_sb:
+			sandbox_file_list = self._get_sandbox_file_list(task, monitor, [self._sm_se_in, self._sm_se_out])
+			utils.create_tarball(sandbox, _convert(sandbox_file_list))
 
+	def get_access_token(self, gc_id):
+		return self._token
 
-	def submitJobs(self, jobNumList, task):
-		for jobNum in jobNumList:
-			if utils.abort():
-				break
-			yield self._submitJob(jobNum, task)
-
-
-	def _run_executor(self, desc, executor, fmt, gcIDs, *args):
-		# Perform some action with the executor, translate wmsID -> gcID and format the result
-		activity = Activity(desc)
-		wmsID_gcID_Map = self._get_map_wmsID_gcID(gcIDs)
-		wmsIDs = sorted(wmsID_gcID_Map.keys())
-
-		for result in executor.execute(wmsIDs, *args):
-			wmsID = result[0] # result[0] is the wmsID by convention
-			gcID = wmsID_gcID_Map.pop(wmsID, None)
-			if gcID is not None:
-				yield fmt((gcID,) + result[1:])
-			else:
-				self._log.debug('unable to find gcID for wmsID %r', wmsID)
-		activity.finish()
-
-
-	def checkJobs(self, gcIDs): # Check status and return (gcID, job_state, job_info) for active jobs
-		def fmt(value): # translate CheckInfo enum values in job_info dictionary
-			job_info = value[2] # get mutable job_info dictionary from the immutable tuple
-			for key in CheckInfo.enumValues:
-				if key in job_info:
-					job_info[CheckInfo.enum2str(key)] = job_info.pop(key)
-			return value
-		return self._run_executor('checking job status', self._check_executor, fmt, gcIDs)
-
-
-	def cancelJobs(self, gcIDs):
-		return self._run_executor('cancelling jobs', self._cancel_executor, identity, gcIDs, self._name)
-
-
-	def retrieveJobs(self, gcID_jobNum_List): # Process output sandboxes returned by getJobsOutput
+	def retrieve_jobs(self, gc_id_jobnum_list):  # Process output sandboxes returned by getJobsOutput
 		# Function to force moving a directory
-		def forceMove(source, target):
+		def _force_move(source, target):
 			try:
 				if os.path.exists(target):
 					shutil.rmtree(target)
@@ -222,119 +204,138 @@ class BasicWMS(WMS):
 				return False
 			return True
 
-		retrievedJobs = []
+		jobnum_list_retrieved = []
 
-		for inJobNum, pathName in self._getJobsOutput(gcID_jobNum_List):
-			# inJobNum != None, pathName == None => Job could not be retrieved
-			if pathName is None:
-				if inJobNum not in retrievedJobs:
-					yield (inJobNum, -1, {}, None)
+		for jobnum_input, output_dn in self._get_jobs_output(gc_id_jobnum_list):
+			# jobnum_input != None, output_dn == None => Job could not be retrieved
+			if output_dn is None:
+				if jobnum_input not in jobnum_list_retrieved:
+					yield (jobnum_input, -1, {}, None)
 				continue
 
-			# inJobNum == None, pathName != None => Found leftovers of job retrieval
-			if inJobNum is None:
+			# jobnum_input == None, output_dn != None => Found leftovers of job retrieval
+			if jobnum_input is None:
 				continue
 
-			# inJobNum != None, pathName != None => Job retrieval from WMS was ok
-			jobFile = os.path.join(pathName, 'job.info')
+			# jobnum_input != None, output_dn != None => Job retrieval from WMS was ok
+			job_fn = os.path.join(output_dn, 'job.info')
 			try:
-				job_info = self._job_parser.process(pathName)
+				job_info = self._job_parser.process(output_dn)
 			except Exception:
 				self._log.exception('Unable to parse job.info')
 				job_info = None
 			if job_info:
-				jobNum = job_info[JobResult.JOBNUM]
-				if jobNum != inJobNum:
-					raise BackendError('Invalid job id in job file %s' % jobFile)
-				if forceMove(pathName, os.path.join(self._outputPath, 'job_%d' % jobNum)):
-					retrievedJobs.append(inJobNum)
-					yield (jobNum, job_info[JobResult.EXITCODE], job_info[JobResult.RAW], pathName)
+				jobnum = job_info[JobResult.JOBNUM]
+				if jobnum != jobnum_input:
+					raise BackendError('Invalid job id in job file %s' % job_fn)
+				if _force_move(output_dn, os.path.join(self._path_output, 'job_%d' % jobnum)):
+					jobnum_list_retrieved.append(jobnum_input)
+					yield (jobnum, job_info[JobResult.EXITCODE], job_info[JobResult.RAW], output_dn)
 				else:
-					yield (jobNum, -1, {}, None)
+					yield (jobnum, -1, {}, None)
 				continue
 
-			# Clean empty pathNames
-			for subDir in imap(lambda x: x[0], os.walk(pathName, topdown=False)):
+			# Clean empty output_dns
+			for sub_dn in imap(lambda x: x[0], os.walk(output_dn, topdown=False)):
 				try:
-					os.rmdir(subDir)
+					os.rmdir(sub_dn)
 				except Exception:
 					clear_current_exception()
 
-			if os.path.exists(pathName):
+			if os.path.exists(output_dn):
 				# Preserve failed job
-				utils.ensureDirExists(self._failPath, 'failed output directory')
-				forceMove(pathName, os.path.join(self._failPath, os.path.basename(pathName)))
+				utils.ensure_dir_exists(self._path_fail, 'failed output directory')
+				_force_move(output_dn, os.path.join(self._path_fail, os.path.basename(output_dn)))
 
-			yield (inJobNum, -1, {}, None)
+			yield (jobnum_input, -1, {}, None)
 
+	def submit_jobs(self, jobnum_list, task):
+		for jobnum in jobnum_list:
+			if utils.abort():
+				break
+			yield self._submit_job(jobnum, task)
 
-	def _getSandboxName(self, task):
-		return os.path.join(self._filecachePath, task.taskID, self._name, 'gc-sandbox.tar.gz')
-
-
-	def _getSandboxFilesIn(self, task):
+	def _get_in_transfer_info_list(self, task):
 		return [
-			('GC Runtime', utils.pathShare('gc-run.sh'), 'gc-run.sh'),
+			('GC Runtime', utils.get_path_share('gc-run.sh'), 'gc-run.sh'),
 			('GC Runtime library', self._runlib, 'gc-run.lib'),
-			('GC Sandbox', self._getSandboxName(task), 'gc-sandbox.tar.gz'),
+			('GC Sandbox', self._get_sandbox_name(task), 'gc-sandbox.tar.gz'),
 		]
 
+	def _get_jobs_output(self, gc_id_jobnum_list):
+		raise AbstractError  # Return (jobnum, sandbox) for finished jobs
 
-	def _getSandboxFilesOut(self, task):
+	def _get_out_transfer_info_list(self, task):
 		return [
 			('GC Wrapper - stdout', 'gc.stdout', 'gc.stdout'),
 			('GC Wrapper - stderr', 'gc.stderr', 'gc.stderr'),
 			('GC Job summary', 'job.info', 'job.info'),
-		] + lmap(lambda fn: ('Task output', fn, fn), task.getSBOutFiles())
+		] + lmap(lambda fn: ('Task output', fn, fn), task.get_sb_out_fn_list())
 
-
-	def _getSandboxFiles(self, task, monitor, smList):
+	def _get_sandbox_file_list(self, task, monitor, sm_list):
 		# Prepare all input files
-		depList = set(ichain(imap(lambda x: x.getDependencies(), [task] + smList)))
-		depPaths = lmap(lambda pkg: utils.pathShare('', pkg = pkg), os.listdir(utils.pathPKG()))
-		depFiles = lmap(lambda dep: utils.resolvePath('env.%s.sh' % dep, depPaths), depList)
-		taskEnv = utils.mergeDicts(imap(lambda x: x.getTaskConfig(), [monitor, task] + smList))
-		taskEnv.update({'GC_DEPFILES': str.join(' ', depList), 'GC_USERNAME': self._token.getUsername(),
-			'GC_WMS_NAME': self._name})
-		taskConfig = sorted(utils.DictFormat(escapeString = True).format(taskEnv, format = 'export %s%s%s\n'))
-		varMappingDict = dict(izip(monitor.getTaskConfig().keys(), monitor.getTaskConfig().keys()))
-		varMappingDict.update(task.getVarMapping())
-		varMapping = sorted(utils.DictFormat(delimeter = ' ').format(varMappingDict, format = '%s%s%s\n'))
+		dep_list = set(ichain(imap(lambda x: x.get_dependency_list(), [task] + sm_list)))
+		dep_fn_list = lmap(lambda dep: utils.resolve_path('env.%s.sh' % dep,
+			lmap(lambda pkg: utils.get_path_share('', pkg=pkg), os.listdir(utils.get_path_pkg()))), dep_list)
+		task_config_dict = utils.merge_dict_list(
+			imap(lambda x: x.get_task_dict(), [monitor, task] + sm_list))
+		task_config_dict.update({'GC_DEPFILES': str.join(' ', dep_list),
+			'GC_USERNAME': self._token.getUsername(), 'GC_WMS_NAME': self._name})
+		task_config_str_list = utils.DictFormat(escape_strings=True).format(
+			task_config_dict, format='export %s%s%s\n')
+		vn_alias_dict = dict(izip(monitor.get_task_dict().keys(), monitor.get_task_dict().keys()))
+		vn_alias_dict.update(task.get_var_alias_map())
+		vn_alias_str_list = utils.DictFormat(delimeter=' ').format(vn_alias_dict, format='%s%s%s\n')
+
 		# Resolve wildcards in task input files
-		def getTaskFiles():
-			for f in task.getSBInFiles():
-				matched = glob.glob(f.pathAbs)
+		def _get_task_fn_list():
+			for fpi in task.get_sb_in_fpi_list():
+				matched = glob.glob(fpi.path_abs)
 				if matched != []:
 					for match in matched:
 						yield match
 				else:
-					yield f.pathAbs
-		return lchain([monitor.getFiles(), depFiles, getTaskFiles(),
-			[VirtualFile('_config.sh', taskConfig), VirtualFile('_varmap.dat', varMapping)]])
+					yield fpi.path_abs
+		return lchain([monitor.get_file_list(), dep_fn_list, _get_task_fn_list(), [
+			VirtualFile('_config.sh', sorted(task_config_str_list)),
+			VirtualFile('_varmap.dat', sorted(vn_alias_str_list))]])
 
+	def _get_sandbox_name(self, task):
+		return os.path.join(self._path_file_cache, task.task_id, self._name, 'gc-sandbox.tar.gz')
 
-	def _writeJobConfig(self, cfgPath, jobNum, task, extras):
+	def _run_executor(self, desc, executor, fmt, gc_id_list, *args):
+		# Perform some action with the executor, translate wms_id -> gc_id and format the result
+		activity = Activity(desc)
+		map_wms_id2gc_id = self._get_map_wms_id2gc_id(gc_id_list)
+		wms_id_list = sorted(map_wms_id2gc_id.keys())
+
+		for result in executor.execute(wms_id_list, *args):
+			wms_id = result[0]  # result[0] is the wms_id by convention
+			gc_id = map_wms_id2gc_id.pop(wms_id, None)
+			if gc_id is not None:
+				yield fmt((gc_id,) + result[1:])
+			else:
+				self._log.debug('unable to find gc_id for wms_id %r', wms_id)
+		activity.finish()
+
+	def _submit_job(self, jobnum, task):
+		raise AbstractError  # Return (jobnum, gc_id, data) for successfully submitted jobs
+
+	def _write_job_config(self, job_config_fn, jobnum, task, extras):
 		try:
-			jobEnv = utils.mergeDicts([task.getJobConfig(jobNum), extras])
-			jobEnv['GC_ARGS'] = task.getJobArguments(jobNum).strip()
-			content = utils.DictFormat(escapeString = True).format(jobEnv, format = 'export %s%s%s\n')
-			utils.safeWrite(open(cfgPath, 'w'), content)
+			job_env_dict = utils.merge_dict_list([task.get_job_dict(jobnum), extras])
+			job_env_dict['GC_ARGS'] = task.get_job_arguments(jobnum).strip()
+			content = utils.DictFormat(escape_strings=True).format(job_env_dict, format='export %s%s%s\n')
+			utils.safe_write(open(job_config_fn, 'w'), content)
 		except Exception:
-			raise BackendError('Could not write job config data to %s.' % cfgPath)
+			raise BackendError('Could not write job config data to %s.' % job_config_fn)
 
 
-	def _submitJob(self, jobNum, task):
-		raise AbstractError # Return (jobNum, gcID, data) for successfully submitted jobs
-
-
-	def _getJobsOutput(self, gcID_jobNum_List):
-		raise AbstractError # Return (jobNum, sandbox) for finished jobs
-
-
-class Grid(WMS): # redirector - used to avoid loading the whole grid module just for the default
-	configSections = WMS.configSections + ['grid']
+class Grid(WMS):  # redirector - used to avoid loading the whole grid module just for the default
+	config_section_list = WMS.config_section_list + ['grid']
 
 	def __new__(cls, config, name):
-		gridWMS = 'GliteWMS'
-		grid_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [WMS.getClass(gridWMS)])
-		return WMS.createInstance(gridWMS, grid_config, name)
+		grid_wms = 'GliteWMS'
+		grid_config = config.change_view(view_class='TaggedConfigView',
+			set_classes=[WMS.get_class(grid_wms)])
+		return WMS.create_instance(grid_wms, grid_config, name)

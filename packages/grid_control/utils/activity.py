@@ -17,9 +17,11 @@ from grid_control.utils.thread_tools import GCLock
 from hpfwk import APIError
 from python_compat import get_current_thread, get_thread_name, imap, rsplit, set
 
+
 class Activity(object):
-	def __init__(self, message = None, level = logging.INFO, name = None, parent = None):
-		(self.name, self._level, self._message, self._parent, self._children) = (name, level, None, None, [])
+	def __init__(self, message=None, level=logging.INFO, name=None, parent=None):
+		self.name = name
+		(self._level, self._message, self._parent, self._children) = (level, None, None, [])
 		self._current_thread_name = get_thread_name(get_current_thread())
 
 		Activity.lock.acquire()
@@ -27,7 +29,7 @@ class Activity(object):
 			self._id = Activity.counter
 			Activity.counter += 1
 			# search parent:
-			self._cleanup_running() # cleanup list of running activities
+			self._cleanup_running()  # cleanup list of running activities
 			for parent_candidate in self._iter_possible_parents(self._current_thread_name):
 				if (parent is None) or (parent == parent_candidate.name):
 					self._parent = parent_candidate
@@ -45,30 +47,52 @@ class Activity(object):
 		if self._parent:
 			self._parent.add_child(self)
 
+	def __del__(self):
+		self.finish()
+
 	def __repr__(self):
 		pname = None
 		if self._parent:
 			pname = self._parent.name
-		return '%s(name: %r, msg: %r, lvl: %s, depth: %d, parent: %s)' % (self.__class__.__name__, self.name, self._message, self._level, self.depth, pname)
-
-	def getMessage(self):
-		return self._message
-
-	def _iter_possible_parents(self, current_thread_name): # yield activities in current and parent threads
-		stack = list(Activity.running_by_thread_name.get(current_thread_name, []))
-		stack.reverse() # in reverse order of creation
-		for item in stack:
-			yield item
-		if '-' in current_thread_name:
-			for item in self._iter_possible_parents(rsplit(current_thread_name, '-', 1)[0]):
-				yield item
+		return '%s(name: %r, msg: %r, lvl: %s, depth: %d, parent: %s)' % (
+			self.__class__.__name__, self.name, self._message, self._level, self.depth, pname)
 
 	def add_child(self, value):
 		self._children.append(value)
 
+	def finish(self):
+		for child in list(self._children):
+			child.finish()
+		if self._parent:
+			self._parent.remove_child(self)
+		running_list = Activity.running_by_thread_name.get(self._current_thread_name, [])
+		if self in running_list:
+			running_list.remove(self)
+
+	def get_children(self):
+		for child in self._children:
+			yield child
+			for subchild in child.get_children():
+				yield subchild
+
+	def get_message(self, prefix='', postfix='...', truncate=None, last=35):
+		message = prefix + self._message + postfix
+		if (truncate is not None) and (len(self._message) > truncate):
+			message = message[:truncate - last - 3] + '...' + message[-last:]
+		return message
+
+	def get_parents(self):
+		if self._parent is not None:
+			for parent in self._parent.get_parents():
+				yield parent
+			yield self._parent
+
 	def remove_child(self, value):
 		if value in self._children:
 			self._children.remove(value)
+
+	def update(self, message):
+		return self._set_message(message)
 
 	def _cleanup_running(self):
 		# clean running activity list
@@ -80,41 +104,48 @@ class Activity(object):
 					finished_activities[-1].finish()
 				Activity.running_by_thread_name.pop(thread_name, None)
 
+	def _iter_possible_parents(self, current_thread_name):
+		# yield activities in current and parent threads
+		stack = list(Activity.running_by_thread_name.get(current_thread_name, []))
+		stack.reverse()  # in reverse order of creation
+		for item in stack:
+			yield item
+		if '-' in current_thread_name:
+			for item in self._iter_possible_parents(rsplit(current_thread_name, '-', 1)[0]):
+				yield item
+
 	def _set_message(self, message):
 		self._message = message
-		for cb in Activity.callbacks:
-			cb()
+		for callback in Activity.callbacks:
+			callback()
 		return self
-
-	def update(self, message):
-		return self._set_message(message)
-
-	def finish(self):
-		for child in list(self._children):
-			child.finish()
-		if self._parent:
-			self._parent.remove_child(self)
-		running_list = Activity.running_by_thread_name.get(self._current_thread_name, [])
-		if self in running_list:
-			running_list.remove(self)
-
-	def __del__(self):
-		self.finish()
-
-	def get_parents(self):
-		if self._parent is not None:
-			for parent in self._parent.get_parents():
-				yield parent
-			yield self._parent
-
-	def get_children(self):
-		for child in self._children:
-			yield child
-			for subchild in child.get_children():
-				yield subchild
 
 Activity.lock = GCLock()
 Activity.counter = 0
 Activity.running_by_thread_name = {}
 Activity.callbacks = []
-Activity.root = Activity('Running grid-control', name = 'root')
+Activity.root = Activity('Running grid-control', name='root')
+
+
+class ProgressActivity(Activity):
+	def __init__(self, message=None, progress_max=None, progress=None,
+			level=logging.INFO, name=None, parent=None):
+		(self._progress, self._progress_max, self._progress_message) = (progress, progress_max, message)
+		Activity.__init__(self, self._get_progress_message(), level, name, parent)
+
+	def update_progress(self, progress, progress_max=None):
+		if progress_max is not None:
+			self._progress_max = progress_max
+		self._progress = progress
+		self.update(self._get_progress_message())
+
+	def _get_progress_message(self):
+		if self._progress is None:
+			return self._progress_message
+		if self._progress_max:
+			progress_str = '[%d / %d]' % (self._progress, self._progress_max)
+		else:
+			progress_str = '[%d]' % self._progress
+		if self._progress_message is None:
+			return progress_str
+		return str.join(' ', [self._progress_message, progress_str]).strip()

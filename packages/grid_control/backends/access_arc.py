@@ -15,8 +15,9 @@
 from grid_control.backends.access_grid import GridAccessToken
 from python_compat import imap, izip
 
+
 class ARCAccessToken(GridAccessToken):
-	alias = ['arc', 'arcproxy']
+	alias_list = ['arc', 'arcproxy']
 
 	def __init__(self, config, name):
 		GridAccessToken.__init__(self, config, name, 'arcproxy')
@@ -29,7 +30,7 @@ class ARCAccessToken(GridAccessToken):
 	def getAuthFiles(self):
 		return [self._getProxyInfo('proxy path')]
 
-	def _parseTime(self, time_str):
+	def _parse_time(self, time_str):
 		result = 0
 		entry_map = {'yea': 365 * 24 * 60 * 60, 'day': 24 * 60 * 60, 'hou': 60 * 60, 'min': 60, 'sec': 1}
 		tmp = time_str.split()
@@ -37,7 +38,7 @@ class ARCAccessToken(GridAccessToken):
 			result += entry_map[entry] * value
 		return result
 
-	def _getTimeleft(self, cached):
+	def _get_timeleft(self, cached):
 		return min(
-			self._getProxyInfo('time left for proxy', self._parseTime, cached),
-			self._getProxyInfo('time left for ac', self._parseTime, cached))
+			self._getProxyInfo('time left for proxy', self._parse_time, cached),
+			self._getProxyInfo('time left for ac', self._parse_time, cached))

@@ -21,10 +21,11 @@ from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import identity, ifilter
 
+
 class SLURM_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		proc_factory = ProcessCreatorAppendArguments(config,
-			'sacct', ['-n', '-o', 'jobid,partition,state,exitcode', '-j'], lambda wmsIDs: [str.join(',', wmsIDs)])
+			'sacct', ['-n', '-o', 'jobid,partition,state,exitcode', '-j'], lambda wms_id_list: [str.join(',', wms_id_list)])
 		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map = {
 			'PENDING': Job.WAITING,    # idle (waiting for a machine to execute on)
 			'RUNNING': Job.RUNNING,    # running
@@ -42,29 +43,29 @@ class SLURM_CheckJobs(CheckJobsWithProcess):
 				raise BackendError('Unable to parse status line %s' % repr(line))
 			tmp = line.split()
 			try:
-				wmsID = str(int(tmp[0]))
+				wms_id = str(int(tmp[0]))
 			except Exception:
 				continue
-			yield {CheckInfo.WMSID: wmsID, CheckInfo.RAW_STATUS: tmp[2], CheckInfo.QUEUE: tmp[1]}
+			yield {CheckInfo.WMSID: wms_id, CheckInfo.RAW_STATUS: tmp[2], CheckInfo.QUEUE: tmp[1]}
 
 
 class SLURM(LocalWMS):
-	configSections = LocalWMS.configSections + ['SLURM']
+	config_section_list = LocalWMS.config_section_list + ['SLURM']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.resolveInstallPath('sbatch'),
-			checkExecutor = CheckJobsMissingState(config, SLURM_CheckJobs(config)),
-			cancelExecutor = CancelJobsWithProcessBlind(config, 'scancel', unknownID = 'not in queue !'))
+			submitExec = utils.resolve_install_path('sbatch'),
+			check_executor = CheckJobsMissingState(config, SLURM_CheckJobs(config)),
+			cancel_executor = CancelJobsWithProcessBlind(config, 'scancel', unknownID = 'not in queue !'))
 
 
-	def getJobArguments(self, jobNum, sandbox):
+	def get_job_arguments(self, jobnum, sandbox):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
-		params = ' -J "%s"' % jobName
+		params = ' -J "%s"' % job_name
 		# processes and IO paths
 		params += ' -o "%s" -e "%s"' % (stdout, stderr)
 		if WMS.QUEUES in reqs:

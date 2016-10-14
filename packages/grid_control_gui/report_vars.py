@@ -14,27 +14,29 @@
 
 from grid_control.job_selector import JobSelector
 from grid_control.report import Report
-from grid_control.utils import printTabular
+from grid_control.utils import display_table
 from python_compat import imap, lzip, set, sorted
 
+
 class VariablesReport(Report):
-	alias = ['variables', 'vars']
+	alias_list = ['variables', 'vars']
 
-	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		Report.__init__(self, jobDB, task, jobs, configString)
-		self._selector = JobSelector.create(configString, task = task)
+	def __init__(self, job_db, task, jobs=None, config_str=''):
+		Report.__init__(self, job_db, task, jobs, config_str)
+		self._task = task
+		self._selector = JobSelector.create(config_str, task=task)
 
-	def display(self):
-		taskConfig = self._task.getTaskConfig()
-		header = lzip(taskConfig, taskConfig)
-		header.extend(imap(lambda key: (key, '<%s>' % key), self._task.getTransientVars()))
+	def show_report(self, job_db):
+		task_config = self._task.get_task_dict()
+		header = lzip(task_config, task_config)
+		header.extend(imap(lambda key: (key, '<%s>' % key), self._task.get_transient_variables()))
 		variables = set()
 		entries = []
-		for jobNum in self._jobDB.getJobs(self._selector):
-			jobConfig = self._task.getJobConfig(jobNum)
-			variables.update(jobConfig)
-			entry = dict(taskConfig)
-			entry.update(self._task.getTransientVars())
-			entry.update(jobConfig)
+		for jobnum in job_db.get_job_list(self._selector):
+			job_config = self._task.get_job_dict(jobnum)
+			variables.update(job_config)
+			entry = dict(task_config)
+			entry.update(self._task.get_transient_variables())
+			entry.update(job_config)
 			entries.append(entry)
-		printTabular(sorted(header + lzip(variables, variables)), entries)
+		display_table(sorted(header + lzip(variables, variables)), entries)

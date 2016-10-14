@@ -17,38 +17,12 @@ import grid_control_cms.Lexicon
 from hpfwk import clear_current_exception
 from python_compat import lmap, unicode
 
-def dbs3_check(checker, msg):
-	def dbs3_check_int(item):
-		try:
-			checker(item)
-			return item
-		except AssertionError:
-			raise grid_control_cms.Lexicon.InputValidationError(msg % item)
-	return dbs3_check_int
-
-def processed_dataset_validation(item):
-	try:
-		grid_control_cms.Lexicon.procdataset(item)
-		return item
-	except AssertionError:
-		clear_current_exception()
-	try:
-		grid_control_cms.Lexicon.userprocdataset(item)
-		return item
-	except AssertionError:
-		raise
-
-def logical_file_name_validation(item):
-	check_lfn = dbs3_check(grid_control_cms.Lexicon.lfn,
-		'lfn %r does not match input validation for DBS 3 publication')
-	if isinstance(item, list):
-		return lmap(check_lfn, item)
-	return check_lfn(item)
 
 def validate_dbs3_json(input_key, input_data):
 	# define input key groups
 	ikg_create = ['create_by', 'creation_date']
-	ikg_conf = ['app_name', 'output_module_label', 'pset_hash', 'release_version'] # 'pset_name', 'global_tag' only missing in 'files'?
+	# 'pset_name', 'global_tag' only missing in 'files'?
+	ikg_conf = ['app_name', 'output_module_label', 'pset_hash', 'release_version']
 	ikg_modified = ['last_modification_date', 'last_modified_by']
 	ikg_pds = ['primary_ds_name', 'primary_ds_type']
 
@@ -62,8 +36,8 @@ def validate_dbs3_json(input_key, input_data):
 		'dataTier': ['data_tier_name'],
 		'dataset': ['acquisition_era_name', 'data_tier_name', 'dataset',
 			'dataset_access_type', 'dataset_id', 'detail',
-			'output_configs', 'physics_group_name', 'prep_id',
-			'processed_ds_name','processing_version', 'xtcrosssection'] + ikg_create + ikg_modified + ikg_pds,
+			'output_configs', 'physics_group_name', 'prep_id', 'processed_ds_name',
+			'processing_version', 'xtcrosssection'] + ikg_create + ikg_modified + ikg_pds,
 		'dataset_conf_list': ['global_tag', 'pset_name'] + ikg_conf,
 		'file_conf_list': ['global_tag', 'lfn', 'pset_name'] + ikg_conf,
 		'file_lumi_list': ['lumi_section_num', 'run_num'],
@@ -81,30 +55,30 @@ def validate_dbs3_json(input_key, input_data):
 	}
 
 	key_validators = {
-		'acquisition_era_name': dbs3_check(grid_control_cms.Lexicon.acqname,
+		'acquisition_era_name': _dbs3_check(grid_control_cms.Lexicon.acqname,
 			'acquisition_era_name %r does not match input validation for DBS 3 publication'),
-		'block_name': dbs3_check(grid_control_cms.Lexicon.block,
+		'block_name': _dbs3_check(grid_control_cms.Lexicon.block,
 			'block_name %r does not match block name input validation for DBS 3 publication'),
-		'create_by': dbs3_check(grid_control_cms.Lexicon.DBSUser,
+		'create_by': _dbs3_check(grid_control_cms.Lexicon.DBSUser,
 			'create_by user %r does not match input validation for DBS 3 publication'),
-		'dataset': dbs3_check(grid_control_cms.Lexicon.dataset,
+		'dataset': _dbs3_check(grid_control_cms.Lexicon.dataset,
 			'dataset %r does not match dataset input validation for DBS 3 publication'),
-		'file_parent_lfn': logical_file_name_validation,
-		'global_tag': dbs3_check(grid_control_cms.Lexicon.globalTag,
+		'file_parent_lfn': _logical_file_name_validation,
+		'global_tag': _dbs3_check(grid_control_cms.Lexicon.globalTag,
 			'global_tag %r does not match global tag validation in DBS 3 publication'),
-		'last_modified_by': dbs3_check(grid_control_cms.Lexicon.DBSUser,
+		'last_modified_by': _dbs3_check(grid_control_cms.Lexicon.DBSUser,
 			'create_by user %r does not match input validation for DBS 3 publication'),
-		'logical_file_name': logical_file_name_validation,
-		'migration_url': dbs3_check(grid_control_cms.Lexicon.validateUrl,
+		'logical_file_name': _logical_file_name_validation,
+		'migration_url': _dbs3_check(grid_control_cms.Lexicon.validateUrl,
 			'url %r does not match input validation for DBS 3 publication'),
-		'primary_ds_name': dbs3_check(grid_control_cms.Lexicon.primdataset,
+		'primary_ds_name': _dbs3_check(grid_control_cms.Lexicon.primdataset,
 			'primary_dataset %r does not match input validation for DBS 3 publication'),
-		'processed_ds_name': dbs3_check(processed_dataset_validation,
+		'processed_ds_name': _dbs3_check(_processed_dataset_validation,
 			'processed_dataset %r does not match input validation for DBS 3 publication'),
-		'processing_version': dbs3_check(grid_control_cms.Lexicon.procversion,
+		'processing_version': _dbs3_check(grid_control_cms.Lexicon.procversion,
 			'processing_version %r does not match input validation for DBS 3 publication'),
 	}
-	default_validator = dbs3_check(grid_control_cms.Lexicon.searchstr,
+	default_validator = _dbs3_check(grid_control_cms.Lexicon.searchstr,
 		'%r does not match string input validation for key ' + input_key + ' in DBS 3 publication')
 
 	if isinstance(input_data, dict):
@@ -112,7 +86,8 @@ def validate_dbs3_json(input_key, input_data):
 			raise grid_control_cms.Lexicon.InputValidationError('Unexpected input_key %r' % input_key)
 		for key in input_data.keys():
 			if key not in accepted_input_keys[input_key]:
-				raise grid_control_cms.Lexicon.InputValidationError('%r is not a valid key for %r' % (key, input_key))
+				raise grid_control_cms.Lexicon.InputValidationError(
+					'%r is not a valid key for %r' % (key, input_key))
 			input_data[key] = validate_dbs3_json(key, input_data[key])
 		return input_data
 	elif isinstance(input_data, list):
@@ -120,4 +95,35 @@ def validate_dbs3_json(input_key, input_data):
 	elif isinstance(input_data, (str, unicode)):
 		return key_validators.get(input_key, default_validator)(input_data)
 	# raise grid_control_cms.Lexicon.InputValidationError('Unexpected datatype %r' % input_data)
-	return input_data # need to implement checks for int and bool values
+	return input_data  # need to implement checks for int and bool values
+
+
+def _dbs3_check(checker, msg):
+	def _dbs3_check_int(item):
+		try:
+			checker(item)
+			return item
+		except AssertionError:
+			raise grid_control_cms.Lexicon.InputValidationError(msg % item)
+	return _dbs3_check_int
+
+
+def _logical_file_name_validation(item):
+	check_lfn = _dbs3_check(grid_control_cms.Lexicon.lfn,
+		'lfn %r does not match input validation for DBS 3 publication')
+	if isinstance(item, list):
+		return lmap(check_lfn, item)
+	return check_lfn(item)
+
+
+def _processed_dataset_validation(item):
+	try:
+		grid_control_cms.Lexicon.procdataset(item)
+		return item
+	except AssertionError:
+		clear_current_exception()
+	try:
+		grid_control_cms.Lexicon.userprocdataset(item)
+		return item
+	except AssertionError:
+		raise

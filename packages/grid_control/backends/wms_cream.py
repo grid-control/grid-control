@@ -17,12 +17,13 @@ from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments
-from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
+from grid_control.utils.process_base import LocalProcess
 from python_compat import imap, irange, md5, tarfile
+
 
 class CREAM_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
@@ -75,17 +76,17 @@ class CREAM_CancelJobs(CancelJobsWithProcessBlind):
 
 
 class CreamWMS(GridWMS):
-	alias = ['cream']
+	alias_list = ['cream']
 
 	def __init__(self, config, name):
-		cancelExecutor = CancelAndPurgeJobs(config, CREAM_CancelJobs(config), CREAM_PurgeJobs(config))
-		GridWMS.__init__(self, config, name, checkExecutor = CREAM_CheckJobs(config),
-			cancelExecutor = ChunkedExecutor(config, 'cancel', cancelExecutor))
+		cancel_executor = CancelAndPurgeJobs(config, CREAM_CancelJobs(config), CREAM_PurgeJobs(config))
+		GridWMS.__init__(self, config, name, check_executor = CREAM_CheckJobs(config),
+			cancel_executor = ChunkedExecutor(config, 'cancel', cancel_executor))
 
-		self._nJobsPerChunk = config.getInt('job chunk size', 10, onChange = None)
+		self._job_lenPerChunk = config.get_int('job chunk size', 10, on_change = None)
 
-		self._submitExec = utils.resolveInstallPath('glite-ce-job-submit')
-		self._outputExec = utils.resolveInstallPath('glite-ce-job-output')
+		self._submitExec = utils.resolve_install_path('glite-ce-job-submit')
+		self._outputExec = utils.resolve_install_path('glite-ce-job-output')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
 
 		self._outputRegex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored in the dir (?P<outputDir>.*)$'
@@ -94,40 +95,39 @@ class CreamWMS(GridWMS):
 		if self._useDelegate is False:
 			self._submitParams.update({ '-a': ' ' })
 
-	def makeJDL(self, jobNum, module):
-		return ['[\n'] + GridWMS.makeJDL(self, jobNum, module) + ['OutputSandboxBaseDestUri = "gsiftp://localhost";\n]']
+	def makeJDL(self, jobnum, module):
+		return ['[\n'] + GridWMS.makeJDL(self, jobnum, module) + ['OutputSandboxBaseDestUri = "gsiftp://localhost";\n]']
 
 	# Get output of jobs and yield output dirs
-	def _getJobsOutput(self, allIds):
+	def _get_jobs_output(self, allIds):
 		if len(allIds) == 0:
 			raise StopIteration
 
-		basePath = os.path.join(self._outputPath, 'tmp')
+		basePath = os.path.join(self._path_output, 'tmp')
 		try:
 			if len(allIds) == 1:
 				# For single jobs create single subdir
 				basePath = os.path.join(basePath, md5(allIds[0][0]).hexdigest())
-			utils.ensureDirExists(basePath)
+			utils.ensure_dir_exists(basePath)
 		except Exception:
 			raise BackendError('Temporary path "%s" could not be created.' % basePath, BackendError)
 		
 		activity = Activity('retrieving %d job outputs' % len(allIds))
-		for ids in imap(lambda x: allIds[x:x+self._nJobsPerChunk], irange(0, len(allIds), self._nJobsPerChunk)):
-			jobNumMap = dict(ids)
-			jobs = ' '.join(self._getRawIDs(ids))
+		for ids in imap(lambda x: allIds[x:x+self._job_lenPerChunk], irange(0, len(allIds), self._job_lenPerChunk)):
+			jobnumMap = dict(ids)
+			jobs = ' '.join(self._iter_wms_ids(ids))
 			log = tempfile.mktemp('.log')
 
-			proc = LoggedProcess(self._outputExec,
-				'--noint --logfile "%s" --dir "%s" %s' % (log, basePath, jobs))
+			proc = LocalProcess(self._outputExec, '--noint', '--logfile', log, '--dir', basePath, jobs)
 
 			# yield output dirs
-			todo = jobNumMap.values()
+			todo = jobnumMap.values()
 			done = []
 			currentJobNum = None
-			for line in imap(str.strip, proc.iter()):
+			for line in imap(str.strip, proc.stdout.iter(timeout = 20)):
 				match = re.match(self._outputRegex, line)
 				if match:
-					currentJobNum = jobNumMap.get(self._createId(match.groupdict()['rawId']))
+					currentJobNum = jobnumMap.get(self._create_gc_id(match.groupdict()['rawId']))
 					todo.remove(currentJobNum)
 					done.append(match.groupdict()['rawId'])
 					outputDir = match.groupdict()['outputDir']
@@ -141,30 +141,30 @@ class CreamWMS(GridWMS):
 								self._log.error('Can\'t unpack output files contained in %s', wildcardTar)
 					yield (currentJobNum, outputDir)
 					currentJobNum = None
-			retCode = proc.wait()
+			exit_code = proc.status(timeout = 10, terminate = True)
 
-			if retCode != 0:
-				if 'Keyboard interrupt raised by user' in proc.getError():
-					utils.removeFiles([log, basePath])
+			if exit_code != 0:
+				if 'Keyboard interrupt raised by user' in proc.stdout.read_log():
+					utils.remove_files([log, basePath])
 					raise StopIteration
 				else:
-					proc.logError(self.errorLog, log = log)
+					self._log.log_process(proc)
 				self._log.error('Trying to recover from error ...')
 				for dirName in os.listdir(basePath):
 					yield (None, os.path.join(basePath, dirName))
 		activity.finish()
 
 		# return unretrievable jobs
-		for jobNum in todo:
-			yield (jobNum, None)
+		for jobnum in todo:
+			yield (jobnum, None)
 
 		purgeLog = tempfile.mktemp('.log')
-		purgeProc = LoggedProcess(utils.resolveInstallPath('glite-ce-job-purge'),
-			'--noint --logfile "%s" %s' % (purgeLog, str.join(' ', done)))
-		retCode = purgeProc.wait()
-		if retCode != 0:
-			if self.explainError(purgeProc, retCode):
+		purgeProc = LocalProcess(utils.resolve_install_path('glite-ce-job-purge'),
+			'--noint', '--logfile', purgeLog, str.join(' ', done))
+		exit_code = purgeProc.status(timeout = 60)
+		if exit_code != 0:
+			if self.explainError(purgeProc, exit_code):
 				pass
 			else:
-				proc.logError(self.errorLog, log = purgeLog, jobs = done)
-		utils.removeFiles([log, purgeLog, basePath])
+				self._log.log_process(proc)
+		utils.remove_files([log, purgeLog, basePath])

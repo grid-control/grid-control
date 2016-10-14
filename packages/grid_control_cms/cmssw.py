@@ -12,16 +12,95 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, logging
+import os
 from grid_control import utils
 from grid_control.backends import WMS
-from grid_control.config import ConfigError, noDefault
+from grid_control.config import ConfigError
 from grid_control.datasets import DataSplitter, PartitionProcessor
 from grid_control.output_processor import DebugJobInfoProcessor
+from grid_control.parameters import ParameterMetadata
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from grid_control.parameters import ParameterMetadata
-from python_compat import ifilter, imap, lmap, sorted
+from python_compat import ifilter, imap, lmap, set, sorted, unspecified
+
+
+class SCRAMTask(DataTask):
+	config_section_list = DataTask.config_section_list + ['SCRAMTask']
+
+	def __init__(self, config, name):
+		DataTask.__init__(self, config, name)
+
+		# SCRAM settings
+		scram_arch_default = unspecified
+		scram_project = config.get_list('scram project', [])
+		if scram_project:  # manual scram setup
+			if len(scram_project) != 2:
+				raise ConfigError('%r needs exactly 2 arguments: <PROJECT> <VERSION>' % 'scram project')
+			self._project_area = None
+			self._project_area_selector_list = None
+			self._scram_project = scram_project[0]
+			self._scram_project_version = scram_project[1]
+			# ensure project area is not used
+			if 'project area' in config.get_option_list():
+				raise ConfigError('Cannot specify both %r and %r' % ('scram project', 'project area'))
+
+		else:  # scram setup used from project area
+			self._project_area = config.get_path('project area')
+			self._project_area_selector_list = config.get_list('area files', ['-.*', '-config', 'bin',
+				'lib', 'python', 'module', '*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py',
+				'-*/.git', '-*/.svn', '-*/CVS', '-*/work.*']) + ['*.pcm']  # FIXME
+			self._log.info('Project area found in: %s', self._project_area)
+
+			# try to determine scram settings from environment settings
+			scram_path = os.path.join(self._project_area, '.SCRAM')
+			scram_env = self._parse_scram_file(os.path.join(scram_path, 'Environment'))
+			try:
+				self._scram_project = scram_env['SCRAM_PROJECTNAME']
+				self._scram_project_version = scram_env['SCRAM_PROJECTVERSION']
+			except:
+				raise ConfigError('Installed program in project area not recognized.')
+
+			def filter_arch_dir(dn):
+				return os.path.isdir(os.path.join(scram_path, dn))
+			for arch_dir in sorted(ifilter(filter_arch_dir, os.listdir(scram_path))):
+				scram_arch_default = arch_dir
+
+		self._scram_version = config.get('scram version', 'scramv1')
+		self._scram_arch = config.get('scram arch', scram_arch_default)
+
+		self._scram_req_list = []
+		if config.get_bool('scram arch requirements', True, on_change=None):
+			self._scram_req_list.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scram_arch))
+		if config.get_bool('scram project requirements', False, on_change=None):
+			self._scram_req_list.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scram_project))
+		if config.get_bool('scram project version requirements', False, on_change=None):
+			self._scram_req_list.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scram_project_version))
+
+	def get_dependency_list(self):
+		return DataTask.get_dependency_list(self) + ['cmssw']
+
+	def get_requirement_list(self, jobnum):
+		# Get job requirements
+		return DataTask.get_requirement_list(self, jobnum) + self._scram_req_list
+
+	def get_task_dict(self):
+		data = DataTask.get_task_dict(self)
+		data['SCRAM_VERSION'] = self._scram_version
+		data['SCRAM_ARCH'] = self._scram_arch
+		data['SCRAM_PROJECTNAME'] = self._scram_project
+		data['SCRAM_PROJECTVERSION'] = self._scram_project_version
+		return data
+
+	def _parse_scram_file(self, fn):
+		try:
+			fp = open(fn, 'r')
+			try:
+				return utils.DictFormat().parse(fp, key_parser={None: str})
+			finally:
+				fp.close()
+		except Exception:
+			raise ConfigError('Project area file %s cannot be parsed!' % fn)
+
 
 class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
 	def __init__(self):
@@ -30,228 +109,229 @@ class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
 
 
 class LFNPartitionProcessor(PartitionProcessor):
-	alias = ['lfnprefix']
+	alias_list = ['lfnprefix']
 
-	def __init__(self, config):
-		PartitionProcessor.__init__(self, config)
-		lfnModifier = config.get('partition lfn modifier', '', onChange = None)
-		lfnModifierShortcuts = config.getDict('partition lfn modifier dict', {
+	def __init__(self, config, datasource_name):
+		PartitionProcessor.__init__(self, config, datasource_name)
+		lfn_modifier = config.get(self._get_pproc_opt('lfn modifier'), '')
+		lfn_modifier_shortcuts = config.get_dict(self._get_pproc_opt('lfn modifier dict'), {
 			'<xrootd>': 'root://cms-xrd-global.cern.ch/',
 			'<xrootd:eu>': 'root://xrootd-cms.infn.it/',
 			'<xrootd:us>': 'root://cmsxrootd.fnal.gov/',
-		}, onChange = None)[0]
+		})[0]
 		self._prefix = None
-		if lfnModifier == '/':
+		if lfn_modifier == '/':
 			self._prefix = '/store/'
-		elif lfnModifier.lower() in lfnModifierShortcuts:
-			self._prefix = lfnModifierShortcuts[lfnModifier.lower()] + '/store/'
-		elif lfnModifier:
-			self._prefix = lfnModifier + '/store/'
+		elif lfn_modifier.lower() in lfn_modifier_shortcuts:
+			self._prefix = lfn_modifier_shortcuts[lfn_modifier.lower()] + '/store/'
+		elif lfn_modifier:
+			self._prefix = lfn_modifier + '/store/'
 
 	def enabled(self):
 		return self._prefix is not None
 
-	def getKeys(self):
-		result = lmap(lambda k: ParameterMetadata(k, untracked = True), ['DATASET_SRM_FILES'])
-		return result
+	def get_partition_metadata(self):
+		return lmap(lambda k: ParameterMetadata(k, untracked=True), ['DATASET_SRM_FILES'])
 
-	def process(self, pNum, splitInfo, result):
-		def modify_filelist_for_srm(filelist):
-			return lmap(lambda f: "file://" + f.split('/')[-1], filelist)
-		def prefixLFN(lfn):
+	def process(self, pnum, partition, result):
+		def _modify_filelist_for_srm(filelist):
+			return lmap(lambda f: 'file://' + f.split('/')[-1], filelist)
+
+		def _prefix_lfn(lfn):
 			return self._prefix + lfn.split('/store/', 1)[-1]
+
 		if self._prefix:
-			splitInfo[DataSplitter.FileList] = lmap(prefixLFN, splitInfo[DataSplitter.FileList])
-			if "srm" in self._prefix:
-				result.update({'DATASET_SRM_FILES': str.join(' ', splitInfo[DataSplitter.FileList])})
-				splitInfo[DataSplitter.FileList] = modify_filelist_for_srm(splitInfo[DataSplitter.FileList])
+			partition[DataSplitter.FileList] = lmap(_prefix_lfn, partition[DataSplitter.FileList])
+			if 'srm' in self._prefix:
+				result.update({'DATASET_SRM_FILES': str.join(' ', partition[DataSplitter.FileList])})
+				partition[DataSplitter.FileList] = _modify_filelist_for_srm(partition[DataSplitter.FileList])
 
 
-class CMSSWPartitionProcessor(PartitionProcessor.getClass('BasicPartitionProcessor')):
-	alias = ['cmsswpart']
+class CMSSWPartitionProcessor(PartitionProcessor.get_class('BasicPartitionProcessor')):  # pylint:disable=no-init
+	alias_list = ['cmsswpart']
 
-	def _formatFileList(self, fl):
-		return str.join(', ', imap(lambda x: '"%s"' % x, fl))
-
-
-class SCRAMTask(DataTask):
-	configSections = DataTask.configSections + ['SCRAMTask']
-
-	def __init__(self, config, name):
-		DataTask.__init__(self, config, name)
-
-		# SCRAM settings
-		scramArchDefault = noDefault
-		scramProject = config.getList('scram project', [])
-		if scramProject: # manual scram setup
-			if len(scramProject) != 2:
-				raise ConfigError('%r needs exactly 2 arguments: <PROJECT> <VERSION>' % 'scram project')
-			self._projectArea = None
-			self._projectAreaPattern = None
-			self._scramProject = scramProject[0]
-			self._scramProjectVersion = scramProject[1]
-			# ensure project area is not used
-			if 'project area' in config.getOptions():
-				raise ConfigError('Cannot specify both %r and %r' % ('scram project', 'project area'))
-
-		else: # scram setup used from project area
-			self._projectArea = config.getPath('project area')
-			self._projectAreaPattern = config.getList('area files', ['-.*', '-config', 'bin', 'lib', 'python', 'module',
-				'*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py', '-*/.git', '-*/.svn', '-*/CVS', '-*/work.*'])
-			logging.getLogger('user').info('Project area found in: %s', self._projectArea)
-
-			# try to determine scram settings from environment settings
-			scramPath = os.path.join(self._projectArea, '.SCRAM')
-			scramEnv = self._parse_scram_file(os.path.join(scramPath, 'Environment'))
-			try:
-				self._scramProject = scramEnv['SCRAM_PROJECTNAME']
-				self._scramProjectVersion = scramEnv['SCRAM_PROJECTVERSION']
-			except:
-				raise ConfigError('Installed program in project area not recognized.')
-
-			for arch_dir in sorted(ifilter(lambda dn: os.path.isdir(os.path.join(scramPath, dn)), os.listdir(scramPath))):
-				scramArchDefault = arch_dir
-
-		self._scramVersion = config.get('scram version', 'scramv1')
-		self._scramArch = config.get('scram arch', scramArchDefault)
-
-		self._scramReqs = []
-		if config.getBool('scram arch requirements', True, onChange = None):
-			self._scramReqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scramArch))
-		if config.getBool('scram project requirements', False, onChange = None):
-			self._scramReqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scramProject))
-		if config.getBool('scram project version requirements', False, onChange = None):
-			self._scramReqs.append((WMS.SOFTWARE, 'VO-cms-%s' % self._scramProjectVersion))
-
-
-	# Get job requirements
-	def getRequirements(self, jobNum):
-		return DataTask.getRequirements(self, jobNum) + self._scramReqs
-
-
-	def getTaskConfig(self):
-		data = DataTask.getTaskConfig(self)
-		data['SCRAM_VERSION'] = self._scramVersion
-		data['SCRAM_ARCH'] = self._scramArch
-		data['SCRAM_PROJECTNAME'] = self._scramProject
-		data['SCRAM_PROJECTVERSION'] = self._scramProjectVersion
-		return data
-
-
-	def getDependencies(self):
-		return DataTask.getDependencies(self) + ['cmssw']
-
-
-	def _parse_scram_file(self, fn):
-		try:
-			fp = open(fn, 'r')
-			try:
-				return utils.DictFormat().parse(fp, keyParser = {None: str})
-			finally:
-				fp.close()
-		except Exception:
-			raise ConfigError('Project area file %s cannot be parsed!' % fn)
+	def _format_fn_list(self, fn_list):
+		return str.join(', ', imap(lambda x: '"%s"' % x, fn_list))
 
 
 class CMSSW(SCRAMTask):
-	configSections = SCRAMTask.configSections + ['CMSSW']
+	config_section_list = SCRAMTask.config_section_list + ['CMSSW']
 
 	def __init__(self, config, name):
 		config.set('se input timeout', '0:30')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
 		config.set('dataset processor', 'LumiDataProcessor', '+=')
-		config.set('partition processor', 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor ' +
+		config.set('partition processor',
+			'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor ' +
 			'LFNPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
-		dash_config = config.changeView(viewClass = 'SimpleConfigView', setSections = ['dashboard'])
+		dash_config = config.change_view(view_class='SimpleConfigView', set_sections=['dashboard'])
 		dash_config.set('application', 'cmsRun')
+
+		self._needed_vn_set = set()
 		SCRAMTask.__init__(self, config, name)
-		if self._scramProject != 'CMSSW':
+
+		# Setup file path informations
+		self._cmsrun_output_files = ['cmssw.dbs.tar.gz']
+		if self._do_gzip_std_output:
+			self._cmsrun_output_files.append('cmssw.log.gz')
+		self._script_fpi = utils.Result(path_rel='gc-run.cmssw.sh',
+			path_abs=utils.get_path_share('gc-run.cmssw.sh', pkg='grid_control_cms'))
+
+		if self._scram_project != 'CMSSW':
 			raise ConfigError('Project area contains no CMSSW project')
 
-		self._oldReleaseTop = None
-		if self._projectArea:
-			self._oldReleaseTop = self._parse_scram_file(os.path.join(self._projectArea, '.SCRAM', self._scramArch, 'Environment')).get('RELEASETOP', None)
+		self._old_release_top = None
+		if self._project_area:
+			scram_arch_env_path = os.path.join(self._project_area, '.SCRAM', self._scram_arch, 'Environment')
+			self._old_release_top = self._parse_scram_file(scram_arch_env_path).get('RELEASETOP', None)
 
-		self.updateErrorDict(utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'))
+		self._update_map_error_code2message(
+			utils.get_path_share('gc-run.cmssw.sh', pkg='grid_control_cms'))
 
-		self._projectAreaTarballSE = config.getBool(['se runtime', 'se project area'], True)
-		self._projectAreaTarball = config.getWorkPath('cmssw-project-area.tar.gz')
+		self._project_area_tarball_on_se = config.get_bool(['se runtime', 'se project area'], True)
+		self._project_area_tarball = config.get_work_path('cmssw-project-area.tar.gz')
 
 		# Prolog / Epilog script support - warn about old syntax
 		self.prolog = TaskExecutableWrapper(config, 'prolog', '')
 		self.epilog = TaskExecutableWrapper(config, 'epilog', '')
-		if config.getPaths('executable', []) != []:
+		if config.get_path_list('executable', []) != []:
 			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
 		self.arguments = config.get('arguments', '')
 
 		# Get cmssw config files and check their existance
 		# Check that for dataset jobs the necessary placeholders are in the config file
-		if self._dataSplitter is None:
-			self.eventsPerJob = config.get('events per job', '0') # this can be a variable like @USER_EVENTS@!
-		fragment = config.getPath('instrumentation fragment', utils.pathShare('fragmentForCMSSW.py', pkg = 'grid_control_cms'))
-		self.configFiles = self._processConfigFiles(config, list(self._getConfigFiles(config)), fragment,
-			autoPrepare = config.getBool('instrumentation', True),
-			mustPrepare = (self._dataSplitter is not None))
+		if not self._has_dataset:
+			self._events_per_job = config.get('events per job', '0')
+			# this can be a variable like @USER_EVENTS@!
+			self._needed_vn_set.add('MAX_EVENTS')
+		fragment = config.get_path('instrumentation fragment',
+			utils.get_path_share('fragmentForCMSSW.py', pkg='grid_control_cms'))
+		self._config_fn_list = self._process_config_file_list(config,
+			list(self._iter_config_files(config)), fragment,
+			auto_prepare=config.get_bool('instrumentation', True),
+			must_prepare=self._has_dataset)
 
 		# Create project area tarball
-		if self._projectArea and not os.path.exists(self._projectAreaTarball):
-			config.setState(True, 'init', detail = 'sandbox')
+		if self._project_area and not os.path.exists(self._project_area_tarball):
+			config.set_state(True, 'init', detail='sandbox')
 		# Information about search order for software environment
-		self.searchLoc = self._getCMSSWPaths(config)
-		if config.getState('init', detail = 'sandbox'):
-			if os.path.exists(self._projectAreaTarball):
-				if not utils.getUserBool('CMSSW tarball already exists! Do you want to regenerate it?', True):
+		self._cmssw_search_dict = self._get_cmssw_path_list(config)
+		if config.get_state('init', detail='sandbox'):
+			if os.path.exists(self._project_area_tarball):
+				if not utils.get_user_bool('CMSSW tarball already exists! Do you want to regenerate it?', True):
 					return
 			# Generate CMSSW tarball
-			if self._projectArea:
-				utils.genTarball(self._projectAreaTarball, utils.matchFiles(self._projectArea, self._projectAreaPattern))
-			if self._projectAreaTarballSE:
-				config.setState(True, 'init', detail = 'storage')
+			if self._project_area:
+				utils.create_tarball(self._project_area_tarball,
+					utils.match_files(self._project_area, self._project_area_selector_list))
+			if self._project_area_tarball_on_se:
+				config.set_state(True, 'init', detail='storage')
 
+	def get_command(self):
+		return './gc-run.cmssw.sh $@'
 
-	def _getCMSSWPaths(self, config):
-		result = []
-		userPath = config.get(['cmssw dir', 'vo software dir'], '')
-		if userPath:
-			userPathLocal = os.path.abspath(utils.cleanPath(userPath))
-			if os.path.exists(userPathLocal):
-				userPath = userPathLocal
-		if userPath:
-			result.append(('CMSSW_DIR_USER', userPath))
-		if self._oldReleaseTop:
-			projPath = os.path.normpath('%s/../../../../' % self._oldReleaseTop)
-			result.append(('CMSSW_DIR_PRO', projPath))
-		log = logging.getLogger('user')
-		log.info('Local jobs will try to use the CMSSW software located here:')
-		for i, loc in enumerate(result):
-			log.info(' %i) %s', i + 1, loc[1])
-		if result:
-			log.info('')
+	def get_description(self, jobnum):  # (task name, job name, type)
+		result = SCRAMTask.get_description(self, jobnum)
+		if not result.jobType:
+			result.jobType = 'analysis'
 		return result
 
+	def get_job_arguments(self, jobnum):
+		return SCRAMTask.get_job_arguments(self, jobnum) + ' ' + self.arguments
 
-	def _getConfigFiles(self, config):
-		cfgDefault = utils.QM(self.prolog.isActive() or self.epilog.isActive(), [], noDefault)
-		for cfgFile in config.getPaths('config file', cfgDefault, mustExist = False):
-			if not os.path.exists(cfgFile):
-				raise ConfigError('Config file %r not found.' % cfgFile)
-			yield cfgFile
+	def get_job_dict(self, jobnum):
+		# Get job dependent environment variables
+		data = SCRAMTask.get_job_dict(self, jobnum)
+		if not self._has_dataset:
+			data['MAX_EVENTS'] = self._events_per_job
+		return data
 
+	def get_sb_in_fpi_list(self):
+		# Get files for input sandbox
+		fpi_list = (SCRAMTask.get_sb_in_fpi_list(self) + self.prolog.get_sb_in_fpi_list() +
+			self.epilog.get_sb_in_fpi_list())
+		for config_file in self._config_fn_list:
+			fpi_list.append(utils.Result(path_abs=config_file, path_rel=os.path.basename(config_file)))
+		if self._project_area and not self._project_area_tarball_on_se:
+			fpi_list.append(utils.Result(path_abs=self._project_area_tarball,
+				path_rel=os.path.basename(self._project_area_tarball)))
+		return fpi_list + [self._script_fpi]
 
-	def _cfgIsInstrumented(self, fn):
+	def get_sb_out_fn_list(self):
+		# Get files for output sandbox
+		if not self._config_fn_list:
+			return SCRAMTask.get_sb_out_fn_list(self)
+		return SCRAMTask.get_sb_out_fn_list(self) + self._cmsrun_output_files
+
+	def get_se_in_fn_list(self):
+		# Get files to be transfered via SE (description, source, target)
+		files = SCRAMTask.get_se_in_fn_list(self)
+		if self._project_area and self._project_area_tarball_on_se:
+			return files + [('CMSSW tarball', self._project_area_tarball, self.task_id + '.tar.gz')]
+		return files
+
+	def get_task_dict(self):
+		# Get environment variables for gc_config.sh
+		data = SCRAMTask.get_task_dict(self)
+		data.update(dict(self._cmssw_search_dict))
+		data['GZIP_OUT'] = utils.QM(self._do_gzip_std_output, 'yes', 'no')
+		data['SE_RUNTIME'] = utils.QM(self._project_area_tarball_on_se, 'yes', 'no')
+		data['HAS_RUNTIME'] = utils.QM(self._project_area, 'yes', 'no')
+		data['CMSSW_EXEC'] = 'cmsRun'
+		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self._config_fn_list))
+		data['CMSSW_OLD_RELEASETOP'] = self._old_release_top
+		if self.prolog.is_active():
+			data['CMSSW_PROLOG_EXEC'] = self.prolog.get_command()
+			data['CMSSW_PROLOG_SB_IN_FILES'] = str.join(' ',
+				imap(lambda x: x.path_rel, self.prolog.get_sb_in_fpi_list()))
+			data['CMSSW_PROLOG_ARGS'] = self.prolog.get_arguments()
+		if self.epilog.is_active():
+			data['CMSSW_EPILOG_EXEC'] = self.epilog.get_command()
+			data['CMSSW_EPILOG_SB_IN_FILES'] = str.join(' ',
+				imap(lambda x: x.path_rel, self.epilog.get_sb_in_fpi_list()))
+			data['CMSSW_EPILOG_ARGS'] = self.epilog.get_arguments()
+		return data
+
+	def _config_find_uninitialized(self, config, config_file_list, auto_prepare, must_prepare):
+		common_path = os.path.dirname(os.path.commonprefix(config_file_list))
+
+		config_file_list_todo = []
+		config_file_status_list = []
+		for cfg in config_file_list:
+			cfg_new = config.get_work_path(os.path.basename(cfg))
+			cfg_new_exists = os.path.exists(cfg_new)
+			if cfg_new_exists:
+				is_instrumented = self._config_is_instrumented(cfg_new)
+				do_copy = False
+			else:
+				is_instrumented = self._config_is_instrumented(cfg)
+				do_copy = True
+			do_prepare = (must_prepare or auto_prepare) and not is_instrumented
+			do_copy = do_copy or do_prepare
+			if do_copy:
+				config_file_list_todo.append((cfg, cfg_new, do_prepare))
+			config_file_status_list.append({1: cfg.split(common_path, 1)[1].lstrip('/'), 2: cfg_new_exists,
+				3: is_instrumented, 4: do_prepare})
+
+		if config_file_status_list:
+			config_file_status_header = [(1, 'Config file'), (2, 'Work dir'),
+				(3, 'Instrumented'), (4, 'Scheduled')]
+			utils.display_table(config_file_status_header, config_file_status_list, 'lccc')
+		return config_file_list_todo
+
+	def _config_is_instrumented(self, fn):
 		fp = open(fn, 'r')
 		try:
 			cfg = fp.read()
 		finally:
 			fp.close()
-		for tag in self.neededVars():
+		for tag in self._needed_vn_set:
 			if (not '__%s__' % tag in cfg) and (not '@%s@' % tag in cfg):
 				return False
 		return True
 
-
-	def _cfgStore(self, source, target, fragment_path = None):
+	def _config_store_backup(self, source, target, fragment_path=None):
 		fp = open(source, 'r')
 		try:
 			content = fp.read()
@@ -261,140 +341,75 @@ class CMSSW(SCRAMTask):
 		try:
 			fp.write(content)
 			if fragment_path:
-				logging.getLogger('user').info('Instrumenting... %s', os.path.basename(source))
+				self._log.info('Instrumenting... %s', os.path.basename(source))
 				fragment_fp = open(fragment_path, 'r')
 				fp.write(fragment_fp.read())
 				fragment_fp.close()
 		finally:
 			fp.close()
 
+	def _create_datasource(self, config, name, psrc_repository):
+		psrc_data = SCRAMTask._create_datasource(self, config, name, psrc_repository)
+		if psrc_data is not None:
+			self._needed_vn_set.update(psrc_data.get_needed_dataset_keys())
+		return psrc_data
 
-	def _cfgFindUninitialized(self, config, cfgFiles, autoPrepare, mustPrepare):
-		comPath = os.path.dirname(os.path.commonprefix(cfgFiles))
-
-		cfgTodo = []
-		cfgStatus = []
-		for cfg in cfgFiles:
-			cfg_new = config.getWorkPath(os.path.basename(cfg))
-			cfg_new_exists = os.path.exists(cfg_new)
-			if cfg_new_exists:
-				isInstrumented = self._cfgIsInstrumented(cfg_new)
-				doCopy = False
-			else:
-				isInstrumented = self._cfgIsInstrumented(cfg)
-				doCopy = True
-			doPrepare = (mustPrepare or autoPrepare) and not isInstrumented
-			doCopy = doCopy or doPrepare
-			if doCopy:
-				cfgTodo.append((cfg, cfg_new, doPrepare))
-			cfgStatus.append({1: cfg.split(comPath, 1)[1].lstrip('/'), 2: cfg_new_exists,
-				3: isInstrumented, 4: doPrepare})
-
-		if cfgStatus:
-			utils.printTabular([(1, 'Config file'), (2, 'Work dir'), (3, 'Instrumented'), (4, 'Scheduled')], cfgStatus, 'lccc')
-		return cfgTodo
-
-
-	def _processConfigFiles(self, config, cfgFiles, fragment_path, autoPrepare, mustPrepare):
-		# process list of uninitialized config files
-		for (cfg, cfg_new, doPrepare) in self._cfgFindUninitialized(config, cfgFiles, autoPrepare, mustPrepare):
-			if doPrepare and (autoPrepare or utils.getUserBool('Do you want to prepare %s for running over the dataset?' % cfg, True)):
-				self._cfgStore(cfg, cfg_new, fragment_path)
-			else:
-				self._cfgStore(cfg, cfg_new)
-
+	def _get_cmssw_path_list(self, config):
 		result = []
-		for cfg in cfgFiles:
-			cfg_new = config.getWorkPath(os.path.basename(cfg))
-			if not os.path.exists(cfg_new):
-				raise ConfigError('Config file %r was not copied to the work directory!' % cfg)
-			isInstrumented = self._cfgIsInstrumented(cfg_new)
-			if mustPrepare and not isInstrumented:
-				raise ConfigError('Config file %r must use %s to work properly!' %
-					(cfg, str.join(', ', imap(lambda x: '@%s@' % x, self.neededVars()))))
-			if autoPrepare and not isInstrumented:
-				self._log.warning('Config file %r was not instrumented!', cfg)
-			result.append(cfg_new)
+		path_cmssw_user = config.get(['cmssw dir', 'vo software dir'], '')
+		if path_cmssw_user:
+			path_cmssw_local = os.path.abspath(utils.clean_path(path_cmssw_user))
+			if os.path.exists(path_cmssw_local):
+				path_cmssw_user = path_cmssw_local
+		if path_cmssw_user:
+			result.append(('CMSSW_DIR_USER', path_cmssw_user))
+		if self._old_release_top:
+			path_scram_project = os.path.normpath('%s/../../../../' % self._old_release_top)
+			result.append(('CMSSW_DIR_PRO', path_scram_project))
+		self._log.info('Local jobs will try to use the CMSSW software located here:')
+		for idx, loc in enumerate(result):
+			self._log.info(' %i) %s', idx + 1, loc[1])
+		if result:
+			self._log.info('')
 		return result
 
-
-	def neededVars(self):
-		if self._dataSplitter:
-			return self._partProcessor.getNeededKeys(self._dataSplitter) or []
-		return ['MAX_EVENTS']
-
-
-	# Get environment variables for gc_config.sh
-	def getTaskConfig(self):
-		data = SCRAMTask.getTaskConfig(self)
-		data.update(dict(self.searchLoc))
-		data['GZIP_OUT'] = utils.QM(self.gzipOut, 'yes', 'no')
-		data['SE_RUNTIME'] = utils.QM(self._projectAreaTarballSE, 'yes', 'no')
-		data['HAS_RUNTIME'] = utils.QM(self._projectArea, 'yes', 'no')
-		data['CMSSW_EXEC'] = 'cmsRun'
-		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self.configFiles))
-		data['CMSSW_OLD_RELEASETOP'] = self._oldReleaseTop
-		if self.prolog.isActive():
-			data['CMSSW_PROLOG_EXEC'] = self.prolog.getCommand()
-			data['CMSSW_PROLOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.prolog.getSBInFiles()))
-			data['CMSSW_PROLOG_ARGS'] = self.prolog.getArguments()
-		if self.epilog.isActive():
-			data['CMSSW_EPILOG_EXEC'] = self.epilog.getCommand()
-			data['CMSSW_EPILOG_SB_IN_FILES'] = str.join(' ', imap(lambda x: x.pathRel, self.epilog.getSBInFiles()))
-			data['CMSSW_EPILOG_ARGS'] = self.epilog.getArguments()
-		return data
-
-
-	# Get files to be transfered via SE (description, source, target)
-	def getSEInFiles(self):
-		files = SCRAMTask.getSEInFiles(self)
-		if self._projectArea and self._projectAreaTarballSE:
-			return files + [('CMSSW tarball', self._projectAreaTarball, self.taskID + '.tar.gz')]
-		return files
-
-
-	# Get files for input sandbox
-	def getSBInFiles(self):
-		files = SCRAMTask.getSBInFiles(self) + self.prolog.getSBInFiles() + self.epilog.getSBInFiles()
-		for cfgFile in self.configFiles:
-			files.append(utils.Result(pathAbs = cfgFile, pathRel = os.path.basename(cfgFile)))
-		if self._projectArea and not self._projectAreaTarballSE:
-			files.append(utils.Result(pathAbs = self._projectAreaTarball, pathRel = os.path.basename(self._projectAreaTarball)))
-		return files + [utils.Result(pathAbs = utils.pathShare('gc-run.cmssw.sh', pkg = 'grid_control_cms'), pathRel = 'gc-run.cmssw.sh')]
-
-
-	# Get files for output sandbox
-	def getSBOutFiles(self):
-		if not self.configFiles:
-			return SCRAMTask.getSBOutFiles(self)
-		return SCRAMTask.getSBOutFiles(self) + utils.QM(self.gzipOut, ['cmssw.log.gz'], []) + ['cmssw.dbs.tar.gz']
-
-
-	def getCommand(self):
-		return './gc-run.cmssw.sh $@'
-
-
-	def getJobArguments(self, jobNum):
-		return SCRAMTask.getJobArguments(self, jobNum) + ' ' + self.arguments
-
-
-	def getVarNames(self):
-		result = SCRAMTask.getVarNames(self)
-		if self._dataSplitter is None:
+	def _get_var_name_list(self):
+		result = SCRAMTask._get_var_name_list(self)
+		if not self._has_dataset:
 			result.append('MAX_EVENTS')
 		return result
 
+	def _iter_config_files(self, config):
+		config_file_default = unspecified
+		if self.prolog.is_active() or self.epilog.is_active():
+			config_file_default = []
+		for config_file in config.get_path_list('config file', config_file_default, must_exist=False):
+			if not os.path.exists(config_file):
+				raise ConfigError('Config file %r not found.' % config_file)
+			yield config_file
 
-	# Get job dependent environment variables
-	def getJobConfig(self, jobNum):
-		data = SCRAMTask.getJobConfig(self, jobNum)
-		if self._dataSplitter is None:
-			data['MAX_EVENTS'] = self.eventsPerJob
-		return data
+	def _process_config_file_list(self, config, config_file_list,
+			fragment_path, auto_prepare, must_prepare):
+		# process list of uninitialized config files
+		iter_uninitialized_config_files = self._config_find_uninitialized(config,
+			config_file_list, auto_prepare, must_prepare)
+		for (cfg, cfg_new, do_prepare) in iter_uninitialized_config_files:
+			ask_user_msg = 'Do you want to prepare %s for running over the dataset?' % cfg
+			if do_prepare and (auto_prepare or utils.get_user_bool(ask_user_msg, True)):
+				self._config_store_backup(cfg, cfg_new, fragment_path)
+			else:
+				self._config_store_backup(cfg, cfg_new)
 
-
-	def getDescription(self, jobNum): # (task name, job name, type)
-		result = SCRAMTask.getDescription(self, jobNum)
-		if not result.jobType:
-			result.jobType = 'analysis'
+		result = []
+		for cfg in config_file_list:
+			cfg_new = config.get_work_path(os.path.basename(cfg))
+			if not os.path.exists(cfg_new):
+				raise ConfigError('Config file %r was not copied to the work directory!' % cfg)
+			is_instrumented = self._config_is_instrumented(cfg_new)
+			if must_prepare and not is_instrumented:
+				raise ConfigError('Config file %r must use %s to work properly!' %
+					(cfg, str.join(', ', imap(lambda x: '@%s@' % x, sorted(self._needed_vn_set)))))
+			if auto_prepare and not is_instrumented:
+				self._log.warning('Config file %r was not instrumented!', cfg)
+			result.append(cfg_new)
 		return result

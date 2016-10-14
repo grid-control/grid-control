@@ -16,8 +16,9 @@
 import os, sys, time, random, logging, gcSupport
 from gcSupport import ClassSelector, FileInfoProcessor, Job, JobClass, Options, Plugin
 from grid_control.backends.storage import se_copy, se_exists, se_mkdir, se_rm
-from grid_control.utils.thread_tools import GCLock, start_thread
+from grid_control.utils.thread_tools import GCLock, start_daemon
 from python_compat import imap, irange, lfilter, lmap, md5
+
 
 log = logging.getLogger()
 
@@ -41,7 +42,7 @@ def parse_cmd_line():
 	help_msg += '\n   can be resubmitted.'
 	parser = Options(usage = '%s [OPTIONS] <config file>' + help_msg)
 
-	def addBoolOpt(group, short_pair, option_base, help_base, default = False,
+	def add_boolOpt(group, short_pair, option_base, help_base, default = False,
 			option_prefix_pair = ('', 'no'), help_prefix_pair = ('', 'do not '), dest = None):
 		def create_opt(idx):
 			return str.join('-', option_prefix_pair[idx].split() + option_base.split())
@@ -50,23 +51,23 @@ def parse_cmd_line():
 			if (default and (idx == 0)) or ((not default) and (idx == 1)):
 				help_def = ' [Default]'
 			return help_prefix_pair[idx] + help_base + help_def
-		parser.addFlag(group, short_pair, (create_opt(0), create_opt(1)), default = default, dest = dest,
+		parser.add_flag(group, short_pair, (create_opt(0), create_opt(1)), default = default, dest = dest,
 			help_pair = (create_help(0), create_help(1)))
 
-	addBoolOpt(None, 'v ', 'verify-md5',        default = True,  help_base = 'MD5 verification of SE files',
+	add_boolOpt(None, 'v ', 'verify-md5',        default = True,  help_base = 'MD5 verification of SE files',
 		help_prefix_pair = ('enable ', 'disable '))
-	addBoolOpt(None, 'l ', 'loop',              default = False, help_base = 'loop over jobs until all files are successfully processed')
-	addBoolOpt(None, 'L ', 'infinite',          default = False, help_base = 'process jobs in an infinite loop')
-	addBoolOpt(None, '  ', 'shuffle',           default = False, help_base = 'shuffle download order')
-	addBoolOpt(None, '  ', '',                  default = False, help_base = 'files which are already on local disk',
+	add_boolOpt(None, 'l ', 'loop',              default = False, help_base = 'loop over jobs until all files are successfully processed')
+	add_boolOpt(None, 'L ', 'infinite',          default = False, help_base = 'process jobs in an infinite loop')
+	add_boolOpt(None, '  ', 'shuffle',           default = False, help_base = 'shuffle download order')
+	add_boolOpt(None, '  ', '',                  default = False, help_base = 'files which are already on local disk',
 		option_prefix_pair = ('skip-existing', 'overwrite'), help_prefix_pair = ('skip ', 'overwrite '), dest = 'skip_existing')
 
 	parser.section('jobs', 'Job state / flag handling')
-	addBoolOpt('jobs', '  ', 'mark-dl',         default = True,  help_base = 'mark sucessfully downloaded jobs as such')
-	addBoolOpt('jobs', '  ', 'mark-dl',         default = False, help_base = 'mark about sucessfully downloaded jobs',
+	add_boolOpt('jobs', '  ', 'mark-dl',         default = True,  help_base = 'mark sucessfully downloaded jobs as such')
+	add_boolOpt('jobs', '  ', 'mark-dl',         default = False, help_base = 'mark about sucessfully downloaded jobs',
 		option_prefix_pair = ('ignore', 'use'), help_prefix_pair = ('ignore ', 'use '), dest = 'mark_ignore_dl')
-	addBoolOpt('jobs', '  ', 'mark-fail',       default = True,  help_base = 'mark jobs failing verification as such')
-	addBoolOpt('jobs', '  ', 'mark-empty-fail', default = False, help_base = 'mark jobs without any files as failed')
+	add_boolOpt('jobs', '  ', 'mark-fail',       default = True,  help_base = 'mark jobs failing verification as such')
+	add_boolOpt('jobs', '  ', 'mark-empty-fail', default = False, help_base = 'mark jobs without any files as failed')
 
 	parser.section('file', 'Local / SE file handling')
 	for (option, help_base) in [
@@ -75,37 +76,37 @@ def parse_cmd_line():
 			('se-ok',      'files of successful jobs on SE'),
 			('se-fail',    'files of failed jobs on the SE'),
 		]:
-		addBoolOpt('file', '  ', option, default = False, help_base = help_base,
+		add_boolOpt('file', '  ', option, default = False, help_base = help_base,
 			option_prefix_pair = ('rm', 'keep'), help_prefix_pair = ('remove ', 'keep '))
 
-	parser.addText(None, 'o', 'output',    default = None,
+	parser.add_text(None, 'o', 'output',    default = None,
 		help = 'specify the local output directory')
-	parser.addText(None, 'T', 'token',     default = 'VomsProxy',
+	parser.add_text(None, 'T', 'token',     default = 'VomsProxy',
 		help = 'specify the access token used to determine ability to download - VomsProxy or TrivialAccessToken')
-	parser.addList(None, 'S', 'selectSE',  default = None,
+	parser.add_list(None, 'S', 'selectSE',  default = None,
 		help = 'specify the SE paths to process')
-	parser.addText(None, 'r', 'retry',
+	parser.add_text(None, 'r', 'retry',
 		help = 'how often should a transfer be attempted [Default: 0]')
-	parser.addText(None, 't', 'threads',   default = 0,
+	parser.add_text(None, 't', 'threads',   default = 0,
 		help = 'how many parallel download threads should be used to download files [Default: no multithreading]')
-	parser.addText(None, ' ', 'slowdown',  default = 2,
+	parser.add_text(None, ' ', 'slowdown',  default = 2,
 		help = 'specify time between downloads [Default: 2 sec]')
-	parser.addBool(None, ' ', 'show-host', default = False,
+	parser.add_bool(None, ' ', 'show-host', default = False,
 		help = 'show SE hostname during download')
 
 	parser.section('short', 'Shortcuts')
-	parser.addFSet('short', 'm', 'move',        help = 'Move files from SE - shorthand for:'.ljust(100) + '%s',
+	parser.add_fset('short', 'm', 'move',        help = 'Move files from SE - shorthand for:'.ljust(100) + '%s',
 		flag_set = '--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --rm-se-ok --keep-local-ok')
-	parser.addFSet('short', 'c', 'copy',        help = 'Copy files from SE - shorthand for:'.ljust(100) + '%s',
+	parser.add_fset('short', 'c', 'copy',        help = 'Copy files from SE - shorthand for:'.ljust(100) + '%s',
 		flag_set = '--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail --rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok')
-	parser.addFSet('short', 'j', 'just-copy',   help = 'Just copy files from SE - shorthand for:'.ljust(100) + '%s',
+	parser.add_fset('short', 'j', 'just-copy',   help = 'Just copy files from SE - shorthand for:'.ljust(100) + '%s',
 		flag_set = '--verify-md5 --skip-existing --no-mark-dl --ignore-mark-dl --no-mark-fail --keep-se-fail --keep-local-fail --keep-se-ok --keep-local-ok')
-	parser.addFSet('short', 's', 'smart-copy',
+	parser.add_fset('short', 's', 'smart-copy',
 		help = 'Copy correct files from SE, but remember already downloaded files and delete corrupt files - shorthand for: '.ljust(100) + '%s',
 		flag_set = '--verify-md5 --mark-dl --mark-fail --rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok')
-	parser.addFSet('short', 'V', 'just-verify', help = 'Just verify files on SE - shorthand for:'.ljust(100) + '%s',
+	parser.add_fset('short', 'V', 'just-verify', help = 'Just verify files on SE - shorthand for:'.ljust(100) + '%s',
 		flag_set = '--verify-md5 --no-mark-dl --keep-se-fail --rm-local-fail --keep-se-ok --rm-local-ok --ignore-mark-dl')
-	parser.addFSet('short', 'D', 'just-delete', help = 'Just delete all finished files on SE - shorthand for:'.ljust(100) + '%s',
+	parser.add_fset('short', 'D', 'just-delete', help = 'Just delete all finished files on SE - shorthand for:'.ljust(100) + '%s',
 		flag_set = '--skip-existing --rm-se-fail --rm-se-ok --rm-local-fail --keep-local-ok --no-mark-dl --ignore-mark-dl')
 
 	return parser.parse()
@@ -138,13 +139,13 @@ def transfer_monitor(output, fileIdx, path, lock, abort):
 	lock.release()
 
 
-def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPath):
+def download_monitored(jobnum, output, fileIdx, checkPath, sourcePath, target_path):
 	copyAbortLock = GCLock()
 	monitorLock = GCLock()
 	monitorLock.acquire()
-	monitor = start_thread('Download monitor %s' % jobNum, transfer_monitor, output, fileIdx, checkPath, monitorLock, copyAbortLock)
+	monitor = start_daemon('Download monitor %s' % jobnum, transfer_monitor, output, fileIdx, checkPath, monitorLock, copyAbortLock)
 	result = -1
-	procCP = se_copy(sourcePath, targetPath, tmp = checkPath)
+	procCP = se_copy(sourcePath, target_path, tmp = checkPath)
 	while True:
 		if not copyAbortLock.acquire(False):
 			monitor.join()
@@ -164,7 +165,7 @@ def download_monitored(jobNum, output, fileIdx, checkPath, sourcePath, targetPat
 	return True
 
 
-def download_file(opts, output, jobNum, fileIdx, fileInfo):
+def download_file(opts, output, jobnum, fileIdx, fileInfo):
 	(hash, _, name_dest, pathSE) = fileInfo
 	output.update_progress(fileIdx)
 
@@ -184,7 +185,7 @@ def download_file(opts, output, jobNum, fileIdx, fileInfo):
 	if 'file://' in outFilePath:
 		checkPath = outFilePath
 
-	if not download_monitored(jobNum, output, fileIdx, checkPath, os.path.join(pathSE, name_dest), outFilePath):
+	if not download_monitored(jobnum, output, fileIdx, checkPath, os.path.join(pathSE, name_dest), outFilePath):
 		return False
 
 	# Verify => compute md5hash
@@ -221,26 +222,26 @@ def cleanup_files(opts, files, failJob, output):
 		output.update_status(fileIdx, None)
 
 
-def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
-	output.init(jobNum)
-	jobObj = jobDB.getJob(jobNum)
+def download_job_output(opts, incInfo, workDir, job_db, token, jobnum, output):
+	output.init(jobnum)
+	job_obj = job_db.get_job(jobnum)
 	# Only run over finished and not yet downloaded jobs
-	if jobObj.state != Job.SUCCESS:
+	if job_obj.state != Job.SUCCESS:
 		output.error('Job has not yet finished successfully!')
 		return incInfo('Processing')
-	if jobObj.get('download') == 'True' and not opts.mark_ignore_dl:
+	if job_obj.get('download') == 'True' and not opts.mark_ignore_dl:
 		if not int(opts.threads):
 			output.error('All files already downloaded!')
 		return incInfo('Downloaded')
-	retry = int(jobObj.get('download attempt', 0))
+	retry = int(job_obj.get('download attempt', 0))
 	failJob = False
 
-	if not token.canSubmit(20*60, True):
+	if not token.can_submit(20*60, True):
 		sys.stderr.write('Please renew access token!')
 		sys.exit(os.EX_UNAVAILABLE)
 
 	# Read the file hash entries from job info file
-	files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobNum)) or []
+	files = FileInfoProcessor().process(os.path.join(workDir, 'output', 'job_%d' % jobnum)) or []
 	if files:
 		files = lmap(lambda fi: (fi[FileInfoProcessor.Hash], fi[FileInfoProcessor.NameLocal],
 			fi[FileInfoProcessor.NameDest], fi[FileInfoProcessor.Path]), files)
@@ -252,13 +253,13 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 			return incInfo('Job without output files')
 
 	for (fileIdx, fileInfo) in enumerate(files):
-		failJob = failJob or not download_file(opts, output, jobNum, fileIdx, fileInfo)
+		failJob = failJob or not download_file(opts, output, jobnum, fileIdx, fileInfo)
 
 	# Ignore the first opts.retry number of failed jobs
 	if failJob and opts.retry and (retry < int(opts.retry)):
 		output.error('Download attempt #%d failed!' % (retry + 1))
-		jobObj.set('download attempt', str(retry + 1))
-		jobDB.commit(jobNum, jobObj)
+		job_obj.set('download attempt', str(retry + 1))
+		job_db.commit(jobnum, job_obj)
 		return incInfo('Download attempts')
 
 	cleanup_files(opts, files, failJob, output)
@@ -267,32 +268,32 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 		incInfo('Failed downloads')
 		if opts.mark_fail:
 			# Mark job as failed to trigger resubmission
-			jobObj.state = Job.FAILED
+			job_obj.state = Job.FAILED
 	else:
 		incInfo('Successful download')
 		if opts.mark_dl:
 			# Mark as downloaded
-			jobObj.set('download', 'True')
+			job_obj.set('download', 'True')
 
 	# Save new job status infos
-	jobDB.commit(jobNum, jobObj)
+	job_db.commit(jobnum, job_obj)
 	output.finish()
 	time.sleep(float(opts.slowdown))
 
 
-def download_multithreaded_main(opts, workDir, jobList, incInfo, jobDB, token, DisplayClass, screen, errorOutput):
+def download_multithreaded_main(opts, workDir, jobList, incInfo, job_db, token, DisplayClass, screen, errorOutput):
 	(active, todo) = ([], list(jobList))
 	todo.reverse()
 	screen.move(0, 0)
-	screen.savePos()
+	screen.save_pos()
 	while True:
 		screen.erase()
-		screen.loadPos()
+		screen.load_pos()
 		active = lfilter(lambda thread_display: thread_display[0].isAlive(), active)
 		while len(active) < int(opts.threads) and len(todo):
 			display = DisplayClass()
-			active.append((start_thread('Download %s' % todo[-1], download_job_output,
-				opts, incInfo, workDir, jobDB, token, todo.pop(), display), display))
+			active.append((start_daemon('Download %s' % todo[-1], download_job_output,
+				opts, incInfo, workDir, job_db, token, todo.pop(), display), display))
 		for (_, display) in active:
 			sys.stdout.write(str.join('\n', display.output))
 		sys.stdout.write(str.join('\n', ['=' * 50] + errorOutput))
@@ -302,17 +303,17 @@ def download_multithreaded_main(opts, workDir, jobList, incInfo, jobDB, token, D
 		time.sleep(0.01)
 
 
-def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
+def download_multithreaded(opts, workDir, jobList, incInfo, job_db, token):
 	from grid_control_gui.ansi import Console
 	errorOutput = []
 	class ThreadDisplay:
 		def __init__(self):
 			self.output = []
-		def init(self, jobNum):
-			self.jobNum = jobNum
-			self.output = ['Job %5d' % jobNum, '']
+		def init(self, jobnum):
+			self.jobnum = jobnum
+			self.output = ['Job %5d' % jobnum, '']
 		def _infoline(self, fileIdx, msg = ''):
-			return 'Job %5d [%i/%i] %s %s' % (self.jobNum, fileIdx + 1, len(self._files), self._files[fileIdx][2], msg)
+			return 'Job %5d [%i/%i] %s %s' % (self.jobnum, fileIdx + 1, len(self._files), self._files[fileIdx][2], msg)
 		def update_files(self, files):
 			(self._files, self.output, self.tr) = (files, self.output[1:], ['']*len(files))
 			for x in irange(len(files)):
@@ -340,16 +341,16 @@ def download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token):
 		def update_status(self, idx, msg):
 			self.output[2*idx] = str.join(' ', [self._infoline(idx, '(%s)' % self.tr[idx])] + (msg or '').split())
 		def finish(self):
-#			self.output.append(str(self.jobNum) + 'FINISHED')
+#			self.output.append(str(self.jobnum) + 'FINISHED')
 			pass
 
-	download_multithreaded_main(opts, workDir, jobList, incInfo, jobDB, token, ThreadDisplay, Console(sys.stdout), errorOutput)
+	download_multithreaded_main(opts, workDir, jobList, incInfo, job_db, token, ThreadDisplay, Console(sys.stdout), errorOutput)
 
 
-def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
+def download_sequential(opts, workDir, jobList, incInfo, job_db, token):
 	class DefaultDisplay:
-		def init(self, jobNum):
-			sys.stdout.write('Job %d: ' % jobNum)
+		def init(self, jobnum):
+			sys.stdout.write('Job %d: ' % jobnum)
 		def update_files(self, files):
 			self._files = files
 			sys.stdout.write('The job wrote %d file%s to the SE\n' % (len(files), ('s', '')[len(files) == 1]))
@@ -372,7 +373,7 @@ def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 			self._write('\t\tRemote site: %s\n' % file_hash)
 			self._write('\t\t Local site: %s\n' % hashLocal)
 		def error(self, msg):
-			sys.stdout.write('\nJob %d: %s' % (jobNum, msg.strip()))
+			sys.stdout.write('\nJob %d: %s' % (jobnum, msg.strip()))
 		def update_status(self, idx, msg):
 			if msg:
 				self._write('\t' + msg + '\r')
@@ -383,16 +384,16 @@ def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 		def finish(self):
 			sys.stdout.write('\n')
 
-	for jobNum in jobList:
-		download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, DefaultDisplay())
+	for jobnum in jobList:
+		download_job_output(opts, incInfo, workDir, job_db, token, jobnum, DefaultDisplay())
 
 
 def loop_download(opts, args):
 	# Init everything in each loop to pick up changes
-	(config, jobDB) = gcSupport.initGC(args)
-	token = Plugin.getClass('AccessToken').createInstance(opts.token, config, 'access')#, OSLayer.create(config))
-	workDir = config.getWorkPath()
-	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
+	(config, job_db) = gcSupport.initGC(args)
+	token = Plugin.get_class('AccessToken').create_instance(opts.token, config, 'access')#, OSLayer.create(config))
+	workDir = config.get_work_path()
+	jobList = job_db.get_job_list(ClassSelector(JobClass.SUCCESS))
 
 	# Create SE output dir
 	if not opts.output:
@@ -410,9 +411,9 @@ def loop_download(opts, args):
 		jobList.sort()
 
 	if int(opts.threads):
-		download_multithreaded(opts, workDir, jobList, incInfo, jobDB, token)
+		download_multithreaded(opts, workDir, jobList, incInfo, job_db, token)
 	else:
-		download_sequential(opts, workDir, jobList, incInfo, jobDB, token)
+		download_sequential(opts, workDir, jobList, incInfo, job_db, token)
 
 	# Print overview
 	if infos:
@@ -422,7 +423,7 @@ def loop_download(opts, args):
 				print('\t%20s: [%d/%d]' % (state, num, len(jobList)))
 
 	# return True if download is finished
-	return ('Downloaded' in infos) and (infos['Downloaded'] == len(jobDB))
+	return ('Downloaded' in infos) and (infos['Downloaded'] == len(job_db))
 
 
 def main(args):

@@ -18,51 +18,52 @@ from grid_control.utils.webservice import GridJSONRestClient
 from grid_control_cms.provider_cms import CMSBaseProvider
 from python_compat import lmap
 
-# required format: <dataset path>[@<instance>][#<block>]
-class DBS3Provider(CMSBaseProvider):
-	alias = ['dbs3', 'dbs']
 
-	def __init__(self, config, datasetExpr, datasetNick = None):
-		CMSBaseProvider.__init__(self, config, datasetExpr, datasetNick)
-		if self._datasetInstance.startswith('http'):
-			self._url = self._datasetInstance
+class DBS3Provider(CMSBaseProvider):
+	# required format: <dataset path>[@<instance>][#<block>]
+	alias_list = ['dbs3', 'dbs']
+
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None):
+		CMSBaseProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
+		if self._dataset_instance.startswith('http'):
+			self._url = self._dataset_instance
 		else:
-			self._url = 'https://cmsweb.cern.ch/dbs/%s/DBSReader' % self._datasetInstance
-		self._usePhedex = (self._url == 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader') # Use DBS locality for private samples
+			self._url = 'https://cmsweb.cern.ch/dbs/%s/DBSReader' % self._dataset_instance
+		# Use DBS locality for private samples
+		self._use_phedex = (self._url == 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader')
 		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query DBS3!', UserError)
 
-
-	def _queryDBSv3(self, api, **kwargs):
-		return self._gjrc.get(api = api, params = kwargs)
-
-
-	def _getCMSDatasets(self, datasetPath):
-		pd, sd, dt = (datasetPath.lstrip('/') + '/*/*/*').split('/')[:3]
-		tmp = self._queryDBSv3('datasets', primary_ds_name = pd, processed_ds_name = sd, data_tier_name = dt)
+	def _get_cms_dataset_list(self, dataset_path):
+		dataset_path_parts = (dataset_path.lstrip('/') + '/*/*/*').split('/')[:3]
+		primary_ds_name, processed_ds_name, data_tier_name = dataset_path_parts
+		tmp = self._query_dbsv3('datasets', primary_ds_name=primary_ds_name,
+			processed_ds_name=processed_ds_name, data_tier_name=data_tier_name)
 		return lmap(lambda x: x['dataset'], tmp)
 
-
-	def _getCMSBlocksImpl(self, datasetPath, getSites):
-		def getNameSEList(blockinfo):
-			if getSites:
-				return (blockinfo['block_name'], [(blockinfo['origin_site_name'], None, True)])
-			return (blockinfo['block_name'], None)
-		return lmap(getNameSEList, self._queryDBSv3('blocks', dataset = datasetPath, detail = getSites))
-
-
-	def _getCMSFilesImpl(self, blockPath, onlyValid, queryLumi):
-		for fi in self._queryDBSv3('files', block_name = blockPath, detail = True):
-			if (fi['is_file_valid'] == 1) or not onlyValid:
-				yield ({DataProvider.URL: fi['logical_file_name'], DataProvider.NEntries: fi['event_count']}, None)
-
-
-	def _getCMSLumisImpl(self, blockPath):
+	def _get_cms_lumi_dict(self, block_path):
 		result = {}
-		for lumiInfo in self._queryDBSv3('filelumis', block_name = blockPath):
-			tmp = (int(lumiInfo['run_num']), lmap(int, lumiInfo['lumi_section_num']))
-			result.setdefault(lumiInfo['logical_file_name'], []).append(tmp)
+		for lumi_info_dict in self._query_dbsv3('filelumis', block_name=block_path):
+			tmp = (int(lumi_info_dict['run_num']), lmap(int, lumi_info_dict['lumi_section_num']))
+			result.setdefault(lumi_info_dict['logical_file_name'], []).append(tmp)
 		return result
 
+	def _iter_blocks_raw(self):
+		return self._get_gc_block_list(use_phedex=self._use_phedex)
 
-	def _getBlocksInternal(self):
-		return self._getGCBlocks(usePhedex = self._usePhedex)
+	def _iter_cms_blocks(self, dataset_path, do_query_sites):
+		def _get_name_locationinfo_list(blockinfo):
+			if do_query_sites:
+				return (blockinfo['block_name'], [(blockinfo['origin_site_name'], None, True)])
+			return (blockinfo['block_name'], None)
+		return lmap(_get_name_locationinfo_list,
+			self._query_dbsv3('blocks', dataset=dataset_path, detail=do_query_sites))
+
+	def _iter_cms_files(self, block_path, query_only_valid, query_lumi):
+		for cms_fi in self._query_dbsv3('files', block_name=block_path, detail=True):
+			if (cms_fi['is_file_valid'] == 1) or not query_only_valid:
+				fi = {DataProvider.URL: cms_fi['logical_file_name'],
+					DataProvider.NEntries: cms_fi['event_count']}
+				yield (fi, None)
+
+	def _query_dbsv3(self, api, **kwargs):
+		return self._gjrc.get(api=api, params=kwargs)

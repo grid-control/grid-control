@@ -12,11 +12,19 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
+from grid_control.backends.broker_base import Broker
+from grid_control.backends.jdl_writer import JDLWriter
+from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
-from python_compat import imap
+from grid_control.utils.activity import Activity
+from grid_control.utils.file_objects import SafeFile
+from grid_control.utils.process_base import LocalProcess
+from python_compat import identity, ifilter, imap, imap, lfilter, lmap, md5, tarfile
+
 
 class ARC_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
@@ -58,3 +66,7 @@ class ARC_CheckJobs(CheckJobsWithProcess):
 class ARC_CancelJobs(CancelJobsWithProcessBlind):
 	def __init__(self, config):
 		CancelJobsWithProcessBlind.__init__(self, config, 'arckill')
+
+
+class ARC(BasicWMS):
+	config_section_list = BasicWMS.config_section_list + ['arc']

@@ -18,7 +18,7 @@ script:
   - ./packages/gcUpdatePlugins.py
   - ./packages/gcUpdatePlugins.py
   - export WRAPPER='coverage run -a'
-  - ./setup.py install
+  - ./setup.py install > setup.log 2>&1 || cat setup.log
   - rm -rf packages
   - ls
   - export GC_CHECK_OUTPUT=true

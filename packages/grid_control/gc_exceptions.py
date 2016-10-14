@@ -15,10 +15,41 @@
 import os, sys, logging
 from hpfwk import NestedException, clear_current_exception
 
-(initial_stdout, initial_stderr, initial_excepthook) = (sys.stdout, sys.stderr, sys.excepthook)
+
+(INITIAL_STDOUT, INITIAL_STDERR, INITIAL_EXCEPTHOOK) = (sys.stdout, sys.stderr, sys.excepthook)
+
+
+class GCError(NestedException):
+	pass  # grid-control exception base class
+
+
+class InstallationError(GCError):
+	pass  # some error with installed programs
+
+
+class UserError(GCError):
+	pass  # some error caused by the user
+
+
+def gc_excepthook(*exc_info):
+	# Exception handler for interactive mode:
+	if hasattr(gc_excepthook, 'restore') and getattr(gc_excepthook, 'restore'):
+		(sys.stdout, sys.stderr, sys.excepthook) = (INITIAL_STDOUT, INITIAL_STDERR, INITIAL_EXCEPTHOOK)
+	try:
+		version = __import__('grid_control').__version__
+	except Exception:
+		version = 'unknown version'
+	log = logging.getLogger('abort')
+	if not log.handlers and not (log.propagate and logging.getLogger().handlers):
+		log.addHandler(logging.StreamHandler(sys.stderr))
+	log.handle(log.makeRecord('exception', logging.CRITICAL, __file__, None,
+		'Exception occured in grid-control [%s]\n\n' % version, tuple(), exc_info))
+sys.excepthook = gc_excepthook
+
 
 class GCLogHandler(logging.FileHandler):
-	def __init__(self, fn_candidates, mode = 'a', *args, **kwargs):
+	# This handler stores several pieces of debug information in a file
+	def __init__(self, fn_candidates, mode='a', *args, **kwargs):
 		(self._fn, self._mode) = (None, mode)
 		for fn_candidate in fn_candidates:
 			try:
@@ -46,35 +77,7 @@ class GCLogHandler(logging.FileHandler):
 				fp.write('\n' + '*' * 70 + '\n\n')
 			fp.close()
 		logging.FileHandler.emit(self, record)
-		msg = '\nIn case this is caused by a bug, please send the log file:\n\t%r\nto grid-control-dev@googlegroups.com\n' % self._fn
+		msg = ('\nIn case this is caused by a bug, please send the log file:\n\t%r\n' % self._fn +
+			'to grid-control-dev@googlegroups.com\n')
 		sys.stderr.write(msg)
 GCLogHandler.config_instances = []
-
-
-# Exception handler for interactive mode:
-def gc_excepthook(*exc_info):
-	if gc_excepthook.restore:
-		(sys.stdout, sys.stderr, sys.excepthook) = (initial_stdout, initial_stderr, initial_excepthook)
-	try:
-		version = __import__('grid_control').__version__
-	except Exception:
-		version = 'unknown version'
-	log = logging.getLogger('abort')
-	if not log.handlers and not (log.propagate and logging.getLogger().handlers):
-		log.addHandler(logging.StreamHandler(sys.stderr))
-	log.handle(log.makeRecord('exception', logging.CRITICAL, __file__, None,
-		'Exception occured in grid-control [%s]\n\n' % version, tuple(), exc_info))
-gc_excepthook.restore = True
-sys.excepthook = gc_excepthook
-
-
-class GCError(NestedException):
-	pass	# grid-control exception base class
-
-
-class UserError(GCError):
-	pass	# some error caused by the user
-
-
-class InstallationError(GCError):
-	pass	# some error with installed programs

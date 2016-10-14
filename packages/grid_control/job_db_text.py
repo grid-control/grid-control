@@ -19,31 +19,33 @@ from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
 from python_compat import irange, sorted
 
+
 class TextFileJobDB(JobDB):
-	def __init__(self, config, jobLimit = -1, jobSelector = None):
-		JobDB.__init__(self, config, jobLimit, jobSelector)
-		self._dbPath = config.getWorkPath('jobs')
-		self._fmt = utils.DictFormat(escapeString = True)
+	def __init__(self, config, job_limit=-1, job_selector=None):
+		JobDB.__init__(self, config, job_limit, job_selector)
+		self._path_db = config.get_work_path('jobs')
+		self._fmt = utils.DictFormat(escape_strings=True)
 		try:
-			self._jobMap = self._readJobs(self._jobLimit)
+			self._job_map = self._read_jobs(self._job_limit)
 		except Exception:
 			raise JobError('Unable to read stored job information!')
-		if self._jobLimit < 0 and len(self._jobMap) > 0:
-			self._jobLimit = max(self._jobMap) + 1
+		if self._job_limit < 0 and len(self._job_map) > 0:
+			self._job_limit = max(self._job_map) + 1
 
+	def commit(self, jobnum, job_obj):
+		fp = SafeFile(os.path.join(self._path_db, 'job_%d.txt' % jobnum), 'w')
+		fp.writelines(self._fmt.format(self._serialize_job_obj(job_obj)))
+		fp.close()
+		self._job_map[jobnum] = job_obj
 
-	def _serialize_job_obj(self, job_obj):
-		data = dict(job_obj.dict)
-		data['status'] = Job.enum2str(job_obj.state)
-		data['attempt'] = job_obj.attempt
-		data['submitted'] = job_obj.submitted
-		data['changed'] = job_obj.changed
-		for key, value in job_obj.history.items():
-			data['history_' + str(key)] = value
-		if job_obj.gcID is not None:
-			data['id'] = job_obj.dict.get('legacy_gcID', None) or job_obj.gcID # store legacy gcID
-		return data
+	def get_job(self, jobnum):
+		return self._job_map.get(jobnum)
 
+	def get_job_persistent(self, jobnum):
+		return self._job_map.get(jobnum, Job())
+
+	def get_job_transient(self, jobnum):
+		return self._job_map.get(jobnum, self._default_job_obj)
 
 	def _create_job_obj(self, name, data):
 		try:
@@ -51,15 +53,15 @@ class TextFileJobDB(JobDB):
 			job.state = Job.str2enum(data.pop('status'), Job.UNKNOWN)
 
 			if 'id' in data:
-				gcID = data.pop('id')
-				if not gcID.startswith('WMSID'): # Legacy support
-					data['legacy_gcID'] = gcID
-					if gcID.startswith('https'):
-						gcID = 'WMSID.GLITEWMS.%s' % gcID
+				gc_id = data.pop('id')
+				if not gc_id.startswith('WMSID'):  # Legacy support
+					data['legacy_gc_id'] = gc_id
+					if gc_id.startswith('https'):
+						gc_id = 'WMSID.GLITEWMS.%s' % gc_id
 					else:
-						wmsID, wmsName = tuple(gcID.split('.', 1))
-						gcID = 'WMSID.%s.%s' % (wmsName, wmsID)
-				job.gcID = gcID
+						wms_id, wms_name = tuple(gc_id.split('.', 1))
+						gc_id = 'WMSID.%s.%s' % (wms_name, wms_id)
+				job.gc_id = gc_id
 
 			for key in ['attempt', 'submitted', 'changed']:
 				if key in data:
@@ -77,7 +79,6 @@ class TextFileJobDB(JobDB):
 			raise JobError('Unable to parse data in %s:\n%r' % (name, data))
 		return job
 
-
 	def _load_job(self, name):
 		try:
 			data = self._fmt.parse(open(name))
@@ -85,49 +86,41 @@ class TextFileJobDB(JobDB):
 			raise JobError('Invalid format in %s' % name)
 		return self._create_job_obj(name, data)
 
-
-	def _readJobs(self, jobLimit):
-		utils.ensureDirExists(self._dbPath, 'job database directory', JobError)
+	def _read_jobs(self, job_limit):
+		utils.ensure_dir_exists(self._path_db, 'job database directory', JobError)
 
 		candidates = []
-		for jobFile in fnmatch.filter(os.listdir(self._dbPath), 'job_*.txt'):
-			try: # 2xsplit is faster than regex
-				jobNum = int(jobFile.split(".")[0].split("_")[1])
+		for job_fn in fnmatch.filter(os.listdir(self._path_db), 'job_*.txt'):
+			try:  # 2xsplit is faster than regex
+				jobnum = int(job_fn.split(".")[0].split("_")[1])
 			except Exception:
 				continue
-			candidates.append((jobNum, jobFile))
+			candidates.append((jobnum, job_fn))
 
-		(jobMap, maxJobs) = ({}, len(candidates))
+		(job_map, max_job_len) = ({}, len(candidates))
 		activity = Activity('Reading job infos')
 		idx = 0
-		for (jobNum, jobFile) in sorted(candidates):
+		for (jobnum, job_fn) in sorted(candidates):
 			idx += 1
-			if (jobLimit >= 0) and (jobNum >= jobLimit):
-				self._log.info('Stopped reading job infos at job #%d out of %d available job files, since the limit of %d jobs is reached',
-					jobNum, len(candidates), jobLimit)
+			if (job_limit >= 0) and (jobnum >= job_limit):
+				self._log.info('Stopped reading job infos at job #%d out of %d available job files, ' +
+					'since the limit of %d jobs is reached', jobnum, len(candidates), job_limit)
 				break
-			jobObj = self._load_job(os.path.join(self._dbPath, jobFile))
-			jobMap[jobNum] = jobObj
+			job_obj = self._load_job(os.path.join(self._path_db, job_fn))
+			job_map[jobnum] = job_obj
 			if idx % 100 == 0:
-				activity.update('Reading job infos %d [%d%%]' % (idx, (100.0 * idx) / maxJobs))
+				activity.update('Reading job infos %d [%d%%]' % (idx, (100.0 * idx) / max_job_len))
 		activity.finish()
-		return jobMap
+		return job_map
 
-
-	def getJob(self, jobNum):
-		return self._jobMap.get(jobNum)
-
-
-	def getJobTransient(self, jobNum):
-		return self._jobMap.get(jobNum, self._defaultJob)
-
-
-	def getJobPersistent(self, jobNum):
-		return self._jobMap.get(jobNum, Job())
-
-
-	def commit(self, jobNum, jobObj):
-		fp = SafeFile(os.path.join(self._dbPath, 'job_%d.txt' % jobNum), 'w')
-		fp.writelines(self._fmt.format(self._serialize_job_obj(jobObj)))
-		fp.close()
-		self._jobMap[jobNum] = jobObj
+	def _serialize_job_obj(self, job_obj):
+		data = dict(job_obj.dict)
+		data['status'] = Job.enum2str(job_obj.state)
+		data['attempt'] = job_obj.attempt
+		data['submitted'] = job_obj.submitted
+		data['changed'] = job_obj.changed
+		for key, value in job_obj.history.items():
+			data['history_' + str(key)] = value
+		if job_obj.gc_id is not None:
+			data['id'] = job_obj.dict.get('legacy_gc_id', None) or job_obj.gc_id  # store legacy gc_id
+		return data

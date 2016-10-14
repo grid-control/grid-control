@@ -18,6 +18,7 @@ from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.job_db import Job
 from python_compat import imap
 
+
 class Condor_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		CheckJobsWithProcess.__init__(self, config,
@@ -53,17 +54,17 @@ class Condor_CheckJobs(CheckJobsWithProcess):
 				job_info[key] = value
 		yield job_info
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		if proc.status(timeout = 0) and ('Failed to fetch ads' in proc.stderr.read_log()):
 			self._status = CheckStatus.ERROR
-		CheckJobsWithProcess._handleError(self, proc)
+		CheckJobsWithProcess._handle_error(self, proc)
 
 
 class Condor_CancelJobs(CancelJobsWithProcess):
 	def __init__(self, config):
 		CancelJobsWithProcess.__init__(self, config, ProcessCreatorAppendArguments(config, 'condor_rm'))
 
-	def _parse(self, wmsIDs, proc): # yield list of wmsIDs
+	def _parse(self, wms_id_list, proc): # yield list of wms_id_list
 		for line in proc.stdout.iter(self._timeout):
 			if 'marked for removal' in line:
 				yield (line.split()[1],)

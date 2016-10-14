@@ -14,18 +14,27 @@
 
 import os, gzip, logging
 from grid_control.utils import DictFormat
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException, Plugin, get_current_exception
 from python_compat import bytes2str, ifilter, izip
+
+
+JobResult = make_enum(['JOBNUM', 'EXITCODE', 'RAW'])  # pylint:disable=invalid-name
+
+
+class JobResultError(NestedException):
+	pass
+
 
 class OutputProcessor(Plugin):
 	def process(self, dn):
 		raise AbstractError
 
-class JobResultError(NestedException):
-	pass
 
-JobResult = makeEnum(['JOBNUM', 'EXITCODE', 'RAW'])
+class TaskOutputProcessor(Plugin):
+	def process(self, dn, task):
+		raise AbstractError
+
 
 class JobInfoProcessor(OutputProcessor):
 	def __init__(self):
@@ -43,15 +52,20 @@ class JobInfoProcessor(OutputProcessor):
 				raise JobResultError('Unable to read job result file %r' % fn)
 			if not info_content:
 				raise JobResultError('Job result file %r is empty' % fn)
-			data = self._df.parse(info_content, keyParser = {None: str}) # impossible to fail
+			data = self._df.parse(info_content, key_parser={None: str})  # impossible to fail
 			try:
-				jobNum = data.pop('JOBID')
-				exitCode = data.pop('EXITCODE')
-				return {JobResult.JOBNUM: jobNum, JobResult.EXITCODE: exitCode, JobResult.RAW: data}
+				jobnum = data.pop('JOBID')
+				exit_code = data.pop('EXITCODE')
+				return {JobResult.JOBNUM: jobnum, JobResult.EXITCODE: exit_code, JobResult.RAW: data}
 			except Exception:
 				raise JobResultError('Job result file %r is incomplete' % fn)
 		except Exception:
 			raise JobResultError('Unable to process output directory %r' % dn)
+
+
+class SandboxProcessor(TaskOutputProcessor):
+	def process(self, dn, task):
+		return True
 
 
 class DebugJobInfoProcessor(JobInfoProcessor):
@@ -86,34 +100,30 @@ class DebugJobInfoProcessor(JobInfoProcessor):
 
 class FileInfoProcessor(JobInfoProcessor):
 	def process(self, dn):
-		jobInfo = None
+		job_info_dict = None
 		try:
-			jobInfo = JobInfoProcessor.process(self, dn)
+			job_info_dict = JobInfoProcessor.process(self, dn)
 		except JobResultError:
-			logging.getLogger('jobs.results').warning('Unable to process job information', exc_info = get_current_exception())
-		if jobInfo:
-			jobData = jobInfo[JobResult.RAW]
+			logger = logging.getLogger('jobs.results')
+			logger.warning('Unable to process job information', exc_info=get_current_exception())
+		if job_info_dict:
+			job_data_dict = job_info_dict[JobResult.RAW]
 			result = {}
+
+			def get_items_with_key(key_prefix):
+				return ifilter(lambda key_value: key_value[0].startswith(key_prefix), job_data_dict.items())
+
 			# parse old job info data format for files
-			oldFileFormat = [FileInfoProcessor.Hash, FileInfoProcessor.NameLocal, FileInfoProcessor.NameDest, FileInfoProcessor.Path]
-			for (fileKey, fileData) in ifilter(lambda key_value: key_value[0].startswith('FILE'), jobData.items()):
-				fileIdx = fileKey.replace('FILE', '').rjust(1, '0')
-				result[int(fileIdx)] = dict(izip(oldFileFormat, fileData.strip('"').split('  ')))
+			old_fmt_header = [FileInfoProcessor.Hash, FileInfoProcessor.NameLocal,
+				FileInfoProcessor.NameDest, FileInfoProcessor.Path]
+			for (file_key, file_data) in get_items_with_key('FILE'):
+				file_idx = file_key.replace('FILE', '').rjust(1, '0')
+				result[int(file_idx)] = dict(izip(old_fmt_header, file_data.strip('"').split('  ')))
 			# parse new job info data format
-			for (fileKey, fileData) in ifilter(lambda key_value: key_value[0].startswith('OUTPUT_FILE'), jobData.items()):
-				(fileIdx, fileProperty) = fileKey.replace('OUTPUT_FILE_', '').split('_')
-				if isinstance(fileData, str):
-					fileData = fileData.strip('"')
-				result.setdefault(int(fileIdx), {})[FileInfoProcessor.str2enum(fileProperty)] = fileData
+			for (file_key, file_data) in get_items_with_key('OUTPUT_FILE'):
+				(file_idx, file_prop) = file_key.replace('OUTPUT_FILE_', '').split('_')
+				if isinstance(file_data, str):
+					file_data = file_data.strip('"')
+				result.setdefault(int(file_idx), {})[FileInfoProcessor.str2enum(file_prop)] = file_data
 			return list(result.values())
-makeEnum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)
-
-
-class TaskOutputProcessor(Plugin):
-	def process(self, dn, task):
-		raise AbstractError
-
-
-class SandboxProcessor(TaskOutputProcessor):
-	def process(self, dn, task):
-		return True
+make_enum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)

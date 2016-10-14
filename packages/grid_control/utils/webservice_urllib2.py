@@ -17,8 +17,9 @@ from grid_control.utils.webservice import RestSession
 from hpfwk import clear_current_exception
 from python_compat import bytes2str, str2bytes
 
+
 try:
-	import ssl # fix ca verification error in Python 2.7.9
+	import ssl  # fix ca verification error in Python 2.7.9
 	if hasattr(ssl, '_create_unverified_context'):
 		setattr(ssl, '_create_default_https_context', getattr(ssl, '_create_unverified_context'))
 except Exception:
@@ -38,23 +39,24 @@ except Exception:
 
 
 class Urllib2Session(RestSession):
-	alias = ['urllib2']
+	alias_list = ['urllib2']
 
-	def request(self, mode, url, headers, params = None, data = None, cert = None):
+	def request(self, mode, url, headers, params=None, data=None, cert=None):
 		request_fun = {RestSession.GET: lambda: 'GET', RestSession.PUT: lambda: 'PUT',
 			RestSession.POST: lambda: 'POST', RestSession.DELETE: lambda: 'DELETE'}[mode]
 		if params:
 			url += '?%s' % urlencode(params)
 		if data:
 			data = str2bytes(data)
-		request = Request(url = url, data = data, headers = headers)
+		request = Request(url=url, data=data, headers=headers)
 		request.get_method = request_fun
 		if cert:
 			class HTTPSClientAuthHandler(HTTPSHandler):
 				def https_open(self, req):
 					return self.do_open(self.getConnection, req)
-				def getConnection(self, host, timeout = None):
-					return HTTPSConnection(host, key_file = cert, cert_file = cert)
+
+				def getConnection(self, host, timeout=None):  # pylint:disable=invalid-name
+					return HTTPSConnection(host, key_file=cert, cert_file=cert)
 			opener = build_opener(HTTPSClientAuthHandler())
 		else:
 			opener = build_opener()

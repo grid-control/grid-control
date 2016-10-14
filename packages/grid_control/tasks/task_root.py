@@ -14,45 +14,44 @@
 
 import os, logging
 from grid_control import utils
-from grid_control.config import ConfigError, changeInitNeeded
+from grid_control.config import ConfigError, TriggerInit
 from grid_control.tasks.task_user import UserTask
 
+
 class ROOTTask(UserTask):
-	alias = ['ROOTMod', 'root']
-	configSections = UserTask.configSections + ['ROOTMod', 'ROOTTask']
+	alias_list = ['ROOTMod', 'root']
+	config_section_list = UserTask.config_section_list + ['ROOTMod', 'ROOTTask']
 
 	def __init__(self, config, name):
 		# Determine ROOT path from previous settings / environment / config file
-		self._rootpath = config.get('root path', os.environ.get('ROOTSYS', ''), persistent = True, onChange = changeInitNeeded('sandbox'))
+		self._rootpath = config.get('root path', os.environ.get('ROOTSYS', ''),
+			persistent=True, on_change=TriggerInit('sandbox'))
 		if not self._rootpath:
 			raise ConfigError('Either set environment variable "ROOTSYS" or set option "root path"!')
 		logging.getLogger('task').info('Using the following ROOT path: %s', self._rootpath)
 
 		# Special handling for executables bundled with ROOT
-		self._executable = config.get('executable', onChange = changeInitNeeded('sandbox'))
-		exeFull = os.path.join(self._rootpath, 'bin', self._executable.lstrip('/'))
-		self.builtIn = os.path.exists(exeFull)
-		if self.builtIn:
+		self._executable = config.get('executable', on_change=TriggerInit('sandbox'))
+		exe_full = os.path.join(self._rootpath, 'bin', self._executable.lstrip('/'))
+		self._is_builtin = os.path.exists(exe_full)
+		if self._is_builtin:
 			config.set('send executable', 'False')
 			# store resolved built-in executable path?
 
 		# Apply default handling from UserTask
 		UserTask.__init__(self, config, name)
-		self.updateErrorDict(utils.pathShare('gc-run.root.sh'))
+		self._update_map_error_code2message(utils.get_path_share('gc-run.root.sh'))
 
 		# Collect lib files needed by executable
-		self.libFiles = []
+		self._lib_fn_list = []
 
-
-	def getTaskConfig(self):
-		return utils.mergeDicts([UserTask.getTaskConfig(self), {'GC_ROOTSYS': self._rootpath}])
-
-
-	def getCommand(self):
+	def get_command(self):
 		cmd = './gc-run.root.sh %s $@ > job.stdout 2> job.stderr' % self._executable
-		return utils.QM(self.builtIn, '', 'chmod u+x %s; ' % self._executable) + cmd
+		return utils.QM(self._is_builtin, '', 'chmod u+x %s; ' % self._executable) + cmd
 
+	def get_sb_in_fpi_list(self):
+		return UserTask.get_sb_in_fpi_list(self) + self._lib_fn_list + [
+			utils.Result(path_abs=utils.get_path_share('gc-run.root.sh'), path_rel='gc-run.root.sh')]
 
-	def getSBInFiles(self):
-		return UserTask.getSBInFiles(self) + self.libFiles + [
-			utils.Result(pathAbs = utils.pathShare('gc-run.root.sh'), pathRel = 'gc-run.root.sh')]
+	def get_task_dict(self):
+		return utils.merge_dict_list([UserTask.get_task_dict(self), {'GC_ROOTSYS': self._rootpath}])

@@ -16,9 +16,10 @@ import os, math, stat, time, signal, logging
 from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError
 from grid_control.config import ConfigError
-from grid_control.utils import ensureDirExists, resolveInstallPath
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils import ensure_dir_exists, resolve_install_path
+from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException, Plugin
+
 
 class CondorProcessError(BackendError):
 	def __init__(self, msg, proc):
@@ -125,8 +126,8 @@ class SSHProcessHandler(ProcessHandler):
 			testProcess.getError()
 			raise CondorProcessError('Failed to validate remote connection.', testProcess)
 	def __initcommands(self, **kwargs):
-		self.cmd = resolveInstallPath("ssh")
-		self.cpy = resolveInstallPath("scp") + " -r"
+		self.cmd = resolve_install_path("ssh")
+		self.cpy = resolve_install_path("scp") + " -r"
 
 	# return instance of LoggedExecute with input properly wrapped
 	def LoggedExecute(self, cmd, args = '', **kwargs):
@@ -204,7 +205,7 @@ class SSHProcessHandler(ProcessHandler):
 	#	@directory:	secure only directory (for initializing)
 	def _secureLinkDirectory(self, sshLink, enforce = True):
 		try:
-			sshLinkDir = ensureDirExists(os.path.dirname(sshLink), 'SSH link direcory', BackendError)
+			sshLinkDir = ensure_dir_exists(os.path.dirname(sshLink), 'SSH link direcory', BackendError)
 		except Exception:
 			if not self.socketEnforce:
 				return False
@@ -261,13 +262,13 @@ class SSHProcessHandler(ProcessHandler):
 class GSISSHProcessHandler(SSHProcessHandler):
 	# commands to use - overwritten by inheriting class
 	def __initcommands(self, **kwargs):
-		resolveInstallPath('gsissh')
-		resolveInstallPath('gsiscp')
+		resolve_install_path('gsissh')
+		resolve_install_path('gsiscp')
 
 # Helper class handling commands through remote interfaces
 class RemoteProcessHandler(object):
 	# enum for connection type - LOCAL exists to ensure uniform interfacing with local programms if needed
-	RPHType = makeEnum(['LOCAL', 'SSH', 'GSISSH'])
+	RPHType = make_enum(['LOCAL', 'SSH', 'GSISSH'])
 
 	# helper functions - properly prepare argument string for passing via interface
 	def _argFormatSSH(self, args):

@@ -22,17 +22,18 @@ from grid_control.job_db import Job
 from hpfwk import ExceptionCollector, clear_current_exception
 from python_compat import imap, lmap, lzip
 
+
 class GliteWMSDirect_CheckJobs(CheckJobs):
 	def __init__(self, config, status_fun):
 		CheckJobs.__init__(self, config)
 		self._status_fun = status_fun
 		self._status_map = GridStatusMap
 
-	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
+	def execute(self, wms_id_list): # yields list of (wms_id, job_status, job_info)
 		ec = ExceptionCollector()
-		for wmsID in wmsIDs:
+		for wms_id in wms_id_list:
 			try:
-				job_info = utils.filterDict(dict(self._status_fun(wmsID)), vF = lambda v: v not in ['', '0'])
+				job_info = utils.filter_dict(dict(self._status_fun(wms_id)), value_filter = lambda v: v not in ['', '0'])
 				job_info[CheckInfo.RAW_STATUS] = job_info.pop('status', '').lower()
 				if 'destination' in job_info:
 					try:
@@ -41,7 +42,7 @@ class GliteWMSDirect_CheckJobs(CheckJobs):
 						job_info[CheckInfo.QUEUE] = dest_info[1].strip()
 					except Exception:
 						clear_current_exception()
-				yield (wmsID, self._status_map.get(job_info[CheckInfo.RAW_STATUS], Job.UNKNOWN), job_info)
+				yield (wms_id, self._status_map.get(job_info[CheckInfo.RAW_STATUS], Job.UNKNOWN), job_info)
 			except Exception:
 				ec.collect()
 				if utils.abort():
@@ -59,11 +60,11 @@ class GliteWMSDirect(GliteWMS):
 		try: # gLite 3.2
 			import wmsui_api
 			glStates = wmsui_api.states_names
-			def getStatusDirect(wmsID):
+			def getStatusDirect(wms_id):
 				try: # new parameter json
-					jobStatus = wmsui_api.getStatus(wmsui_api.getJobIdfromList(None, [wmsID])[0], 0)
+					jobStatus = wmsui_api.getStatus(wmsui_api.getJobIdfromList(None, [wms_id])[0], 0)
 				except Exception:
-					jobStatus = wmsui_api.getStatus(wmsui_api.getJobIdfromList([wmsID])[0], 0)
+					jobStatus = wmsui_api.getStatus(wmsui_api.getJobIdfromList([wms_id])[0], 0)
 				return lmap(lambda name: (name.lower(), jobStatus.getAttribute(glStates.index(name))), glStates)
 		except Exception: # gLite 3.1
 			try:
@@ -71,8 +72,8 @@ class GliteWMSDirect(GliteWMS):
 				import Job
 				wrStatus = Status()
 				jobStatus = Job.JobStatus(wrStatus)
-				def getStatusDirect(wmsID):
-					wrStatus.getStatus(wmsID, 0)
+				def getStatusDirect(wms_id):
+					wrStatus.getStatus(wms_id, 0)
 					err, apiMsg = wrStatus.get_error()
 					if err:
 						raise BackendError(apiMsg)
@@ -82,7 +83,7 @@ class GliteWMSDirect(GliteWMS):
 				getStatusDirect = None
 		sys.path = stored_sys_path
 
-		checkExecutor = None
+		check_executor = None
 		if getStatusDirect:
-			checkExecutor = GliteWMSDirect_CheckJobs(config, getStatusDirect)
-		GliteWMS.__init__(self, config, name, checkExecutor = checkExecutor)
+			check_executor = GliteWMSDirect_CheckJobs(config, getStatusDirect)
+		GliteWMS.__init__(self, config, name, check_executor = check_executor)

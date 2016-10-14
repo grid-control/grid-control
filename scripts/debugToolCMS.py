@@ -17,19 +17,20 @@ from gcSupport import Options, Plugin, getConfig, scriptOptions
 from grid_control.utils.webservice import JSONRestClient
 from grid_control_cms.sitedb import SiteDB
 
+
 def lfn2pfn(node, lfn, prot = 'srmv2'):
 	return JSONRestClient().get(url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
 		params = {'node': node, 'protocol': prot, 'lfn': lfn})['phedex']['mapping']
 
 parser = Options()
-parser.addText(None, 's', 'se',      default = None,    help = 'Resolve LFN on CMS SE into PFN')
-parser.addText(None, ' ', 'se-prot', default = 'srmv2', help = 'Name of default SE protocol')
-parser.addText(None, ' ', 'lfn',     default = '/store/user/<hypernews name>', help = 'Name of default LFN')
+parser.add_text(None, 's', 'se',      default = None,    help = 'Resolve LFN on CMS SE into PFN')
+parser.add_text(None, ' ', 'se-prot', default = 'srmv2', help = 'Name of default SE protocol')
+parser.add_text(None, ' ', 'lfn',     default = '/store/user/<hypernews name>', help = 'Name of default LFN')
 options = scriptOptions(parser)
 
 if options.opts.se:
 	if '<hypernews name>' in options.opts.lfn:
-		token = Plugin.getClass('AccessToken').createInstance('VomsProxy', getConfig(), 'token')
+		token = Plugin.get_class('AccessToken').create_instance('VomsProxy', getConfig(), 'token')
 		site_db = SiteDB()
 		hnName = site_db.dn_to_username(dn=token.getFQUsername())
 		if not hnName:

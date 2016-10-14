@@ -25,6 +25,7 @@ from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
 from python_compat import json, lchain, lfilter
 
+
 """
 HTCondor backend core
  This module provides the backend for HTCondor pools of version 8+.
@@ -35,7 +36,7 @@ handles interaction with all other components.
 Conventions:
   o Job Identification/accounting
 Internal components uniquely identify jobs via blobs of
-  jobData = (int(jobNum), str(taskID), int(clusterID), int(processID))
+  jobData = (int(jobnum), str(task_id), int(clusterID), int(processID))
 while job activities are directed via job data maps of
   {ScheddURI : [jobData,jobData,jobData,...] }
 
@@ -52,7 +53,7 @@ a link copy. For convention with other backends, these correspond to:
 """
 
 class HTCondor(BasicWMS):
-	configSections = BasicWMS.configSections + ['htcondor']
+	config_section_list = BasicWMS.config_section_list + ['htcondor']
 	"""
 	Backend for HTCondor 8+
 	"""
@@ -69,8 +70,8 @@ class HTCondor(BasicWMS):
 	_queueQueryMapDef = {
 			'clusterId' : [ 'ClusterId'] ,
 			'processId' : [ 'ProcId' ],
-			'jobNum'    : [ 'GcJobNum' ],
-			'wmsID'     : [ 'GcID' ],
+			'jobnum'    : [ 'GcJobNum' ],
+			'wms_id'     : [ 'GcID' ],
 			'rawID'     : [ 'rawID' ],
 			'state'     : [ 'JobStatus' ],
 			'hold'      : [ 'HoldReasonCode' ],
@@ -88,12 +89,12 @@ class HTCondor(BasicWMS):
 		self._initLogger()
 		BasicWMS.__init__(self, config, name)
 		# setup the connection to pools and their interfaces
-		self._sandboxDir  = config.getPath('sandbox path', config.getWorkPath('sandbox.%s' % name), mustExist = False)
+		self._sandboxDir  = config.get_path('sandbox path', config.get_work_path('sandbox.%s' % name), must_exist = False)
 		self._initPoolInterfaces(config)
 		self._jobSettings = {
 			"Universe" : config.get("universe", "vanilla"),
-			"ClassAd" : config.getList("append info", []),
-			"JDL" : config.getList("append opts", []),
+			"ClassAd" : config.get_list("append info", []),
+			"JDL" : config.get_list("append opts", []),
 			}
 
 	def _initLogger(cls):
@@ -106,7 +107,7 @@ class HTCondor(BasicWMS):
 		Establish adapters and connection details for pool and schedd
 		"""
 		poolConfig = {}
-		for poolConfigFileName in config.getList('poolConfig', [], onChange = None):
+		for poolConfigFileName in config.get_list('poolConfig', [], on_change = None):
 			try:
 				self._log(logging.DEBUG1,"Reading pool config '%s'"%poolConfigFileName)
 				confFile = open(poolConfigFileName, 'r')
@@ -117,7 +118,7 @@ class HTCondor(BasicWMS):
 		self._jobFeatureMap = poolConfig.get('jobFeatureMap',{})
 		self._queueQueryMap = poolConfig.get('queueQueryMap',{})
 		self._niceName      = poolConfig.get('NiceName', '<POOLNAME>')
-		cfgScheddURI = config.get('ScheddURI','', onChange = changeOnlyUnset)
+		cfgScheddURI = config.get('ScheddURI','', on_change = changeOnlyUnset)
 		if cfgScheddURI:
 			self._schedd = HTCScheddFactory(cfgScheddURI, parentPool=self)
 		else:
@@ -147,38 +148,38 @@ class HTCondor(BasicWMS):
 		raise ConfigError('Unable to guess valid HTCondor Schedd.')
 
 	# Information interfaces
-	def getTimings(self):
-		return self._schedd.getTimings()
+	def get_interval_info(self):
+		return self._schedd.get_interval_info()
 
 	# path functions shared with schedds
-	def getJobCfgPath(self, jobNum = "%d"):
-		cfgName = 'job_%s.var' % jobNum
-		return os.path.join(self.config.getWorkPath('jobs'), cfgName), cfgName
+	def getJobCfgPath(self, jobnum = "%d"):
+		cfgName = 'job_%s.var' % jobnum
+		return os.path.join(self.config.get_work_path('jobs'), cfgName), cfgName
 
 	def getSandboxPath(self, subdirToken=""):
 		sandpath = os.path.join(self._sandboxDir, str(subdirToken), '' )
-		return utils.ensureDirExists(sandpath, 'sandbox directory', BackendError)
+		return utils.ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
 
 	# Primary backend actions
-	def submitJobs(self, jobNumList, task):
-		requestLen = len(jobNumList)
+	def submit_jobs(self, jobnumList, task):
+		requestLen = len(jobnumList)
 		activity = Activity('Submitting jobs (--%)')
-		while jobNumList:
-			jobSubmitNumList = jobNumList[-self._schedd.getSubmitScale():]
-			del jobNumList[-self._schedd.getSubmitScale():]
-			activity = Activity('Submitting jobs (%2d%%)'%(100*(requestLen-len(jobNumList))/requestLen))
-			for jobNum in jobSubmitNumList:
-				self._writeJobConfig(
-					self.getJobCfgPath(jobNum)[0],
-					jobNum,
+		while jobnumList:
+			jobSubmitNumList = jobnumList[-self._schedd.getSubmitScale():]
+			del jobnumList[-self._schedd.getSubmitScale():]
+			activity = Activity('Submitting jobs (%2d%%)'%(100*(requestLen-len(jobnumList))/requestLen))
+			for jobnum in jobSubmitNumList:
+				self._write_job_config(
+					self.getJobCfgPath(jobnum)[0],
+					jobnum,
 					task, {}
 					)
-			rawJobInfoMaps = self._schedd.submitJobs(
+			rawJobInfoMaps = self._schedd.submit_jobs(
 				jobSubmitNumList, 
 				task,
 				self._getQueryArgs()
 				)
-			# Yield (jobNum, gcID, other data) per jobZ
+			# Yield (jobnum, gc_id, other data) per jobZ
 			jobInfoMaps = self._digestQueueInfoMaps(rawJobInfoMaps)
 			for htcID in jobInfoMaps:
 				yield (
@@ -188,16 +189,16 @@ class HTCondor(BasicWMS):
 					)
 		activity.finish()
 
-	def checkJobs(self, wmsJobIdList):
+	def check_jobs(self, wmsJobIdList):
 		if not len(wmsJobIdList):
 			raise StopIteration
 		activity   = Activity('Checking jobs')
 		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
-		rawJobInfoMaps = self._schedd.checkJobs(
+		rawJobInfoMaps = self._schedd.check_jobs(
 			self._splitGcRequests(wmsJobIdList),
 			self._getQueryArgs()
 			)
-		# Yield (jobNum, gcID, state, other data) per active jobs
+		# Yield (jobnum, gc_id, state, other data) per active jobs
 		jobInfoMaps = self._digestQueueInfoMaps(rawJobInfoMaps)
 		for htcID in jobInfoMaps:
 			yield (
@@ -208,7 +209,7 @@ class HTCondor(BasicWMS):
 				)
 		activity.finish()
 
-	def _getJobsOutput(self, wmsJobIdList):
+	def _get_jobs_output(self, wmsJobIdList):
 		if not len(wmsJobIdList):
 			raise StopIteration
 		activity   = Activity('Fetching jobs')
@@ -216,7 +217,7 @@ class HTCondor(BasicWMS):
 		returnedJobs = self._schedd.getJobsOutput(
 			self._splitGcRequests(wmsJobIdList)
 			)
-		# Yield (jobNum, outputPath) per retrieved job
+		# Yield (jobnum, path_output) per retrieved job
 		for htcID in returnedJobs:
 			yield (
 				htcID.gcJobNum,
@@ -224,15 +225,15 @@ class HTCondor(BasicWMS):
 				)
 		activity.finish()
 	
-	def cancelJobs(self, wmsJobIdList):
+	def cancel_jobs(self, wmsJobIdList):
 		if not len(wmsJobIdList):
 			raise StopIteration
 		activity   = Activity('Canceling jobs')
 		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(wmsJobIdList)), self._schedd.getURI())
-		canceledJobs = self._schedd.cancelJobs(
+		canceledJobs = self._schedd.cancel_jobs(
 			self._splitGcRequests(wmsJobIdList)
 			)
-		# Yield ( jobNum, wmsID) for canceled jobs
+		# Yield ( jobnum, wms_id) for canceled jobs
 		for htcJobID in canceledJobs:
 			yield (
 				htcJobID.gcJobNum,
@@ -243,20 +244,20 @@ class HTCondor(BasicWMS):
 	# GC/WMS/Job ID converters
 	def _createGcId(self, htcID):
 		"""Create a GcId for a given htcID"""
-		return self._createId(htcID.rawID)
+		return self._create_gc_id(htcID.rawID)
 	def _splitGcId(self, gcId):
-		"""Split a GcId, returning wmsName and htcJobID"""
-		wmsName, rawId = self._splitId(gcId)
-		return (wmsName, HTCJobID(rawID = rawId))
-	def _splitGcRequests(self, jobNumGcIdList):
-		"""Process sequence of (GcId, jobNum), returning sequence of htcIDs"""
-		return [ self._splitGcId(gcId)[1] for gcId, jobNum in jobNumGcIdList ]
-	def _getJobDataMap(self, jobNumGcIdList):
-		"""Process list of (jobNum, GcId), returning {ScheddURI : [(jobNum, taskID, clusterID, processID),...] }"""
+		"""Split a GcId, returning wms_name and htcJobID"""
+		wms_name, rawId = self._split_gc_id(gcId)
+		return (wms_name, HTCJobID(rawID = rawId))
+	def _splitGcRequests(self, jobnumGcIdList):
+		"""Process sequence of (GcId, jobnum), returning sequence of htcIDs"""
+		return [ self._splitGcId(gcId)[1] for gcId, jobnum in jobnumGcIdList ]
+	def _getJobDataMap(self, jobnumGcIdList):
+		"""Process list of (jobnum, GcId), returning {ScheddURI : [(jobnum, task_id, clusterID, processID),...] }"""
 		scheddJobMap = {}
-		for jobNum, GcId in jobNumGcIdList:
-			_, scheddURI, taskID, clusterID, processID = _splitGcId(GcId)
-			scheddJobMap.setdefault(scheddURI, []).append(tuple(jobNum, taskID, clusterID, processID))
+		for jobnum, GcId in jobnumGcIdList:
+			_, scheddURI, task_id, clusterID, processID = _splitGcId(GcId)
+			scheddJobMap.setdefault(scheddURI, []).append(tuple(jobnum, task_id, clusterID, processID))
 		return scheddJobMap
 
 	# Queue queries and status processing

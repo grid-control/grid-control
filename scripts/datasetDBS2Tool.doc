@@ -15,8 +15,8 @@
 import os, sys, optparse
 from gcSupport import getConfig
 
-#from grid_control.utils import printTabular, wrapList
-#from grid_control_cms.lumi_tools import formatLumi, mergeLumi
+#from grid_control.utils import display_table, wrap_list
+#from grid_control_cms.lumi_tools import format_lumi, merge_lumi_list
 
 #from grid_control_cms.provider_dbsv2 import DataProvider, createDBSAPI
 from python_compat import imap, set
@@ -41,10 +41,10 @@ parser.add_option('-p', '--parents', dest='parents')
 (opts, args) = parser.parse_args()
 
 if opts.lumiranges:
-	dummyConfig = getConfig(configDict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False,
+	dummyConfig = getConfig(config_dict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False,
 		'remove empty blocks': False, 'remove empty files': False}})
 	provider = DataProvider.create(dummyConfig, 'dummy', opts.lumiranges, 'DBSApiv2')
-	blocks = provider.getBlocks(show_stats = False)
+	blocks = provider.get_block_list_cached(show_stats = False)
 	lrInfo = {}
 	for block in blocks[:-1]:
 		ds = block[DataProvider.Dataset]
@@ -54,7 +54,7 @@ if opts.lumiranges:
 			lrInfo[ds] = (f(min, 0), f(max, 1))
 #	mkDict = lambda (ds, min_max): {0: ds, 1: min_max[0], 2: min_max[1]}
 #	print
-#	printTabular([(0, 'Dataset'), (1, 'MinRun'), (2, 'MaxRun')], xlmap(mkDict, lrInfo.items()))
+#	display_table([(0, 'Dataset'), (1, 'MinRun'), (2, 'MaxRun')], xlmap(mkDict, lrInfo.items()))
 	sys.exit(os.EX_OK)
 
 #api = createDBSAPI(opts.url)
@@ -67,29 +67,29 @@ if opts.remove:
 	if '#' in opts.remove:
 		eraseBlock(opts.remove)
 	else:
-		for block in api.listBlocks(opts.remove.split('#')[0]):
+		for block in api.get_dbs_block_list(opts.remove.split('#')[0]):
 			eraseBlock(block['Name'])
 		api.deleteProcDS(opts.remove.split('#')[0])
 
 elif opts.listlumis:
 	allrl = []
-	for fileInfo in api.listFiles(opts.listlumis, retriveList=['retrive_lumi']):
+	for fileInfo in api.get_dbs_file_list(opts.listlumis, retriveList=['retrive_lumi']):
 		lfn = fileInfo['LogicalFileName']
 		rl = []
 		for lumi in fileInfo['LumiList']:
 			rl.append(([int(lumi['RunNumber']), int(lumi['LumiSectionNumber'])], [int(lumi['RunNumber']), int(lumi['LumiSectionNumber'])]))
 #		print lfn
-#		print wrapList(formatLumi(mergeLumi(rl)), 70, ',\n\t')
+#		print wrap_list(format_lumi(merge_lumi_list(rl)), 70, ',\n\t')
 		allrl.extend(rl)
 #	print '\nComplete dataset:'
-#	print wrapList(formatLumi(mergeLumi(allrl)), 70, ',\n\t')
+#	print wrap_list(format_lumi(merge_lumi_list(allrl)), 70, ',\n\t')
 
 #elif opts.list:
-#	for block in api.listBlocks(opts.list):
+#	for block in api.get_dbs_block_list(opts.list):
 #		print block['Name']
 
 #elif opts.files:
-#	for f in api.listFiles(opts.files, retriveList=['retrive_block', 'retrive_run', 'retrive_lumi']):
+#	for f in api.get_dbs_file_list(opts.files, retriveList=['retrive_block', 'retrive_run', 'retrive_lumi']):
 #		print f
 #		print
 
@@ -110,7 +110,7 @@ elif opts.parents:
 
 elif opts.se:
 	selist = []
-	for block in api.listBlocks(opts.se):
+	for block in api.get_dbs_block_list(opts.se):
 		selist.extend(imap(lambda x: x['Name'], block['StorageElementList']))
 #	print str.join(',', set(selist))
 

@@ -13,52 +13,53 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.config import appendOption
+from grid_control.config import join_config_locations
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError, NestedException
 from python_compat import any, identity, ifilter, imap, irange, lmap
+
 
 class BackendError(NestedException):
 	pass
 
 
 class ProcessCreator(ConfigurablePlugin):
-	def create_proc(self, wmsIDs):
+	def create_proc(self, wms_id_list):
 		raise AbstractError
 
 
 class ProcessCreatorViaArguments(ProcessCreator):
-	def create_proc(self, wmsIDs):
-		return LocalProcess(*self._arguments(wmsIDs))
+	def create_proc(self, wms_id_list):
+		return LocalProcess(*self._arguments(wms_id_list))
 
-	def _arguments(self, wmsIDs):
+	def _arguments(self, wms_id_list):
 		raise AbstractError
 
 
 class ProcessCreatorAppendArguments(ProcessCreatorViaArguments):
 	def __init__(self, config, cmd, args = None, fmt = identity):
 		ProcessCreatorViaArguments.__init__(self, config)
-		(self._cmd, self._args, self._fmt) = (utils.resolveInstallPath(cmd), args or [], fmt)
+		(self._cmd, self._args, self._fmt) = (utils.resolve_install_path(cmd), args or [], fmt)
 
-	def create_proc(self, wmsIDs):
-		return LocalProcess(*self._arguments(wmsIDs))
+	def create_proc(self, wms_id_list):
+		return LocalProcess(*self._arguments(wms_id_list))
 
-	def _arguments(self, wmsIDs):
-		return [self._cmd] + self._args + self._fmt(wmsIDs)
+	def _arguments(self, wms_id_list):
+		return [self._cmd] + self._args + self._fmt(wms_id_list)
 
 
 class ProcessCreatorViaStdin(ProcessCreator):
-	def create_proc(self, wmsIDs):
+	def create_proc(self, wms_id_list):
 		proc = LocalProcess(*self._arguments())
-		proc.stdin.write(self._stdin_message(wmsIDs))
+		proc.stdin.write(self._stdin_message(wms_id_list))
 		proc.stdin.close()
 		return proc
 
 	def _arguments(self):
 		raise AbstractError
 
-	def _stdin_message(self, wmsIDs):
+	def _stdin_message(self, wms_id_list):
 		raise AbstractError
 
 
@@ -73,7 +74,7 @@ class BackendExecutor(ConfigurablePlugin):
 		blacklist = lmap(str.lower, blacklist or [])
 		discardlist = lmap(str.lower, discardlist or [])
 		def is_on_list(line, lst):
-			return any(imap(lambda entry: entry in line, lst))
+			return any(imap(line.__contains__, lst))
 		do_log = log_empty # log if stderr is empty
 		for line in ifilter(identity, imap(str.lower, proc.stderr.read_log().splitlines())):
 			if is_on_list(line, discardlist): # line on discard list -> dont log
@@ -100,16 +101,16 @@ class ForwardingExecutor(BackendExecutor):
 class ChunkedExecutor(ForwardingExecutor):
 	def __init__(self, config, option_prefix, executor, def_chunk_size = 5, def_chunk_interval = 5):
 		ForwardingExecutor.__init__(self, config, executor)
-		self._chunk_size = config.getInt(appendOption(option_prefix, 'chunk size'), def_chunk_size, onChange = None)
-		self._chunk_time = config.getInt(appendOption(option_prefix, 'chunk interval'), def_chunk_interval, onChange = None)
+		self._chunk_size = config.get_int(join_config_locations(option_prefix, 'chunk size'), def_chunk_size, on_change = None)
+		self._chunk_time = config.get_int(join_config_locations(option_prefix, 'chunk interval'), def_chunk_interval, on_change = None)
 
-	def execute(self, wmsIDs, *args, **kwargs):
+	def execute(self, wms_id_list, *args, **kwargs):
 		do_wait = False
-		for wmsIDChunk in imap(lambda x: wmsIDs[x:x + self._chunk_size], irange(0, len(wmsIDs), self._chunk_size)):
+		for wms_idChunk in imap(lambda x: wms_id_list[x:x + self._chunk_size], irange(0, len(wms_id_list), self._chunk_size)):
 			if do_wait and not utils.wait(self._chunk_time):
 				break
 			do_wait = True
-			for result in self._executor.execute(wmsIDChunk, *args, **kwargs):
+			for result in self._executor.execute(wms_idChunk, *args, **kwargs):
 				yield result
 
 

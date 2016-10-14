@@ -19,120 +19,132 @@ from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCThreadPool
 from python_compat import imap, lchain, lmap
 
+
 class EventHandler(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['events']
-	tagName = 'event'
+	config_section_list = NamedPlugin.config_section_list + ['events']
+	config_tag_name = 'event'
 
 	def __init__(self, config, name, task):
 		NamedPlugin.__init__(self, config, name)
 		self._task = task
 
-	def onJobSubmit(self, wms, jobObj, jobNum):
+	def on_job_output(self, wms, job_obj, jobnum, exit_code):
 		pass
 
-	def onJobUpdate(self, wms, jobObj, jobNum, data):
+	def on_job_submit(self, wms, job_obj, jobnum):
 		pass
 
-	def onJobOutput(self, wms, jobObj, jobNum, retCode):
+	def on_job_update(self, wms, job_obj, jobnum, data):
 		pass
 
-	def onTaskFinish(self, nJobs):
+	def on_task_finish(self, job_len):
 		pass
 
-	def onFinish(self):
+	def on_workflow_finish(self):
 		pass
+
+
+class Monitoring(EventHandler):
+	# Monitoring base class with submodule support
+	config_tag_name = 'monitor'
+
+	def get_file_list(self):
+		return []
+
+	def get_script(self):  # Script to call later on
+		return []
+
+	def get_task_dict(self):
+		return {'GC_MONITORING': str.join(' ', imap(os.path.basename, self.get_script()))}
 
 
 class MultiEventHandler(EventHandler):
-	def __init__(self, config, name, handlerList, task):
+	def __init__(self, config, name, handler_list, task):
 		EventHandler.__init__(self, config, name, task)
-		self._handlers = handlerList
+		self._handlers = handler_list
 
-	def onJobSubmit(self, wms, jobObj, jobNum):
+	def on_job_output(self, wms, job_obj, jobnum, exit_code):
 		for handler in self._handlers:
-			handler.onJobSubmit(wms, jobObj, jobNum)
+			handler.on_job_output(wms, job_obj, jobnum, exit_code)
 
-	def onJobUpdate(self, wms, jobObj, jobNum, data):
+	def on_job_submit(self, wms, job_obj, jobnum):
 		for handler in self._handlers:
-			handler.onJobUpdate(wms, jobObj, jobNum, data)
+			handler.on_job_submit(wms, job_obj, jobnum)
 
-	def onJobOutput(self, wms, jobObj, jobNum, retCode):
+	def on_job_update(self, wms, job_obj, jobnum, data):
 		for handler in self._handlers:
-			handler.onJobOutput(wms, jobObj, jobNum, retCode)
+			handler.on_job_update(wms, job_obj, jobnum, data)
 
-	def onTaskFinish(self, nJobs):
+	def on_task_finish(self, job_len):
 		for handler in self._handlers:
-			handler.onTaskFinish(nJobs)
+			handler.on_task_finish(job_len)
 
-	def onFinish(self):
+	def on_workflow_finish(self):
 		for handler in self._handlers:
-			handler.onFinish()
-
-
-# Monitoring base class with submodule support
-class Monitoring(EventHandler):
-	tagName = 'monitor'
-
-	# Script to call later on
-	def getScript(self):
-		return []
-
-	def getTaskConfig(self):
-		return {'GC_MONITORING': str.join(' ', imap(os.path.basename, self.getScript()))}
-
-	def getFiles(self):
-		return []
-
-
-class MultiMonitor(MultiEventHandler, Monitoring):
-	def getScript(self):
-		return lchain(imap(lambda h: h.getScript(), self._handlers))
-
-	def getTaskConfig(self):
-		tmp = Monitoring.getTaskConfig(self)
-		return utils.mergeDicts(lmap(lambda m: m.getTaskConfig(), self._handlers) + [tmp])
-
-	def getFiles(self):
-		return lchain(lmap(lambda h: h.getFiles(), self._handlers) + [self.getScript()])
+			handler.on_workflow_finish()
 
 
 class ScriptMonitoring(Monitoring):
-	alias = ['scripts']
-	configSections = EventHandler.configSections + ['scripts']
+	alias_list = ['scripts']
+	config_section_list = EventHandler.config_section_list + ['scripts']
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)
-		self._silent = config.getBool('silent', True, onChange = None)
-		self._evtSubmit = config.getCommand('on submit', '', onChange = None)
-		self._evtStatus = config.getCommand('on status', '', onChange = None)
-		self._evtOutput = config.getCommand('on output', '', onChange = None)
-		self._evtFinish = config.getCommand('on finish', '', onChange = None)
-		self._runningMax = config.getTime('script timeout', 5, onChange = None)
-		self._workPath = config.getWorkPath()
+		self._silent = config.get_bool('silent', True, on_change=None)
+		self._script_submit = config.get_command('on submit', '', on_change=None)
+		self._script_status = config.get_command('on status', '', on_change=None)
+		self._script_output = config.get_command('on output', '', on_change=None)
+		self._script_finish = config.get_command('on finish', '', on_change=None)
+		self._script_timeout = config.get_time('script timeout', 5, on_change=None)
+		self._path_work = config.get_work_path()
 		self._tp = GCThreadPool()
 
-	# Get both task and job config / state dicts
-	def _scriptThread(self, script, jobNum = None, jobObj = None, allDict = None):
+	def on_job_output(self, wms, job_obj, jobnum, exit_code):
+		# Called on job status update
+		self._run_in_background(self._script_output, jobnum, job_obj, {'RETCODE': exit_code})
+
+	def on_job_submit(self, wms, job_obj, jobnum):
+		# Called on job submission
+		self._run_in_background(self._script_submit, jobnum, job_obj)
+
+	def on_job_update(self, wms, job_obj, jobnum, data):
+		# Called on job status update
+		self._run_in_background(self._script_status, jobnum, job_obj)
+
+	def on_task_finish(self, job_len):
+		# Called at the end of the task
+		self._run_in_background(self._script_finish, additional_var_dict={'NJOBS': job_len})
+
+	def on_workflow_finish(self):
+		self._tp.wait_and_drop(self._script_timeout)
+
+	def _run_in_background(self, script, jobnum=None, job_obj=None, additional_var_dict=None):
+		if script != '':
+			self._tp.start_daemon('Running monitoring script %s' % script,
+				self._script_thread, script, jobnum, job_obj, additional_var_dict)
+
+	def _script_thread(self, script, jobnum=None, job_obj=None, add_dict=None):
+		# Get both task and job config / state dicts
 		try:
 			tmp = {}
-			if jobObj is not None:
-				for key, value in jobObj.get_dict().items():
+			if job_obj is not None:
+				for key, value in job_obj.get_dict().items():
 					tmp[key.upper()] = value
-			tmp['WORKDIR'] = self._workPath
-			tmp.update(self._task.getTaskConfig())
-			if jobNum is not None:
-				tmp.update(self._task.getJobConfig(jobNum))
-			tmp.update(allDict or {})
+			tmp['WORKDIR'] = self._path_work
+			tmp.update(self._task.get_task_dict())
+			if jobnum is not None:
+				tmp.update(self._task.get_job_dict(jobnum))
+			tmp.update(add_dict or {})
 			env = dict(os.environ)
 			for key, value in tmp.items():
 				if not key.startswith('GC_'):
 					key = 'GC_' + key
 				env[key] = str(value)
 
-			script = self._task.substVars('monitoring script', script, jobNum, tmp)
+			script = self._task.substitute_variables('monitoring script', script, jobnum, tmp)
 			if not self._silent:
 				proc = LocalProcess(*shlex.split(script), **{'environment': env})
-				proc_output = proc.get_output(timeout = self._runningMax)
+				proc_output = proc.get_output(timeout=self._script_timeout)
 				if proc_output.strip():
 					self._log.info(proc_output.strip())
 			else:
@@ -140,26 +152,15 @@ class ScriptMonitoring(Monitoring):
 		except Exception:
 			self._log.exception('Error while running user script')
 
-	def _runInBackground(self, script, jobNum = None, jobObj = None, addDict = None):
-		if script != '':
-			self._tp.start_thread('Running monitoring script %s' % script,
-				self._scriptThread, script, jobNum, jobObj, addDict)
 
-	# Called on job submission
-	def onJobSubmit(self, wms, jobObj, jobNum):
-		self._runInBackground(self._evtSubmit, jobNum, jobObj)
+# The multimonitor inherits the multiplexing features from MultiEventHandler and the monitoring API
+class MultiMonitor(MultiEventHandler, Monitoring):
+	def get_file_list(self):
+		return lchain(lmap(lambda h: h.get_file_list(), self._handlers) + [self.get_script()])
 
-	# Called on job status update
-	def onJobUpdate(self, wms, jobObj, jobNum, data):
-		self._runInBackground(self._evtStatus, jobNum, jobObj)
+	def get_script(self):
+		return lchain(imap(lambda h: h.get_script(), self._handlers))
 
-	# Called on job status update
-	def onJobOutput(self, wms, jobObj, jobNum, retCode):
-		self._runInBackground(self._evtOutput, jobNum, jobObj, {'RETCODE': retCode})
-
-	# Called at the end of the task
-	def onTaskFinish(self, nJobs):
-		self._runInBackground(self._evtFinish, addDict = {'NJOBS': nJobs})
-
-	def onFinish(self):
-		self._tp.wait_and_drop(self._runningMax)
+	def get_task_dict(self):
+		tmp = Monitoring.get_task_dict(self)
+		return utils.merge_dict_list(lmap(lambda m: m.get_task_dict(), self._handlers) + [tmp])

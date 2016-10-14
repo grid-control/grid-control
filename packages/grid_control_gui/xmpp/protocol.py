@@ -337,16 +337,16 @@ class Protocol(Node):
         if frm: attrs['from']=frm
         if typ: attrs['type']=typ
         Node.__init__(self, tag=name, attrs=attrs, payload=payload, node=node)
-        if not node and xmlns: self.setNamespace(xmlns)
+        if not node and xmlns: self.set_namespace(xmlns)
         if self['to']: self.setTo(self['to'])
         if self['from']: self.setFrom(self['from'])
         if node and type(self)==type(node) and self.__class__==node.__class__ and self.attrs.has_key('id'): del self.attrs['id']
         self.timestamp=None
         for x in self.getTags('x',namespace=NS_DELAY):
             try:
-                if not self.getTimestamp() or x.getAttr('stamp')<self.getTimestamp(): self.setTimestamp(x.getAttr('stamp'))
+                if not self.get_timestamp() or x.getAttr('stamp')<self.get_timestamp(): self.set_timestamp(x.getAttr('stamp'))
             except: pass
-        if timestamp is not None: self.setTimestamp(timestamp)  # To auto-timestamp stanza just pass timestamp=''
+        if timestamp is not None: self.set_timestamp(timestamp)  # To auto-timestamp stanza just pass timestamp=''
     def getTo(self):
         """ Return value of the 'to' attribute. """
         try: return self['to']
@@ -355,7 +355,7 @@ class Protocol(Node):
         """ Return value of the 'from' attribute. """
         try: return self['from']
         except: return None
-    def getTimestamp(self):
+    def get_timestamp(self):
         """ Return the timestamp in the 'yyyymmddThhmmss' format. """
         return self.timestamp
     def getID(self):
@@ -394,7 +394,7 @@ class Protocol(Node):
         elif type(error) in [type(''),type(u'')]: error=ErrorNode(error)
         self.setType('error')
         self.addChild(node=error)
-    def setTimestamp(self,val=None):
+    def set_timestamp(self,val=None):
         """Set the timestamp. timestamp should be the yyyymmddThhmmss string."""
         if not val: val=time.strftime('%Y%m%dT%H:%M:%S', time.gmtime())
         self.timestamp=val
@@ -533,7 +533,7 @@ class Iq(Protocol):
         if tag: return tag.getChildren()
     def setQueryNS(self,namespace):
         """ Set the namespace of the 'query' child element."""
-        self.setTag('query').setNamespace(namespace)
+        self.setTag('query').set_namespace(namespace)
     def setQueryPayload(self,payload):
         """ Set the 'query' child element payload."""
         self.setTag('query').setPayload(payload)
@@ -642,7 +642,7 @@ class DataField(Node):
         ret=[]
         for tag in self.getTags('value'): ret.append(tag.getData())
         return ret
-    def getOptions(self):
+    def get_option_list(self):
         """ Return label-option pairs list associated with this field."""
         ret=[]
         for tag in self.getTags('option'): ret.append([tag.getAttr('label'),tag.getTagData('value')])
@@ -796,7 +796,7 @@ class DataForm(Node):
                 else: newkids.append(n)
             self.kids=newkids
         if typ: self.setType(typ)
-        self.setNamespace(NS_DATA)
+        self.set_namespace(NS_DATA)
         if title: self.setTitle(title)
         if type(data)==type({}):
             newdata=[]

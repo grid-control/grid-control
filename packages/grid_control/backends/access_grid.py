@@ -13,17 +13,18 @@
 # | limitations under the License.
 
 from grid_control.backends.access import AccessTokenError, TimedAccessToken
-from grid_control.utils import DictFormat, resolveInstallPath
+from grid_control.utils import DictFormat, resolve_install_path
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError
 from python_compat import identity
 
+
 class GridAccessToken(TimedAccessToken):
 	def __init__(self, config, name, proxy_exec):
 		TimedAccessToken.__init__(self, config, name)
-		self._infoExec = resolveInstallPath(proxy_exec)
+		self._infoExec = resolve_install_path(proxy_exec)
 		self._proxyPath = config.get('proxy path', '')
-		self._ignoreWarning = config.getBool('ignore warnings', False, onChange = None)
+		self._ignoreWarning = config.get_bool('ignore warnings', False, on_change = None)
 		self._cache = None
 
 	def getUsername(self):
@@ -44,11 +45,11 @@ class GridAccessToken(TimedAccessToken):
 			return self._cache
 		# Call voms-proxy-info and parse results
 		proc = LocalProcess(self._infoExec, *self._getProxyArgs())
-		(retCode, stdout, stderr) = proc.finish(timeout = 10)
-		if (retCode != 0) and not self._ignoreWarning:
+		(exit_code, stdout, stderr) = proc.finish(timeout = 10)
+		if (exit_code != 0) and not self._ignoreWarning:
 			msg = ('%s output:\n%s\n%s\n' % (self._infoExec, stdout, stderr)).replace('\n\n', '\n')
 			msg += 'If job submission is still possible, you can set [access] ignore warnings = True\n'
-			raise AccessTokenError(msg + '%s failed with return code %d' % (self._infoExec, retCode))
+			raise AccessTokenError(msg + '%s failed with return code %d' % (self._infoExec, exit_code))
 		self._cache = DictFormat(':').parse(stdout)
 		return self._cache
 

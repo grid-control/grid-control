@@ -15,31 +15,40 @@
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
 
+
 class StatsDataProcessor(DataProcessor):
-	def __init__(self, config, onChange):
-		DataProcessor.__init__(self, config, onChange)
+	def __init__(self, config, datasource_name):
+		DataProcessor.__init__(self, config, datasource_name)
+		(self._entries, self._blocks, self._files) = (0, 0, 0)
 
-	def _reset(self):
-		self._entries = 0
-		self._blocks = 0
-		self._files = 0
-
-	def processBlock(self, block):
+	def process_block(self, block):
 		if block:
 			self._blocks += 1
 			self._files += len(block[DataProvider.FileList])
 			self._entries += block[DataProvider.NEntries]
 			return block
 
+	def _reset(self):
+		self._entries = 0
+		self._blocks = 0
+		self._files = 0
+
 
 class SimpleStatsDataProcessor(StatsDataProcessor):
-	def __init__(self, config, onChange, log, msg):
-		StatsDataProcessor.__init__(self, config, onChange)
+	def __init__(self, config, datasource_name, log, msg):
+		StatsDataProcessor.__init__(self, config, datasource_name)
 		(self._log, self._msg) = (log, msg)
 
-	def _getStats(self):
+	def process(self, block_iter):
+		self._reset()
+		for block in StatsDataProcessor.process(self, block_iter):
+			yield block
+		self._log.info('%s%s', self._msg, self._get_stats() or 'nothing!')
+
+	def _get_stats(self):
 		stats = []
-		def addStat(value, singular, plural):
+
+		def _add_stat(value, singular, plural):
 			if stats:
 				stats.append('with')
 			if value > 0:
@@ -48,13 +57,8 @@ class SimpleStatsDataProcessor(StatsDataProcessor):
 					stats.append(singular)
 				else:
 					stats.append(plural)
-		addStat(self._blocks, 'block', 'blocks')
-		addStat(self._files, 'file', 'files')
-		addStat(self._entries, 'entry', 'entries')
-		return str.join(' ', stats)
 
-	def process(self, blockIter):
-		self._reset()
-		for block in StatsDataProcessor.process(self, blockIter):
-			yield block
-		self._log.info('%s%s', self._msg, self._getStats() or 'nothing!')
+		_add_stat(self._blocks, 'block', 'blocks')
+		_add_stat(self._files, 'file', 'files')
+		_add_stat(self._entries, 'entry', 'entries')
+		return str.join(' ', stats)

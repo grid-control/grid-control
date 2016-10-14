@@ -20,27 +20,29 @@ from grid_control.job_db import Job
 from grid_control_gui.plugin_graph import get_graph_image, get_workflow_graph
 from python_compat import lmap, lzip, sorted
 
+
 try:
 	import cherrypy
 except Exception:
-	cherrypy = None
+	cherrypy = None  # pylint:disable=invalid-name
+
 
 class CPProgressBar(object):
-	def __init__(self, minValue = 0, progress = 0, maxValue = 100, totalWidth = 300):
-		self.width = totalWidth
-		self.done = round(((progress - minValue) / float(maxValue - minValue)) * 100.0)
+	def __init__(self, value_min=0, progress=0, value_max=100, total_width=300):
+		self._width = total_width
+		self._done = round(((progress - value_min) / float(value_max - value_min)) * 100.0)
 
 	def __str__(self):
 		return """
 <div style="width:%dpx;padding:2px;background-color:white;border:1px solid black;text-align:center">
 	<div style="width:%dpx;background-color:green;"> %s%%
 	</div>
-</div>""" % (self.width, int(self.width * self.done / 100), int(self.done))
+</div>""" % (self._width, int(self._width * self._done / 100), int(self._done))
 
 
 class TabularHTML(object):
-	def __init__(self, head, data, fmt = None, top = True):
-		self.table = """
+	def __init__(self, head, data, fmt=None, top=True):
+		self._table = """
 <style type="text/css">
 	table {font-size:12px;color:#333333;border-width: 1px;border-color: #7799aa;border-collapse: collapse;}
 	th {font-size:12px;background-color:#aacccc;border-width: 1px;padding: 8px;border-style: solid;border-color: #7799aa;text-align:left;}
@@ -48,22 +50,23 @@ class TabularHTML(object):
 	td {font-size:12px;border-width: 1px;padding: 8px;border-style: solid;border-color: #7799aa;}
 </style>"""
 		fmt = fmt or {}
-		lookupDict = lmap(lambda id_name: (id_name[0], fmt.get(id_name[0], str)), head)
-		headerList = lmap(lambda id_name: '<th>%s</th>' % id_name[1], head)
-		def entryList(entry):
-			return lmap(lambda id_fmt: '<td>%s</td>' % id_fmt[1](entry.get(id_fmt[0])), lookupDict)
-		rowList = [headerList] + lmap(entryList, data)
+		lookup_dict = lmap(lambda id_name: (id_name[0], fmt.get(id_name[0], str)), head)
+		header_list = lmap(lambda id_name: '<th>%s</th>' % id_name[1], head)
+
+		def _make_entry_list(entry):
+			return lmap(lambda id_fmt: '<td>%s</td>' % id_fmt[1](entry.get(id_fmt[0])), lookup_dict)
+		row_list = [header_list] + lmap(_make_entry_list, data)
 		if not top:
-			rowList = lzip(*rowList)
-		rows = lmap(lambda row: '\t<tr>%s</tr>\n' % str.join('', row), rowList)
+			row_list = lzip(*row_list)
+		rows = lmap(lambda row: '\t<tr>%s</tr>\n' % str.join('', row), row_list)
 		if top:
-			widthStr = 'width:100%;'
+			width_str = 'width:100%;'
 		else:
-			widthStr = ''
-		self.table += '<table style="%s" border="1">\n%s</table>' % (widthStr, str.join('', rows))
+			width_str = ''
+		self._table += '<table style="%s" border="1">\n%s</table>' % (width_str, str.join('', rows))
 
 	def __str__(self):
-		return self.table
+		return self._table
 
 
 class CPWebserver(GUI):
@@ -71,11 +74,8 @@ class CPWebserver(GUI):
 		if not cherrypy:
 			raise InstallationError('cherrypy is not installed!')
 		GUI.__init__(self, config, workflow)
-		self.counter = 0
-
-	def processQueue(self, timeout):
-		self.counter += 1
-		utils.wait(timeout)
+		self._counter = 0
+		self._workflow = workflow
 
 	def image(self):
 		cherrypy.response.headers['Content-Type'] = 'image/png'
@@ -84,26 +84,31 @@ class CPWebserver(GUI):
 
 	def jobs(self, *args, **kw):
 		result = '<body>'
-		result += str(CPProgressBar(0, min(100, self.counter), 100, 300))
+		result += str(CPProgressBar(0, min(100, self._counter), 100, 300))
 		if 'job' in kw:
-			jobNum = int(kw['job'])
-			info = self._workflow.task.getJobConfig(jobNum)
-			result += str(TabularHTML(lzip(sorted(info), sorted(info)), [info], top = False))
-		def getJobObjs():
-			for jobNum in self._workflow.jobManager.jobDB.getJobs():
-				result = self._workflow.jobManager.jobDB.getJobTransient(jobNum).__dict__
-				result['jobNum'] = jobNum
+			jobnum = int(kw['job'])
+			info = self._workflow.task.get_job_dict(jobnum)
+			result += str(TabularHTML(lzip(sorted(info), sorted(info)), [info], top=False))
+
+		def _fmt_time(value):
+			return time.strftime('%Y-%m-%d %T', time.localtime(value))
+
+		def _iter_job_objs():
+			for jobnum in self._workflow.job_manager.job_db.get_job_list():
+				result = self._workflow.job_manager.job_db.get_job_transient(jobnum).__dict__
+				result['jobnum'] = jobnum
 				result.update(result['dict'])
 				yield result
-		fmtTime = lambda t: time.strftime('%Y-%m-%d %T', time.localtime(t))
-		result += str(TabularHTML([
-				('jobNum', 'Job'), ('state', 'Status'), ('attempt', 'Attempt'),
-				('gcID', 'WMS ID'), ('dest', 'Destination'), ('submitted', 'Submitted')
-			], getJobObjs(),
-			fmt = {
-				'jobNum': lambda x: '<a href="jobs?job=%s">%s</a>' % (x, x),
-				'state': Job.enum2str, 'submitted': fmtTime
-			}, top = True))
+
+		header_list = [
+			('jobnum', 'Job'), ('state', 'Status'), ('attempt', 'Attempt'),
+			('gc_id', 'WMS ID'), ('dest', 'Destination'), ('submitted', 'Submitted')
+		]
+		fmt_dict = {
+			'jobnum': lambda x: '<a href="jobs?job=%s">%s</a>' % (x, x),
+			'state': Job.enum2str, 'submitted': _fmt_time
+		}
+		result += str(TabularHTML(header_list, _iter_job_objs(), fmt=fmt_dict, top=True))
 		result += '</body>'
 		return result
 	jobs.exposed = True
@@ -116,14 +121,18 @@ class CPWebserver(GUI):
 		return result
 	index.exposed = True
 
-	def displayWorkflow(self):
+	def display_workflow(self, workflow):
 		basic_auth = {'tools.auth_basic.on': True, 'tools.auth_basic.realm': 'earth',
-			'tools.auth_basic.checkpassword': cherrypy.lib.auth_basic.checkpassword_dict({'user' : '123'})}
+			'tools.auth_basic.checkpassword': cherrypy.lib.auth_basic.checkpassword_dict({'user': '123'})}
 		cherrypy.log.screen = False
 		cherrypy.engine.autoreload.unsubscribe()
 		cherrypy.server.socket_port = 12345
-		cherrypy.tree.mount(self, '/', {'/' : basic_auth})
+		cherrypy.tree.mount(self, '/', {'/': basic_auth})
 		cherrypy.engine.start()
-		self._workflow.process(wait = self.processQueue)
+		workflow.process(wait=self._process_queue)
 		cherrypy.engine.exit()
 		cherrypy.server.stop()
+
+	def _process_queue(self, timeout):
+		self._counter += 1
+		utils.wait(timeout)

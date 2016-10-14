@@ -12,20 +12,23 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# GCSCF: DEF,ENC
 import os, sys, logging
-from grid_control import utils
 from grid_control.config.config_entry import ConfigEntry, ConfigError
+from grid_control.utils import PersistentDict, exec_wrapper, get_file_name, get_path_pkg, resolve_path  # pylint:disable=line-too-long
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import SafeFile
-from grid_control.utils.parsing import parseList
+from grid_control.utils.parsing import parse_list
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
-from python_compat import identity, imap, irange, itemgetter, lfilter, lmap, rsplit
+from python_compat import imap, irange, itemgetter, lfilter, lidfilter, rsplit
 
-# Class to fill config containers with settings
+
 class ConfigFiller(Plugin):
-	def _addEntry(self, container, section, option, value, source):
+	# Class to fill config containers with settings
+	def fill(self, container):
+		raise AbstractError
+
+	def _add_entry(self, container, section, option, value, source):
 		opttype = '='
 		try:
 			option = option.strip()
@@ -34,231 +37,246 @@ class ConfigFiller(Plugin):
 				option = option[:-1].strip()
 			container.append(ConfigEntry(section.strip(), option, value.strip(), opttype, source))
 		except Exception:
-			raise ConfigError('Unable to register config value [%s] %s %s %s (from %s)' % (section, option, opttype, value, source))
+			raise ConfigError('Unable to register config value [%s] %s %s %s (from %s)' % (
+				section, option, opttype, value, source))
+
+
+class CompatConfigFiller(ConfigFiller):
+	# read old persistency file - and set appropriate config options (only used on oldContainer!)
+	def __init__(self, persistency_file):
+		self._persistency_dict = {}
+		if os.path.exists(persistency_file):
+			self._persistency_dict = PersistentDict(persistency_file, ' = ')
 
 	def fill(self, container):
-		raise AbstractError
+		def _set_persistent_setting(section, key):
+			if key in self._persistency_dict:
+				value = self._persistency_dict.get(key)
+				self._add_entry(container, section, key, value, '<persistency file>')
+		_set_persistent_setting('task', 'task id')
+		_set_persistent_setting('task', 'task date')
+		_set_persistent_setting('parameters', 'parameter hash')
+		_set_persistent_setting('jobs', 'seeds')
 
 
-# Config filler which collects data from config files
+class DictConfigFiller(ConfigFiller):
+	# Config filler which collects data from dictionary
+	def __init__(self, config_dict):
+		self._config_dict = config_dict
+
+	def fill(self, container):
+		for section in self._config_dict:
+			for option in self._config_dict[section]:
+				self._add_entry(container, section, option, str(self._config_dict[section][option]), '<dict>')
+
+
 class FileConfigFiller(ConfigFiller):
-	def __init__(self, configFiles, addSearchPath = True):
-		(self._configFiles, self._addSearchPath) = (configFiles, addSearchPath)
+	# Config filler which collects data from config files
+	def __init__(self, config_fn_list, add_search_path=True):
+		(self._config_fn_list, self._add_search_path) = (config_fn_list, add_search_path)
+		(self._cur_section, self._cur_option) = (None, None)
+		(self._cur_value, self._cur_indices) = (None, None)
 
 	def fill(self, container):
-		searchPaths = []
-		for configFile in self._configFiles:
-			configContent = {}
-			searchPaths.extend(self._fillContentWithIncludes(configFile, [os.getcwd()], configContent))
+		search_path_list = []
+		for config_fn in self._config_fn_list:
+			content_configfile = {}
+			search_path_list.extend(self._fill_content_deep(config_fn, [os.getcwd()], content_configfile))
 			# Store config settings
-			for section in configContent:
-				for (option, value, source) in configContent[section]:
-					self._addEntry(container, section, option, value, source)
-		searchString = str.join(' ', UniqueList(searchPaths))
-		if self._addSearchPath:
-			self._addEntry(container, 'global', 'plugin paths+', searchString, str.join(',', self._configFiles))
+			for section in content_configfile:
+				for (option, value, source) in content_configfile[section]:
+					self._add_entry(container, section, option, value, source)
+		search_path_str = str.join(' ', UniqueList(search_path_list))
+		if self._add_search_path:
+			plugin_paths_source = str.join(',', self._config_fn_list)
+			self._add_entry(container, 'global', 'plugin paths+', search_path_str, plugin_paths_source)
 
-	def _fillContentWithIncludes(self, configFile, searchPaths, configContent):
-		log = logging.getLogger(('config.%s' % utils.getRootName(configFile)).rstrip('.').lower())
-		log.log(logging.INFO1, 'Reading config file %s', configFile)
-		configFile = utils.resolvePath(configFile, searchPaths, ErrorClass = ConfigError)
-		configFileLines = SafeFile(configFile).readlines()
+	def _fill_content_deep(self, config_fn, search_path_list, content_configfile):
+		log = logging.getLogger(('config.%s' % get_file_name(config_fn)).rstrip('.').lower())
+		log.log(logging.INFO1, 'Reading config file %s', config_fn)
+		config_fn = resolve_path(config_fn, search_path_list, exception_type=ConfigError)
+		config_str_list = SafeFile(config_fn).readlines()
 
 		# Single pass, non-recursive list retrieval
-		tmpConfigContent = {}
-		self._fillContentSingleFile(configFile, configFileLines, searchPaths, tmpConfigContent)
-		def getFlatList(section, option):
-			for (opt, value, _) in tmpConfigContent.get(section, []):
+		tmp_content_configfile = {}
+		self._fill_content_shallow(config_fn, config_str_list,
+			search_path_list, tmp_content_configfile)
+
+		def _get_list_shallow(section, option):
+			for (opt, value, _) in tmp_content_configfile.get(section, []):
 				if opt == option:
-					for entry in parseList(value, None):
+					for entry in parse_list(value, None):
 						yield entry
 
-		newSearchPaths = [os.path.dirname(configFile)]
+		search_path_list_new = [os.path.dirname(config_fn)]
 		# Add entries from include statement recursively
-		for includeFile in getFlatList('global', 'include'):
-			self._fillContentWithIncludes(includeFile, searchPaths + newSearchPaths, configContent)
+		for include_fn in _get_list_shallow('global', 'include'):
+			self._fill_content_deep(include_fn, search_path_list + search_path_list_new, content_configfile)
 		# Process all other entries in current file
-		self._fillContentSingleFile(configFile, configFileLines, searchPaths, configContent)
+		self._fill_content_shallow(config_fn, config_str_list, search_path_list, content_configfile)
 		# Override entries in current config file
-		for overrideFile in getFlatList('global', 'include override'):
-			self._fillContentWithIncludes(overrideFile, searchPaths + newSearchPaths, configContent)
+		for override_fn in _get_list_shallow('global', 'include override'):
+			self._fill_content_deep(override_fn, search_path_list + search_path_list_new, content_configfile)
 		# Filter special global options
-		if configContent.get('global', []):
-			configContent['global'] = lfilter(lambda opt_v_s: opt_v_s[0] not in ['include', 'include override'], configContent['global'])
-		return searchPaths + newSearchPaths
+		if content_configfile.get('global', []):
+			def _ignore_includes(opt_v_s_tuple):
+				return opt_v_s_tuple[0] not in ['include', 'include override']
+			content_configfile['global'] = lfilter(_ignore_includes, content_configfile['global'])
+		return search_path_list + search_path_list_new
 
-	def _fillContentSingleFile(self, configFile, configFileLines, searchPaths, configContent):
+	def _fill_content_shallow(self, config_fn, config_str_list, search_path_list, content_configfile):
 		try:
-			(self._currentSection, self._currentOption, self._currentValue, self._currentIndices) = (None, None, None, None)
-			exceptionIntro = 'Unable to parse config file %s' % configFile
-			for idx, line in enumerate(configFileLines):
-				self._parseLine(exceptionIntro, configContent, configFile, idx, line)
-			if self._currentOption:
-				self._storeOption(exceptionIntro, configContent, configFile)
+			(self._cur_section, self._cur_option) = (None, None)
+			(self._cur_value, self._cur_indices) = (None, None)
+			exception_intro = 'Unable to parse config file %s' % config_fn
+			for idx, line in enumerate(config_str_list):
+				self._parse_line(exception_intro, content_configfile, config_fn, idx, line)
+			if self._cur_option:
+				self._store_option(exception_intro, content_configfile, config_fn)
 		except Exception:
-			raise ConfigError('Error while reading configuration file "%s"!' % configFile)
+			raise ConfigError('Error while reading configuration file "%s"!' % config_fn)
 
-	def _parseLineStripComments(self, exceptionIntro, configContent, configFile, idx, line):
+	def _parse_line_option(self, exception_intro, content_configfile, config_fn, idx, line):
+		(option, value) = line.split('=', 1)
+		(self._cur_option, self._cur_value, self._cur_indices) = (option.strip(), value.strip(), [idx])
+
+	def _parse_line_option_continued(self, exception_intro, content_configfile, config_fn, idx, line):
+		self._cur_value += '\n' + line.strip()
+		self._cur_indices += [idx]
+
+	def _parse_line_section(self, exception_intro, content_configfile, config_fn, idx, line):
+		self._cur_section = line[1:line.index(']')].strip()
+		self._parse_line(exception_intro, content_configfile, config_fn,
+			idx, line[line.index(']') + 1:].strip())
+
+	def _parse_line_strip_comments(self, exception_intro, content_configfile, config_fn, idx, line):
 		return rsplit(line, ';', 1)[0].rstrip()
 
-	def _parseLineContinueOption(self, exceptionIntro, configContent, configFile, idx, line):
-		self._currentValue += '\n' + line.strip()
-		self._currentIndices += [idx]
-
-	def _parseLineSection(self, exceptionIntro, configContent, configFile, idx, line):
-		self._currentSection = line[1:line.index(']')].strip()
-		self._parseLine(exceptionIntro, configContent, configFile, idx, line[line.index(']') + 1:].strip())
-
-	def _parseLineOption(self, exceptionIntro, configContent, configFile, idx, line):
-		(self._currentOption, self._currentValue) = lmap(str.strip, line.split('=', 1))
-		self._currentIndices = [idx]
-
 	# Not using ConfigParser anymore! Ability to read duplicate options is needed
-	def _parseLine(self, exceptionIntro, configContent, configFile, idx, line):
-		def protected_call(fun, exceptionMsg, line):
+	def _parse_line(self, exception_intro, content_configfile, config_fn, idx, line):
+		def _protected_call(fun, exception_msg, line):
 			try:
-				return fun(exceptionIntro, configContent, configFile, idx, line)
+				return fun(exception_intro, content_configfile, config_fn, idx, line)
 			except Exception:
-				raise ConfigError(exceptionIntro + ':%d\n\t%r\n' % (idx, line) + exceptionMsg)
+				raise ConfigError(exception_intro + ':%d\n\t%r\n' % (idx, line) + exception_msg)
 
-		line = protected_call(self._parseLineStripComments, 'Unable to strip comments!', line)
-		exceptionIntroLineInfo = exceptionIntro + ':%d\n\t%r\n' % (idx, line)
+		line = _protected_call(self._parse_line_strip_comments, 'Unable to strip comments!', line)
+		exception_intro_ext = exception_intro + ':%d\n\t%r\n' % (idx, line)
 		if line.lstrip().startswith(';') or line.lstrip().startswith('#') or not line.strip():
-			return # skip empty lines or comment lines
+			return  # skip empty lines or comment lines
 		elif line[0].isspace():
-			protected_call(self._parseLineContinueOption, 'Invalid indentation!', line)
+			_protected_call(self._parse_line_option_continued, 'Invalid indentation!', line)
 		elif line.startswith('['):
-			if self._currentOption:
-				self._storeOption(exceptionIntroLineInfo, configContent, configFile)
-			protected_call(self._parseLineSection, 'Unable to parse config section!', line)
+			if self._cur_option:
+				self._store_option(exception_intro_ext, content_configfile, config_fn)
+			_protected_call(self._parse_line_section, 'Unable to parse config section!', line)
 		elif '=' in line:
-			if self._currentOption:
-				self._storeOption(exceptionIntroLineInfo, configContent, configFile)
-			protected_call(self._parseLineOption, 'Unable to parse config option!', line)
+			if self._cur_option:
+				self._store_option(exception_intro_ext, content_configfile, config_fn)
+			_protected_call(self._parse_line_option, 'Unable to parse config option!', line)
 		else:
-			raise ConfigError(exceptionIntroLineInfo + '\nPlease use "key = value" syntax or indent values!')
+			raise ConfigError(exception_intro_ext + '\nPlease use "key = value" syntax or indent values!')
 
-	def _storeOption(self, exceptionIntro, configContent, configFile):
-		def assert_set(cond, msg):
+	def _store_option(self, exception_intro, content_configfile, config_fn):
+		def _assert_set(cond, msg):
 			if not cond:
-				raise ConfigError(exceptionIntro + '\n' + msg)
-		assert_set(self._currentSection, 'Found config option outside of config section!')
-		assert_set(self._currentOption, 'Config option is not set!')
-		assert_set(self._currentValue is not None, 'Config value is not set!')
-		assert_set(self._currentIndices, 'Config source not set!')
-		sectionContent = configContent.setdefault(self._currentSection, [])
-		self._currentValue = self._currentValue.replace('$GC_CONFIG_DIR', os.path.dirname(configFile))
-		self._currentValue = self._currentValue.replace('$GC_CONFIG_FILE', configFile)
-		sectionContent.append((self._currentOption, self._currentValue,
-			configFile + ':' + str.join(',', imap(str, self._currentIndices))))
-		(self._currentOption, self._currentValue, self._currentIndices) = (None, None, None)
+				raise ConfigError(exception_intro + '\n' + msg)
+		_assert_set(self._cur_section, 'Found config option outside of config section!')
+		_assert_set(self._cur_option, 'Config option is not set!')
+		_assert_set(self._cur_value is not None, 'Config value is not set!')
+		_assert_set(self._cur_indices, 'Config source not set!')
+		content_section = content_configfile.setdefault(self._cur_section, [])
+		self._cur_value = self._cur_value.replace('$GC_CONFIG_DIR', os.path.dirname(config_fn))
+		self._cur_value = self._cur_value.replace('$GC_CONFIG_FILE', config_fn)
+		content_section.append((self._cur_option, self._cur_value,
+			config_fn + ':' + str.join(',', imap(str, self._cur_indices))))
+		(self._cur_option, self._cur_value, self._cur_indices) = (None, None, None)
 
 
-# Config filler which collects data from default config files
-class DefaultFilesConfigFiller(FileConfigFiller):
-	def __init__(self):
-		# Collect host / user / installation specific config files
-		def resolve_hostname():
-			import socket
-			host = socket.gethostname()
-			try:
-				return socket.gethostbyaddr(host)[0]
-			except Exception:
-				return host
-		log = logging.getLogger('config.default')
-		try:
-			host = hang_protection(resolve_hostname, timeout = 5)
-			hostCfg = lmap(lambda c: utils.pathPKG('../config/%s.conf' % host.split('.', c)[-1]), irange(host.count('.') + 1, -1, -1))
-			log.log(logging.DEBUG1, 'Possible host config files: %s', str.join(', ', hostCfg))
-		except TimeoutException:
-			sys.stderr.write('System call to resolve hostname is hanging!\n')
-			sys.stderr.flush()
-			hostCfg = []
-		defaultCfg = ['/etc/grid-control.conf', '~/.grid-control.conf', utils.pathPKG('../config/default.conf')]
-		if os.environ.get('GC_CONFIG'):
-			defaultCfg.append('$GC_CONFIG')
-		log.log(logging.DEBUG1, 'Possible default config files: %s', str.join(', ', defaultCfg))
-		fqConfigFiles = lmap(lambda p: utils.resolvePath(p, mustExist = False), hostCfg + defaultCfg)
-		FileConfigFiller.__init__(self, lfilter(os.path.exists, fqConfigFiles), addSearchPath = False)
-
-
-# Config filler which collects data from dictionary
-class DictConfigFiller(ConfigFiller):
-	def __init__(self, configDict):
-		self._configDict = configDict
+class MultiConfigFiller(ConfigFiller):
+	# Fill config using multiple fillers
+	def __init__(self, config_filler_list):
+		self._config_filler_list = config_filler_list
 
 	def fill(self, container):
-		for section in self._configDict:
-			for option in self._configDict[section]:
-				self._addEntry(container, section, option, str(self._configDict[section][option]), '<dict>')
+		for filler in self._config_filler_list:
+			filler.fill(container)
 
 
-# Config filler which collects data from a user string
 class StringConfigFiller(ConfigFiller):
-	def __init__(self, optionList):
-		self._optionList = lfilter(identity, imap(str.strip, optionList))
+	# Config filler which collects data from a user string
+	def __init__(self, option_list):
+		self._option_list = lidfilter(imap(str.strip, option_list))
 
 	def fill(self, container):
-		for uopt in self._optionList:
+		for uopt in self._option_list:
 			try:
 				section, tmp = tuple(uopt.lstrip('[').split(']', 1))
 			except Exception:
 				raise ConfigError('Unable to parse section in %s' % repr(uopt))
 			try:
 				option, value = tuple(imap(str.strip, tmp.split('=', 1)))
-				self._addEntry(container, section, option, value, '<cmdline override>')
+				self._add_entry(container, section, option, value, '<cmdline override>')
 			except Exception:
 				raise ConfigError('Unable to parse option in %s' % repr(uopt))
 
 
-# Class to fill config containers with settings from a python config file
 class PythonConfigFiller(DictConfigFiller):
-	def __init__(self, configFiles):
+	# Class to fill config containers with settings from a python config file
+	def __init__(self, config_fn_list):
 		from gcSettings import Settings
-		for configFile in configFiles:
-			fp = SafeFile(configFile)
+		for config_fn in config_fn_list:
+			fp = SafeFile(config_fn)
 			try:
-				utils.execWrapper(fp.read(), {'Settings': Settings})
+				exec_wrapper(fp.read(), {'Settings': Settings})
 			finally:
 				fp.close()
-		DictConfigFiller.__init__(self, Settings.getConfigDict())
+		DictConfigFiller.__init__(self, Settings.get_config_dict())
 
 
-# Fill config using multiple fillers
-class MultiConfigFiller(ConfigFiller):
-	def __init__(self, fillerList):
-		self._fillerList = fillerList
+class DefaultFilesConfigFiller(FileConfigFiller):
+	# Config filler which collects data from default config files
+	def __init__(self):
+		# Collect host / user / installation specific config files
+		def _resolve_hostname():
+			import socket
+			host = socket.gethostname()
+			try:
+				return socket.gethostbyaddr(host)[0]
+			except Exception:
+				return host
 
-	def fill(self, container):
-		for filler in self._fillerList:
-			filler.fill(container)
+		try:
+			hostname = hang_protection(_resolve_hostname, timeout=5)
+		except TimeoutException:
+			hostname = None
+			sys.stderr.write('System call to resolve hostname is hanging!\n')
+			sys.stderr.flush()
+
+		def get_default_config_fn_iter():  # return possible default config files
+			if hostname:  # host / domain specific
+				for part_idx in irange(hostname.count('.') + 1, -1, -1):
+					yield get_path_pkg('../config/%s.conf' % hostname.split('.', part_idx)[-1])
+			yield '/etc/grid-control.conf'  # system specific
+			yield '~/.grid-control.conf'  # user specific
+			yield get_path_pkg('../config/default.conf')  # installation specific
+			if os.environ.get('GC_CONFIG'):
+				yield '$GC_CONFIG'  # environment specific
+
+		config_fn_list = list(get_default_config_fn_iter())
+		log = logging.getLogger('config.sources.default')
+		log.log(logging.DEBUG1, 'Possible default config files: %s', str.join(', ', config_fn_list))
+		config_fn_iter = imap(lambda fn: resolve_path(fn, must_exist=False), config_fn_list)
+		FileConfigFiller.__init__(self, lfilter(os.path.exists, config_fn_iter), add_search_path=False)
 
 
-# Class which handles python and normal config files transparently
 class GeneralFileConfigFiller(MultiConfigFiller):
-	def __init__(self, configFiles):
-		fillerList = []
-		for configFile in configFiles:
-			if configFile.endswith('py'):
-				fillerList.append(PythonConfigFiller([configFile]))
+	# Class which handles python and normal config files transparently
+	def __init__(self, config_fn_list):
+		config_filler_list = []
+		for config_fn in config_fn_list:
+			if config_fn.endswith('py'):
+				config_filler_list.append(PythonConfigFiller([config_fn]))
 			else:
-				fillerList.append(FileConfigFiller([configFile]))
-		MultiConfigFiller.__init__(self, fillerList)
-
-
-# read old persistency file - and set appropriate config options (only used on oldContainer!)
-class CompatConfigFiller(ConfigFiller):
-	def __init__(self, persistencyFile):
-		self._persistencyDict = {}
-		if os.path.exists(persistencyFile):
-			self._persistencyDict = utils.PersistentDict(persistencyFile, ' = ')
-
-	def fill(self, container):
-		def setPersistentSetting(section, key):
-			if key in self._persistencyDict:
-				value = self._persistencyDict.get(key)
-				self._addEntry(container, section, key, value, '<persistency file>')
-		setPersistentSetting('task', 'task id')
-		setPersistentSetting('task', 'task date')
-		setPersistentSetting('parameters', 'parameter hash')
-		setPersistentSetting('jobs', 'seeds')
+				config_filler_list.append(FileConfigFiller([config_fn]))
+		MultiConfigFiller.__init__(self, config_filler_list)

@@ -19,9 +19,10 @@ except ImportError:
 	from xmlrpc.client import ServerProxy
 import sys
 from gcSupport import utils
-from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFromJSON
+from grid_control_cms.lumi_tools import format_lumi, merge_lumi_list, parse_lumi_from_json
+
 
 server = ServerProxy('http://pccmsdqm04.cern.ch/runregistry/xmlrpc')
 data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupName': 'Collisions10'})
-runs = parseLumiFromJSON(data)
-sys.stdout.write('lumi filter = %s\n' % utils.wrapList(formatLumi(mergeLumi(runs)), 60, ',\n\t'))
+runs = parse_lumi_from_json(data)
+sys.stdout.write('lumi filter = %s\n' % utils.wrap_list(format_lumi(merge_lumi_list(runs)), 60, ',\n\t'))

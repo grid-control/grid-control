@@ -19,13 +19,14 @@ from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreator
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.job_db import Job
-from grid_control.utils.parsing import parseTime
+from grid_control.utils.parsing import parse_time
 from grid_control.utils.process_base import LocalProcess
 from python_compat import identity, ifilter, izip, lmap
 
+
 class PBS_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config, fqid_fun = identity):
-		proc_factory = ProcessCreatorAppendArguments(config, 'qstat', ['-f'], lambda wmsIDs: lmap(fqid_fun, wmsIDs))
+		proc_factory = ProcessCreatorAppendArguments(config, 'qstat', ['-f'], lambda wms_id_list: lmap(fqid_fun, wms_id_list))
 		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map = {
 			'H': Job.SUBMITTED, 'S': Job.SUBMITTED,
 			'W': Job.WAITING,   'Q': Job.QUEUED,
@@ -52,7 +53,7 @@ class PBS_CheckJobs(CheckJobsWithProcess):
 class PBS_Discover_Nodes(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
-		self._exec = utils.resolveInstallPath('pbsnodes')
+		self._exec = utils.resolve_install_path('pbsnodes')
 
 	def discover(self):
 		proc = LocalProcess(self._exec)
@@ -67,12 +68,12 @@ class PBS_Discover_Nodes(BackendDiscovery):
 class PBS_Discover_Queues(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
-		self._exec = utils.resolveInstallPath('qstat')
+		self._exec = utils.resolve_install_path('qstat')
 
 	def discover(self):
 		active = False
 		keys = [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]
-		parser = dict(izip(keys, [int, parseTime, parseTime]))
+		parser = dict(izip(keys, [int, parse_time, parse_time]))
 		proc = LocalProcess(self._exec, '-q')
 		for line in proc.stdout.iter(timeout = 10):
 			if line.startswith('-'):
@@ -89,28 +90,28 @@ class PBS_Discover_Queues(BackendDiscovery):
 
 
 class PBS(PBSGECommon):
-	configSections = PBSGECommon.configSections + ['PBS']
+	config_section_list = PBSGECommon.config_section_list + ['PBS']
 
 	def __init__(self, config, name):
-		cancelExecutor = CancelJobsWithProcessBlind(config, 'qdel',
-			fmt = lambda wmsIDs: lmap(self._fqid, wmsIDs), unknownID = 'Unknown Job Id')
+		cancel_executor = CancelJobsWithProcessBlind(config, 'qdel',
+			fmt = lambda wms_id_list: lmap(self._fqid, wms_id_list), unknownID = 'Unknown Job Id')
 		PBSGECommon.__init__(self, config, name,
-			cancelExecutor = cancelExecutor,
-			checkExecutor = CheckJobsMissingState(config, PBS_CheckJobs(config, self._fqid)))
+			cancel_executor = cancel_executor,
+			check_executor = CheckJobsMissingState(config, PBS_CheckJobs(config, self._fqid)))
 		self._nodes_finder = PBS_Discover_Nodes(config)
 		self._queues_finder = PBS_Discover_Queues(config)
-		self._server = config.get('server', '', onChange = None)
+		self._server = config.get('server', '', on_change = None)
 
 
-	def _fqid(self, wmsID):
+	def _fqid(self, wms_id):
 		if not self._server:
-			return wmsID
-		return '%s.%s' % (wmsID, self._server)
+			return wms_id
+		return '%s.%s' % (wms_id, self._server)
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		reqMap = { WMS.MEMORY: ('pvmem', lambda m: '%dmb' % m) }
-		params = PBSGECommon.getCommonSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap)
+		params = PBSGECommon.getCommonSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr, reqMap)
 		# Job requirements
 		if reqs.get(WMS.QUEUES):
 			params += ' -q %s' % reqs[WMS.QUEUES][0]

@@ -16,34 +16,22 @@ import sys, logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.report import Report
 from grid_control.utils.activity import Activity
-from grid_control.utils.parsing import strTimeShort
+from grid_control.utils.parsing import str_time_short
 from hpfwk import AbstractError
-
-class GUI(ConfigurablePlugin):
-	def __init__(self, config, workflow):
-		ConfigurablePlugin.__init__(self, config)
-		self._workflow = workflow
-		self._reportOpts = config.get('report options', '', onChange = None)
-		self._report = config.getCompositePlugin('report', 'BasicReport', 'MultiReport',
-			cls = Report, onChange = None, pargs = (workflow.jobManager.jobDB,
-			workflow.task), pkwargs = {'configString': self._reportOpts})
-
-	def displayWorkflow(self):
-		raise AbstractError
-
-
-class NullGUI(GUI):
-	def displayWorkflow(self):
-		return self._workflow.process()
 
 
 class SimpleActivityStream(object):
-	def __init__(self, stream, register_callback = False):
+	def __init__(self, stream, register_callback=False):
 		(self._stream, self._old_message, self._register_cb) = (stream, None, register_callback)
 		if hasattr(self._stream, 'encoding'):
 			self.encoding = self._stream.encoding
 		if self._register_cb:
 			Activity.callbacks.append(self.write)
+
+	def finish(self):
+		if self._register_cb:
+			Activity.callbacks.remove(self.write)
+		return self._stream
 
 	def flush(self):
 		return self._stream.flush()
@@ -51,18 +39,11 @@ class SimpleActivityStream(object):
 	def isatty(self):
 		return self._stream.isatty()
 
-	def finish(self):
-		if self._register_cb:
-			Activity.callbacks.remove(self.write)
-		return self._stream
-
-	def write(self, value = ''):
+	def write(self, value=''):
 		activity_message = None
 		if Activity.root:
 			for activity in Activity.root.get_children():
-				activity_message = activity.getMessage() + '...'
-				if len(activity_message) > 75:
-					activity_message = activity_message[:37] + '...' + activity_message[-35:]
+				activity_message = activity.get_message(truncate=75)
 		if self._old_message is not None:
 			self._stream.write('\r%s\r' % (' ' * len(self._old_message)))
 		self._old_message = activity_message
@@ -73,26 +54,43 @@ class SimpleActivityStream(object):
 		return result
 
 
+class GUI(ConfigurablePlugin):
+	def __init__(self, config, workflow):
+		ConfigurablePlugin.__init__(self, config)
+		self._report_config_str = config.get('report options', '', on_change=None)
+		self._report = config.get_composited_plugin('report', 'BasicReport', 'MultiReport',
+			cls=Report, on_change=None, pargs=(workflow.job_manager.job_db,
+			workflow.task), pkwargs={'config_str': self._report_config_str})
+
+	def display_workflow(self, workflow):
+		raise AbstractError
+
+
+class NullGUI(GUI):
+	def display_workflow(self, workflow):
+		return workflow.process()
+
+
 class SimpleConsole(GUI):
 	def __init__(self, config, workflow):
 		GUI.__init__(self, config, workflow)
 		self._log = logging.getLogger('workflow')
 
-	def displayWorkflow(self):
-		if self._report.getHeight():
+	def display_workflow(self, workflow):
+		if self._report.get_height():
 			self._log.info('')
-		self._report.display()
-		if self._report.getHeight():
+		self._report.show_report(workflow.job_manager.job_db)
+		if self._report.get_height():
 			self._log.info('')
-		if self._workflow.duration < 0:
+		if workflow.duration < 0:
 			self._log.info('Running in continuous mode. Press ^C to exit.')
-		elif self._workflow.duration > 0:
-			self._log.info('Running for %s', strTimeShort(self._workflow.duration))
-		if not sys.stdout.isatty():
-			return self._workflow.process()
-		sys.stdout = SimpleActivityStream(sys.stdout, register_callback = True)
-		sys.stderr = SimpleActivityStream(sys.stderr)
+		elif workflow.duration > 0:
+			self._log.info('Running for %s', str_time_short(workflow.duration))
+		if sys.stdout.isatty():
+			sys.stdout = SimpleActivityStream(sys.stdout, register_callback=True)
+			sys.stderr = SimpleActivityStream(sys.stderr)
 		try:
-			return self._workflow.process()
+			return workflow.process()
 		finally:
-			(sys.stdout, sys.stderr) = (sys.stdout.finish(), sys.stderr.finish())
+			if sys.stdout.isatty():
+				(sys.stdout, sys.stderr) = (sys.stdout.finish(), sys.stderr.finish())

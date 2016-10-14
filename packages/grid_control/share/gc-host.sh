@@ -15,7 +15,7 @@
 
 # grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
 
-# (jobNum, sandbox, stdout, stderr) (local.sh) (...)
+# (jobnum, sandbox, stdout, stderr) (local.sh) (...)
 export GC_SANDBOX="$2"
 GC_STDOUT="$3"
 GC_STDERR="$4"

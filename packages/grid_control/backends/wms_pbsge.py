@@ -16,25 +16,26 @@ from grid_control import utils
 from grid_control.backends.wms import WMS
 from grid_control.backends.wms_local import LocalWMS
 
+
 class PBSGECommon(LocalWMS):
-	def __init__(self, config, name, checkExecutor, cancelExecutor, nodesFinder, queuesFinder):
+	def __init__(self, config, name, check_executor, cancel_executor, nodesFinder, queuesFinder):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.resolveInstallPath('qsub'),
-			checkExecutor = checkExecutor, cancelExecutor = cancelExecutor,
+			submitExec = utils.resolve_install_path('qsub'),
+			check_executor = check_executor, cancel_executor = cancel_executor,
 			nodesFinder = nodesFinder, queuesFinder = queuesFinder)
-		self._shell = config.get('shell', '', onChange = None)
-		self._account = config.get('account', '', onChange = None)
-		self._delay = config.getBool('delay output', False, onChange = None)
-		self._softwareReqs = config.getLookup('software requirement map', {}, single = False, onChange = None)
+		self._shell = config.get('shell', '', on_change = None)
+		self._account = config.get('account', '', on_change = None)
+		self._delay = config.get_bool('delay output', False, on_change = None)
+		self._softwareReqs = config.get_lookup('software requirement map', {}, single = False, on_change = None)
 
 
-	def getJobArguments(self, jobNum, sandbox):
+	def get_job_arguments(self, jobnum, sandbox):
 		return ''
 
 
-	def getCommonSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr, reqMap):
+	def getCommonSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr, reqMap):
 		# Job name
-		params = ' -N "%s"' % jobName
+		params = ' -N "%s"' % job_name
 		# Job accounting
 		if self._account:
 			params += ' -P %s' % self._account

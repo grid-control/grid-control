@@ -14,15 +14,17 @@
 
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.utils.data_structures import makeEnum
-from python_compat import imap, md5_hex, set
+from grid_control.utils.data_structures import make_enum
+from python_compat import imap, itemgetter, md5_hex, set
+
 
 # Enum to specify how to react to multiple occurences of something
-DatasetUniqueMode = makeEnum(['warn', 'abort', 'skip', 'ignore', 'record'])
-DatasetCheckMode = makeEnum(['warn', 'abort', 'ignore'])
+DatasetUniqueMode = make_enum(['warn', 'abort', 'skip', 'ignore', 'record'])  # pylint: disable=invalid-name
+DatasetCheckMode = make_enum(['warn', 'abort', 'ignore'])  # pylint: disable=invalid-name
+
 
 class DataChecker(DataProcessor):
-	def _handleError(self, msg, mode):
+	def _handle_error(self, msg, mode):
 		if mode == DatasetCheckMode.warn:
 			self._log.warning(msg)
 		elif mode == DatasetCheckMode.abort:
@@ -30,109 +32,113 @@ class DataChecker(DataProcessor):
 
 
 class EntriesConsistencyDataProcessor(DataChecker):
-	alias = ['consistency']
+	alias_list = ['consistency']
 
-	def __init__(self, config, onChange):
-		DataChecker.__init__(self, config, onChange)
-		self._mode = config.getEnum('dataset check entry consistency', DatasetCheckMode,
-			DatasetCheckMode.abort, onChange = onChange)
+	def __init__(self, config, datasource_name):
+		DataChecker.__init__(self, config, datasource_name)
+		self._mode = config.get_enum(self._get_dproc_opt('check entry consistency'),
+			DatasetCheckMode, DatasetCheckMode.abort)
 
 	def enabled(self):
 		return self._mode != DatasetCheckMode.ignore
 
-	def processBlock(self, block):
+	def process_block(self, block):
 		# Check entry consistency
-		events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
+		events = sum(imap(itemgetter(DataProvider.NEntries), block[DataProvider.FileList]))
 		if block.setdefault(DataProvider.NEntries, events) != events:
-			self._handleError('Inconsistency in block %s: Number of events doesn\'t match (b:%d != f:%d)' % (
-				DataProvider.bName(block), block[DataProvider.NEntries], events), self._mode)
+			error_msg = 'Inconsistency in block %s: Number of events doesn\'t match (b:%d != f:%d)'
+			error_msg = error_msg % (DataProvider.get_block_id(block), block[DataProvider.NEntries], events)
+			self._handle_error(error_msg, self._mode)
 		return block
 
 
 class NickNameConsistencyProcessor(DataChecker):
-	alias = ['nickconsistency']
+	alias_list = ['nickconsistency']
 
-	def __init__(self, config, onChange):
-		DataChecker.__init__(self, config, onChange)
+	def __init__(self, config, datasource_name):
+		DataChecker.__init__(self, config, datasource_name)
 		# Ensure the same nickname is used consistently in all blocks of a dataset
-		self._checkConsistency = config.getEnum('dataset check nickname consistency', DatasetCheckMode,
-			DatasetCheckMode.abort, onChange = onChange)
-		self._checkConsistencyData = {}
+		self._check_consistency = config.get_enum(self._get_dproc_opt('check nickname consistency'),
+			DatasetCheckMode, DatasetCheckMode.abort)
+		self._check_consistency_data = {}
 		# Check if two different datasets have the same nickname
-		self._checkCollision = config.getEnum('dataset check nickname collision', DatasetCheckMode,
-			DatasetCheckMode.abort, onChange = onChange)
-		self._checkCollisionData = {}
+		self._check_collision = config.get_enum(self._get_dproc_opt('check nickname collision'),
+			DatasetCheckMode, DatasetCheckMode.abort)
+		self._check_collision_data = {}
 
 	def enabled(self):
-		return (self._checkConsistency != DatasetCheckMode.ignore) or (self._checkCollision != DatasetCheckMode.ignore)
+		return DatasetCheckMode.ignore not in (self._check_consistency, self._check_collision)
 
-	# Get nickname and check for collisions
-	def processBlock(self, block):
-		blockDS = block[DataProvider.Dataset]
+	def process_block(self, block):  # Get nickname and check for collisions
+		dataset_name = block[DataProvider.Dataset]
 		nick = block[DataProvider.Nickname]
 		# Check if nickname is used consistenly in all blocks of a datasets
-		if self._checkConsistency != DatasetCheckMode.ignore:
-			if self._checkConsistencyData.setdefault(blockDS, nick) != nick:
-				self._handleError('Different blocks of dataset "%s" have different nicknames: ["%s", "%s"]' % (
-					blockDS, self._checkConsistencyData[blockDS], nick), self._checkConsistency)
-		if self._checkCollision != DatasetCheckMode.ignore:
-			if self._checkCollisionData.setdefault(nick, blockDS) != blockDS:
-				self._handleError('Multiple datasets use the same nickname "%s": ["%s", "%s"]' % (
-					nick, self._checkCollisionData[nick], blockDS), self._checkCollision)
+		if self._check_consistency != DatasetCheckMode.ignore:
+			if self._check_consistency_data.setdefault(dataset_name, nick) != nick:
+				self._handle_error('Different blocks of dataset "%s" have different nicknames: ["%s", "%s"]' % (
+					dataset_name, self._check_consistency_data[dataset_name], nick), self._check_consistency)
+		if self._check_collision != DatasetCheckMode.ignore:
+			if self._check_collision_data.setdefault(nick, dataset_name) != dataset_name:
+				self._handle_error('Multiple datasets use the same nickname "%s": ["%s", "%s"]' % (
+					nick, self._check_collision_data[nick], dataset_name), self._check_collision)
 		return block
 
 
 class UniqueDataProcessor(DataChecker):
-	alias = ['unique']
+	alias_list = ['unique']
 
-	def __init__(self, config, onChange):
-		DataChecker.__init__(self, config, onChange)
-		self._checkURL = config.getEnum('dataset check unique url', DatasetUniqueMode, DatasetUniqueMode.abort, onChange = onChange)
-		self._checkBlock = config.getEnum('dataset check unique block', DatasetUniqueMode, DatasetUniqueMode.abort, onChange = onChange)
+	def __init__(self, config, datasource_name):
+		DataChecker.__init__(self, config, datasource_name)
+		self._check_url = config.get_enum(self._get_dproc_opt('check unique url'),
+			DatasetUniqueMode, DatasetUniqueMode.abort)
+		self._check_block = config.get_enum(self._get_dproc_opt('check unique block'),
+			DatasetUniqueMode, DatasetUniqueMode.abort)
+		(self._recorded_url, self._recorded_block) = (set(), set())
 
 	def enabled(self):
-		return (self._checkURL != DatasetUniqueMode.ignore) or (self._checkBlock != DatasetUniqueMode.ignore)
+		return [self._check_url, self._check_block] != 2 * [DatasetUniqueMode.ignore]
 
-	def process(self, blockIter):
-		self._recordedURL = set()
-		self._recordedBlock = set()
-		return DataProcessor.process(self, blockIter)
+	def process(self, block_iter):
+		self._recorded_url = set()  # reset records
+		self._recorded_block = set()
+		return DataProcessor.process(self, block_iter)
 
-	def processBlock(self, block):
+	def process_block(self, block):
 		# Check uniqueness of URLs
-		recordedBlockURL = []
-		if self._checkURL != DatasetUniqueMode.ignore:
-			def processFI(fiList):
-				for fi in fiList:
-					urlHash = md5_hex(repr((fi[DataProvider.URL], fi[DataProvider.NEntries], fi.get(DataProvider.Metadata))))
-					if urlHash in self._recordedURL:
+		url_hash_list = []
+		if self._check_url != DatasetUniqueMode.ignore:
+			def _process_fi_list(fi_list):
+				for fi in fi_list:
+					url_hash = md5_hex(repr((fi[DataProvider.URL], fi[DataProvider.NEntries],
+						fi.get(DataProvider.Metadata))))
+					if url_hash in self._recorded_url:
 						msg = 'Multiple occurences of URL: %r!' % fi[DataProvider.URL]
 						msg += ' (This check can be configured with %r)' % 'dataset check unique url'
-						if self._checkURL == DatasetUniqueMode.warn:
+						if self._check_url == DatasetUniqueMode.warn:
 							self._log.warning(msg)
-						elif self._checkURL == DatasetUniqueMode.abort:
+						elif self._check_url == DatasetUniqueMode.abort:
 							raise DatasetError(msg)
-						elif self._checkURL == DatasetUniqueMode.skip:
+						elif self._check_url == DatasetUniqueMode.skip:
 							continue
-					self._recordedURL.add(urlHash)
-					recordedBlockURL.append(urlHash)
+					self._recorded_url.add(url_hash)
+					url_hash_list.append(url_hash)
 					yield fi
-			block[DataProvider.FileList] = list(processFI(block[DataProvider.FileList]))
-			recordedBlockURL.sort()
+			block[DataProvider.FileList] = list(_process_fi_list(block[DataProvider.FileList]))
+			url_hash_list.sort()
 
 		# Check uniqueness of blocks
-		if self._checkBlock != DatasetUniqueMode.ignore:
-			blockHash = md5_hex(repr((block.get(DataProvider.Dataset), block[DataProvider.BlockName],
-				recordedBlockURL, block[DataProvider.NEntries],
+		if self._check_block != DatasetUniqueMode.ignore:
+			block_hash = md5_hex(repr((block.get(DataProvider.Dataset), block[DataProvider.BlockName],
+				url_hash_list, block[DataProvider.NEntries],
 				block[DataProvider.Locations], block.get(DataProvider.Metadata))))
-			if blockHash in self._recordedBlock:
-				msg = 'Multiple occurences of block: "%s"!' % DataProvider.bName(block)
+			if block_hash in self._recorded_block:
+				msg = 'Multiple occurences of block: "%s"!' % DataProvider.get_block_id(block)
 				msg += ' (This check can be configured with %r)' % 'dataset check unique block'
-				if self._checkBlock == DatasetUniqueMode.warn:
+				if self._check_block == DatasetUniqueMode.warn:
 					self._log.warning(msg)
-				elif self._checkBlock == DatasetUniqueMode.abort:
+				elif self._check_block == DatasetUniqueMode.abort:
 					raise DatasetError(msg)
-				elif self._checkBlock == DatasetUniqueMode.skip:
+				elif self._check_block == DatasetUniqueMode.skip:
 					return None
-			self._recordedBlock.add(blockHash)
+			self._recorded_block.add(block_hash)
 		return block

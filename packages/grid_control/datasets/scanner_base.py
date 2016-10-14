@@ -16,24 +16,35 @@ import logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from hpfwk import AbstractError
 
-class InfoScanner(ConfigurablePlugin):
-	def __init__(self, config):
-		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('dataset.provider.infoscanner')
 
-	def getGuards(self):
+class InfoScanner(ConfigurablePlugin):
+	def __init__(self, config, datasource_name):
+		ConfigurablePlugin.__init__(self, config)
+		self._log = logging.getLogger('%s.provider.infoscanner' % datasource_name)
+		self._datasource_name = datasource_name
+
+	def get_guard_keysets(self):
 		return ([], [])
 
-	def getEntriesVerbose(self, depth, path, metadata, events, seList, objStore):
-		self._log.log(logging.DEBUG, '    ' * depth + 'Collecting information with %s...', self.__class__.__name__)
-		for level, content, name in [
-				(logging.DEBUG, path, 'Path'),
-				(logging.DEBUG1, metadata, 'Metadata'),
-				(logging.DEBUG, events, 'Events'),
-				(logging.DEBUG1, seList, 'SE list'),
-				(logging.DEBUG1, objStore, 'Objects')]:
-			self._log.log(level, '    ' * depth + '  %s: %s', name, content)
-		return self.getEntries(path, metadata, events, seList, objStore)
+	def iter_datasource_items(self, depth, item, metadata_dict, entries, location_list, obj_dict):
+		if self._log.isEnabledFor(logging.DEBUG):
+			self._log.log(logging.DEBUG, '    ' * depth +
+				'Collecting information with %s...', self.__class__.__name__)
+			logging_info_list = [
+				(logging.DEBUG, item, 'Item'),
+				(logging.DEBUG1, metadata_dict, 'Metadata'),
+				(logging.DEBUG, entries, 'entries'),
+				(logging.DEBUG1, location_list, 'SE list'),
+				(logging.DEBUG1, obj_dict, 'Objects')
+			]
+			for (level, content, name) in logging_info_list:
+				self._log.log(level, '    ' * depth + '  %s: %s', name, content)
+		return self._iter_datasource_items(item, metadata_dict, entries, location_list, obj_dict)
 
-	def getEntries(self, path, metadata, events, seList, objStore):
+	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		raise AbstractError
+
+
+class NullScanner(InfoScanner):
+	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
+		yield (item, metadata_dict, entries, location_list, obj_dict)

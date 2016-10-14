@@ -17,6 +17,7 @@ from grid_control.backends import WMS
 from hpfwk import APIError
 from python_compat import identity, ifilter, imap, lmap
 
+
 class JDLWriter(object):
 	def __init__(self):
 		self._esc_dict = {'\\': r'\\', '\"': r'\"', '\n': r'\n'}
@@ -33,7 +34,7 @@ class JDLWriter(object):
 
 	def _format_reqs_sites(self, sites):
 		fmt = lambda x: 'RegExp(%s, other.GlueCEUniqueID)' % self._escape(x)
-		(blacklist, whitelist) = utils.splitBlackWhiteList(sites)
+		(blacklist, whitelist) = utils.split_blackwhite_list(sites)
 		sitereqs = lmap(lambda x: '!' + fmt(x), blacklist)
 		if whitelist:
 			sitereqs.append('(%s)' % str.join(' || ', imap(fmt, whitelist)))

@@ -19,30 +19,31 @@ from grid_control.utils.activity import Activity
 from hpfwk import AbstractError
 from python_compat import identity, lmap
 
+
 class CancelJobs(BackendExecutor):
-	def execute(self, wmsIDs, wmsName): # yields list of (wmsID,)
+	def execute(self, wms_id_list, wms_name): # yields list of (wms_id,)
 		raise AbstractError
 
 
 class CancelJobsWithProcess(CancelJobs):
 	def __init__(self, config, proc_factory):
 		CancelJobs.__init__(self, config)
-		self._timeout = config.getTime('cancel timeout', 60, onChange = None)
+		self._timeout = config.get_time('cancel timeout', 60, on_change = None)
 		self._errormsg = 'Job cancel command returned with exit code %(proc_status)s'
 		self._proc_factory = proc_factory
 
-	def _parse(self, wmsIDs, proc): # yield list of (wmsID,)
+	def _parse(self, wms_id_list, proc): # yield list of (wms_id,)
 		raise AbstractError
 
-	def execute(self, wmsIDs, wmsName):
-		proc = self._proc_factory.create_proc(wmsIDs)
-		for result in self._parse(wmsIDs, proc):
+	def execute(self, wms_id_list, wms_name):
+		proc = self._proc_factory.create_proc(wms_id_list)
+		for result in self._parse(wms_id_list, proc):
 			if not utils.abort():
 				yield result
 		if proc.status(timeout = 0, terminate = True) != 0:
-			self._handleError(proc)
+			self._handle_error(proc)
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg)
 
 
@@ -54,11 +55,11 @@ class CancelJobsWithProcessBlind(CancelJobsWithProcess):
 		if unknownID is not None:
 			self._blacklist = [unknownID]
 
-	def _parse(self, wmsIDs, proc): # yield list of (wmsID,)
+	def _parse(self, wms_id_list, proc): # yield list of (wms_id,)
 		proc.status(self._timeout, terminate = True)
-		return lmap(lambda wmsID: (wmsID,), wmsIDs)
+		return lmap(lambda wms_id: (wms_id,), wms_id_list)
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = self._blacklist, log_empty = False)
 
 
@@ -72,10 +73,10 @@ class CancelAndPurgeJobs(CancelJobs):
 		self._cancel_executor.setup(log)
 		self._purge_executor.setup(log)
 
-	def execute(self, wmsIDs, wmsName): # yields list of (wmsID,)
-		marked_wmsIDs = lmap(lambda result: result[0], self._cancel_executor.execute(wmsIDs, wmsName))
+	def execute(self, wms_id_list, wms_name): # yields list of (wms_id,)
+		marked_wms_id_list = lmap(lambda result: result[0], self._cancel_executor.execute(wms_id_list, wms_name))
 		time.sleep(5)
 		activity = Activity('Purging jobs')
-		for result in self._purge_executor.execute(marked_wmsIDs, wmsName):
+		for result in self._purge_executor.execute(marked_wms_id_list, wms_name):
 			yield result
 		activity.finish()

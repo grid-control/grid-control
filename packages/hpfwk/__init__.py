@@ -12,9 +12,12 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+# pylint:disable=line-too-long
+
 from hpfwk.hpf_debug import format_exception, handle_debug_interrupt
 from hpfwk.hpf_exceptions import APIError, AbstractError, ExceptionCollector, NestedException, clear_current_exception, get_current_exception
 from hpfwk.hpf_plugin import InstanceFactory, Plugin, PluginError, init_hpf_plugins
+
 
 __all__ = ['AbstractError', 'APIError', 'clear_current_exception', 'ExceptionCollector',
 	'format_exception', 'get_current_exception', 'handle_debug_interrupt', 'init_hpf_plugins',

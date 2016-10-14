@@ -165,7 +165,7 @@ class Node(object):
             node.parent = self
         else: newnode=Node(tag=name, parent=self, attrs=attrs, payload=payload)
         if namespace:
-            newnode.setNamespace(namespace)
+            newnode.set_namespace(namespace)
         self.kids.append(newnode)
         self.data.append(u'')
         return newnode
@@ -263,7 +263,7 @@ class Node(object):
     def setName(self,val):
         """ Changes the node name. """
         self.name = val
-    def setNamespace(self, namespace):
+    def set_namespace(self, namespace):
         """ Changes the node namespace. """
         self.namespace=namespace
     def setParent(self, node):

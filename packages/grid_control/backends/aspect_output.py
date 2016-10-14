@@ -17,8 +17,9 @@ from grid_control.backends.backend_tools import BackendExecutor
 from hpfwk import AbstractError
 from python_compat import tarfile
 
+
 class RetrieveJobs(BackendExecutor):
-	def execute(self, wmsIDs): # yields list of (wmsID, local_output_dir)
+	def execute(self, wms_id_list): # yields list of (wms_id, local_output_dir)
 		raise AbstractError
 
 
@@ -31,8 +32,8 @@ class RetrieveJobsEmulateWildcard(RetrieveJobs):
 		RetrieveJobs.setup(self, log)
 		self._executor.setup(log)
 
-	def execute(self, wmsIDs): # yields list of (wmsID, local_output_dir)
-		for (wmsID, local_output_dir) in self._executor.execute(self, wmsIDs):
+	def execute(self, wms_id_list): # yields list of (wms_id, local_output_dir)
+		for (wms_id, local_output_dir) in self._executor.execute(self, wms_id_list):
 			if local_output_dir and os.path.exists(local_output_dir):
 				fn_wildcard_tar = os.path.join(local_output_dir, self._wildcard_file)
 				if os.path.exists(fn_wildcard_tar):
@@ -45,7 +46,7 @@ class RetrieveJobsEmulateWildcard(RetrieveJobs):
 						os.unlink(fn_wildcard_tar)
 					except Exception:
 						self._log.error('Unable to remove wildcard emulation file %s', fn_wildcard_tar)
-			yield (wmsID, local_output_dir)
+			yield (wms_id, local_output_dir)
 
 
 class RetrieveAndPurgeJobs(RetrieveJobs):

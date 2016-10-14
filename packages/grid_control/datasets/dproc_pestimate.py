@@ -12,50 +12,57 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+from grid_control.config import join_config_locations
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
 from hpfwk import clear_current_exception
-from python_compat import identity, ifilter, lmap
+from python_compat import iidfilter
+
 
 class PartitionEstimator(DataProcessor):
-	alias = ['estimate', 'SplitSettingEstimator']
+	alias_list = ['estimate', 'SplitSettingEstimator']
 
-	def __init__(self, config, onChange):
-		DataProcessor.__init__(self, config, onChange)
-		self._targetJobs = config.getInt('target partitions', -1, onChange = onChange)
-		self._targetJobsDS = config.getInt('target partitions per nickname', -1, onChange = onChange)
+	def __init__(self, config, datasource_name):
+		DataProcessor.__init__(self, config, datasource_name)
+		self._target_jobs = config.get_int(
+			join_config_locations(['', datasource_name], 'target partitions'), -1)
+		self._target_jobs_ds = config.get_int(
+			join_config_locations(['', datasource_name], 'target partitions per nickname'), -1)
 		self._entries = {None: 0}
 		self._files = {None: 0}
-		self._config = config
+		self._config = None
+		if self.enabled():
+			self._config = config
 
 	def enabled(self):
-		return (self._targetJobs > 0) or (self._targetJobsDS > 0)
+		return (self._target_jobs > 0) or (self._target_jobs_ds > 0)
 
-	def _setSplitParam(self, config, name, work_units, target_partitions):
-		try:
-			config.setInt(name, max(1, int(work_units / float(target_partitions) + 0.5)))
-		except Exception:
-			clear_current_exception()
+	def process(self, block_iter):
+		if self.enabled() and self._config:
+			block_list = list(DataProcessor.process(self, block_iter))
+			if self._target_jobs > 0:
+				self._set_split_opt(self._config, 'files per job', self._files[None], self._target_jobs)
+				self._set_split_opt(self._config, 'events per job', self._entries[None], self._target_jobs)
+			if self._target_jobs_ds > 0:
+				for nick in iidfilter(self._files):
+					block_config = self._config.change_view(set_sections=['dataset %s' % nick])
+					self._set_split_opt(block_config, 'files per job', self._files[nick], self._target_jobs_ds)
+					self._set_split_opt(block_config, 'events per job', self._entries[nick], self._target_jobs_ds)
+			self._config = None
+			return block_list
+		return block_iter
 
-	def process(self, blockIter):
-		if self.enabled() and not self._config.getState('resync', detail = 'datasets'):
-			blocks = lmap(self.processBlock, blockIter)
-			if self._targetJobs > 0:
-				self._setSplitParam(self._config, 'files per job', self._files[None], self._targetJobs)
-				self._setSplitParam(self._config, 'events per job', self._entries[None], self._targetJobs)
-			if self._targetJobsDS > 0:
-				for nick in ifilter(identity, self._files):
-					block_config = self._config.changeView(setSections = ['dataset %s' % nick])
-					self._setSplitParam(block_config, 'files per job', self._files[nick], self._targetJobsDS)
-					self._setSplitParam(block_config, 'events per job', self._entries[nick], self._targetJobsDS)
-			return blocks
-		return blockIter
-
-	def processBlock(self, block):
-		def inc(key):
+	def process_block(self, block):
+		def _inc(key):
 			self._files[key] = self._files.get(key, 0) + len(block[DataProvider.FileList])
 			self._entries[key] = self._entries.get(key, 0) + block[DataProvider.NEntries]
-		inc(None)
+		_inc(None)
 		if block.get(DataProvider.Nickname):
-			inc(block.get(DataProvider.Nickname))
+			_inc(block.get(DataProvider.Nickname))
 		return block
+
+	def _set_split_opt(self, config, name, work_units, target_partitions):
+		try:
+			config.set_int(name, max(1, int(work_units / float(target_partitions) + 0.5)))
+		except Exception:
+			clear_current_exception()

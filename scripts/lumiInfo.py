@@ -16,27 +16,28 @@
 import os, sys
 from gcSupport import Activity, ClassSelector, FileInfoProcessor, JobClass, Options, getCMSSWInfo, initGC, scriptOptions, utils
 from grid_control.datasets import DataSplitter
-from grid_control_cms.lumi_tools import formatLumi, mergeLumi, parseLumiFilter
+from grid_control_cms.lumi_tools import format_lumi, merge_lumi_list, parse_lumi_filter
 from hpfwk import clear_current_exception
 from python_compat import imap, irange, lmap, set, sorted
 
+
 parser = Options()
 parser.section('expr', 'Manipulate lumi filter expressions', '%s <lumi filter expression>')
-parser.addBool('expr', 'G', 'gc',            default = False, help = 'Output grid-control compatible lumi expression')
-parser.addBool('expr', 'J', 'json',          default = False, help = 'Output JSON file with lumi expression')
-parser.addBool('expr', 'F', 'full',          default = False, help = 'Output JSON file with full expression')
+parser.add_bool('expr', 'G', 'gc',            default = False, help = 'Output grid-control compatible lumi expression')
+parser.add_bool('expr', 'J', 'json',          default = False, help = 'Output JSON file with lumi expression')
+parser.add_bool('expr', 'F', 'full',          default = False, help = 'Output JSON file with full expression')
 
 parser.section('calc', 'Options which allow luminosity related calculations', '%s <config file>')
-parser.addText('calc', 'O', 'output-dir',    default = None,  help = 'Set output directory (default: work directory)')
-parser.addBool('calc', 'g', 'job-gc',        default = False, help = 'Output grid-control compatible lumi expression for processed lumi sections')
-parser.addBool('calc', 'j', 'job-json',      default = False, help = 'Output JSON file with processed lumi sections')
-parser.addBool('calc', 'e', 'job-events',    default = False, help = 'Get number of events processed')
-parser.addBool('calc', 'p', 'parameterized', default = False, help = 'Use output file name to categorize output (useful for parameterized tasks)')
-parser.addBool('calc', ' ', 'replace',   default = 'job_%d_', help = 'Pattern to replace for parameterized jobs (default: job_%%d_')
+parser.add_text('calc', 'O', 'output-dir',    default = None,  help = 'Set output directory (default: work directory)')
+parser.add_bool('calc', 'g', 'job-gc',        default = False, help = 'Output grid-control compatible lumi expression for processed lumi sections')
+parser.add_bool('calc', 'j', 'job-json',      default = False, help = 'Output JSON file with processed lumi sections')
+parser.add_bool('calc', 'e', 'job-events',    default = False, help = 'Get number of events processed')
+parser.add_bool('calc', 'p', 'parameterized', default = False, help = 'Use output file name to categorize output (useful for parameterized tasks)')
+parser.add_bool('calc', ' ', 'replace',   default = 'job_%d_', help = 'Pattern to replace for parameterized jobs (default: job_%%d_')
 options = scriptOptions(parser)
 
 def outputGC(lumis, stream = sys.stdout):
-	stream.write('%s\n' % utils.wrapList(formatLumi(lumis), 60, ',\n'))
+	stream.write('%s\n' % utils.wrap_list(format_lumi(lumis), 60, ',\n'))
 
 def outputJSON(lumis, stream = sys.stdout):
 	tmp = {}
@@ -57,7 +58,7 @@ def lumi_expr(opts, args):
 	if len(args) == 0:
 		raise Exception('No arguments given!')
 	try:
-		lumis = parseLumiFilter(str.join(' ', args))
+		lumis = parse_lumi_filter(str.join(' ', args))
 	except Exception:
 		raise Exception('Could not parse: %s' % str.join(' ', args))
 
@@ -69,25 +70,26 @@ def lumi_expr(opts, args):
 		result = {}
 		for rlrange in lumis:
 			start, end = rlrange
-			assert(start[0] == end[0])
+			if start[0] != end[0]:
+				raise Exception('Lumi filter term contains different runs: %s' % repr(rlrange))
 			result.setdefault(start[0], []).extend(irange(start[1], end[1] + 1))
 		print(result)
 
 def iter_jobs(opts, workDir, jobList, splitter):
-	(splitInfo, fip) = ({}, FileInfoProcessor())
+	(partition, fip) = ({}, FileInfoProcessor())
 	activity = Activity('Reading job logs')
-	for jobNum in jobList:
-		activity.update('Reading job logs - [%d / %d]' % (jobNum, jobList[-1]))
+	for jobnum in jobList:
+		activity.update('Reading job logs - [%d / %d]' % (jobnum, jobList[-1]))
 
 		if opts.parameterized:
-			fi = fip.process(os.path.join(workDir, 'output', 'job_%d' % jobNum))
+			fi = fip.process(os.path.join(workDir, 'output', 'job_%d' % jobnum))
 			outputName = fi[0][FileInfoProcessor.NameDest].split('.')[0]
-			outputName = outputName.replace(opts.replace % jobNum, '_').replace('/', '_').replace('__', '_').strip('_')
+			outputName = outputName.replace(opts.replace % jobnum, '_').replace('/', '_').replace('__', '_').strip('_')
 		else:
 			if splitter:
-				splitInfo = splitter.getSplitInfo(jobNum)
-			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.Dataset, '').replace('/', '_'))
-		yield (jobNum, outputName)
+				partition = splitter.get_partition(jobnum)
+			outputName = partition.get(DataSplitter.Nickname, partition.get(DataSplitter.Dataset, '').replace('/', '_'))
+		yield (jobnum, outputName)
 	activity.finish()
 
 def process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict):
@@ -108,16 +110,16 @@ def process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict):
 
 def process_jobs(opts, workDir, jobList, splitter):
 	(lumiDict, readDict, writeDict) = ({}, {}, {})
-	for (jobNum, outputName) in iter_jobs(opts, workDir, jobList, splitter):
+	for (jobnum, outputName) in iter_jobs(opts, workDir, jobList, splitter):
 		# Read framework report files to get number of events
 		try:
-			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobNum))
+			outputDir = os.path.join(workDir, 'output', 'job_' + str(jobnum))
 			for fwkXML in getCMSSWInfo(os.path.join(outputDir, 'cmssw.dbs.tar.gz')):
 				process_fwjr(outputName, fwkXML, lumiDict, readDict, writeDict)
 		except KeyboardInterrupt:
 			sys.exit(os.EX_OK)
 		except Exception:
-			print('Error while parsing framework output of job %s!' % jobNum)
+			print('Error while parsing framework output of job %s!' % jobnum)
 			continue
 	return (lumiDict, readDict, writeDict)
 
@@ -132,7 +134,7 @@ def lumi_calc(opts, workDir, jobList, splitter):
 			for lumi in lumiDict[sample][run]:
 				lumis.setdefault(sample, []).append(([run, lumi], [run, lumi]))
 	for sample in lumiDict:
-		lumis[sample] = mergeLumi(lumis[sample])
+		lumis[sample] = merge_lumi_list(lumis[sample])
 	activity.finish()
 
 	for sample, lumi_list in lumis.items():
@@ -144,7 +146,7 @@ def lumi_calc(opts, workDir, jobList, splitter):
 			if writeDict.get(sample, None):
 				sys.stdout.write('\n')
 				head = [(0, '          Output filename'), (1, 'Events')]
-				utils.printTabular(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
+				utils.display_table(head, lmap(lambda pfn: {0: pfn, 1: writeDict[sample][pfn]}, writeDict[sample]))
 		if opts.job_json:
 			json_fn = os.path.join(opts.output_dir or workDir, 'processed_%s.json' % sample)
 			outputJSON(lumi_list, open(json_fn, 'w'))
@@ -161,14 +163,14 @@ def main(opts, args):
 		return lumi_expr(opts, args)
 
 	if opts.job_json or opts.job_gc or opts.job_events:
-		(config, jobDB) = initGC(args)
-		workDir = config.getWorkPath()
+		(config, job_db) = initGC(args)
+		workDir = config.get_work_path()
 		splitter = None
 		try:
-			splitter = DataSplitter.loadPartitionsForScript(os.path.join(workDir, 'datamap.tar'))
+			splitter = DataSplitter.load_partitions_for_script(os.path.join(workDir, 'datamap.tar'))
 		except Exception:
 			clear_current_exception()
-		return lumi_calc(opts, workDir, sorted(jobDB.getJobs(ClassSelector(JobClass.SUCCESS))), splitter)
+		return lumi_calc(opts, workDir, sorted(job_db.get_job_list(ClassSelector(JobClass.SUCCESS))), splitter)
 
 if __name__ == '__main__':
 	sys.exit(main(options.opts, options.args))

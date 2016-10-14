@@ -14,23 +14,24 @@
 
 import sys
 from grid_control.report import Report
-from grid_control.utils.parsing import strTime
+from grid_control.utils.parsing import str_time_long
 from python_compat import ifilter, imap
 
+
 class TimeReport(Report):
-	alias = ['time']
+	alias_list = ['time']
 
-	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		Report.__init__(self, jobDB, task, jobs, configString)
-		self._dollar_per_hour = float(configString or 0.013)
+	def __init__(self, job_db, task, jobs=None, config_str=''):
+		Report.__init__(self, job_db, task, jobs, config_str)
+		self._dollar_per_hour = float(config_str or 0.013)
 
-	def getHeight(self):
+	def get_height(self):
 		return 1
 
-	def display(self):
-		job_runtimes = imap(lambda jobNum: self._jobDB.getJobTransient(jobNum).get('runtime', 0), self._jobs)
-		cpuTime = sum(ifilter(lambda rt: rt > 0, job_runtimes))
-		msg = 'Consumed wall time: %-20s' % strTime(cpuTime)
-		msg += 'Estimated cost: $%.2f\n' % ((cpuTime / 60. / 60.) * self._dollar_per_hour)
+	def show_report(self, job_db):
+		job_runtimes = imap(lambda jobnum: job_db.get_job_transient(jobnum).get('runtime', 0), self._jobs)
+		cpu_time = sum(ifilter(lambda rt: rt > 0, job_runtimes))
+		msg = 'Consumed wall time: %-20s' % str_time_long(cpu_time)
+		msg += 'Estimated cost: $%.2f\n' % ((cpu_time / 60. / 60.) * self._dollar_per_hour)
 		sys.stdout.write(msg)
 		sys.stdout.flush()

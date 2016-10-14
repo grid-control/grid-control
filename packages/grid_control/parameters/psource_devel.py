@@ -14,28 +14,31 @@
 
 from grid_control.parameters.psource_meta import ZipLongParameterSource
 from hpfwk import AbstractError
-from python_compat import irange, sort_inplace
+from python_compat import irange
+
 
 class CombineParameterSource(ZipLongParameterSource):
-	alias = ['combine']
-	def __init__(self, psource1, psource2, var1, var2 = None):
+	alias_list = ['combine']
+
+	def __init__(self, psource1, psource2, var1, var2=None):
+		ZipLongParameterSource.__init__(self)
 		psource1_values = {}
-		for (pNum1, value) in self._iterParamItems(psource1, var1):
-			psource1_values.setdefault(value, []).append(pNum1)
+		for (pnum1, value) in self._iter_parameter_items(psource1, var1):
+			psource1_values.setdefault(value, []).append(pnum1)
 		self._combine_idx = []
-		for (pNum2, value) in self._iterParamItems(psource2, var2 or var1):
-			for pNum1 in psource1_values.get(value, []):
-				self._combine_idx.append((pNum1, pNum2))
-		sort_inplace(self._combine_idx)
+		for (pnum2, value) in self._iter_parameter_items(psource2, var2 or var1):
+			for pnum1 in psource1_values.get(value, []):
+				self._combine_idx.append((pnum1, pnum2))
+		self._combine_idx.sort()
 		raise AbstractError
 
-	def _iterParamItems(self, psource, var):
-		def getValue(psource, pNum, var):
+	def _iter_parameter_items(self, psource, var):
+		def _get_value(psource, pnum, var):
 			result = {}
-			psource.fillParameterInfo(pNum, result)
+			psource.fill_parameter_content(pnum, result)
 			return result.get(var)
-		if psource.getMaxParameters() is None:
-			yield (-1, getValue(psource, None, var))
+		if psource.get_parameter_len() is None:
+			yield (-1, _get_value(psource, None, var))
 		else:
-			for pNum in irange(psource.getMaxParameters()):
-				yield (pNum, getValue(psource, pNum, var))
+			for pnum in irange(psource.get_parameter_len()):
+				yield (pnum, _get_value(psource, pnum, var))

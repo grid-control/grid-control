@@ -17,84 +17,84 @@ from grid_control.backends.wms import WMS
 from grid_control.utils import Result
 from python_compat import ifilter, lmap, sorted
 
+
 # Distribute to WMS according to job id prefix
 
 class MultiWMS(WMS):
 	def __init__(self, config, name, wmsList):
 		WMS.__init__(self, config, name)
 		self._defaultWMS = wmsList[0]
-		defaultT = self._defaultWMS.getTimings()
-		self._timing = Result(waitOnIdle = defaultT.waitOnIdle, waitBetweenSteps = defaultT.waitBetweenSteps)
-		self._wmsMap = {self._defaultWMS.getObjectName().lower(): self._defaultWMS}
+		defaultT = self._defaultWMS.get_interval_info()
+		self._timing = Result(wait_on_idle = defaultT.wait_on_idle, wait_between_steps = defaultT.wait_between_steps)
+		self._wmsMap = {self._defaultWMS.get_object_name().lower(): self._defaultWMS}
 		for wmsEntry in wmsList[1:]:
-			wmsObj = wmsEntry
-			self._wmsMap[wmsObj.getObjectName().lower()] = wmsObj
-			wmsT = wmsObj.getTimings()
-			self._timing.waitOnIdle = max(self._timing.waitOnIdle, wmsT.waitOnIdle)
-			self._timing.waitBetweenSteps = max(self._timing.waitBetweenSteps, wmsT.waitBetweenSteps)
+			wms_obj = wmsEntry
+			self._wmsMap[wms_obj.get_object_name().lower()] = wms_obj
+			wmsT = wms_obj.get_interval_info()
+			self._timing.wait_on_idle = max(self._timing.wait_on_idle, wmsT.wait_on_idle)
+			self._timing.wait_between_steps = max(self._timing.wait_between_steps, wmsT.wait_between_steps)
 
-		self._brokerWMS = config.getPlugin('wms broker', 'RandomBroker',
+		self._brokerWMS = config.get_plugin('wms broker', 'RandomBroker',
 			cls = Broker, inherit = True, tags = [self], pargs = ('wms', 'wms', self._wmsMap.keys))
 
 
-	def getTimings(self):
+	def get_interval_info(self):
 		return self._timing
 
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
-		canCurrentlySubmit = self._defaultWMS.canSubmit(neededTime, canCurrentlySubmit)
-		for wmsObj in self._wmsMap.values():
-			canCurrentlySubmit = wmsObj.canSubmit(neededTime, canCurrentlySubmit)
-		return canCurrentlySubmit
+	def can_submit(self, needed_time, can_currently_submit):
+		can_currently_submit = self._defaultWMS.can_submit(needed_time, can_currently_submit)
+		for wms_obj in self._wmsMap.values():
+			can_currently_submit = wms_obj.can_submit(needed_time, can_currently_submit)
+		return can_currently_submit
 
 
-	def getAccessToken(self, gcID):
-		return self._wmsMap.get(self._splitId(gcID)[0].lower(), self._defaultWMS).getAccessToken(gcID)
+	def get_access_token(self, gc_id):
+		return self._wmsMap.get(self._split_gc_id(gc_id)[0].lower(), self._defaultWMS).get_access_token(gc_id)
 
 
-	def deployTask(self, task, monitor, transferSE, transferSB):
-		for wmsObj in self._wmsMap.values():
-			wmsObj.deployTask(task, monitor, transferSE, transferSB)
+	def deploy_task(self, task, monitor, transfer_se, transfer_sb):
+		for wms_obj in self._wmsMap.values():
+			wms_obj.deploy_task(task, monitor, transfer_se, transfer_sb)
 
 
-	def submitJobs(self, jobNumList, task):
-		def chooseBackend(jobNum):
-			jobReq = self._brokerWMS.brokerAdd(task.getRequirements(jobNum), WMS.BACKEND)
+	def submit_jobs(self, jobnumList, task):
+		def chooseBackend(jobnum):
+			jobReq = self._brokerWMS.brokerAdd(task.get_requirement_list(jobnum), WMS.BACKEND)
 			return list(dict(jobReq).get(WMS.BACKEND))[0]
-		return self._forwardCall(jobNumList, chooseBackend, lambda wmsObj, args: wmsObj.submitJobs(args, task))
+		return self._forwardCall(jobnumList, chooseBackend, lambda wms_obj, args: wms_obj.submit_jobs(args, task))
 
 
-	def _findBackend(self, gcID_jobNum):
-		return self._splitId(gcID_jobNum[0])[0]
+	def _findBackend(self, gc_id_jobnum):
+		return self._split_gc_id(gc_id_jobnum[0])[0]
 
 
-	def checkJobs(self, gcIDs):
-		tmp = lmap(lambda gcID: (gcID, None), gcIDs)
-		return self._forwardCall(tmp, self._findBackend, lambda wmsObj, args: wmsObj.checkJobs(lmap(lambda x: x[0], args)))
+	def check_jobs(self, gc_id_list):
+		tmp = lmap(lambda gc_id: (gc_id, None), gc_id_list)
+		return self._forwardCall(tmp, self._findBackend, lambda wms_obj, args: wms_obj.check_jobs(lmap(lambda x: x[0], args)))
 
 
-	def cancelJobs(self, gcIDs):
-		tmp = lmap(lambda gcID: (gcID, None), gcIDs)
-		return self._forwardCall(tmp, self._findBackend, lambda wmsObj, args: wmsObj.cancelJobs(lmap(lambda x: x[0], args)))
+	def cancel_jobs(self, gc_id_list):
+		tmp = lmap(lambda gc_id: (gc_id, None), gc_id_list)
+		return self._forwardCall(tmp, self._findBackend, lambda wms_obj, args: wms_obj.cancel_jobs(lmap(lambda x: x[0], args)))
 
 
-	def retrieveJobs(self, gcID_jobNum_List):
-		return self._forwardCall(gcID_jobNum_List, self._findBackend, lambda wmsObj, args: wmsObj.retrieveJobs(args))
+	def retrieve_jobs(self, gc_id_jobnum_List):
+		return self._forwardCall(gc_id_jobnum_List, self._findBackend, lambda wms_obj, args: wms_obj.retrieve_jobs(args))
 
 
 	def _getMapID2Backend(self, args, assignFun):
 		argMap = {}
+		default_backend = self._defaultWMS.get_object_name()
 		for arg in args: # Assign args to backends
-			backend = assignFun(arg)
-			if not backend:
-				backend = self._defaultWMS.getObjectName()
+			backend = assignFun(arg) or default_backend
 			argMap.setdefault(backend.lower(), []).append(arg)
 		return argMap
 
 
 	def _forwardCall(self, args, assignFun, callFun):
 		argMap = self._getMapID2Backend(args, assignFun)
-		for wmsPrefix in ifilter(lambda wmsPrefix: wmsPrefix in argMap, sorted(self._wmsMap)):
+		for wmsPrefix in ifilter(argMap.__contains__, sorted(self._wmsMap)):
 			wms = self._wmsMap[wmsPrefix]
 			for result in callFun(wms, argMap[wmsPrefix]):
 				yield result

@@ -20,6 +20,7 @@ from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import ifilter, imap, izip, lmap, next
 
+
 class Host_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		CheckJobsWithProcess.__init__(self, config,
@@ -40,7 +41,7 @@ class Host_CheckJobs(CheckJobsWithProcess):
 			job_info.update({CheckInfo.QUEUE: 'localqueue', CheckInfo.WN: 'localhost'})
 			yield job_info
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = ['Unknown Job Id'], log_empty = False)
 
 
@@ -48,27 +49,27 @@ class Host_CancelJobs(CancelJobsWithProcessBlind):
 	def __init__(self, config):
 		CancelJobsWithProcessBlind.__init__(self, config, 'kill', ['-9'], unknownID = 'No such process')
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = self._blacklist, log_empty = False)
 
 
 class Host(LocalWMS):
-	alias = ['Localhost']
-	configSections = LocalWMS.configSections + ['Localhost', 'Host']
+	alias_list = ['Localhost']
+	config_section_list = LocalWMS.config_section_list + ['Localhost', 'Host']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.pathShare('gc-host.sh'),
-			checkExecutor = CheckJobsMissingState(config, Host_CheckJobs(config)),
-			cancelExecutor = Host_CancelJobs(config))
+			submitExec = utils.get_path_share('gc-host.sh'),
+			check_executor = CheckJobsMissingState(config, Host_CheckJobs(config)),
+			cancel_executor = Host_CancelJobs(config))
 
 
-	def getJobArguments(self, jobNum, sandbox):
+	def get_job_arguments(self, jobnum, sandbox):
 		return ''
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
-		return '%d "%s" "%s" "%s"' % (jobNum, sandbox, stdout, stderr)
+	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
+		return '%d "%s" "%s" "%s"' % (jobnum, sandbox, stdout, stderr)
 
 
 	def parseSubmitOutput(self, data):

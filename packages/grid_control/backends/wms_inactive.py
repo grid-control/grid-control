@@ -14,31 +14,32 @@
 
 from grid_control.backends import WMS
 
+
 class InactiveWMS(WMS):
-	alias = ['inactive']
+	alias_list = ['inactive']
 
 	def __init__(self, config, name):
 		WMS.__init__(self, config, name)
-		self._token = config.getCompositePlugin(['proxy', 'access token'], 'TrivialAccessToken',
+		self._token = config.get_composited_plugin(['proxy', 'access token'], 'TrivialAccessToken',
 			'MultiAccessToken', cls = 'AccessToken', inherit = True, tags = [self])
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, needed_time, can_currently_submit):
 		return True
 
-	def getAccessToken(self, gcID):
+	def get_access_token(self, gc_id):
 		return self._token
 
-	def deployTask(self, task, monitor, transferSE, transferSB):
+	def deploy_task(self, task, monitor, transfer_se, transfer_sb):
 		return
 
-	def submitJobs(self, jobNumList, task): # jobNumList = [1, 2, ...]
-		self._log.warning('Discarded submission of %d jobs', len(jobNumList))
+	def submit_jobs(self, jobnumList, task): # jobnumList = [1, 2, ...]
+		self._log.warning('Discarded submission of %d jobs', len(jobnumList))
 
-	def checkJobs(self, gcIDs): # Check status and return (gcID, job_state, job_info) for active jobs
-		self._log.warning('Discarded check of %d jobs', len(gcIDs))
+	def check_jobs(self, gc_id_list): # Check status and return (gc_id, job_state, job_info) for active jobs
+		self._log.warning('Discarded check of %d jobs', len(gc_id_list))
 
-	def retrieveJobs(self, gcIDs):
-		self._log.warning('Discarded retrieval of %d jobs', len(gcIDs))
+	def retrieve_jobs(self, gc_id_list):
+		self._log.warning('Discarded retrieval of %d jobs', len(gc_id_list))
 
-	def cancelJobs(self, gcIDs):
-		self._log.warning('Discarded abort of %d jobs', len(gcIDs))
+	def cancel_jobs(self, gc_id_list):
+		self._log.warning('Discarded abort of %d jobs', len(gc_id_list))

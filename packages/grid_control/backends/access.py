@@ -17,15 +17,16 @@
 import os, time, logging
 from grid_control.gc_exceptions import UserError
 from grid_control.gc_plugin import NamedPlugin
-from grid_control.utils.parsing import strTime
+from grid_control.utils.parsing import str_time_long
 from hpfwk import AbstractError, NestedException
+
 
 class AccessTokenError(NestedException):
 	pass
 
 class AccessToken(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['proxy', 'access']
-	tagName = 'access'
+	config_section_list = NamedPlugin.config_section_list + ['proxy', 'access']
+	config_tag_name = 'access'
 
 	def getUsername(self):
 		raise AbstractError
@@ -39,7 +40,7 @@ class AccessToken(NamedPlugin):
 	def getAuthFiles(self):
 		raise AbstractError
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, needed_time, can_currently_submit):
 		raise AbstractError
 
 
@@ -60,14 +61,14 @@ class MultiAccessToken(AccessToken):
 	def getAuthFiles(self):
 		return self._subtokenList[0].getAuthFiles()
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, needed_time, can_currently_submit):
 		for subtoken in self._subtokenList:
-			canCurrentlySubmit = canCurrentlySubmit and subtoken.canSubmit(neededTime, canCurrentlySubmit)
-		return canCurrentlySubmit
+			can_currently_submit = can_currently_submit and subtoken.can_submit(needed_time, can_currently_submit)
+		return can_currently_submit
 
 
 class TrivialAccessToken(AccessToken):
-	alias = ['trivial', 'TrivialProxy']
+	alias_list = ['trivial', 'TrivialProxy']
 
 	def getUsername(self):
 		for var in ('LOGNAME', 'USER', 'LNAME', 'USERNAME'):
@@ -82,56 +83,56 @@ class TrivialAccessToken(AccessToken):
 	def getAuthFiles(self):
 		return []
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, needed_time, can_currently_submit):
 		return True
 
 
 class TimedAccessToken(AccessToken):
 	def __init__(self, config, name):
 		AccessToken.__init__(self, config, name)
-		self._lowerLimit = config.getTime('min lifetime', 300, onChange = None)
-		self._maxQueryTime = config.getTime(['max query time', 'urgent query time'],  5 * 60, onChange = None)
-		self._minQueryTime = config.getTime(['min query time', 'query time'], 30 * 60, onChange = None)
-		self._ignoreTime = config.getBool(['ignore walltime', 'ignore needed time'], False, onChange = None)
+		self._lowerLimit = config.get_time('min lifetime', 300, on_change = None)
+		self._maxQueryTime = config.get_time(['max query time', 'urgent query time'],  5 * 60, on_change = None)
+		self._minQueryTime = config.get_time(['min query time', 'query time'], 30 * 60, on_change = None)
+		self._ignoreTime = config.get_bool(['ignore walltime', 'ignore needed time'], False, on_change = None)
 		self._lastUpdate = 0
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, needed_time, can_currently_submit):
 		if not self._checkTimeleft(self._lowerLimit):
 			raise UserError('Your access token (%s) only has %d seconds left! (Required are %s)' %
-				(self.getObjectName(), self._getTimeleft(cached = True), strTime(self._lowerLimit)))
-		if self._ignoreTime or (neededTime < 0):
+				(self.get_object_name(), self._get_timeleft(cached = True), str_time_long(self._lowerLimit)))
+		if self._ignoreTime or (needed_time < 0):
 			return True
-		if not self._checkTimeleft(self._lowerLimit + neededTime) and canCurrentlySubmit:
+		if not self._checkTimeleft(self._lowerLimit + needed_time) and can_currently_submit:
 			self._log.log_time(logging.WARNING, 'Access token (%s) lifetime (%s) does not meet the access and walltime (%s) requirements!',
-				self.getObjectName(), strTime(self._getTimeleft(cached = False)), strTime(self._lowerLimit + neededTime))
+				self.get_object_name(), str_time_long(self._get_timeleft(cached = False)), str_time_long(self._lowerLimit + needed_time))
 			self._log.log_time(logging.WARNING, 'Disabling job submission')
 			return False
 		return True
 
-	def _getTimeleft(self, cached):
+	def _get_timeleft(self, cached):
 		raise AbstractError
 
-	def _checkTimeleft(self, neededTime): # check for time left
+	def _checkTimeleft(self, needed_time): # check for time left
 		delta = time.time() - self._lastUpdate
-		timeleft = max(0, self._getTimeleft(cached = True) - delta)
+		timeleft = max(0, self._get_timeleft(cached = True) - delta)
 		# recheck token => after > 30min have passed or when time is running out (max every 5 minutes)
-		if (delta > self._minQueryTime) or (timeleft < neededTime and delta > self._maxQueryTime):
+		if (delta > self._minQueryTime) or (timeleft < needed_time and delta > self._maxQueryTime):
 			self._lastUpdate = time.time()
-			timeleft = self._getTimeleft(cached = False)
-			self._log.log_time(logging.INFO, 'Time left for access token "%s": %s', self.getObjectName(), strTime(timeleft))
-		return timeleft >= neededTime
+			timeleft = self._get_timeleft(cached = False)
+			self._log.log_time(logging.INFO, 'Time left for access token "%s": %s', self.get_object_name(), str_time_long(timeleft))
+		return timeleft >= needed_time
 
 
 class RefreshableAccessToken(TimedAccessToken):
 	def __init__(self, config, name):
 		TimedAccessToken.__init__(self, config, name)
-		self._refresh = config.getTime('access refresh', 60*60, onChange = None)
+		self._refresh = config.get_time('access refresh', 60*60, on_change = None)
 
 	def _refreshAccessToken(self):
 		raise AbstractError
 
-	def _checkTimeleft(self, neededTime): # check for time left
-		if self._getTimeleft(True) < self._refresh:
+	def _checkTimeleft(self, needed_time): # check for time left
+		if self._get_timeleft(True) < self._refresh:
 			self._refreshAccessToken()
-			self._getTimeleft(False)
-		return TimedAccessToken._checkTimeleft(self, neededTime)
+			self._get_timeleft(False)
+		return TimedAccessToken._checkTimeleft(self, needed_time)

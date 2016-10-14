@@ -19,37 +19,39 @@ from grid_control.datasets import DataSplitter
 from grid_control.parameters import ParameterAdapter, ParameterInfo, ParameterMetadata, ParameterSource
 from python_compat import ifilter, imap, izip, lfilter, lmap, md5_hex, set, sorted
 
+
 random.seed(0)
 
 parser = Options(usage = '%s [OPTIONS] <parameter definition>')
-parser.addAccu(None, 'c', 'collapse',           default = 0,     help = 'Do not collapse dataset infos in display')
-parser.addBool(None, 'a', 'active',             default = False, help = 'Show activity state')
-parser.addBool(None, 'd', 'disabled',           default = False, help = 'Show disabled parameter sets')
-parser.addBool(None, 'f', 'force-intervention', default = False, help = 'Simulate dataset intervention')
-parser.addBool(None, 'I', 'intervention',       default = False, help = 'Display intervention tasks')
-parser.addBool(None, 'l', 'list-parameters',    default = False, help = 'Display parameter list')
-parser.addBool(None, 'L', 'show-sources',       default = False, help = 'Show parameter sources')
-parser.addBool(None, 't', 'untracked',          default = False, help = 'Display untracked variables')
-parser.addBool(None, 'T', 'persistent',         default = False, help = 'Work with persistent paramters')
-parser.addList(None, 'p', 'parameter',          default = [],    help = 'Specify parameters')
-parser.addText(None, 'D', 'dataset',            default = '',    help = 'Add dataset splitting (use "True" to simulate a dataset)')
-parser.addText(None, 'j', 'job',                default = None,  help = 'Select job to display (used for unbounded parameter spaces)')
-parser.addText(None, 'F', 'factory',            default = None,  help = 'Select parameter source factory')
-parser.addText(None, 'o', 'output',             default = '',    help = 'Show only specified parameters')
-parser.addText(None, 'S', 'save',               default = '',    help = 'Saves information to specified file')
-parser.addText(None, 'V', 'visible',            default = '',    help = 'Set visible variables')
+parser.add_accu(None, 'c', 'collapse',           default = 0,     help = 'Do not collapse dataset infos in display')
+parser.add_bool(None, 'a', 'active',             default = False, help = 'Show activity state')
+parser.add_bool(None, 'd', 'disabled',           default = False, help = 'Show disabled parameter sets')
+parser.add_bool(None, 'f', 'force-intervention', default = False, help = 'Simulate dataset intervention')
+parser.add_bool(None, 'I', 'intervention',       default = False, help = 'Display intervention tasks')
+parser.add_bool(None, 'l', 'list-parameters',    default = False, help = 'Display parameter list')
+parser.add_bool(None, 'L', 'show-sources',       default = False, help = 'Show parameter sources')
+parser.add_bool(None, 't', 'untracked',          default = False, help = 'Display untracked variables')
+parser.add_bool(None, 'T', 'persistent',         default = False, help = 'Work with persistent paramters')
+parser.add_list(None, 'p', 'parameter',          default = [],    help = 'Specify parameters')
+parser.add_text(None, 'D', 'dataset',            default = '',    help = 'Add dataset splitting (use "True" to simulate a dataset)')
+parser.add_text(None, 'j', 'job',                default = None,  help = 'Select job to display (used for unbounded parameter spaces)')
+parser.add_text(None, 'F', 'factory',            default = None,  help = 'Select parameter source factory')
+parser.add_text(None, 'o', 'output',             default = '',    help = 'Show only specified parameters')
+parser.add_text(None, 'S', 'save',               default = '',    help = 'Saves information to specified file')
+parser.add_text(None, 'V', 'visible',            default = '',    help = 'Set visible variables')
 options = scriptOptions(parser)
 
 if len(options.args) != 1:
-	utils.exitWithUsage(parser.usage())
+	utils.exit_with_usage(parser.usage())
 
-log = logging.getLogger('user')
+log = logging.getLogger()
 
 # Create dataset parameter source
 class DummySplitter:
-	def getMaxJobs(self):
+	def get_partition_len(self):
 		return 3
-	def getSplitInfo(self, pNum):
+
+	def get_partition(self, pNum):
 		mkEntry = lambda ds, fl, n, nick: { DataSplitter.Dataset: ds, DataSplitter.Nickname: nick,
 			DataSplitter.FileList: fl, DataSplitter.NEntries: n }
 		tmp = [ mkEntry('ds1', ['a', 'b'], 23, 'data_1'), mkEntry('ds1', ['1'], 42, 'data_1'),
@@ -57,23 +59,23 @@ class DummySplitter:
 		return tmp[pNum]
 
 class DataSplitProcessorTest:
-	def getKeys(self):
+	def get_partition_metadata(self):
 		return lmap(lambda k: ParameterMetadata(k, untracked=True),
 			['DATASETINFO', 'DATASETPATH', 'DATASETBLOCK', 'DATASETNICK'])
 
-	def process(self, pNum, splitInfo, result):
+	def process(self, pNum, partition, result):
 		result.update({
 			'DATASETINFO': '',
-			'DATASETPATH': splitInfo.get(DataSplitter.Dataset, None),
-			'DATASETBLOCK': splitInfo.get(DataSplitter.BlockName, None),
-			'DATASETNICK': splitInfo.get(DataSplitter.Nickname, None),
+			'DATASETPATH': partition.get(DataSplitter.Dataset, None),
+			'DATASETBLOCK': partition.get(DataSplitter.BlockName, None),
+			'DATASETNICK': partition.get(DataSplitter.Nickname, None),
 			'DATASETSPLIT': pNum,
 		})
 
 repository = {}
 
 def force_intervention():
-	for dp in repository:
+	for dp in repository.values():
 		dp.intervention = (set([1]), set([0]), True)
 
 def process_intervention(opts, psource):
@@ -94,19 +96,19 @@ def process_intervention(opts, psource):
 
 def save_parameters(psource, fn):
 	log.info('')
-	ParameterSource.getClass('GCDumpParameterSource').write(fn, psource)
+	ParameterSource.get_class('GCDumpParameterSource').write(fn, psource)
 	log.info('Parameter information saved to ./%s', fn)
 
 def setup_config(opts, args):
 	# Set config based on settings from config file or command line
-	configFile = None
+	config_file = None
 	if os.path.exists(args[0]):
-		configFile = args[0]
-	config = getConfig(configFile, section = 'global')
-	if os.path.exists(config.getWorkPath('datamap.tar')):
-		opts.dataset = config.getWorkPath('datamap.tar')
-	config.changeView(setSections = ['jobs']).set('nseeds', '1', '?=')
-	configParameters = config.changeView(setSections = ['parameters'])
+		config_file = args[0]
+	config = getConfig(config_file, section = 'global')
+	if os.path.exists(config.get_work_path('datamap.tar')):
+		opts.dataset = config.get_work_path('datamap.tar')
+	config.change_view(set_sections = ['jobs']).set('nseeds', '1', '?=')
+	configParameters = config.change_view(set_sections = ['parameters'])
 	if opts.parameter:
 		log.info('Provided options:')
 		for p in opts.parameter:
@@ -115,12 +117,12 @@ def setup_config(opts, args):
 			log.info('\t%s: %s', k.strip(), v.strip())
 		log.info('')
 
-	if configFile is None:
+	if config_file is None:
 		configParameters.set('parameters', str.join(' ', args).replace('\\n', '\n'))
 		if opts.dataset:
 			configParameters.set('default lookup', 'DATASETNICK')
 		if opts.verbose > 2:
-			config.changeView(setSections = None).write(sys.stdout)
+			config.change_view(set_sections = None).write(sys.stdout)
 	return config
 
 def setup_dataset(config, dataset):
@@ -128,34 +130,34 @@ def setup_dataset(config, dataset):
 		log.info('Registering dummy data provider data')
 		dataSplitter = DummySplitter()
 	else:
-		dataSplitter = DataSplitter.loadPartitionsForScript(dataset)
+		dataSplitter = DataSplitter.load_partitions_for_script(dataset)
 
-	config = config.changeView(setSections = None)
-	partProcessor = config.getCompositePlugin('partition processor',
+	config = config.change_view(set_sections = None)
+	partProcessor = config.get_composited_plugin('partition processor',
 		'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
-		'MultiPartitionProcessor', cls = 'PartitionProcessor', onChange = None)
-	ParameterSource.createInstance('DataParameterSource', config.getWorkPath(), 'data',
+		'MultiPartitionProcessor', cls = 'PartitionProcessor', on_change = None, pargs = ('dataset',))
+	ParameterSource.create_instance('DataParameterSource', config.get_work_path(), 'data',
 		None, dataSplitter, partProcessor, repository)
 
 # Initialize ParameterFactory and ParameterSource
-def get_psource(opts, args):
+def get_psrc(opts, args):
 	config = setup_config(opts, args)
 	if opts.factory:
 		config.set('parameter factory', opts.factory)
-	pm = config.getPlugin('internal parameter factory', 'BasicParameterFactory', cls = 'ParameterFactory', pargs = (repository,))
+	pm = config.get_plugin('internal parameter factory', 'BasicParameterFactory', cls = 'ParameterFactory')
 	if opts.dataset:
 		setup_dataset(config, opts.dataset)
 	adapter = 'BasicParameterAdapter'
 	if opts.persistent:
 		adapter = 'TrackedParameterAdapter'
-	return ParameterAdapter.createInstance(adapter, config, pm.getSource())
+	return ParameterAdapter.create_instance(adapter, config, pm.get_psrc(repository))
 
 def get_parameters(opts, psource):
 	result = []
 	needGCParam = False
-	if psource.getMaxJobs() is not None:
+	if psource.get_job_len() is not None:
 		countActive = 0
-		for info in psource.iterJobs():
+		for info in psource.iter_jobs():
 			if info[ParameterInfo.ACTIVE]:
 				countActive += 1
 			if opts.disabled or info[ParameterInfo.ACTIVE]:
@@ -165,25 +167,25 @@ def get_parameters(opts, psource):
 					needGCParam = True
 				result.append(info)
 		if opts.parseable:
-			log.info('Count,%d,%d', countActive, psource.getMaxJobs())
+			log.info('Count,%d,%d', countActive, psource.get_job_len())
 		else:
-			log.info('Number of parameter points: %d', psource.getMaxJobs())
-			if countActive != psource.getMaxJobs():
+			log.info('Number of parameter points: %d', psource.get_job_len())
+			if countActive != psource.get_job_len():
 				log.info('Number of active parameter points: %d', countActive)
 	else:
 		job = 123
 		if opts.job is not None:
 			job = int(opts.job)
 		log.info('Unbounded parameter space found - showing parameters for job %d', job)
-		result.append(psource.getJobInfo(job))
+		result.append(psource.get_job_content(job))
 	return (result, needGCParam)
 
 def list_parameters(opts, psource):
 	(result, needGCParam) = get_parameters(opts, psource)
 	enabledOutput = opts.output.split(',')
-	output = lfilter(lambda k: not opts.output or k in enabledOutput, psource.getJobKeys())
-	stored = lfilter(lambda k: k.untracked == False, output)
-	untracked = lfilter(lambda k: k.untracked == True, output)
+	output = lfilter(lambda k: not opts.output or k in enabledOutput, psource.get_job_metadata())
+	stored = lmap(lambda k: k.value, ifilter(lambda k: k.untracked == False, output))
+	untracked = lmap(lambda k: k.value, ifilter(lambda k: k.untracked == True, output))
 
 	if opts.collapse > 0:
 		result_old = result
@@ -224,11 +226,10 @@ def list_parameters(opts, psource):
 	head.extend(sorted(izip(stored, stored)))
 	if opts.untracked:
 		head.extend(sorted(imap(lambda n: (n, '(%s)' % n), ifilter(lambda n: n not in ['GC_PARAM', 'GC_JOB_ID'], untracked))))
-	log.info('')
-	utils.printTabular(head, result)
+	utils.display_table(head, result)
 
 def main(opts, args):
-	psource = get_psource(opts, args)
+	psource = get_psrc(opts, args)
 
 	if opts.show_sources:
 		sys.stdout.write(str.join('\n', psource.show()) + '\n\n')

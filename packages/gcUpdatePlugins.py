@@ -13,7 +13,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-if __name__ == '__main__':
+def update_plugin_files():
 	import os, sys
 	base_dir = os.path.abspath(os.path.dirname(__file__))
 	sys.path.append(base_dir)
@@ -25,7 +25,12 @@ if __name__ == '__main__':
 				return False
 		return True
 
-	for package in os.listdir(base_dir):
+	package_list = os.listdir(base_dir)
+	package_list.sort()
+	for package in package_list:
 		package = os.path.abspath(os.path.join(base_dir, package))
 		if os.path.isdir(package):
 			create_plugin_file(package, select)
+
+if __name__ == '__main__':
+	update_plugin_files()

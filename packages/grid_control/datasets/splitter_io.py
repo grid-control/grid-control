@@ -13,222 +13,254 @@
 # | limitations under the License.
 
 import os, gzip
-from grid_control import utils
 from grid_control.datasets.splitter_base import DataSplitter, DataSplitterIO, PartitionError
+from grid_control.utils import DictFormat, split_list
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
-from grid_control.utils.parsing import parseBool, parseJSON, parseList
+from grid_control.utils.parsing import parse_bool, parse_json, parse_list
 from grid_control.utils.thread_tools import GCLock
-from hpfwk import clear_current_exception
+from hpfwk import AbstractError, clear_current_exception
 from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lfilter, lmap, tarfile
 
-class BaseJobFileTarAdaptor(object):
+
+class PartitionReader(object):
 	def __init__(self, path):
 		activity = Activity('Reading dataset partition file')
 		self._lock = GCLock()
-		self._fmt = utils.DictFormat()
+		self._fmt = DictFormat()
 		self._tar = tarfile.open(path, 'r:')
-		(self._cacheKey, self._cacheTar) = (None, None)
 
-		metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), keyParser = {None: str})
-		self.maxJobs = metadata.pop('MaxJobs')
-		self.classname = metadata.pop('ClassName')
-		self.metadata = {'dataset': dict(ifilter(lambda k_v: not k_v[0].startswith('['), metadata.items()))}
-		for (k, v) in ifilter(lambda k_v: k_v[0].startswith('['), metadata.items()):
-			self.metadata.setdefault('dataset %s' % k.split(']')[0].lstrip('['), {})[k.split(']')[1].strip()] = v
+		metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), key_parser={None: str})
+		self._partition_len = metadata.pop('MaxJobs')
+		self.splitter_name = metadata.pop('ClassName')
+		(metadata_item_list_general, metadata_item_list_specific) = split_list(metadata.items(),
+			fun=lambda k_v: not k_v[0].startswith('['))
+		self.metadata = {'dataset': dict(metadata_item_list_general)}
+		for (key, value) in metadata_item_list_specific:
+			section, option = key.split(']', 1)
+			self.metadata.setdefault('dataset %s' % section.lstrip('['), {})[option.strip()] = value
 		activity.finish()
 
-		self._parserMap = { None: str, DataSplitter.NEntries: int, DataSplitter.Skipped: int,
-			DataSplitter.DatasetID: int, DataSplitter.Invalid: parseBool,
-			DataSplitter.Locations: lambda x: parseList(x, ','),
-			DataSplitter.MetadataHeader: parseJSON,
-			DataSplitter.Metadata: lambda x: parseJSON(x.strip("'")) }
+		self._map_enum2parser = {
+			None: str,
+			DataSplitter.NEntries: int, DataSplitter.Skipped: int,
+			DataSplitter.Invalid: parse_bool,
+			DataSplitter.Locations: lambda x: parse_list(x, ','),
+			DataSplitter.MetadataHeader: parse_json,
+			DataSplitter.Metadata: lambda x: parse_json(x.strip("'"))
+		}
 
-	def __getitem__(self, key):
-		if key >= self.maxJobs:
-			raise IndexError('Invalid dataset partition %s' % repr(key))
+	def __getitem__(self, partition_num):
+		if partition_num >= self._partition_len:
+			raise IndexError('Invalid dataset partition %s' % repr(partition_num))
 		try:
 			self._lock.acquire()
-			return self._getPartition(key)
+			return self._get_partition(partition_num)
 		finally:
 			self._lock.release()
 
+	def get_partition_len(self):
+		return self._partition_len
+
+	def _combine_partition_parts(self, partition, url_list):
+		if DataSplitter.CommonPrefix in partition:
+			url_list = imap(lambda x: '%s/%s' % (partition[DataSplitter.CommonPrefix], x), url_list)
+		partition[DataSplitter.FileList] = lmap(str.strip, url_list)
+		return partition
+
+	def _get_partition(self, partition_num):
+		raise AbstractError
+
 
 class DataSplitterIOAuto(DataSplitterIO):
-	def saveSplitting(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
-		writer = DataSplitterIO_V2()
-		writer.saveSplitting(path, meta, source, sourceLen, message)
-
-	def loadSplitting(self, path):
+	def import_partition_source(self, path):
 		try:
 			version = int(tarfile.open(path, 'r:').extractfile('Version').read())
 		except Exception:
 			version = 1
-		if version == 1:
-			state = DataSplitterIO_V1().loadSplitting(path)
-		else:
-			state = DataSplitterIO_V2().loadSplitting(path)
-		return state
+		reader = DataSplitterIO.create_instance('version_%s' % version)
+		return reader.import_partition_source(path)
+
+	def save_partitions_and_info(self, progress, path, partition_iter, splitter_info_dict):
+		writer = DataSplitterIOV2()
+		return writer.save_partitions_and_info(progress, path, partition_iter, splitter_info_dict)
 
 
 class DataSplitterIOBase(DataSplitterIO):
 	def __init__(self):
-		self._fmt = utils.DictFormat() # use a single instance to save time
+		self._fmt = DictFormat()  # use a single instance to save time
 
-	def _addToTar(self, tar, name, data):
-		info, fileObj = VirtualFile(name, data).getTarInfo()
-		tar.addfile(info, fileObj)
-		fileObj.close()
-
-	def _addToSubTar(self, subTarTuple, name, data):
-		self._addToTar(subTarTuple[0], name, data)
-
-	def _createSubTar(self, subTarFileName):
-		subTarFileObj = BytesBuffer()
-		subTarFile = tarfile.open(mode = 'w:gz', fileobj = subTarFileObj)
-		return (subTarFile, subTarFileObj, subTarFileName)
-
-	# Function to close all contained
-	def _closeSubTar(self, tar, subTarTuple):
-		if subTarTuple:
-			(subTarFile, subTarFileObj, subTarFileName) = subTarTuple
-			subTarFile.close()
-			try: # Python 3.2 does not close the wrapping gzip file object if an external file object is given
-				subTarFile.fileobj.close()
-			except Exception:
-				clear_current_exception()
-			subTarFileObj.seek(0)
-			subTarFileInfo = tarfile.TarInfo(subTarFileName)
-			subTarFileInfo.size = len(subTarFileObj.getvalue())
-			tar.addfile(subTarFileInfo, subTarFileObj)
-
-	# Function to determine the filenames to write (and conditionally set the common prefix in entry)
-	def _getReducedFileList(self, entry, filenames):
-		commonprefix = os.path.commonprefix(filenames)
-		commonprefix = str.join('/', commonprefix.split('/')[:-1])
-		if len(commonprefix) > 6:
-			entry[DataSplitter.CommonPrefix] = commonprefix
-			return lmap(lambda x: x.replace(commonprefix + '/', ''), filenames)
-		return filenames
-
-	# Function to format a single file entry with metadata
-	def _formatFileEntry(self, k_s_v):
-		(x, y, z) = k_s_v
-		if x in [DataSplitter.Metadata, DataSplitter.MetadataHeader]:
-			return (x, y, json.dumps(z))
-		elif isinstance(z, list):
-			return (x, y, str.join(',', z))
-		return (x, y, z)
-
-	# Save as tar file to allow random access to mapping data with little memory overhead
-	def saveSplitting(self, path, meta, source, sourceLen, message = 'Writing job mapping file'):
-		tar = tarfile.open(path, 'w:')
-		self._saveStateToTar(tar, meta, source, sourceLen, message)
-		tar.close()
-
-	def loadSplitting(self, path):
+	def import_partition_source(self, path):
+		# Save as outer_tar file to allow random access to mapping data with little memory overhead
 		try:
-			return self._loadStateFromTar(path)
+			return self._load_partition_source(path)
 		except Exception:
 			raise PartitionError("No valid dataset splitting found in '%s'." % path)
 
+	def save_partitions_and_info(self, progress, path, partition_iter, splitter_info_dict):
+		outer_tar = tarfile.open(path, 'w:')
+		self._save_partitions_and_info(progress, outer_tar, partition_iter, splitter_info_dict)
+		outer_tar.close()
 
-class DataSplitterIO_V1(DataSplitterIOBase):
-	# Save as tar file to allow random access to mapping data with little memory overhead
-	def _saveStateToTar(self, tar, meta, source, sourceLen, message):
-		# Write the splitting info grouped into subtarfiles
-		activity = Activity(message)
-		(jobNum, subTar) = (-1, None)
-		for jobNum, entry in enumerate(source):
-			if jobNum % 100 == 0:
-				self._closeSubTar(tar, subTar)
-				subTar = self._createSubTar('%03dXX.tgz' % int(jobNum / 100))
-				activity.update('%s [%d / %d]' % (message, jobNum, sourceLen))
+	def _add_to_tar(self, tar, fn, data):
+		info, fp = VirtualFile(fn, data).get_tar_info()
+		tar.addfile(info, fp)
+		fp.close()
+
+	def _close_nested_tar(self, outer_tar, nested_tar):
+		# Function to close all contained outer_tar objects
+		if nested_tar:
+			nested_tar.close()
+			try:  # Python 3.2 does not close the wrapping gzip file object
+				nested_tar.fileobj.close()  # if an external file object is given
+			except Exception:
+				clear_current_exception()
+			nested_tar.nested_tar_fp.seek(0)
+			nested_tar_info = tarfile.TarInfo(nested_tar.nested_fn)
+			nested_tar_info.size = len(nested_tar.nested_tar_fp.getvalue())
+			outer_tar.addfile(nested_tar_info, nested_tar.nested_tar_fp)
+
+	def _create_nested_tar(self, fn):
+		nested_tar_fp = BytesBuffer()
+		nested_tar = tarfile.open(mode='w:gz', fileobj=nested_tar_fp)
+		nested_tar.nested_tar_fp = nested_tar_fp
+		nested_tar.nested_fn = fn
+		return nested_tar
+
+	def _format_file_entry(self, k_s_v):
+		# Function to format a single file entry with metadata
+		(key, separator, value) = k_s_v
+		if key in [DataSplitter.Metadata, DataSplitter.MetadataHeader]:
+			return (key, separator, json.dumps(value))
+		elif isinstance(value, list):
+			return (key, separator, str.join(',', value))
+		return (key, separator, value)
+
+	def _get_reduced_url_list(self, partition, url_list):
+		# Determine the filenames to write (and conditionally set the common prefix in partition)
+		commonprefix = os.path.commonprefix(url_list)
+		commonprefix = str.join('/', commonprefix.split('/')[:-1])
+		if len(commonprefix) > 6:
+			partition[DataSplitter.CommonPrefix] = commonprefix
+			return lmap(lambda x: x.replace(commonprefix + '/', ''), url_list)
+		return url_list
+
+	def _load_partition_source(self, path):
+		raise AbstractError
+
+	def _save_partitions_and_info(self, progress, outer_tar, partition_iter, splitter_info_dict):
+		raise AbstractError
+
+
+class CachingPartitionReader(PartitionReader):
+	def __init__(self, path):
+		PartitionReader.__init__(self, path)
+		(self._cache_nested_fn, self._cache_nested_tar) = (None, None)
+
+	def _get_nested_tar(self, nested_fn):
+		if self._cache_nested_fn != nested_fn:  # caching gives 3-4x speedup for sequential access
+			self._cache_nested_tar = self._open_nested_tar(nested_fn)
+			self._cache_nested_fn = nested_fn
+		return self._cache_nested_tar
+
+	def _open_nested_tar(self, nested_fn):
+		nested_tar_fp = self._tar.extractfile(nested_fn)
+		nested_tar_fp = BytesBuffer(gzip.GzipFile(fileobj=nested_tar_fp).read())
+		return tarfile.open(mode='r', fileobj=nested_tar_fp)
+
+
+class DataSplitterIOV1(DataSplitterIOBase):
+	alias_list = ['version_1']
+
+	def _load_partition_source(self, path):
+		return TarPartitionReaderV1(path)
+
+	def _save_partitions_and_info(self, progress, outer_tar, partition_iter, splitter_info_dict):
+		# Write the splitting info grouped into nested_tars
+		(partition_num, nested_tar) = (-1, None)
+		for (partition_num, partition) in enumerate(partition_iter):
+			if partition_num % 100 == 0:
+				self._close_nested_tar(outer_tar, nested_tar)
+				nested_tar = self._create_nested_tar('%03dXX.tgz' % int(partition_num / 100))
+				progress.update_progress(partition_num)
 			# Determine shortest way to store file list
-			tmp = entry.pop(DataSplitter.FileList)
-			savelist = self._getReducedFileList(entry, tmp) # can modify entry
+			url_list = partition.pop(DataSplitter.FileList)
+			url_list_reduced = self._get_reduced_url_list(partition, url_list)  # can modify partition
 			# Write files with infos / filelist
-			for name, data in [('list', str.join('\n', savelist)), ('info', self._fmt.format(entry, fkt = self._formatFileEntry))]:
-				self._addToSubTar(subTar, os.path.join('%05d' % jobNum, name), data)
+			fn_data_list = [
+				('list', str.join('\n', url_list_reduced)),
+				('info', self._fmt.format(partition, fkt=self._format_file_entry))
+			]
+			for fn, data in fn_data_list:
+				self._add_to_tar(nested_tar, os.path.join('%05d' % partition_num, fn), data)
 			# Remove common prefix from info
-			if DataSplitter.CommonPrefix in entry:
-				entry.pop(DataSplitter.CommonPrefix)
-			entry[DataSplitter.FileList] = tmp
-		self._closeSubTar(tar, subTar)
+			if DataSplitter.CommonPrefix in partition:
+				partition.pop(DataSplitter.CommonPrefix)
+			partition[DataSplitter.FileList] = url_list
+		self._close_nested_tar(outer_tar, nested_tar)
 		# Write metadata to allow reconstruction of data splitter
-		meta['MaxJobs'] = jobNum + 1
-		self._addToTar(tar, 'Metadata', self._fmt.format(meta))
-		activity.finish()
-
-	def _loadStateFromTar(self, path):
-		class JobFileTarAdaptor_V1(BaseJobFileTarAdaptor):
-			def _getPartition(self, key):
-				if not self._cacheKey == key / 100:
-					self._cacheKey = key / 100
-					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / 100))
-					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
-					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
-				data = self._fmt.parse(self._cacheTar.extractfile('%05d/info' % key).readlines(),
-					keyParser = {None: int}, valueParser = self._parserMap)
-				fileList = lmap(bytes2str, self._cacheTar.extractfile('%05d/list' % key).readlines())
-				if DataSplitter.CommonPrefix in data:
-					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
-				data[DataSplitter.FileList] = lmap(str.strip, fileList)
-				return data
-		return JobFileTarAdaptor_V1(path)
+		splitter_info_dict['MaxJobs'] = partition_num + 1
+		self._add_to_tar(outer_tar, 'Metadata', self._fmt.format(splitter_info_dict))
 
 
-class DataSplitterIO_V2(DataSplitterIOBase):
+class DataSplitterIOV2(DataSplitterIOBase):
+	alias_list = ['version_2']
+
 	def __init__(self):
 		DataSplitterIOBase.__init__(self)
-		self._keySize = 100
+		self._partition_chunk_size = 100
 
-	def _saveStateToTar(self, tar, meta, source, sourceLen, message):
-		# Write the splitting info grouped into subtarfiles
-		activity = Activity(message)
-		(jobNum, lastValid, subTar) = (-1, -1, None)
-		for jobNum, entry in enumerate(source):
-			if not entry.get(DataSplitter.Invalid, False):
-				lastValid = jobNum
-			if jobNum % self._keySize == 0:
-				self._closeSubTar(tar, subTar)
-				subTar = self._createSubTar('%03dXX.tgz' % int(jobNum / self._keySize))
-				activity.update('%s [%d / %d]' % (message, jobNum, sourceLen))
+	def _load_partition_source(self, path):
+		return TarPartitionReaderV2(path, self._partition_chunk_size)
+
+	def _save_partitions_and_info(self, progress, outer_tar, partition_iter, splitter_info_dict):
+		# Write the splitting info grouped into nested_tars
+		(partition_num, last_valid_pnum, nested_tar) = (-1, -1, None)
+		for (partition_num, partition) in enumerate(partition_iter):
+			if not partition.get(DataSplitter.Invalid, False):
+				last_valid_pnum = partition_num
+			if partition_num % self._partition_chunk_size == 0:
+				self._close_nested_tar(outer_tar, nested_tar)
+				nested_tar = self._create_nested_tar(
+					'%03dXX.tgz' % int(partition_num / self._partition_chunk_size))
+				progress.update_progress(partition_num)
 			# Determine shortest way to store file list
-			tmp = entry.pop(DataSplitter.FileList)
-			savelist = self._getReducedFileList(entry, tmp) # can modify entry
+			url_list = partition.pop(DataSplitter.FileList)
+			url_list_reduced = self._get_reduced_url_list(partition, url_list)  # can modify partition
+			url_list_write = lmap(lambda url: '=%s\n' % url, url_list_reduced)
 			# Write files with infos / filelist
-			data = str.join('', self._fmt.format(entry, fkt = self._formatFileEntry) + lmap(lambda fn: '=%s\n' % fn, savelist))
-			self._addToSubTar(subTar, '%05d' % jobNum, data)
+			self._add_to_tar(nested_tar, '%05d' % partition_num,
+				str.join('', self._fmt.format(partition, fkt=self._format_file_entry) + url_list_write))
 			# Remove common prefix from info
-			if DataSplitter.CommonPrefix in entry:
-				entry.pop(DataSplitter.CommonPrefix)
-			entry[DataSplitter.FileList] = tmp
-		self._closeSubTar(tar, subTar)
-		activity.finish()
+			if DataSplitter.CommonPrefix in partition:
+				partition.pop(DataSplitter.CommonPrefix)
+			partition[DataSplitter.FileList] = url_list
+		self._close_nested_tar(outer_tar, nested_tar)
 		# Write metadata to allow reconstruction of data splitter
-		meta['MaxJobs'] = lastValid + 1
-		for (fn, data) in [('Metadata', self._fmt.format(meta)), ('Version', '2')]:
-			self._addToTar(tar, fn, data)
+		splitter_info_dict['MaxJobs'] = last_valid_pnum + 1
+		for (fn, data) in [('Metadata', self._fmt.format(splitter_info_dict)), ('Version', '2')]:
+			self._add_to_tar(outer_tar, fn, data)
 
-	def _loadStateFromTar(self, path):
-		class JobFileTarAdaptor_V2(BaseJobFileTarAdaptor):
-			def __init__(self, path, keySize):
-				BaseJobFileTarAdaptor.__init__(self, path)
-				self._keySize = keySize
 
-			def _getPartition(self, key):
-				if not self._cacheKey == key / self._keySize:
-					self._cacheKey = key / self._keySize
-					subTarFileObj = self._tar.extractfile('%03dXX.tgz' % (key / self._keySize))
-					subTarFileObj = BytesBuffer(gzip.GzipFile(fileobj = subTarFileObj).read()) # 3-4x speedup for sequential access
-					self._cacheTar = tarfile.open(mode = 'r', fileobj = subTarFileObj)
-				fullData = lmap(bytes2str, self._cacheTar.extractfile('%05d' % key).readlines())
-				data = self._fmt.parse(lfilter(lambda x: not x.startswith('='), fullData),
-					keyParser = {None: int}, valueParser = self._parserMap)
-				fileList = imap(lambda x: x[1:], ifilter(lambda x: x.startswith('='), fullData))
-				if DataSplitter.CommonPrefix in data:
-					fileList = imap(lambda x: '%s/%s' % (data[DataSplitter.CommonPrefix], x), fileList)
-				data[DataSplitter.FileList] = lmap(str.strip, fileList)
-				return data
-		return JobFileTarAdaptor_V2(path, self._keySize)
+class TarPartitionReaderV1(CachingPartitionReader):
+	# Save as outer_tar file to allow random access to mapping data with little memory overhead
+	def _get_partition(self, key):
+		nested_tar = self._get_nested_tar('%03dXX.tgz' % (key / 100))
+		partition = self._fmt.parse(nested_tar.extractfile('%05d/info' % key).readlines(),
+			key_parser={None: DataSplitter.intstr2enum}, value_parser=self._map_enum2parser)
+		url_list = lmap(bytes2str, nested_tar.extractfile('%05d/list' % key).readlines())
+		return self._combine_partition_parts(partition, url_list)
+
+
+class TarPartitionReaderV2(CachingPartitionReader):
+	def __init__(self, path, partition_chunk_size):
+		CachingPartitionReader.__init__(self, path)
+		self._partition_chunk_size = partition_chunk_size
+
+	def _get_partition(self, partition_num):
+		nested_tar = self._get_nested_tar('%03dXX.tgz' % (partition_num / self._partition_chunk_size))
+		partition_str_list = lmap(bytes2str, nested_tar.extractfile('%05d' % partition_num).readlines())
+		partition = self._fmt.parse(lfilter(lambda x: not x.startswith('='), partition_str_list),
+			key_parser={None: DataSplitter.intstr2enum}, value_parser=self._map_enum2parser)
+		url_list = imap(lambda x: x[1:], ifilter(lambda x: x.startswith('='), partition_str_list))
+		return self._combine_partition_parts(partition, url_list)

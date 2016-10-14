@@ -42,7 +42,10 @@ __credits__ = "Gustavo Niemeyer, Niels Gustaebel, Richard Townsend."
 # Imports
 #---------
 import os, re, sys, copy, stat, time, errno, shutil, struct
-from python_compat import irange
+try:
+	irange = xrange
+except Exception:
+	irange = range
 
 if not hasattr(os, 'SEEK_SET'):
     os.SEEK_SET = 0

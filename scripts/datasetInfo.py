@@ -20,33 +20,34 @@ from grid_control.utils import thread_tools
 from hpfwk import clear_current_exception
 from python_compat import imap, itemgetter, izip, lmap, lzip, set, sort_inplace, sorted
 
+
 usage = '%s [OPTIONS] <DBS dataset path> | <dataset cache file>' % sys.argv[0]
 parser = Options(usage)
-parser.addBool(None, 'l', 'list-datasets',  default = False, help = 'Show list of all datasets in query / file')
-parser.addBool(None, 'b', 'list-blocks',    default = False, help = 'Show list of blocks of the dataset(s)')
-parser.addBool(None, 'f', 'list-files',     default = False, help = 'Show list of all files grouped according to blocks')
-parser.addBool(None, 's', 'list-storage',   default = False, help = 'Show list of locations where data is stored')
-parser.addBool(None, 'm', 'metadata',       default = False, help = 'Get metadata infomation of dataset files')
-parser.addBool(None, 'M', 'block-metadata', default = False, help = 'Get common metadata infomation of dataset blocks')
-parser.addBool(None, 'O', 'ordered',        default = False, help = 'Sort dataset blocks and files')
-parser.addText(None, 'p', 'provider',       default = '',    help = 'Default dataset provider')
-parser.addText(None, 'C', 'settings',       default = '',    help = 'Specify config file as source of detailed dataset settings')
-parser.addText(None, 'S', 'save',           default = '',    help = 'Saves dataset information to specified file')
-parser.addBool(None, 'i', 'info',           default = False, help = 'Gives machine readable info of given dataset(s)')
-parser.addBool(None, 'c', 'config-entry',   default = False, help = 'Gives config file entries to run over given dataset(s)')
-parser.addBool(None, 'n', 'config-nick',    default = False, help = 'Use dataset path to derive nickname in case it it undefined')
-parser.addText(None, 'L', 'location',  default = 'hostname', help = 'Format of location information')
+parser.add_bool(None, 'l', 'list-datasets',  default = False, help = 'Show list of all datasets in query / file')
+parser.add_bool(None, 'b', 'list-blocks',    default = False, help = 'Show list of blocks of the dataset(s)')
+parser.add_bool(None, 'f', 'list-files',     default = False, help = 'Show list of all files grouped according to blocks')
+parser.add_bool(None, 's', 'list-storage',   default = False, help = 'Show list of locations where data is stored')
+parser.add_bool(None, 'm', 'metadata',       default = False, help = 'Get metadata infomation of dataset files')
+parser.add_bool(None, 'M', 'block-metadata', default = False, help = 'Get common metadata infomation of dataset blocks')
+parser.add_bool(None, 'O', 'ordered',        default = False, help = 'Sort dataset blocks and files')
+parser.add_text(None, 'p', 'provider',       default = '',    help = 'Default dataset provider')
+parser.add_text(None, 'C', 'settings',       default = '',    help = 'Specify config file as source of detailed dataset settings')
+parser.add_text(None, 'S', 'save',           default = '',    help = 'Saves dataset information to specified file')
+parser.add_bool(None, 'i', 'info',           default = False, help = 'Gives machine readable info of given dataset(s)')
+parser.add_bool(None, 'c', 'config-entry',   default = False, help = 'Gives config file entries to run over given dataset(s)')
+parser.add_bool(None, 'n', 'config-nick',    default = False, help = 'Use dataset path to derive nickname in case it it undefined')
+parser.add_text(None, 'L', 'location',  default = 'hostname', help = 'Format of location information')
 options = scriptOptions(parser)
 
 # we need exactly one positional argument (dataset path)
 if len(options.args) != 1:
-	utils.exitWithUsage(usage)
+	utils.exit_with_usage(usage)
 
 # Disable threaded queries
 def noThread(desc, fun, *args, **kargs):
 	fun(*args, **kargs)
 	return type('DummyThread', (), {'join': lambda self: None})()
-thread_tools.start_thread = noThread
+thread_tools.start_daemon = noThread
 
 def get_dataset_config(opts, args):
 	dataset = args[0].strip()
@@ -61,14 +62,13 @@ def get_dataset_config(opts, args):
 	if opts.metadata or opts.block_metadata:
 		cfgSettings['lumi filter *'] = '-'
 		cfgSettings['keep lumi metadata *'] = 'True'
-	return getConfig(configFile = opts.settings, configDict = {'dataset': cfgSettings})
+	return getConfig(config_file = opts.settings, config_dict = {'dataset': cfgSettings})
 
 def list_datasets(blocks):
 	# Add some enums for consistent access to info dicts
 	DataProvider.NFiles = -1
 	DataProvider.NBlocks = -2
 
-	print('')
 	infos = {}
 	order = []
 	infosum = {DataProvider.Dataset : 'Sum'}
@@ -85,11 +85,10 @@ def list_datasets(blocks):
 		updateInfos(infosum)
 	head = [(DataProvider.Dataset, 'Dataset'), (DataProvider.NEntries, '#Events'),
 		(DataProvider.NBlocks, '#Blocks'), (DataProvider.NFiles, '#Files')]
-	utils.printTabular(head, lmap(lambda x: infos[x], order) + ['=', infosum])
+	utils.display_table(head, lmap(lambda x: infos[x], order) + ['=', infosum])
 
 def list_blocks(blocks, headerbase):
-	print('')
-	utils.printTabular(headerbase + [(DataProvider.BlockName, 'Block'), (DataProvider.NEntries, 'Events')], blocks)
+	utils.display_table(headerbase + [(DataProvider.BlockName, 'Block'), (DataProvider.NEntries, 'Events')], blocks)
 
 def list_files(datasets, blocks):
 	print('')
@@ -97,7 +96,7 @@ def list_files(datasets, blocks):
 		if len(datasets) > 1:
 			print('Dataset: %s' % block[DataProvider.Dataset])
 		print('Blockname: %s' % block[DataProvider.BlockName])
-		utils.printTabular([(DataProvider.URL, 'Filename'), (DataProvider.NEntries, 'Events')], block[DataProvider.FileList])
+		utils.display_table([(DataProvider.URL, 'Filename'), (DataProvider.NEntries, 'Events')], block[DataProvider.FileList])
 		print('')
 
 def print_metadata(src, maxlen):
@@ -125,10 +124,13 @@ def list_block_metadata(datasets, blocks):
 		if len(datasets) > 1:
 			print('Dataset: %s' % block[DataProvider.Dataset])
 		print('Blockname: %s' % block[DataProvider.BlockName])
+		if DataProvider.Metadata not in block:
+			print('<no metadata>\n')
+			continue
 		mkdict = lambda x: dict(izip(block[DataProvider.Metadata], x[DataProvider.Metadata]))
 		metadata = utils.QM(block[DataProvider.FileList], mkdict(block[DataProvider.FileList][0]), {})
 		for fileInfo in block[DataProvider.FileList]:
-			utils.intersectDict(metadata, mkdict(fileInfo))
+			utils.intersect_first_dict(metadata, mkdict(fileInfo))
 		print_metadata(metadata.items(), max([0] + lmap(len, metadata.keys())))
 
 def list_storage(blocks, headerbase):
@@ -176,10 +178,10 @@ def list_config_entries(opts, blocks, provider):
 				infos[dsName][DataProvider.URL] = block[DataProvider.FileList][0][DataProvider.URL]
 	for dsID, dsName in enumerate(order):
 		info = infos[dsName]
-		providerName = sorted(provider.getClassNames(), key = len)[0]
+		providerName = sorted(provider.get_class_name_list(), key = len)[0]
 		nickname = info.get(DataProvider.Nickname, 'nick%d' % dsID).rjust(maxnick)
-		filterExpr = utils.QM(providerName == 'list', ' %% %s' % info[DataProvider.Dataset], '')
-		print('\t%s : %s : %s%s' % (nickname, providerName, provider.getDatasetExpr(), filterExpr))
+		filter_expr = utils.QM(providerName == 'list', ' %% %s' % info[DataProvider.Dataset], '')
+		print('\t%s : %s : %s%s' % (nickname, providerName, provider.get_dataset_expr(), filter_expr))
 
 def list_infos(blocks):
 	evSum = 0
@@ -193,19 +195,19 @@ def list_infos(blocks):
 
 def save_dataset(opts, provider):
 	print('')
-	blocks = provider.getBlocks(show_stats = False)
+	blocks = provider.get_block_list_cached(show_stats = False)
 	if opts.ordered:
 		sort_inplace(blocks, key = itemgetter(DataProvider.Dataset, DataProvider.BlockName))
 		for b in blocks:
 			sort_inplace(b[DataProvider.FileList], key = itemgetter(DataProvider.URL))
-	DataProvider.saveToFile(opts.save, blocks)
+	DataProvider.save_to_file(opts.save, blocks)
 	print('Dataset information saved to ./%s' % opts.save)
 
-def main(opts, args):
+def get_dataset_info(opts, args):
 	config = get_dataset_config(opts, args)
 
-	provider = config.getPlugin('dataset', cls = DataProvider)
-	blocks = provider.getBlocks(show_stats = False)
+	provider = config.get_plugin('dataset', cls = DataProvider)
+	blocks = provider.get_block_list_cached(show_stats = False)
 	if len(blocks) == 0:
 		raise DatasetError('No blocks!')
 
@@ -215,6 +217,10 @@ def main(opts, args):
 	else:
 		print('Dataset: %s' % blocks[0][DataProvider.Dataset])
 		headerbase = []
+	return (provider, datasets, blocks, headerbase)
+
+def main(opts, args):
+	(provider, datasets, blocks, headerbase) = get_dataset_info(opts, args)
 
 	if opts.list_datasets:
 		list_datasets(blocks)

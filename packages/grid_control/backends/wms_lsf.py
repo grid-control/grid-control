@@ -21,6 +21,7 @@ from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import identity, ifilter, izip, next
 
+
 class LSF_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		CheckJobsWithProcess.__init__(self, config,
@@ -45,7 +46,7 @@ class LSF_CheckJobs(CheckJobsWithProcess):
 			except Exception:
 				raise BackendError('Error reading job info:\n%s' % line)
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = ['is not found'])
 
 
@@ -55,22 +56,22 @@ class LSF_CancelJobs(CancelJobsWithProcessBlind):
 
 
 class LSF(LocalWMS):
-	configSections = LocalWMS.configSections + ['LSF']
+	config_section_list = LocalWMS.config_section_list + ['LSF']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.resolveInstallPath('bsub'),
-			cancelExecutor = LSF_CancelJobs(config),
-			checkExecutor = CheckJobsMissingState(config, LSF_CheckJobs(config)))
+			submitExec = utils.resolve_install_path('bsub'),
+			cancel_executor = LSF_CancelJobs(config),
+			check_executor = CheckJobsMissingState(config, LSF_CheckJobs(config)))
 
 
-	def getJobArguments(self, jobNum, sandbox):
+	def get_job_arguments(self, jobnum, sandbox):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
-		params = ' -J %s' % jobName
+		params = ' -J %s' % job_name
 		# Job requirements
 		if WMS.QUEUES in reqs:
 			params += ' -q %s' % str.join(',', reqs[WMS.QUEUES])

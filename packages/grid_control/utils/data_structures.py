@@ -13,52 +13,71 @@
 # | limitations under the License.
 
 from hpfwk import APIError
-from python_compat import imap, izip, lsmap, md5_hex, set
+from python_compat import imap, izip, lsmap, md5_hex, set, unspecified
 
-def makeEnum(members = None, cls = None, useHash = True):
+
+def make_enum(members=None, cls=None, use_hash=True):
 	members = members or []
 	if cls:
-		enumID = md5_hex(str(members) + '!' + cls.__name__)[:4]
+		enum_id = md5_hex(str(members) + '!' + cls.__name__)[:4]
 	else:
-		enumID = md5_hex(str(members))[:4]
-		cls = type('Enum_%s_%s' % (enumID, str.join('_', members)), (), {})
+		enum_id = md5_hex(str(members))[:4]
+		cls = type('Enum_%s_%s' % (enum_id, str.join('_', members)), (), {})
 
-	def getValue(idx, name):
-		if useHash:
-			return idx + int(enumID, 16)
+	def _get_value(idx, name):
+		if use_hash:
+			return idx + int(enum_id, 16)
 		else:
 			return idx
-	values = lsmap(getValue, enumerate(members))
+	values = lsmap(_get_value, enumerate(members))
 
-	cls.enumNames = members
-	cls.enumValues = values
-	enumMapNV = dict(izip(imap(str.lower, cls.enumNames), cls.enumValues))
-	enumMapVN = dict(izip(cls.enumValues, cls.enumNames))
-	if len(enumMapNV) != len(enumMapVN):
+	cls.enum_name_list = members
+	cls.enum_value_list = values
+	_map_name2value = dict(izip(imap(str.lower, cls.enum_name_list), cls.enum_value_list))
+	_map_value2name = dict(izip(cls.enum_value_list, cls.enum_name_list))
+	if len(_map_name2value) != len(_map_value2name):
 		raise APIError('Invalid enum definition!')
-	def str2enum(cls, value, *args):
-		return enumMapNV.get(value.lower(), *args)
-	cls.enum2str = enumMapVN.get
-	cls.str2enum = classmethod(str2enum)
-	for name, value in izip(cls.enumNames, cls.enumValues):
+
+	def _intstr2enum(cls, value, default=unspecified):
+		try:
+			enum = int(value)
+		except Exception:
+			if unspecified(default):
+				raise
+			enum = default
+		if enum not in cls.enum_value_list:
+			allowed_str = str.join(', ', imap(lambda nv: '%s=%s', _map_name2value.items()))
+			raise Exception('Invalid enum value %s (allowed are %r)' % (repr(value), allowed_str))
+		return enum
+
+	def _str2enum(cls, value, *args):
+		try:
+			return _map_name2value.get(value.lower(), *args)
+		except Exception:
+			allowed_str = str.join(', ', cls.enum_name_list)
+			raise Exception('Invalid enum string %s (allowed are %r)' % (repr(value), allowed_str))
+	cls.enum2str = _map_value2name.get
+	cls.str2enum = classmethod(_str2enum)
+	cls.intstr2enum = classmethod(_intstr2enum)
+	for name, value in izip(cls.enum_name_list, cls.enum_value_list):
 		setattr(cls, name, value)
 	return cls
 
 
 class UniqueList(object):
-	def __init__(self, values = None):
+	def __init__(self, values=None):
 		self._set = set()
 		self._list = list()
 		self.extend(values or [])
-
-	def __repr__(self):
-		return '<%s>' % repr(self._list)[1:-1]
 
 	def __contains__(self, value):
 		return value in self._set
 
 	def __iter__(self):
 		return self._list.__iter__()
+
+	def __repr__(self):
+		return '<%s>' % repr(self._list)[1:-1]
 
 	def append(self, value):
 		if value not in self:

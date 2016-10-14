@@ -22,6 +22,7 @@ from grid_control_cms.dbs3_migration_queue import AlreadyQueued, DBS3MigrationQu
 from grid_control_cms.sitedb import SiteDB
 from python_compat import imap, izip, json, lmap, md5_hex, set
 
+
 def create_dbs3_json_files(opts, block_info, block_dump):
 	block_size = 0
 	dataset_type = set()
@@ -86,7 +87,7 @@ def create_dbs3_proto_blocks(opts, dataset_blocks):
 			block_dump = {'dataset_conf_list': [], 'files': [], 'file_conf_list': [], 'file_parent_list': []}
 			(block_size, block_dataset_types) = create_dbs3_json_files(opts, block, block_dump)
 			if len(block_dataset_types) > 1:
-				raise Exception('Data and MC files are mixed in block %s' % DataProvider.bName(block))
+				raise Exception('Data and MC files are mixed in block %s' % DataProvider.get_block_id(block))
 			elif len(block_dataset_types) == 1:
 				yield (block, block_dump, block_size, block_dataset_types.pop())
 			else:
@@ -131,7 +132,7 @@ def create_dbs3_json_blocks(opts, dataset_blocks):
 		except IndexError:
 			origin_site_name = 'UNKNOWN'
 
-		block_dump['block'] = {'block_name': DataProvider.bName(block), 'block_size': block_size,
+		block_dump['block'] = {'block_name': DataProvider.get_block_id(block), 'block_size': block_size,
 			'file_count': len(block[DataProvider.FileList]), 'origin_site_name': origin_site_name}
 		if opts.do_close_blocks:
 			block_dump['block']['open_for_writing'] = 0
@@ -150,55 +151,55 @@ def setup_parser():
 	parser = Options(usage = '%s [OPTIONS] <config file / work directory>')
 	parser.section('disc', 'Discovery options - ignored in case dbs input file is specified')
 	# options that are used as config settings for InfoScanners
-	parser.addText('disc', 'n', 'dataset-name-pattern', default = '',
+	parser.add_text('disc', 'n', 'dataset-name-pattern', default = '',
 		help = 'Specify dbs path name - Example: DataSet_@NICK@_@VAR@')
-	parser.addText('disc', 'H', 'dataset-hash-keys',    default = '',
+	parser.add_text('disc', 'H', 'dataset-hash-keys',    default = '',
 		help = 'Included additional variables in dataset hash calculation')
-	parser.addText('disc', 'J', 'source-job-selector',  default = '',
+	parser.add_text('disc', 'J', 'source-job-selector',  default = '',
 		help = 'Specify dataset(s) to process')
-	parser.addBool('disc', 'm', 'merge-parents',        default = False,
+	parser.add_bool('disc', 'm', 'merge-parents',        default = False,
 		help = 'Merge output files from different parent blocks into a single block [Default: Keep boundaries]')
-	parser.addText('disc', 'P', 'parent-source',        default = '',
+	parser.add_text('disc', 'P', 'parent-source',        default = '',
 		help = 'Override parent information source - to bootstrap a reprocessing on local files')
 	# options directly used by this script
-	parser.addText('disc', 'T', 'datatype',             default = None,
+	parser.add_text('disc', 'T', 'datatype',             default = None,
 		help = 'Supply dataset type in case cmssw report did not specify it - valid values: "mc" or "data"')
-	parser.addBool('disc', 'j', 'jobhash',              default = False,
+	parser.add_bool('disc', 'j', 'jobhash',              default = False,
 		help = 'Use hash of all config files in job for dataset key calculation')
-	parser.addBool('disc', 'u', 'unique-cfg',           default = False,
+	parser.add_bool('disc', 'u', 'unique-cfg',           default = False,
 		help = 'Circumvent edmConfigHash collisions so each dataset is stored with unique config information')
-	parser.addText('disc', 'G', 'globaltag',          default = 'crab2_tag',
+	parser.add_text('disc', 'G', 'globaltag',          default = 'crab2_tag',
 		help = 'Specify global tag')
 
 	parser.section('proc', 'Processing mode')
-	parser.addBool('proc', 'd', 'discovery',            default = False,
+	parser.add_bool('proc', 'd', 'discovery',            default = False,
 		help = 'Enable discovery mode - just collect file information and exit')
-	parser.addText('proc', ' ', 'tempdir',              default = '',
+	parser.add_text('proc', ' ', 'tempdir',              default = '',
 		help = 'Override temp directory')
-	parser.addBool('proc', 'i', 'no-import',            default = True, dest = 'do_import',
+	parser.add_bool('proc', 'i', 'no-import',            default = True, dest = 'do_import',
 		help = 'Disable import of new datasets into target DBS instance - only temporary json files are created')
-	parser.addBool('proc', 'I', 'incremental',          default = False,
+	parser.add_bool('proc', 'I', 'incremental',          default = False,
 		help = 'Skip import of existing files - Warning: this destroys coherent block structure!')
-	parser.addBool('proc', 'o', 'open-blocks',          default = True, dest = 'do_close_blocks',
+	parser.add_bool('proc', 'o', 'open-blocks',          default = True, dest = 'do_close_blocks',
 		help = 'Keep blocks open for addition of further files [Default: Close blocks]')
-#	parser.addBool('proc', 'b', 'batch',                default = False,
+#	parser.add_bool('proc', 'b', 'batch',                default = False,
 #		help = 'Enable non-interactive batch mode [Default: Interactive mode]')
 
 	parser.section('dbsi', 'DBS instance handling')
-	parser.addText('dbsi', 't', 'target-instance',      default = 'https://cmsweb.cern.ch/dbs/prod/phys03',
+	parser.add_text('dbsi', 't', 'target-instance',      default = 'https://cmsweb.cern.ch/dbs/prod/phys03',
 		help = 'Specify target dbs instance url')
-	parser.addText('dbsi', 's', 'source-instance',      default = 'https://cmsweb.cern.ch/dbs/prod/global',
+	parser.add_text('dbsi', 's', 'source-instance',      default = 'https://cmsweb.cern.ch/dbs/prod/global',
 		help = 'Specify source dbs instance url(s), where parent datasets are taken from')
 
-	parser.addText(None, 'F', 'input-file',         default = None,
+	parser.add_text(None, 'F', 'input-file',         default = None,
 		help = 'Specify dbs input file to use instead of scanning job output')
-	parser.addBool(None, 'c', 'continue-migration', default = False,
+	parser.add_bool(None, 'c', 'continue-migration', default = False,
 		help = 'Continue an already started migration')
-#	parser.addText(None, 'D', 'display-dataset',    default = None,
+#	parser.add_text(None, 'D', 'display-dataset',    default = None,
 #		help = 'Display information associated with dataset key(s) (accepts "all")')
-#	parser.addText(None, 'C', 'display-config',     default = None,
+#	parser.add_text(None, 'C', 'display-config',     default = None,
 #		help = 'Display information associated with config hash(es) (accepts "all")')
-#	parser.addText(None, 'k', 'dataset-key-select', default = '',
+#	parser.add_text(None, 'k', 'dataset-key-select', default = '',
 #		help = 'Specify dataset keys to process')
 
 	return scriptOptions(parser)
@@ -209,7 +210,7 @@ def discover_blocks(options):
 	if os.path.isdir(options.args[0]):
 		workDir = os.path.abspath(os.path.normpath(options.args[0]))
 	else:
-		workDir = getConfig(configFile = options.args[0]).getWorkPath()
+		workDir = getConfig(config_file = options.args[0]).get_work_path()
 	if not options.opts.tempdir:
 		options.opts.tempdir = os.path.join(workDir, 'dbs')
 	if not os.path.exists(options.opts.tempdir):
@@ -217,13 +218,13 @@ def discover_blocks(options):
 
 	# get provider with dataset information
 	if options.opts.input_file:
-		provider = DataProvider.createInstance('ListProvider', getConfig(), options.opts.input_file, None)
+		provider = DataProvider.create_instance('ListProvider', getConfig(), options.opts.input_file, None)
 	else:
-		config = getConfig(configDict = {'dataset': options.config_dict})
-		provider = DataProvider.createInstance('DBSInfoProvider', config, options.args[0], None)
+		config = getConfig(config_dict = {'dataset': options.config_dict})
+		provider = DataProvider.create_instance('DBSInfoProvider', config, options.args[0], None)
 
-	blocks = provider.getBlocks(show_stats = False)
-	DataProvider.saveToFile(os.path.join(options.opts.tempdir, 'dbs.dat'), blocks)
+	blocks = provider.get_block_list_cached(show_stats = False)
+	DataProvider.save_to_file(os.path.join(options.opts.tempdir, 'dbs.dat'), blocks)
 	if options.opts.discovery:
 		sys.exit(os.EX_OK)
 	return blocks
@@ -235,11 +236,11 @@ def filter_blocks(opts, blocks):
 		# Query target DBS for all found datasets and perform dataset resync with "supposed" state
 #		dNames = set(ximap(lambda b: b[DataProvider.Dataset], blocks))
 #		dNames = xfilter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames) - todo
-#		config = getConfig(configDict = {None: {'dbs instance': opts.dbsTarget}})
-#		oldBlocks = xreduce(xoperator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).getBlocks(show_stats = False), dNames), [])
-#		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldBlocks, blocks)
+#		config = getConfig(config_dict = {None: {'dbs instance': opts.dbsTarget}})
+#		oldBlocks = xreduce(xoperator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).get_block_list_cached(show_stats = False), dNames), [])
+#		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resync_blocks(oldBlocks, blocks)
 #		if len(blocksMissing) or len(blocksChanged):
-#			if not utils.getUserBool(' * WARNING: Block structure has changed! Continue?', False):
+#			if not utils.get_user_bool(' * WARNING: Block structure has changed! Continue?', False):
 #				sys.exit(os.EX_OK)
 		# Search for blocks which were partially added and generate "pseudo"-blocks with left over files
 #		setOldBlocks = set(ximap(lambda x: x[DataProvider.BlockName], oldBlocks))
@@ -248,7 +249,7 @@ def filter_blocks(opts, blocks):
 #		if blockCollision and opts.closeBlock: # Block are closed and contents have changed
 #			for block in blocksAdded:
 #				if block[DataProvider.BlockName] in blockCollision:
-#					block[DataProvider.BlockName] = strGuid(xmd5(str(time.time())).hexdigest())
+#					block[DataProvider.BlockName] = str_guid(xmd5(str(time.time())).hexdigest())
 #		blocks = blocksAdded
 
 
@@ -280,10 +281,10 @@ def process_dbs3_json_blocks(opts, block_dump_iter):
 			unique_parent_lfns = set(imap(lambda parent: parent['parent_logical_file_name'], blockDump['file_parent_list']))
 			unique_blocks = set()
 			for parent_lfn in unique_parent_lfns:
-				for block in dbs3_source_client.listBlocks(logical_file_name = parent_lfn):
+				for block in dbs3_source_client.get_dbs_block_list(logical_file_name = parent_lfn):
 					unique_blocks.add(block['block_name'])
 			for parent_block in unique_blocks:
-				if dbs3_target_client.listBlocks(block_name = parent_block): # block already at destination
+				if dbs3_target_client.get_dbs_block_list(block_name = parent_block): # block already at destination
 					logger.debug('Block %s is already at destination', parent_block)
 					continue
 				migration_task = MigrationTask(block_name = parent_block, migration_url = opts.dbsSource, dbs_client = dbs3_target_client)
@@ -302,7 +303,7 @@ def process_dbs3_json_blocks(opts, block_dump_iter):
 		# wait for all parent blocks migrated to dbs3
 		do_migration(dbs3_migration_queue)
 		# insert block into dbs3
-		dbs3_target_client.insertBulkBlock(blockDump)
+		dbs3_target_client.insert_dbs_block_dump(blockDump)
 
 
 def main():
@@ -315,7 +316,7 @@ def main():
 	if options.opts.discovery:
 		options.config_dict['dataset name pattern'] = '@DS_KEY@'
 	if len(options.args) != 1:
-		utils.exitWithUsage(options.parser.usage(), 'Neither work directory nor config file specified!')
+		utils.exit_with_usage(options.parser.usage(), 'Neither work directory nor config file specified!')
 	# Lock file in case several instances of this program are running
 	mutex = FileMutex(os.path.join(options.opts.tempdir, 'datasetDBSAdd.lock'))
 	try:

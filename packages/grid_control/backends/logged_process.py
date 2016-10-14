@@ -19,6 +19,7 @@ from grid_control.utils.file_objects import VirtualFile
 from hpfwk import get_current_exception
 from python_compat import tarfile
 
+
 class LoggedProcess(object):
 	def __init__(self, cmd, args = '', niceCmd = None, niceArgs = None, shell = True):
 		self.niceCmd = QM(niceCmd, niceCmd, os.path.basename(cmd))
@@ -46,7 +47,7 @@ class LoggedProcess(object):
 		self.stderr.extend(self.proc.childerr.readlines())
 		return str.join('', self.stderr)
 
-	def getMessage(self):
+	def get_message(self):
 		return self.getOutput() + '\n' + self.getError()
 
 	def kill(self):
@@ -94,7 +95,7 @@ class LoggedProcess(object):
 
 		try:
 			tar = tarfile.TarFile.open(target, 'a')
-			data = {'retCode': self.wait(), 'exec': self.cmd, 'args': self.args}
+			data = {'exit_code': self.wait(), 'exec': self.cmd, 'args': self.args}
 			files = [VirtualFile(os.path.join(entry, 'info'), DictFormat().format(data))]
 			kwargs.update({'stdout': self.getOutput(), 'stderr': self.getError()})
 			for key, value in kwargs.items():
@@ -104,12 +105,10 @@ class LoggedProcess(object):
 					content = [value]
 				files.append(VirtualFile(os.path.join(entry, key), content))
 			for fileObj in files:
-				info, handle = fileObj.getTarInfo()
+				info, handle = fileObj.get_tar_info()
 				tar.addfile(info, handle)
 				handle.close()
 			tar.close()
 		except Exception:
 			raise GCError('Unable to log errors of external process "%s" to "%s"' % (self.niceCmd, target))
 		self._logger.info('All logfiles were moved to %s', target)
-
-

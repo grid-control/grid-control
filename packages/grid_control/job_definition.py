@@ -12,42 +12,43 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+
 class JobDef(object):
-	def __init__(self, jobNum):
+	def __init__(self, jobnum):
 		self.variables = {}
 		self.active = True
-		self.jobNum = jobNum
+		self.jobnum = jobnum
 		(self.files, self.software, self.storage) = ([], None, None)
 		(self.memory, self.time_wall, self.time_cpu, self.cores) = (None, None, None, None)
 
-	def _combineReq(self, fun, oldValue, newValue):
-		if oldValue is not None:
-			return fun(oldValue, newValue)
-		return newValue
-
-	def requireMemory(self, value):
-		self.memory = self._combineReq(max, self.memory, value)
-
-	def requireWalltime(self, value):
-		self.time_wall = self._combineReq(max, self.time_wall, value)
-
-	def requireCPUtime(self, value):
-		self.time_cpu = self._combineReq(max, self.time_cpu, value)
-
-	def requireCores(self, value):
-		self.cores = self._combineReq(max, self.cores, value)
-
-	def requireSoftware(self, value):
-		self.software = self._combineReq(lambda l, i: l + i, self.software, [value])
-
-	def requireStorage(self, selist):
-		self.storage = self._combineReq(lambda l, i: l + i, self.storage, selist)
-
-	def applyTo(self, other):
+	def apply_to(self, other):
 		other.variables.update(self.variables)
 		other.active = other.active and self.active
 		other.files.extend(self.files)
 		# FIX requirements!
 
-	def getHash(self):
+	def get_hash(self):
 		return None
+
+	def require_cores(self, value):
+		self.cores = self._combine_req(max, self.cores, value)
+
+	def require_cpu_time(self, value):
+		self.time_cpu = self._combine_req(max, self.time_cpu, value)
+
+	def require_memory(self, value):
+		self.memory = self._combine_req(max, self.memory, value)
+
+	def require_software(self, value):
+		self.software = self._combine_req(lambda l, i: l + i, self.software, [value])
+
+	def require_storage(self, selist):
+		self.storage = self._combine_req(lambda l, i: l + i, self.storage, selist)
+
+	def require_wall_time(self, value):
+		self.time_wall = self._combine_req(max, self.time_wall, value)
+
+	def _combine_req(self, fun, value_old, value_new):
+		if value_old is not None:
+			return fun(value_old, value_new)
+		return value_new

@@ -21,6 +21,7 @@ from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import identity, ifilter, izip, lmap, next
 
+
 class JMS_CheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		CheckJobsWithProcess.__init__(self, config,
@@ -44,27 +45,27 @@ class JMS_CheckJobs(CheckJobsWithProcess):
 				job_info[CheckInfo.WN] = tmp[14]
 			yield job_info
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = ['not in queue', 'tput: No value for $TERM'])
 
 
 class JMS(LocalWMS):
-	configSections = LocalWMS.configSections + ['JMS']
+	config_section_list = LocalWMS.config_section_list + ['JMS']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.resolveInstallPath('job_submit'),
-			checkExecutor = CheckJobsMissingState(config, JMS_CheckJobs(config)),
-			cancelExecutor = CancelJobsWithProcessBlind(config, 'job_cancel', unknownID = 'not in queue !'))
+			submitExec = utils.resolve_install_path('job_submit'),
+			check_executor = CheckJobsMissingState(config, JMS_CheckJobs(config)),
+			cancel_executor = CancelJobsWithProcessBlind(config, 'job_cancel', unknownID = 'not in queue !'))
 
 
-	def getJobArguments(self, jobNum, sandbox):
+	def get_job_arguments(self, jobnum, sandbox):
 		return repr(sandbox)
 
 
-	def getSubmitArguments(self, jobNum, jobName, reqs, sandbox, stdout, stderr):
+	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
-		params = ' -J "%s"' % jobName
+		params = ' -J "%s"' % job_name
 		# Job requirements
 		if WMS.QUEUES in reqs:
 			params += ' -c %s' % reqs[WMS.QUEUES][0]

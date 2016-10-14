@@ -1,4 +1,4 @@
-# | Copyright 2013-2015 Karlsruhe Institute of Technology
+# | Copyright 2013-2016 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,35 +14,36 @@
 
 import os
 from grid_control import utils
-from grid_control.config import changeInitNeeded, noDefault
+from grid_control.config import TriggerInit
+from python_compat import unspecified
 
-class TaskExecutableWrapper:
-	def __init__(self, config, prefix = '', exeDefault = noDefault):
-		initSandbox = changeInitNeeded('sandbox')
-		self._executableSend = config.getBool('%s send executable' % prefix, True, onChange = initSandbox)
-		if self._executableSend:
-			self._executable = config.getPath('%s executable' % prefix, exeDefault, onChange = initSandbox)
+
+class TaskExecutableWrapper(object):
+	def __init__(self, config, prefix='', executable_default=unspecified):
+		init_sandbox = TriggerInit('sandbox')
+		self._executable_send = config.get_bool('%s send executable' % prefix, True,
+			on_change=init_sandbox)
+		if self._executable_send:
+			self._executable = config.get_path('%s executable' % prefix, executable_default,
+				on_change=init_sandbox)
 		else:
-			self._executable = config.get('%s executable' % prefix, exeDefault, onChange = initSandbox)
-		self._arguments = config.get('%s arguments' % prefix, '', onChange = initSandbox)
+			self._executable = config.get('%s executable' % prefix, executable_default,
+				on_change=init_sandbox)
+		self._arguments = config.get('%s arguments' % prefix, '', on_change=init_sandbox)
 
+	def get_arguments(self):
+		return self._arguments
 
-	def isActive(self):
-		return self._executable != ''
-
-
-	def getCommand(self):
-		if self._executableSend:
+	def get_command(self):
+		if self._executable_send:
 			cmd = os.path.basename(self._executable)
 			return 'chmod u+x %s; ./%s $@' % (cmd, cmd)
 		return '%s $@' % str.join('; ', self._executable.splitlines())
 
-
-	def getArguments(self):
-		return self._arguments
-
-
-	def getSBInFiles(self):
-		if self._executableSend and self._executable:
-			return [utils.Result(pathAbs = self._executable, pathRel = os.path.basename(self._executable))]
+	def get_sb_in_fpi_list(self):
+		if self._executable_send and self._executable:
+			return [utils.Result(path_abs=self._executable, path_rel=os.path.basename(self._executable))]
 		return []
+
+	def is_active(self):
+		return self._executable != ''

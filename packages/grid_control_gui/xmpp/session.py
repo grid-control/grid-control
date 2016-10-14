@@ -247,15 +247,15 @@ class Session:
             # send features
             features=Node('stream:features')
             if NS_TLS in self.waiting_features:
-                features.NT.starttls.setNamespace(NS_TLS)
+                features.NT.starttls.set_namespace(NS_TLS)
                 features.T.starttls.NT.required
             if NS_SASL in self.waiting_features:
-                features.NT.mechanisms.setNamespace(NS_SASL)
+                features.NT.mechanisms.set_namespace(NS_SASL)
                 for mec in self._owner.SASL.mechanisms:
                     features.T.mechanisms.NT.mechanism=mec
             else:
-                if NS_BIND in self.waiting_features: features.NT.bind.setNamespace(NS_BIND)
-                if NS_SESSION in self.waiting_features: features.NT.session.setNamespace(NS_SESSION)
+                if NS_BIND in self.waiting_features: features.NT.bind.set_namespace(NS_BIND)
+                if NS_SESSION in self.waiting_features: features.NT.session.set_namespace(NS_SESSION)
             self.sendnow(features)
 
     def feature(self,feature):
@@ -294,7 +294,7 @@ class Session:
         else:
             self.set_stream_state(STREAM__CLOSING)
             p=Presence(typ='unavailable')
-            p.setNamespace(NS_CLIENT)
+            p.set_namespace(NS_CLIENT)
             self._dispatch(p,trusted=1)
         if error:
             if isinstance(error,Node): self.sendnow(error)

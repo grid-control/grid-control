@@ -1,5 +1,3 @@
-from python_compat import sorted, lrange
-
 """JSON token scanner
 """
 import re
@@ -472,9 +470,13 @@ ESCAPE_DCT = {
     '\r': '\\r',
     '\t': '\\t',
 }
-for i in lrange(0x20):
-    #ESCAPE_DCT.setdefault(chr(i), '\\u{0:04x}'.format(i))
-    ESCAPE_DCT.setdefault(chr(i), '\\u%04x' % (i,))
+ESCAPE_DCT.update({'\x00': '\\u0000', '\x01': '\\u0001', '\x02': '\\u0002', '\x03': '\\u0003',
+    '\x04': '\\u0004', '\x05': '\\u0005', '\x06': '\\u0006', '\x07': '\\u0007', '\x08': '\\u0008',
+    '\t': '\\u0009', '\n': '\\u000a', '\x0b': '\\u000b', '\x0c': '\\u000c', '\r': '\\u000d',
+    '\x0e': '\\u000e', '\x0f': '\\u000f', '\x10': '\\u0010', '\x11': '\\u0011', '\x12': '\\u0012',
+    '\x13': '\\u0013', '\x14': '\\u0014', '\x15': '\\u0015', '\x16': '\\u0016', '\x17': '\\u0017',
+    '\x18': '\\u0018', '\x19': '\\u0019', '\x1a': '\\u001a', '\x1b': '\\u001b', '\x1c': '\\u001c',
+    '\x1d': '\\u001d', '\x1e': '\\u001e', '\x1f': '\\u001f'})
 
 INFINITY = float('inf')
 FLOAT_REPR = repr
@@ -807,7 +809,8 @@ def _make_iterencode(markers, _default, _encoder, _indent, _floatstr,
             item_separator = _item_separator
         first = True
         if _sort_keys:
-            items = sorted(dct.items(), key=lambda kv: kv[0])
+            items = list(dct.items())
+            items.sort()
         else:
             items = dct.iteritems()
         for key, value in items:

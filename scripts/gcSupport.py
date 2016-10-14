@@ -15,6 +15,7 @@
 
 import os, sys, time, fcntl, logging
 
+
 # add python subdirectory from where exec was started to search path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'packages')))
 
@@ -22,33 +23,38 @@ from grid_control import utils
 from grid_control.config import create_config
 from grid_control.job_db import Job, JobClass
 from grid_control.job_selector import ClassSelector, JobSelector
+from grid_control.logging_setup import LogLevelEnum, parse_logging_args
 from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor, JobResult
 from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
 from hpfwk import Plugin, clear_current_exception
 from python_compat import ifilter, imap, lmap, sorted, tarfile
 
+
 def scriptOptions(parser, args = None, arg_keys = None):
-	parser.addBool(None, ' ', 'parseable', default = False, help = 'Output tabular data in parseable format')
-	parser.addBool(None, ' ', 'pivot',     default = False, help = 'Output pivoted tabular data')
-	parser.addText(None, ' ', 'textwidth', default = 100,   help = 'Output tabular data with selected width')
-	parser.addAccu(None, 'v', 'verbose',   default = 0,     help = 'Increase verbosity')
+	parser.add_bool(None, ' ', 'parseable', default = False, help = 'Output tabular data in parseable format')
+	parser.add_bool(None, ' ', 'pivot',     default = False, help = 'Output pivoted tabular data')
+	parser.add_text(None, ' ', 'textwidth', default = 100,   help = 'Output tabular data with selected width')
+	parser.add_accu(None, 'v', 'verbose',   default = 0,     help = 'Increase verbosity')
+	parser.add_list(None, ' ', 'logging',                    help = 'Increase verbosity')
 	(opts, args, config_dict) = parser.parse(args, arg_keys)
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbose)
+	for (logger_name, logger_level) in parse_logging_args(opts.logging):
+		logging.getLogger(logger_name).setLevel(LogLevelEnum.str2enum(logger_level))
 	if opts.parseable:
-		utils.printTabular.mode = 'parseable'
+		utils.display_table.mode = 'parseable'
 	elif opts.pivot:
-		utils.printTabular.mode = 'longlist'
-	utils.printTabular.wraplen = int(opts.textwidth)
+		utils.display_table.mode = 'longlist'
+	utils.display_table.wraplen = int(opts.textwidth)
 	return utils.Result(opts = opts, args = args, config_dict = config_dict, parser = parser)
 
 
-def getConfig(configFile = None, configDict = None, section = None, additional = None):
-	if configDict and section:
-		configDict = {section: configDict}
-	config = create_config(configFile, configDict, useDefaultFiles = True, additional = additional)
+def getConfig(config_file = None, config_dict = None, section = None, additional = None):
+	if config_dict and section:
+		config_dict = {section: config_dict}
+	config = create_config(config_file, config_dict, use_default_files = True, additional = additional)
 	if section:
-		return config.changeView(addSections = [section])
+		return config.change_view(add_sections = [section])
 	return config
 
 
@@ -84,7 +90,7 @@ def initGC(args):
 		userSelector = None
 		if len(args) != 1:
 			userSelector = JobSelector.create(args[1])
-		return (config, Plugin.createInstance('TextFileJobDB', config, jobSelector = userSelector))
+		return (config, Plugin.create_instance('TextFileJobDB', config, job_selector = userSelector))
 	sys.stderr.write('Syntax: %s <config file> [<job id>, ...]\n\n' % sys.argv[0])
 	sys.exit(os.EX_USAGE)
 
@@ -110,9 +116,10 @@ def prettySize(size):
 		else:
 			return str(round(size / float(lim / 2**10), 2)) + suf
 
-def getPluginList(pluginName):
+def get_pluginList(pluginName):
 	aliasDict = {}
-	for entry in Plugin.getClass(pluginName).getClassList():
+	cls = Plugin.get_class(pluginName)
+	for entry in cls.get_class_info_list():
 		depth = entry.pop('depth', 0)
 		(alias, name) = entry.popitem()
 		aliasDict.setdefault(name, []).append((depth, alias))
@@ -134,14 +141,14 @@ def getPluginList(pluginName):
 
 def displayPluginList(clsList):
 	header = [('Name', 'Name')]
-	fmtString = 'l'
+	fmt_string = 'l'
 	for entry in clsList:
 		if entry['Alias']:
 			header.append(('Alias', 'Alternate names'))
-			fmtString = 'rl'
+			fmt_string = 'rl'
 			break
-	utils.printTabular(header, sorted(clsList, key = lambda x: x['Name'].lower()), fmtString = fmtString)
+	utils.display_table(header, sorted(clsList, key = lambda x: x['Name'].lower()), fmt_string = fmt_string)
 
 __all__ = ['Activity', 'ClassSelector', 'displayPluginList', 'FileInfoProcessor', 'FileMutex',
-	'getCMSSWInfo', 'getConfig', 'getPluginList', 'initGC', 'Job', 'JobClass', 'JobInfoProcessor',
+	'getCMSSWInfo', 'getConfig', 'get_pluginList', 'initGC', 'Job', 'JobClass', 'JobInfoProcessor',
 	'JobResult', 'JobSelector', 'Options', 'Plugin', 'scriptOptions', 'utils']

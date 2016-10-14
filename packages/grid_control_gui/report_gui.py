@@ -16,53 +16,54 @@ import sys
 from grid_control import utils
 from grid_control.job_db import Job, JobClass
 from grid_control.report import Report
-from grid_control.utils.parsing import parseStr
+from grid_control.utils.parsing import parse_str
 from grid_control_gui.ansi import Console
 from grid_control_gui.report_colorbar import JobProgressBar
 from python_compat import ifilter, imap, irange, lfilter, lmap, set, sorted
 
-class CategoryBaseReport(Report):
-	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		Report.__init__(self, jobDB, task, jobs, configString)
-		catJobs = {}
-		catDescDict = {}
-		# Assignment of jobs to categories (depending on variables and using datasetnick if available)
-		jobConfig = {}
-		varList = []
-		for jobNum in self._jobs:
-			if task:
-				jobConfig = task.getJobConfig(jobNum)
-			varList = sorted(ifilter(lambda var: '!' not in repr(var), jobConfig.keys()))
-			if 'DATASETSPLIT' in varList:
-				varList.remove('DATASETSPLIT')
-				varList.append('DATASETNICK')
-			catKey = str.join('|', imap(lambda var: '%s=%s' % (var, jobConfig[var]), varList))
-			catJobs.setdefault(catKey, []).append(jobNum)
-			if catKey not in catDescDict:
-				catDescDict[catKey] = dict(imap(lambda var: (var, jobConfig[var]), varList))
-		# Kill redundant keys from description
-		commonVars = dict(imap(lambda var: (var, jobConfig[var]), varList)) # seed with last varList
-		for catKey in catDescDict:
-			for key in list(commonVars.keys()):
-				if key not in catDescDict[catKey].keys():
-					commonVars.pop(key)
-				elif commonVars[key] != catDescDict[catKey][key]:
-					commonVars.pop(key)
-		for catKey in catDescDict:
-			for commonKey in commonVars:
-				catDescDict[catKey].pop(commonKey)
-		# Generate job-category map with efficient int keys - catNum becomes the new catKey
-		self._job2cat = {}
-		self._catDescDict = {}
-		for catNum, catKey in enumerate(sorted(catJobs)):
-			self._catDescDict[catNum] = catDescDict[catKey]
-			self._job2cat.update(dict.fromkeys(catJobs[catKey], catNum))
 
-	def _formatDesc(self, desc, others):
+class CategoryBaseReport(Report):
+	def __init__(self, job_db, task, jobs=None, config_str=''):
+		Report.__init__(self, job_db, task, jobs, config_str)
+		map_cat2jobs = {}
+		map_cat2desc = {}
+		# Assignment of jobs to categories (depending on variables and using datasetnick if available)
+		job_config_dict = {}
+		vn_list = []
+		for jobnum in self._jobs:
+			if task:
+				job_config_dict = task.get_job_dict(jobnum)
+			vn_list = sorted(ifilter(lambda var: '!' not in repr(var), job_config_dict.keys()))
+			if 'DATASETSPLIT' in vn_list:
+				vn_list.remove('DATASETSPLIT')
+				vn_list.append('DATASETNICK')
+			cat_key = str.join('|', imap(lambda vn: '%s=%s' % (vn, job_config_dict[vn]), vn_list))
+			map_cat2jobs.setdefault(cat_key, []).append(jobnum)
+			if cat_key not in map_cat2desc:
+				map_cat2desc[cat_key] = dict(imap(lambda var: (var, job_config_dict[var]), vn_list))
+		# Kill redundant keys from description - seed with last vn_list
+		common_var_dict = dict(imap(lambda var: (var, job_config_dict[var]), vn_list))
+		for cat_key in map_cat2desc:
+			for key in list(common_var_dict.keys()):
+				if key not in map_cat2desc[cat_key].keys():
+					common_var_dict.pop(key)
+				elif common_var_dict[key] != map_cat2desc[cat_key][key]:
+					common_var_dict.pop(key)
+		for cat_key in map_cat2desc:
+			for common_key in common_var_dict:
+				map_cat2desc[cat_key].pop(common_key)
+		# Generate job-category map with efficient int keys - catNum becomes the new cat_key
+		self._job2cat = {}
+		self._map_cat2desc = {}
+		for cat_num, cat_key in enumerate(sorted(map_cat2jobs)):
+			self._map_cat2desc[cat_num] = map_cat2desc[cat_key]
+			self._job2cat.update(dict.fromkeys(map_cat2jobs[cat_key], cat_num))
+
+	def _format_desc(self, desc, others):
 		if isinstance(desc, str):
 			result = desc
 		else:
-			desc = dict(desc) # perform copy to allow dict.pop(...) calls
+			desc = dict(desc)  # perform copy to allow dict.pop(...) calls
 			tmp = []
 			if 'DATASETNICK' in desc:
 				tmp = ['Dataset: %s' % desc.pop('DATASETNICK')]
@@ -71,200 +72,213 @@ class CategoryBaseReport(Report):
 			result += ' (%d subtasks)' % others
 		return result
 
-	def _getCategoryStateSummary(self):
-		catStateDict = {}
-		for jobNum in self._jobs:
-			jobState = self._jobDB.getJobTransient(jobNum).state
-			catKey = self._job2cat[jobNum]
-			catStateDict[catKey][jobState] = catStateDict.setdefault(catKey, dict()).get(jobState, 0) + 1
-		return (catStateDict, dict(self._catDescDict), {}) # (<state overview>, <descriptions>, <#subcategories>)
-
-
-class ModuleReport(CategoryBaseReport):
-	alias = ['module']
-
-	def display(self):
-		(catStateDict, catDescDict, _) = CategoryBaseReport._getCategoryStateSummary(self)
-		infos = []
-		head = set()
-		stateCat = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED', Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
-		for catKey in catDescDict:
-			tmp = dict(catDescDict[catKey])
-			head.update(tmp.keys())
-			for stateKey in catStateDict[catKey]:
-				state = stateCat.get(stateKey, 'WAITING')
-				tmp[state] = tmp.get(state, 0) + catStateDict[catKey][stateKey]
-			infos.append(tmp)
-
-		stateCatList = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
-		utils.printTabular(lmap(lambda x: (x, x), sorted(head) + stateCatList),
-			infos, 'c' * len(head), fmt = dict.fromkeys(stateCatList, lambda x: '%7d' % parseStr(x, int, 0)))
+	def _get_category_state_summary(self, job_db):
+		cat_state_dict = {}
+		for jobnum in self._jobs:
+			job_state = job_db.get_job_transient(jobnum).state
+			cat_key = self._job2cat[jobnum]
+			cat_dict = cat_state_dict.setdefault(cat_key, dict())
+			cat_dict[job_state] = cat_dict.get(job_state, 0) + 1
+		# (<state overview>, <descriptions>, <#subcategories>)
+		return (cat_state_dict, dict(self._map_cat2desc), {})
 
 
 class AdaptiveBaseReport(CategoryBaseReport):
-	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		CategoryBaseReport.__init__(self, jobDB, task, jobs, configString)
-		self._catMax = int(configString)
-		self._catCur = self._catMax
+	def __init__(self, job_db, task, jobs=None, config_str=''):
+		CategoryBaseReport.__init__(self, job_db, task, jobs, config_str)
+		self._cat_max = int(config_str)
+		self._cat_cur = self._cat_max
 
-	# Function to merge categories together
-	def _mergeCats(self, catStateDict, catDescDict, catSubcatDict, catLenDict, newCatDesc, catKeyList):
-		if not catKeyList:
-			return
-		newCatKey = max(catStateDict.keys()) + 1
-		newStates = {}
-		newLen = 0
-		newSubcats = 0
-		for catKey in catKeyList:
-			oldStates = catStateDict.pop(catKey)
-			for stateKey in oldStates:
-				newStates[stateKey] = newStates.get(stateKey, 0) + oldStates[stateKey]
-			catDescDict.pop(catKey)
-			newLen += catLenDict.pop(catKey)
-			newSubcats += catSubcatDict.pop(catKey, 1)
-		catStateDict[newCatKey] = newStates
-		catDescDict[newCatKey] = newCatDesc
-		catLenDict[newCatKey] = newLen
-		catSubcatDict[newCatKey] = newSubcats
-		return newCatKey
+	def _clear_category_desc(self, var_key_result, map_cat2desc):
+		for var_key in sorted(var_key_result, reverse=True):
+			if var_key == 'DATASETNICK':  # Never remove dataset infos
+				continue
+			if sum(imap(len, var_key_result[var_key])) - len(var_key_result[var_key]) == 0:
+				cat_desc_set = set()
+				for cat_key in map_cat2desc:
+					desc_dict = dict(map_cat2desc[cat_key])
+					desc_dict.pop(var_key)
+					desc = self._format_desc(desc_dict, 0)
+					if desc in cat_desc_set:
+						break
+					cat_desc_set.add(desc)
+				if len(cat_desc_set) == len(map_cat2desc):
+					for cat_key in map_cat2desc:
+						if var_key in map_cat2desc[cat_key]:
+							map_cat2desc[cat_key].pop(var_key)
 
+	def _get_category_state_summary(self, job_db):
+		(cat_state_dict, map_cat2desc, cat_subcat_dict) = CategoryBaseReport._get_category_state_summary(
+			self, job_db)
+		# Used for quick calculations
+		map_cat2len = {}
+		for cat_key in cat_state_dict:
+			map_cat2len[cat_key] = sum(cat_state_dict[cat_key].values())
 
-	# Get dictionary with categories that will get merged when removing a variable
-	def _getKeyMergeResults(self, catDescDict):
-		# Merge parameters to reach category goal - NP hard problem, so be greedy and quick!
-		def eqDict(a, b, k):
-			a = dict(a)
-			b = dict(b)
-			a.pop(k)
-			b.pop(k)
-			return a == b
+		# Merge successfully completed categories
+		def _single_or_successful(cat_key):
+			return (len(cat_state_dict[cat_key]) == 1) and (Job.SUCCESS in cat_state_dict[cat_key])
+		self._merge_categories(cat_state_dict, map_cat2desc, cat_subcat_dict, map_cat2len,
+			'Completed subtasks', lfilter(_single_or_successful, cat_state_dict))
 
-		varKeyResult = {}
-		catKeySearchDict = {}
-		for catKey in catDescDict:
-			for varKey in catDescDict[catKey]:
-				if varKey not in catKeySearchDict:
-					catKeySearch = set(catDescDict.keys())
+		# Next merge steps shouldn't see non-dict cat_keys in map_cat2desc
+		def _select_non_dict(cat_key):
+			return not isinstance(map_cat2desc[cat_key], dict)
+		hidden_desc = {}
+		for cat_key in ifilter(_select_non_dict, list(map_cat2desc)):
+			hidden_desc[cat_key] = map_cat2desc.pop(cat_key)
+		# Merge categories till goal is reached
+		self._merge_categories_with_goal(cat_state_dict, map_cat2desc,
+			cat_subcat_dict, map_cat2len, hidden_desc)
+		# Remove redundant variables from description
+		var_key_result = self._get_possible_merge_categories(map_cat2desc)
+		self._clear_category_desc(var_key_result, map_cat2desc)
+		# Restore hidden descriptions
+		map_cat2desc.update(hidden_desc)
+		# Enforce category maximum - merge categories with the least amount of jobs
+		if len(cat_state_dict) != self._cat_max:
+			self._merge_categories(cat_state_dict, map_cat2desc, cat_subcat_dict,
+				map_cat2len, 'Remaining subtasks',
+				sorted(cat_state_dict, key=lambda cat_key: -map_cat2len[cat_key])[self._cat_max - 1:])
+		# Finalize descriptions:
+		if len(map_cat2desc) == 1:
+			map_cat2desc[list(map_cat2desc.keys())[0]] = 'All jobs'
+		return (cat_state_dict, map_cat2desc, cat_subcat_dict)
+
+	def _get_possible_merge_categories(self, map_cat2desc):
+		# Get dictionary with categories that will get merged when removing a variable
+		def _eq_dict(dict_a, dict_b, key):
+			# Merge parameters to reach category goal - NP hard problem, so be greedy and quick!
+			dict_a = dict(dict_a)
+			dict_b = dict(dict_b)
+			dict_a.pop(key)
+			dict_b.pop(key)
+			return dict_a == dict_b
+
+		var_key_result = {}
+		cat_key_search_dict = {}
+		for cat_key in map_cat2desc:
+			for var_key in map_cat2desc[cat_key]:
+				if var_key not in cat_key_search_dict:
+					cat_key_search = set(map_cat2desc.keys())
 				else:
-					catKeySearch = catKeySearchDict[varKey]
-				if catKeySearch:
-					matches = lfilter(lambda ck: eqDict(catDescDict[catKey], catDescDict[ck], varKey), catKeySearch)
+					cat_key_search = cat_key_search_dict[var_key]
+				if cat_key_search:
+					matches = lfilter(lambda ck: _eq_dict(map_cat2desc[cat_key],
+						map_cat2desc[ck], var_key), cat_key_search)
 					if matches:
-						catKeySearchDict[varKey] = catKeySearch.difference(set(matches))
-						varKeyResult.setdefault(varKey, []).append(matches)
-		return varKeyResult
+						cat_key_search_dict[var_key] = cat_key_search.difference(set(matches))
+						var_key_result.setdefault(var_key, []).append(matches)
+		return var_key_result
 
+	def _merge_categories(self, cat_state_dict, map_cat2desc, cat_subcat_dict,
+			map_cat2len, new_cat_desc, cat_key_list):
+		# Function to merge categories together
+		if not cat_key_list:
+			return
+		newcat_key = max(cat_state_dict.keys()) + 1
+		new_states = {}
+		new_len = 0
+		new_subcat_len = 0
+		for cat_key in cat_key_list:
+			old_states = cat_state_dict.pop(cat_key)
+			for state_key in old_states:
+				new_states[state_key] = new_states.get(state_key, 0) + old_states[state_key]
+			map_cat2desc.pop(cat_key)
+			new_len += map_cat2len.pop(cat_key)
+			new_subcat_len += cat_subcat_dict.pop(cat_key, 1)
+		cat_state_dict[newcat_key] = new_states
+		map_cat2desc[newcat_key] = new_cat_desc
+		map_cat2len[newcat_key] = new_len
+		cat_subcat_dict[newcat_key] = new_subcat_len
+		return newcat_key
 
-	def _mergeCatsWithGoal(self, catStateDict, catDescDict, catSubcatDict, catLenDict, hiddenDesc):
+	def _merge_categories_with_goal(self, cat_state_dict, map_cat2desc,
+			cat_subcat_dict, map_cat2len, hidden_desc):
 		# Merge categories till goal is reached
 		while True:
-			deltaGoal = max(0, (len(catDescDict) + len(hiddenDesc)) - self._catMax)
-			varKeyResult = self._getKeyMergeResults(catDescDict)
-			(varKeyMerge, varKeyMergeDelta) = (None, 0)
-			for varKey in sorted(varKeyResult):
-				delta = sum(imap(len, varKeyResult[varKey])) - len(varKeyResult[varKey])
-				if (delta <= deltaGoal) and (delta > varKeyMergeDelta):
-					(varKeyMerge, varKeyMergeDelta) = (varKey, delta)
-			if varKeyMerge:
-				for mergeList in varKeyResult[varKeyMerge]:
-					varKeyMergeDesc = dict(catDescDict[mergeList[0]])
-					varKeyMergeDesc.pop(varKeyMerge)
-					self._mergeCats(catStateDict, catDescDict, catSubcatDict, catLenDict,
-						varKeyMergeDesc, mergeList)
+			delta_goal = max(0, (len(map_cat2desc) + len(hidden_desc)) - self._cat_max)
+			var_key_result = self._get_possible_merge_categories(map_cat2desc)
+			(var_key_merge, var_key_merge_delta) = (None, 0)
+			for var_key in sorted(var_key_result):
+				delta = sum(imap(len, var_key_result[var_key])) - len(var_key_result[var_key])
+				if (delta <= delta_goal) and (delta > var_key_merge_delta):
+					(var_key_merge, var_key_merge_delta) = (var_key, delta)
+			if var_key_merge:
+				for merge_list in var_key_result[var_key_merge]:
+					var_key_merge_desc = dict(map_cat2desc[merge_list[0]])
+					var_key_merge_desc.pop(var_key_merge)
+					self._merge_categories(cat_state_dict, map_cat2desc, cat_subcat_dict, map_cat2len,
+						var_key_merge_desc, merge_list)
 			else:
 				break
 
 
-	def _clearCategoryDesc(self, varKeyResult, catDescDict):
-		for varKey in sorted(varKeyResult, reverse = True):
-			if varKey == 'DATASETNICK': # Never remove dataset infos
-				continue
-			if sum(imap(len, varKeyResult[varKey])) - len(varKeyResult[varKey]) == 0:
-				catDescSet = set()
-				for catKey in catDescDict:
-					descDict = dict(catDescDict[catKey])
-					descDict.pop(varKey)
-					desc = self._formatDesc(descDict, 0)
-					if desc in catDescSet:
-						break
-					catDescSet.add(desc)
-				if len(catDescSet) == len(catDescDict):
-					for catKey in catDescDict:
-						if varKey in catDescDict[catKey]:
-							catDescDict[catKey].pop(varKey)
+class ModuleReport(CategoryBaseReport):
+	alias_list = ['module']
 
+	def show_report(self, job_db):
+		(cat_state_dict, map_cat2desc, _) = CategoryBaseReport._get_category_state_summary(self, job_db)
+		infos = []
+		head = set()
+		map_state2cat = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED',
+			Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
+		for cat_key in map_cat2desc:
+			tmp = dict(map_cat2desc[cat_key])
+			head.update(tmp.keys())
+			for state_key in cat_state_dict[cat_key]:
+				state = map_state2cat.get(state_key, 'WAITING')
+				tmp[state] = tmp.get(state, 0) + cat_state_dict[cat_key][state_key]
+			infos.append(tmp)
 
-	def _getCategoryStateSummary(self):
-		(catStateDict, catDescDict, catSubcatDict) = CategoryBaseReport._getCategoryStateSummary(self)
-		# Used for quick calculations
-		catLenDict = {}
-		for catKey in catStateDict:
-			catLenDict[catKey] = sum(catStateDict[catKey].values())
-		# Merge successfully completed categories
-		self._mergeCats(catStateDict, catDescDict, catSubcatDict, catLenDict,
-			'Completed subtasks', lfilter(lambda catKey:
-				(len(catStateDict[catKey]) == 1) and (Job.SUCCESS in catStateDict[catKey]), catStateDict))
-		# Next merge steps shouldn't see non-dict catKeys in catDescDict
-		hiddenDesc = {}
-		for catKey in ifilter(lambda catKey: not isinstance(catDescDict[catKey], dict), list(catDescDict)):
-			hiddenDesc[catKey] = catDescDict.pop(catKey)
-		# Merge categories till goal is reached
-		self._mergeCatsWithGoal(catStateDict, catDescDict, catSubcatDict, catLenDict, hiddenDesc)
-		# Remove redundant variables from description
-		varKeyResult = self._getKeyMergeResults(catDescDict)
-		self._clearCategoryDesc(varKeyResult, catDescDict)
-		# Restore hidden descriptions
-		catDescDict.update(hiddenDesc)
-		# Enforce category maximum - merge categories with the least amount of jobs
-		if len(catStateDict) != self._catMax:
-			self._mergeCats(catStateDict, catDescDict, catSubcatDict, catLenDict, 'Remaining subtasks',
-				sorted(catStateDict, key = lambda catKey: -catLenDict[catKey])[self._catMax - 1:])
-		# Finalize descriptions:
-		if len(catDescDict) == 1:
-			catDescDict[list(catDescDict.keys())[0]] = 'All jobs'
-		return (catStateDict, catDescDict, catSubcatDict)
+		cat_order = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
+		utils.display_table(lmap(lambda x: (x, x), sorted(head) + cat_order),
+			infos, 'c' * len(head), fmt=dict.fromkeys(cat_order, lambda x: '%7d' % parse_str(x, int, 0)))
 
 
 class GUIReport(AdaptiveBaseReport):
-	alias = ['modern']
+	alias_list = ['modern']
 
-	def __init__(self, jobDB, task, jobs = None, configString = ''):
-		(self.maxY, self.maxX) = Console(sys.stdout).getmaxyx()
-		self.maxX -= 10 # Padding
-		AdaptiveBaseReport.__init__(self, jobDB, task, jobs, str(int(self.maxY / 5)))
+	def __init__(self, job_db, task, jobs=None, config_str=''):
+		(self._max_y, self._max_x) = Console(sys.stdout).getmaxyx()
+		self._max_x -= 10  # Padding
+		AdaptiveBaseReport.__init__(self, job_db, task, jobs, str(int(self._max_y / 5)))
 
-	def getHeight(self):
-		return self._catCur * 2 + 3
+	def get_height(self):
+		return self._cat_cur * 2 + 3
 
-	def printLimited(self, value, width, rvalue = ''):
+	def show_report(self, job_db):
+		(cat_state_dict, map_cat2desc, cat_subcat_dict) = self._get_category_state_summary(job_db)
+		self._cat_cur = len(cat_state_dict)
+
+		def _sum_cat(cat_key, states):
+			return sum(imap(lambda z: cat_state_dict[cat_key].get(z, 0), states))
+
+		self._print_gui_header('Status report for task:')
+		for cat_key in cat_state_dict:  # sorted(cat_state_dict, key=lambda x: -self._categories[x][0]):
+			desc = self._format_desc(map_cat2desc[cat_key], cat_subcat_dict.get(cat_key, 0))
+			completed = _sum_cat(cat_key, [Job.SUCCESS])
+			total = sum(cat_state_dict[cat_key].values())
+			self._print_truncated(Console.fmt(desc, [Console.BOLD]), self._max_x - 24,
+				'(%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total)))
+			progressbar = JobProgressBar(sum(cat_state_dict[cat_key].values()),
+				width=max(0, self._max_x - 19))
+			progressbar.update(completed,
+				_sum_cat(cat_key, JobClass.ATWMS.states),
+				_sum_cat(cat_key, [Job.RUNNING, Job.DONE]),
+				_sum_cat(cat_key, [Job.ABORTED, Job.CANCELLED, Job.FAILED]))
+			self._print_truncated(progressbar, self._max_x)
+		for dummy in irange(self._cat_max - len(cat_state_dict)):
+			sys.stdout.write(' ' * self._max_x + '\n')
+			sys.stdout.write(' ' * self._max_x + '\n')
+
+	def _print_gui_header(self, message):
+		self._print_truncated('-' * (self._max_x - 24), self._max_x)
+		header = self._get_header(self._max_x - len(message) - 1)
+		self._print_truncated('%s %s' % (message, header), self._max_x)
+		self._print_truncated('-' * (self._max_x - 24), self._max_x)
+
+	def _print_truncated(self, value, width, rvalue=''):
 		if len(value) + len(rvalue) > width:
 			value = str(value)[:width - 3 - len(rvalue)] + '...'
 		sys.stdout.write(str(value) + ' ' * (width - (len(value) + len(rvalue))) + str(rvalue) + '\n')
-
-	def printGUIHeader(self, message):
-		self.printLimited('-' * (self.maxX - 24), self.maxX)
-		self.printLimited('%s %s' % (message, self._getHeader(self.maxX - len(message) - 1)), self.maxX)
-		self.printLimited('-' * (self.maxX - 24), self.maxX)
-
-	def display(self):
-		(catStateDict, catDescDict, catSubcatDict) = self._getCategoryStateSummary()
-		self._catCur = len(catStateDict)
-		def sumCat(catKey, states):
-			return sum(imap(lambda z: catStateDict[catKey].get(z, 0), states))
-
-		self.printGUIHeader('Status report for task:')
-		for catKey in catStateDict: # sorted(catStateDict, key = lambda x: -self._categories[x][0]):
-			desc = self._formatDesc(catDescDict[catKey], catSubcatDict.get(catKey, 0))
-			completed = sumCat(catKey, [Job.SUCCESS])
-			total = sum(catStateDict[catKey].values())
-			self.printLimited(Console.fmt(desc, [Console.BOLD]), self.maxX - 24,
-				'(%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total)))
-			progressbar = JobProgressBar(sum(catStateDict[catKey].values()), width = max(0, self.maxX - 19))
-			progressbar.update(completed,
-				sumCat(catKey, JobClass.ATWMS.states),
-				sumCat(catKey, [Job.RUNNING, Job.DONE]),
-				sumCat(catKey, [Job.ABORTED, Job.CANCELLED, Job.FAILED]))
-			self.printLimited(progressbar, self.maxX)
-		for dummy in irange(self._catMax - len(catStateDict)):
-			sys.stdout.write(' ' * self.maxX + '\n')
-			sys.stdout.write(' ' * self.maxX + '\n')

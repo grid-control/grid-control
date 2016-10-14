@@ -17,6 +17,7 @@ from grid_control.backends.jdl_writer import JDLWriter
 from grid_control.backends.wms_grid import GridWMS, Grid_CancelJobs, Grid_CheckJobs
 from python_compat import imap
 
+
 class EDGJDL(JDLWriter):
 	def _format_reqs_storage(self, locations):
 		if locations:
@@ -25,14 +26,14 @@ class EDGJDL(JDLWriter):
 
 
 class EuropeanDataGrid(GridWMS):
-	alias = ['EDG', 'LCG']
+	alias_list = ['EDG', 'LCG']
 
 	def __init__(self, config, name):
 		GridWMS.__init__(self, config, name,
-			checkExecutor = Grid_CheckJobs(config, 'edg-job-status'),
-			cancelExecutor = Grid_CancelJobs(config, 'edg-job-cancel'),
+			check_executor = Grid_CheckJobs(config, 'edg-job-status'),
+			cancel_executor = Grid_CancelJobs(config, 'edg-job-cancel'),
 			jdlWriter = EDGJDL())
 
-		self._submitExec = utils.resolveInstallPath('edg-job-submit')
-		self._outputExec = utils.resolveInstallPath('edg-job-get-output')
+		self._submitExec = utils.resolve_install_path('edg-job-submit')
+		self._outputExec = utils.resolve_install_path('edg-job-get-output')
 		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })

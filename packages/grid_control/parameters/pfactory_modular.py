@@ -16,26 +16,28 @@ from grid_control.parameters.pfactory_base import UserParameterFactory
 from grid_control.parameters.psource_base import ParameterError, ParameterSource
 from python_compat import ifilter, sorted
 
+
 # Parameter factory which evaluates a parameter module string
 class ModularParameterFactory(UserParameterFactory):
-	alias = ['modular']
+	alias_list = ['modular']
 
-	def _getUserSource(self, pExpr):
+	def _get_psrc_user(self, pexpr, repository):
 		# Wrap psource factory functions
-		def createWrapper(clsName):
-			def wrapper(*args):
-				parameterClass = ParameterSource.getClass(clsName)
+		def _create_wrapper(cls_name):
+			def _wrapper(*args):
+				psrc_type = ParameterSource.get_class(cls_name)
 				try:
-					return parameterClass.create(self._paramConfig, self._repository, *args)
+					return psrc_type.create_psrc(self._parameter_config, repository, *args)
 				except Exception:
-					raise ParameterError('Error while creating %r with arguments %r' % (parameterClass.__name__, args))
-			return wrapper
-		userFun = {}
-		for clsInfo in ParameterSource.getClassList():
-			for clsName in ifilter(lambda name: name != 'depth', clsInfo.keys()):
-				userFun[clsName] = createWrapper(clsName)
+					error_msg = 'Error while creating %r with arguments %r'
+					raise ParameterError(error_msg % (psrc_type.__name__, args))
+			return _wrapper
+		user_functions = {}
+		for cls_info in ParameterSource.get_class_info_list():
+			for cls_name in ifilter(lambda name: name != 'depth', cls_info.keys()):
+				user_functions[cls_name] = _create_wrapper(cls_name)
 		try:
-			return eval(pExpr, dict(userFun)) # pylint:disable=eval-used
+			return eval(pexpr, dict(user_functions))  # pylint:disable=eval-used
 		except Exception:
-			self._log.warning('Available functions: %s', sorted(userFun.keys()))
+			self._log.warning('Available functions: %s', sorted(user_functions.keys()))
 			raise

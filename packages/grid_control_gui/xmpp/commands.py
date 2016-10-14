@@ -155,11 +155,11 @@ class Commands(PlugIn):
             raise NameError, 'Command not found'
         else:
             #Do disco removal here
-            command = self.getCommand(name,jid)['disco']
+            command = self.get_command(name,jid)['disco']
             del self._handlers[jid][name]
             self._browser.delDiscoHandler(command,node=name,jid=jid)
 
-    def getCommand(self,name,jid=''):
+    def get_command(self,name,jid=''):
         """Returns the command tuple"""
         # This gets the command object with name
         # We must:

@@ -16,15 +16,18 @@ import logging
 from grid_control import utils
 from grid_control.backends.backend_tools import BackendError, BackendExecutor
 from grid_control.job_db import Job
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError
 from python_compat import set
 
-CheckInfo = makeEnum(['WMSID', 'RAW_STATUS', 'QUEUE', 'WN', 'SITE'])
-CheckStatus = makeEnum(['OK', 'ERROR'])
+
+CheckInfo = make_enum(['WMSID', 'RAW_STATUS', 'QUEUE', 'WN', 'SITE'])
+CheckStatus = make_enum(['OK', 'ERROR'])
+
+# TODO: Error Handler Plugins - logging, exception, errorcode - with abort / continue
 
 class CheckJobs(BackendExecutor):
-	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
+	def execute(self, wms_id_list): # yields list of (wms_id, job_status, job_info)
 		raise AbstractError
 
 	def get_status(self):
@@ -40,33 +43,33 @@ class CheckJobsMissingState(CheckJobs):
 		CheckJobs.setup(self, log)
 		self._executor.setup(log)
 
-	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
+	def execute(self, wms_id_list): # yields list of (wms_id, job_status, job_info)
 		checked_ids = set()
-		for (wmsID, job_status, job_info) in self._executor.execute(wmsIDs):
-			checked_ids.add(wmsID)
-			yield (wmsID, job_status, job_info)
+		for (wms_id, job_status, job_info) in self._executor.execute(wms_id_list):
+			checked_ids.add(wms_id)
+			yield (wms_id, job_status, job_info)
 		if self._executor.get_status() == CheckStatus.OK:
-			for wmsID in wmsIDs:
-				if wmsID not in checked_ids:
-					yield (wmsID, self._missing_state, {})
+			for wms_id in wms_id_list:
+				if wms_id not in checked_ids:
+					yield (wms_id, self._missing_state, {})
 
 
 class CheckJobsWithProcess(CheckJobs):
 	def __init__(self, config, proc_factory, status_map = None):
 		CheckJobs.__init__(self, config)
-		self._timeout = config.getTime('check timeout', 60, onChange = None)
-		self._log_everything = config.getBool('check promiscuous', False, onChange = None)
+		self._timeout = config.get_time('check timeout', 60, on_change = None)
+		self._log_everything = config.get_bool('check promiscuous', False, on_change = None)
 		self._errormsg = 'Job status command returned with exit code %(proc_status)s'
 		(self._status, self._proc_factory, self._status_map) = (CheckStatus.OK, proc_factory, status_map or {})
 
-	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
+	def execute(self, wms_id_list): # yields list of (wms_id, job_status, job_info)
 		self._status = CheckStatus.OK
-		proc = self._proc_factory.create_proc(wmsIDs)
+		proc = self._proc_factory.create_proc(wms_id_list)
 		for job_info in self._parse(proc):
 			if job_info and not utils.abort():
 				yield self._parse_job_info(job_info)
 		if proc.status(timeout = 0, terminate = True) != 0:
-			self._handleError(proc)
+			self._handle_error(proc)
 		if self._log_everything:
 			self._log.log_process(proc, level = logging.DEBUG, msg = 'Finished checking jobs')
 
@@ -79,12 +82,12 @@ class CheckJobsWithProcess(CheckJobs):
 	def _parse_status(self, value, default):
 		return self._status_map.get(value, default)
 
-	def _parse_job_info(self, job_info): # return (wmsID, job_status, job_info)
+	def _parse_job_info(self, job_info): # return (wms_id, job_status, job_info)
 		try:
 			job_status = self._parse_status(job_info.get(CheckInfo.RAW_STATUS), Job.UNKNOWN)
 			return (job_info.pop(CheckInfo.WMSID), job_status, job_info)
 		except Exception:
 			raise BackendError('Unable to parse job info %s' % repr(job_info))
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg)

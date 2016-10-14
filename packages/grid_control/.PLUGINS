@@ -118,6 +118,8 @@
 
      * grid_control.datasets.dproc_basic LocationDataProcessor location
 
+     * grid_control.datasets.dproc_reorg MergeDataProcessor merge
+
      * grid_control.datasets.dproc_base MultiDataProcessor
 
      * grid_control.datasets.dproc_nick NickNameProducer
@@ -131,6 +133,8 @@
      * grid_control.datasets.dproc_pestimate PartitionEstimator estimate SplitSettingEstimator
 
      * grid_control.datasets.dproc_sort SortingDataProcessor sort
+
+     * grid_control.datasets.dproc_reorg SplitDataProcessor split
 
      * grid_control.datasets.dproc_stats StatsDataProcessor
 
@@ -168,11 +172,11 @@
 
       * grid_control.datasets.splitter_basic FileBoundarySplitter files
 
-      * grid_control.datasets.splitter_basic HybridSplitter hybrid
-
-      * grid_control.datasets.splitter_meta MetadataSplitter
+      * grid_control.datasets.splitter_meta FileClassSplitter
 
        * grid_control.datasets.splitter_meta UserMetadataSplitter metadata
+
+      * grid_control.datasets.splitter_basic HybridSplitter hybrid
 
     * grid_control.gui GUI
 
@@ -182,9 +186,9 @@
 
     * grid_control.datasets.scanner_base InfoScanner
 
-     * grid_control.datasets.scanner_basic AddFilePrefix
+     * grid_control.datasets.scanner_basic AddFilePrefix prefix
 
-     * grid_control.datasets.scanner_basic DetermineEvents
+     * grid_control.datasets.scanner_basic DetermineEntries DetermineEvents events
 
      * grid_control.datasets.scanner_basic FilesFromDataProvider
 
@@ -194,19 +198,19 @@
 
      * grid_control.datasets.scanner_basic JobInfoFromOutputDir
 
-     * grid_control.datasets.scanner_basic MatchDelimeter
+     * grid_control.datasets.scanner_basic MatchDelimeter delimeter
 
-     * grid_control.datasets.scanner_basic MatchOnFilename
+     * grid_control.datasets.scanner_basic MatchOnFilename match
 
      * grid_control.datasets.scanner_basic MetadataFromTask
 
-     * grid_control.datasets.scanner_basic NullScanner
+     * grid_control.datasets.scanner_base NullScanner
 
      * grid_control.datasets.scanner_basic OutputDirsFromConfig
 
      * grid_control.datasets.scanner_basic OutputDirsFromWork
 
-     * grid_control.datasets.scanner_basic ParentLookup
+     * grid_control.datasets.scanner_basic ParentLookup parent
 
     * grid_control.job_db JobDB
 
@@ -308,6 +312,8 @@
 
       * grid_control.backends.wms BasicWMS
 
+       * grid_control.backends.wms_arc ARC
+
        * grid_control.backends.condor_wms.condor_wms Condor
 
        * grid_control.backends.wms_grid GridWMS
@@ -384,6 +390,8 @@
 
      * grid_control.datasets.pproc_basic TFCPartitionProcessor tfc
 
+    * grid_control.datasets.splitter_base PartitionResyncHandler
+
     * grid_control.backends.backend_tools ProcessCreator
 
      * grid_control.backends.backend_tools ProcessCreatorViaArguments
@@ -402,9 +410,9 @@
 
     * grid_control.datasets.splitter_io DataSplitterIOBase
 
-     * grid_control.datasets.splitter_io DataSplitterIO_V1
+     * grid_control.datasets.splitter_io DataSplitterIOV1 version_1
 
-     * grid_control.datasets.splitter_io DataSplitterIO_V2
+     * grid_control.datasets.splitter_io DataSplitterIOV2 version_2
 
    * grid_control.config.matcher_base DictLookup
 
@@ -464,6 +472,20 @@
 
      * grid_control.output_processor FileInfoProcessor
 
+   * grid_control.parameters.config_param ParameterParser
+
+    * grid_control.parameters.config_param ExprParameterParser expr eval
+
+    * grid_control.parameters.config_param FormatParameterParser format
+
+    * grid_control.parameters.config_param LinesParameterParser lines
+
+    * grid_control.parameters.config_param ShellParameterParser shell default
+
+    * grid_control.parameters.config_param SplitParameterParser split
+
+    * grid_control.parameters.config_param VerbatimParameterParser verbatim
+
    * grid_control.parameters.psource_base ParameterSource
 
     * grid_control.parameters.psource_meta ForwardingParameterSource
@@ -472,9 +494,11 @@
 
      * grid_control.parameters.psource_meta SubSpaceParameterSource pspace
 
+     * grid_control.parameters.psource_meta TruncateParameterSource truncate
+
     * grid_control.parameters.psource_file GCDumpParameterSource
 
-    * grid_control.parameters.psource_base ImmutableParameterSource
+    * grid_control.parameters.psource_basic ImmutableParameterSource
 
      * grid_control.parameters.psource_basic InternalParameterSource
 
@@ -514,7 +538,7 @@
 
        * grid_control.parameters.psource_devel CombineParameterSource combine
 
-      * grid_control.parameters.psource_meta ZipShortParameterSource
+      * grid_control.parameters.psource_meta ZipShortParameterSource szip
 
      * grid_control.parameters.psource_meta ChainParameterSource chain
 
@@ -527,6 +551,12 @@
     * grid_control.parameters.psource_base NullParameterSource null
 
     * grid_control.parameters.psource_basic RequirementParameterSource req
+
+   * grid_control.parameters.config_param ParameterTupleParser
+
+    * grid_control.parameters.config_param BinningTupleParser binning
+
+    * grid_control.parameters.config_param DefaultTupleParser tuple default
 
    * grid_control.backends.htcondor_wms.processadapter ProcessAdapterInterface
 

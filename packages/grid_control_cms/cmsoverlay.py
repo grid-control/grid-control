@@ -12,8 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-preserved_for_later_use = """
+"""
 from webservice_api import readJSON
+
 
 class CMSOverlay:
 	def __init__(self, config):
@@ -30,7 +31,8 @@ class CMSOverlay:
 			if url.startswith('cms://'): # cms://T2_DE_DESY/project/subdir
 				site, url = (url.rstrip('/') + '/').replace('cms://', '').lstrip('/').split('/', 1)
 				return readJSON('https://cmsweb.cern.ch/phedex/datasvc/json/prod/lfn2pfn',
-					{'node': site, 'protocol': 'srm', 'lfn': '/store/user/%s/%s' % (hnName, url.rstrip('/'))})['phedex']['mapping']
+					{'node': site, 'protocol': 'srm',
+						'lfn': '/store/user/%s/%s' % (hnName, url.rstrip('/'))})['phedex']['mapping']
 			return url
 		#self.rewriteList(lambda (s, i): i.startswith('se') and i.endswith('path'), rewriteSEurl)
 """

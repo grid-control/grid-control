@@ -13,14 +13,21 @@
 # | limitations under the License.
 
 import logging
+from grid_control.config import join_config_locations
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import prune_processors
-from hpfwk import AbstractError
+from hpfwk import AbstractError, NestedException
+
+
+class DataProcessorError(NestedException):
+	pass
+
 
 class DataProcessor(ConfigurablePlugin):
-	def __init__(self, config, onChange):
+	def __init__(self, config, datasource_name):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('dataset.provider.processor')
+		self._datasource_name = datasource_name
+		self._log = logging.getLogger('%s.provider.processor' % datasource_name)
 		self._log_debug = None
 		if self._log.isEnabledFor(logging.DEBUG):
 			self._log_debug = self._log
@@ -28,38 +35,52 @@ class DataProcessor(ConfigurablePlugin):
 	def enabled(self):
 		return True
 
-	def process(self, blockIter):
-		for block in blockIter:
-			if self._log_debug:
-				self._log_debug.debug('%s is processing block %s...' % (self, repr(block)))
-			result = self.processBlock(block)
-			if result is not None:
-				yield result
-			if self._log_debug:
-				self._log_debug.debug('%s process result: %s' % (self, repr(result)))
+	def process(self, block_iter):
+		for block in block_iter:
+			try:
+				if self._log_debug:
+					self._log_debug.debug('%s is processing block %s...' % (self, repr(block)))
+				result = self.process_block(block)
+				if result is not None:
+					yield result
+				if self._log_debug:
+					self._log_debug.debug('%s process result: %s' % (self, repr(result)))
+			except Exception:
+				error_msg = 'Error while processing dataset block in datasource %s'
+				raise DataProcessorError(error_msg % repr(self._datasource_name))
 		self._finished()
 
-	def processBlock(self, block):
+	def process_block(self, block):
 		raise AbstractError
 
 	def _finished(self):
 		pass
 
+	def _get_dproc_opt(self, *args):
+		return join_config_locations(self._datasource_name, *args)
+
 
 class MultiDataProcessor(DataProcessor):
-	def __init__(self, config, processorList, onChange):
-		DataProcessor.__init__(self, config, onChange)
-		do_prune = config.getBool('dataset processor prune', True, onChange = onChange)
-		self._processorList = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive dataset processors!')
+	def __init__(self, config, processor_list, datasource_name):
+		DataProcessor.__init__(self, config, datasource_name)
+		do_prune = config.get_bool(self._get_dproc_opt('processor prune'), True)
+		self._processor_list = prune_processors(do_prune, processor_list,
+			self._log, 'Removed %d inactive dataset processors!')
 
-	def process(self, blockIter):
-		for processor in self._processorList:
-			blockIter = processor.process(blockIter)
-		return blockIter
+	def process(self, block_iter):
+		for processor in self._processor_list:
+			block_iter = processor.process(block_iter)
+		return block_iter
 
 
 class NullDataProcessor(DataProcessor):
-	alias = ['null']
+	alias_list = ['null']
 
-	def processBlock(self, block):
+	def __init__(self, config=None, datasource_name=None):
+		DataProcessor.__init__(self, config, datasource_name)
+
+	def __repr__(self):
+		return '%s()' % self.__class__.__name__
+
+	def process_block(self, block):
 		return block

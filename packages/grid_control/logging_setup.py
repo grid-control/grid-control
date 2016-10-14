@@ -14,198 +14,24 @@
 
 import os, sys, time, logging, threading
 from grid_control.gc_exceptions import GCError, GCLogHandler
-from grid_control.utils.data_structures import UniqueList, makeEnum
+from grid_control.utils.data_structures import UniqueList, make_enum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
 from grid_control.utils.thread_tools import GCLock
 from hpfwk import AbstractError, clear_current_exception, format_exception
-from python_compat import irange, lmap, set, sorted, tarfile
-
-LogLevelEnum = makeEnum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)), useHash = False)
-
-class LogEveryNsec(logging.Filter):
-	def __init__(self, interval):
-		logging.Filter.__init__(self)
-		self._memory = {}
-		self._interval = interval
-
-	def filter(self, record):
-		accept = (time.time() - self._memory.get(record.msg, 0) > self._interval)
-		if accept:
-			self._memory[record.msg] = time.time()
-		return accept
+from python_compat import imap, irange, lmap, set, sorted, tarfile
 
 
-# In contrast to StreamHandler, this logging handler doesn't keep a stream copy
-class GCStreamHandler(logging.Handler):
-	def __init__(self):
-		logging.Handler.__init__(self)
-		self._lock = GCLock(threading.RLock())
-
-	def get_stream(self):
-		raise AbstractError
-
-	def emit(self, record):
-		self._lock.acquire()
-		try:
-			stream = self.get_stream()
-			stream.write(self.format(record) + '\n')
-			stream.flush()
-		finally:
-			self._lock.release()
+LogLevelEnum = make_enum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)), use_hash=False)  # pylint:disable=invalid-name,line-too-long
 
 
-class StdoutStreamHandler(GCStreamHandler):
-	def get_stream(self):
-		return sys.stdout
-
-
-class StderrStreamHandler(GCStreamHandler):
-	def get_stream(self):
-		return sys.stderr
-
-
-class ProcessArchiveHandler(logging.Handler):
-	def __init__(self, fn, log = None):
-		logging.Handler.__init__(self)
-		self._fn = fn
-		self._log = log or logging.getLogger('logging.process')
-		# safeguard against multiple tar file
-		self._lock = ProcessArchiveHandler.tar_locks.setdefault(os.path.abspath(fn), threading.RLock())
-		# overwrite python2.3 non-reentrant lock
-		self.lock = threading.RLock()
-
-	def _write_process_log(self, record):
-		entry = '%s_%s.%03d' % (record.name, time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(record.created)), int(record.msecs))
-		files = record.files
-		files['info'] = 'call=%s\nexit=%s\n' % (repr(record.proc.get_call()), record.proc.status(0))
-		files['stdout'] = record.proc.stdout.read_log()
-		files['stderr'] = record.proc.stderr.read_log()
-		files['stdin'] = record.proc.stdin.read_log()
-		try:
-			tar = tarfile.TarFile.open(self._fn, 'a')
-			for key, value in record.files.items():
-				if os.path.exists(value):
-					value = SafeFile(value).read()
-				fileObj = VirtualFile(os.path.join(entry, key), [value])
-				info, handle = fileObj.getTarInfo()
-				tar.addfile(info, handle)
-				handle.close()
-			tar.close()
-		except Exception:
-			raise GCError('Unable to log results of external call "%s" to "%s"' % (record.proc.get_call(), self._fn))
-
-	def emit(self, record):
-		if record.pathname == '<process>':
-			self._lock.acquire()
-			try:
-				self._write_process_log(record)
-			finally:
-				self._lock.release()
-			self._log.warning('All logfiles were moved to %s', self._fn)
-ProcessArchiveHandler.tar_locks = {}
-
-
-class GCFormatter(logging.Formatter):
-	def __init__(self, details_lt = logging.DEBUG, details_gt = logging.ERROR, ex_context = 0, ex_vars = 0, ex_fstack = 0, ex_tree = 2):
-		logging.Formatter.__init__(self)
-		self._force_details_range = (details_lt, details_gt)
-		(self._ex_context, self._ex_vars, self._ex_fstack, self._ex_tree) = (ex_context, ex_vars, ex_fstack, ex_tree)
-
-	def __repr__(self):
-		return '%s(quiet = %r, code = %r, var = %r, file = %r, tree = %r)' % (self.__class__.__name__,
-			tuple(map(logging.getLevelName, self._force_details_range)), self._ex_context, self._ex_vars, self._ex_fstack, self._ex_tree)
-
-	def format(self, record):
-		record.message = record.getMessage()
-		try:
-			force_time = record.print_time
-		except Exception:
-			force_time = False
-		force_details = (record.levelno <= self._force_details_range[0]) or (record.levelno >= self._force_details_range[1])
-		if force_time or force_details:
-			record.asctime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(record.created))
-		if force_details:
-			msg = '%(asctime)s - %(name)s:%(levelname)s - %(message)s' % record.__dict__
-		elif force_time:
-			msg = '%(asctime)s - %(message)s' % record.__dict__
-		else:
-			msg = record.message
-		if record.exc_info:
-			if not msg.endswith('\n'):
-				msg += ': '
-			msg += format_exception(record.exc_info, self._ex_context, self._ex_vars, self._ex_fstack, self._ex_tree)
-		return msg
-
-
-def clean_logger(logger_name = None):
+def clean_logger(logger_name=None):
 	logger = logging.getLogger(logger_name)
 	logger.handlers = []
 	return logger
 
 
-def register_handler(logger, handler, formatter):
-	handler.setFormatter(formatter)
-	logger.addHandler(handler)
-	return handler
-
-
-def get_debug_file_candidates():
-	return [
-		os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'),
-		'/tmp/gc.debug.%d.%d' % (os.getuid(), os.getpid()),
-		'~/gc.debug'
-	]
-
-
-def logging_defaults():
-	formatter_verbose = GCFormatter(ex_context = 2, ex_vars = 1, ex_fstack = 1, ex_tree = 2)
-	root_logger = clean_logger()
-	root_logger.manager.loggerDict.clear()
-	root_logger.setLevel(logging.DEFAULT)
-	root_handler = register_handler(root_logger, StdoutStreamHandler(), formatter_verbose)
-
-	# Setup logger used for abort messages
-	abort_logger = clean_logger('abort')
-	abort_logger.propagate = False
-	abort_handler = register_handler(abort_logger, StderrStreamHandler(), formatter_verbose)
-
-	# Output verbose exception information into dedicated GC log (in gc / tmp / user directory) if possible
-	try:
-		register_handler(abort_logger, GCLogHandler(get_debug_file_candidates(), mode = 'w'), formatter_verbose)
-		formatter_quiet = GCFormatter(ex_context = 0, ex_vars = 0, ex_fstack = 0, ex_tree = 1)
-		abort_handler.setFormatter(formatter_quiet)
-		root_handler.setFormatter(formatter_quiet)
-	except Exception: # otherwise use verbose settings for default output
-		clear_current_exception()
-
-	# External libraries
-	logging.getLogger('requests').setLevel(logging.WARNING)
-
-	# Adding log_process_result to Logging class
-	def log_process(self, proc, level = logging.WARNING, files = None, msg = None):
-		msg = msg or 'Process %(call)s finished with exit code %(proc_status)s'
-		status = proc.status(timeout = 0)
-		record = self.makeRecord(self.name, level, '<process>', 0, msg, tuple(), None)
-		record.proc = proc
-		record.call = proc.get_call()
-		record.proc_status = status
-		record.files = files or {}
-		record.msg = record.msg % record.__dict__
-		self.handle(record)
-	logging.Logger.log_process = log_process
-
-	# Adding log with time prefix to Logging class
-	def log_time(self, level, msg, *args, **kwargs):
-		if self.isEnabledFor(level):
-			tmp = self.findCaller()
-			record = self.makeRecord(self.name, level, tmp[0], tmp[1], msg, args, kwargs.pop('exc_info', None))
-			record.print_time = True
-			self.handle(record)
-	logging.Logger.log_time = log_time
-
-
-# Display logging setup
 def dump_log_setup(level):
+	# Display logging setup
 	output = logging.getLogger('logging')
 
 	def display_logger(indent, logger, name):
@@ -228,75 +54,137 @@ def dump_log_setup(level):
 						desc += '(%s, %s)' % (repr(getattr(fmt, '_fmt')), repr(fmt.datefmt))
 					output.log(level, '%s|  %% %s', '|  ' * (indent + 1), desc)
 				if hasattr(handler, 'filters'):
-					for lf in handler.filters:
-						output.log(level, '%s  # %s', '|  ' * (indent + 1), lf.__class__.__name__)
+					for log_filter in handler.filters:
+						output.log(level, '%s  # %s', '|  ' * (indent + 1), log_filter.__class__.__name__)
 
 	display_logger(0, logging.getLogger(), '<root>')
 	for key, logger in sorted(logging.getLogger().manager.loggerDict.items()):
 		display_logger(key.count('.') + 1, logger, key)
 
 
-# Configure formatting of handlers
+def get_debug_file_candidates():
+	return [
+		os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'),
+		'/tmp/gc.debug.%d.%d' % (os.getuid(), os.getpid()),
+		'~/gc.debug'
+	]
+
+
 def logging_configure_handler(config, logger_name, handler_str, handler):
+	# Configure formatting of handlers
 	def get_handler_option(postfix):
 		return ['%s %s' % (logger_name, postfix), '%s %s %s' % (logger_name, handler_str, postfix)]
 	fmt = GCFormatter(
-		details_lt = config.getEnum(get_handler_option('detail lower limit'), LogLevelEnum, logging.DEBUG, onChange = None),
-		details_gt = config.getEnum(get_handler_option('detail upper limit'), LogLevelEnum, logging.ERROR, onChange = None),
-		ex_context = config.getInt(get_handler_option('code context'), 2, onChange = None),
-		ex_vars = config.getInt(get_handler_option('variables'), 1, onChange = None),
-		ex_fstack = config.getInt(get_handler_option('file stack'), 1, onChange = None),
-		ex_tree = config.getInt(get_handler_option('tree'), 2, onChange = None))
+		details_lt=config.get_enum(get_handler_option('detail lower limit'),
+			LogLevelEnum, logging.DEBUG, on_change=None),
+		details_gt=config.get_enum(get_handler_option('detail upper limit'),
+			LogLevelEnum, logging.ERROR, on_change=None),
+		ex_context=config.get_int(get_handler_option('code context'), 2, on_change=None),
+		ex_vars=config.get_int(get_handler_option('variables'), 200, on_change=None),
+		ex_fstack=config.get_int(get_handler_option('file stack'), 1, on_change=None),
+		ex_tree=config.get_int(get_handler_option('tree'), 2, on_change=None))
 	handler.setFormatter(fmt)
 	return handler
 
 
-# Configure general setup of loggers - destinations, level and propagation
 def logging_create_handlers(config, logger_name):
+	# Configure general setup of loggers - destinations, level and propagation
 	logger = logging.getLogger(logger_name.lower().replace('exception', 'abort').replace('root', ''))
 	# Setup handlers
-	handler_list = config.getList(logger_name + ' handler', [], onChange = None)
-	if handler_list: # remove any standard handlers:
+	handler_list = config.get_list(logger_name + ' handler', [], on_change=None)
+	if handler_list:  # remove any standard handlers:
 		for handler in list(logger.handlers):
 			logger.removeHandler(handler)
 	else:
 		for handler in logger.handlers:
 			logging_configure_handler(config, logger_name, '', handler)
-	for handler_str in UniqueList(handler_list): # add only unique output handlers
+	for handler_str in UniqueList(handler_list):  # add only unique output handlers
 		if handler_str == 'stdout':
 			handler = StdoutStreamHandler()
 		elif handler_str == 'stderr':
 			handler = StderrStreamHandler()
 		elif handler_str == 'file':
-			handler = logging.FileHandler(config.get(logger_name + ' file', onChange = None), 'w')
+			handler = logging.FileHandler(config.get(logger_name + ' file', on_change=None), 'w')
 		elif handler_str == 'debug_file':
-			handler = GCLogHandler(config.getPaths(logger_name + ' debug file', get_debug_file_candidates(), onChange = None, mustExist = False), 'w')
+			handler = GCLogHandler(config.get_path_list(logger_name + ' debug file',
+				get_debug_file_candidates(), on_change=None, must_exist=False), 'w')
 		else:
 			raise Exception('Unknown handler %s for logger %s' % (handler_str, logger_name))
 		logger.addHandler(logging_configure_handler(config, logger_name, handler_str, handler))
 		logger.propagate = False
 	# Set propagate status
-	logger.propagate = config.getBool(logger_name + ' propagate', bool(logger.propagate), onChange = None)
+	logger.propagate = config.get_bool(logger_name + ' propagate',
+		bool(logger.propagate), on_change=None)
 	# Set logging level
-	logger.setLevel(config.getEnum(logger_name + ' level', LogLevelEnum, logger.level, onChange = None))
+	logger.setLevel(config.get_enum(logger_name + ' level',
+		LogLevelEnum, logger.level, on_change=None))
 
 
-# Apply configuration to logging setup
+def logging_defaults():
+	formatter_verbose = GCFormatter(ex_context=2, ex_vars=200, ex_fstack=1, ex_tree=2)
+	root_logger = clean_logger()
+	root_logger.manager.loggerDict.clear()
+	root_logger.setLevel(logging.DEFAULT)
+	root_handler = register_handler(root_logger, StdoutStreamHandler(), formatter_verbose)
+
+	# Setup logger used for abort messages
+	abort_logger = clean_logger('abort')
+	abort_logger.propagate = False
+	abort_handler = register_handler(abort_logger, StderrStreamHandler(), formatter_verbose)
+
+	# Output verbose exception information into dedicated GC log (in gc / tmp / user directory)
+	try:
+		register_handler(abort_logger,
+			GCLogHandler(get_debug_file_candidates(), mode='w'), formatter_verbose)
+		formatter_quiet = GCFormatter(ex_context=0, ex_vars=0, ex_fstack=0, ex_tree=1)
+		abort_handler.setFormatter(formatter_quiet)
+		root_handler.setFormatter(formatter_quiet)
+	except Exception:  # otherwise use verbose settings for default output
+		clear_current_exception()
+
+	# External libraries
+	logging.getLogger('requests').setLevel(logging.WARNING)
+
+	# Adding log_process_result to Logging class
+	def log_process(self, proc, level=logging.WARNING, files=None, msg=None):
+		msg = msg or 'Process %(call)s finished with exit code %(proc_status)s'
+		status = proc.status(timeout=0)
+		record = self.makeRecord(self.name, level, '<process>', 0, msg, tuple(), None)
+		record.proc = proc
+		record.call = proc.get_call()
+		record.proc_status = status
+		record.files = files or {}
+		record.msg = record.msg % record.__dict__
+		self.handle(record)
+	logging.Logger.log_process = log_process
+
+	# Adding log with time prefix to Logging class
+	def log_time(self, level, msg, *args, **kwargs):
+		if self.isEnabledFor(level):
+			tmp = self.findCaller()
+			record = self.makeRecord(self.name, level,
+				tmp[0], tmp[1], msg, args, kwargs.pop('exc_info', None))
+			record.print_time = True
+			self.handle(record)
+	logging.Logger.log_time = log_time
+
+
 def logging_setup(config):
-	if config.getBool('debug mode', False, onChange = None):
+	# Apply configuration to logging setup
+	if config.get_bool('debug mode', False, on_change=None):
 		config.set('level', 'NOTSET', '?=')
-		config.set('detail lower limit', 'NOTSET')
-		config.set('detail upper limit', 'NOTSET')
+		config.set('detail lower limit', 'NOTSET', '?=')
+		config.set('detail upper limit', 'NOTSET', '?=')
 		config.set('abort handler', 'stdout debug_file', '?=')
-		config.setInt('abort code context', 2)
-		config.setInt('abort variables', 2)
-		config.setInt('abort file stack', 2)
-		config.setInt('abort tree', 2)
-	display_logger = config.getBool('display logger', False, onChange = None)
+		config.set_int('abort code context', 2, '?=')
+		config.set_int('abort variables', 1000, '?=')
+		config.set_int('abort file stack', 2, '?=')
+		config.set_int('abort tree', 2, '?=')
+	display_logger = config.get_bool('display logger', False, on_change=None)
 
 	# Find logger names in options
 	logger_names = set()
-	for option in config.getOptions():
+	for option in config.get_option_list():
 		if option in ['debug mode', 'display logger']:
 			pass
 		elif option.count(' ') == 0:
@@ -308,5 +196,146 @@ def logging_setup(config):
 	for logger_name in logger_names:
 		logging_create_handlers(config, logger_name)
 
+	logging.getLogger().addHandler(ProcessArchiveHandler(config.get_work_path('error.tar')))
+
 	if display_logger:
 		dump_log_setup(logging.WARNING)
+
+
+def parse_logging_args(arg_list):
+	for entry in arg_list:
+		tmp = entry.replace(':', '=').split('=')
+		if len(tmp) == 1:
+			if tmp[0] in LogLevelEnum.enum_name_list:
+				tmp.insert(0, '')  # use root logger
+			else:
+				tmp.append('DEBUG')  # default is to set debug level
+		yield (tmp[0], tmp[1])
+
+
+def register_handler(logger, handler, formatter):
+	handler.setFormatter(formatter)
+	logger.addHandler(handler)
+	return handler
+
+
+class LogEveryNsec(logging.Filter):
+	def __init__(self, interval):
+		logging.Filter.__init__(self)
+		self._memory = {}
+		self._interval = interval
+
+	def filter(self, record):
+		accept = (time.time() - self._memory.get(record.msg, 0) > self._interval)
+		if accept:
+			self._memory[record.msg] = time.time()
+		return accept
+
+
+class GCFormatter(logging.Formatter):
+	def __init__(self, details_lt=logging.DEBUG, details_gt=logging.ERROR,
+			ex_context=0, ex_vars=0, ex_fstack=0, ex_tree=2):
+		logging.Formatter.__init__(self)
+		self._force_details_range = (details_lt, details_gt)
+		(self._ex_context, self._ex_vars) = (ex_context, ex_vars)
+		(self._ex_fstack, self._ex_tree) = (ex_fstack, ex_tree)
+
+	def __repr__(self):
+		return '%s(quiet = %r, code = %r, var = %r, file = %r, tree = %r)' % (self.__class__.__name__,
+			tuple(imap(logging.getLevelName, self._force_details_range)), self._ex_context,
+			self._ex_vars, self._ex_fstack, self._ex_tree)
+
+	def format(self, record):
+		record.message = record.getMessage()
+		try:
+			force_time = record.print_time
+		except Exception:
+			force_time = False
+		force_details = (record.levelno <= self._force_details_range[0])
+		force_details = force_details or (record.levelno >= self._force_details_range[1])
+		if force_time or force_details:
+			record.asctime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(record.created))
+		if force_details:
+			msg = '%(asctime)s - %(name)s:%(levelname)s - %(message)s' % record.__dict__
+		elif force_time:
+			msg = '%(asctime)s - %(message)s' % record.__dict__
+		else:
+			msg = record.message
+		if record.exc_info:
+			if not msg.endswith('\n'):
+				msg += ': '
+			msg += format_exception(record.exc_info,
+				self._ex_context, self._ex_vars, self._ex_fstack, self._ex_tree)
+		return msg
+
+
+class GCStreamHandler(logging.Handler):
+	# In contrast to StreamHandler, this logging handler doesn't keep a stream copy
+	def __init__(self):
+		logging.Handler.__init__(self)
+		self._lock = GCLock(threading.RLock())
+
+	def emit(self, record):
+		self._lock.acquire()
+		try:
+			stream = self.get_stream()
+			stream.write(self.format(record) + '\n')
+			stream.flush()
+		finally:
+			self._lock.release()
+
+	def get_stream(self):
+		raise AbstractError
+
+
+class ProcessArchiveHandler(logging.Handler):
+	def __init__(self, fn, log=None):
+		logging.Handler.__init__(self)
+		self._fn = fn
+		self._log = log or logging.getLogger('logging.process')
+		# safeguard against multiple tar file
+		self._lock = ProcessArchiveHandler.tar_locks.setdefault(os.path.abspath(fn), threading.RLock())
+		# overwrite python2.3 non-reentrant lock
+		self.lock = threading.RLock()
+
+	def emit(self, record):
+		if record.pathname == '<process>':
+			self._lock.acquire()
+			try:
+				self._write_process_log(record)
+			finally:
+				self._lock.release()
+			self._log.warning('All logfiles were moved to %s', self._fn)
+
+	def _write_process_log(self, record):
+		entry_time = time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(record.created))
+		entry = '%s_%s.%03d' % (record.name, entry_time, int(record.msecs))
+		files = record.files
+		files['info'] = 'call=%s\nexit=%s\n' % (repr(record.proc.get_call()), record.proc.status(0))
+		files['stdout'] = record.proc.stdout.read_log()
+		files['stderr'] = record.proc.stderr.read_log()
+		files['stdin'] = record.proc.stdin.read_log()
+		try:
+			tar = tarfile.TarFile.open(self._fn, 'a')
+			for key, value in record.files.items():
+				if os.path.exists(value):
+					value = SafeFile(value).read()
+				file_obj = VirtualFile(os.path.join(entry, key), [value])
+				info, handle = file_obj.get_tar_info()
+				tar.addfile(info, handle)
+				handle.close()
+			tar.close()
+		except Exception:
+			raise GCError('Unable to log results of external call "%s" to "%s"' % (
+				record.proc.get_call(), self._fn))
+ProcessArchiveHandler.tar_locks = {}
+
+
+class StderrStreamHandler(GCStreamHandler):
+	def get_stream(self):
+		return sys.stderr
+
+
+class StdoutStreamHandler(GCStreamHandler):
+	def get_stream(self):
+		return sys.stdout

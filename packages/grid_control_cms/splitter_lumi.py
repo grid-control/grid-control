@@ -13,15 +13,16 @@
 # | limitations under the License.
 
 from grid_control.datasets import DataProvider, DataSplitter
-from python_compat import lmap
+from python_compat import imap
 
-class RunSplitter(DataSplitter.getClass('MetadataSplitter')):
-	alias = ['runs']
 
-	def _initConfig(self, config):
-		self._run_range = self._configQuery(config.getInt, 'run range', 1)
+class RunSplitter(DataSplitter.get_class('FileClassSplitter')):
+	alias_list = ['runs']
 
-	def metaKey(self, metadataNames, block, fi):
-		selRunRange = self._setup(self._run_range, block)
-		mdIdx = metadataNames.index('Runs')
-		return lmap(lambda r: int(r / selRunRange), fi[DataProvider.Metadata][mdIdx])
+	def _configure_splitter(self, config):
+		self._run_range = self._query_config(config.get_int, 'run range', 1)
+
+	def _get_fi_class(self, fi, block):
+		run_range = self._setup(self._run_range, block)
+		metadata_idx = block[DataProvider.Metadata].index('Runs')
+		return tuple(imap(lambda r: int(r / run_range), fi[DataProvider.Metadata][metadata_idx]))

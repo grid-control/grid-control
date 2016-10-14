@@ -15,8 +15,18 @@
 
 import os, sys
 
-sys.path.append(os.path.abspath(os.path.join(sys.path[0], 'packages')))
 
-from gcTool import run
+def main():
+	try:  # try to load the globally installed gcTool module
+		api_installed = __import__('gcTool')
+		del sys.modules['gcTool']  # and remove it to load the selected one
+	except Exception:
+		api_installed = None
+	sys.path.insert(1, os.path.abspath(os.path.join(sys.path[0], 'packages')))
+	api_current = __import__('gcTool')
+	do_install_check = (os.environ.get('GC_INSTALL_CHECK', 'true').lower() == 'true')
+	if do_install_check and ((api_installed or api_current) != api_current):
+		sys.stdout.write('Using the grid-control installation at %s\n' % sys.path[0])
+	api_current.gc_run()
 
-run()
+main()

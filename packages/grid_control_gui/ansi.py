@@ -14,21 +14,36 @@
 
 import re, sys, fcntl, struct, termios
 
+
 class Console(object):
 	attr = {'COLOR_BLACK': '30', 'COLOR_RED': '31', 'COLOR_GREEN': '32',
 		'COLOR_YELLOW': '33', 'COLOR_BLUE': '34', 'COLOR_MAGENTA': '35',
 		'COLOR_CYAN': '36', 'COLOR_WHITE': '37', 'BOLD': '1', 'RESET': '0'}
-	cmd = {'savePos': '7', 'loadPos': '8', 'eraseDown': '[J', 'eraseLine': '[K', 'erase': '[2J',
-		'hideCursor': '[?25l', 'showCursor': '[?25h'}
+	cmd = {'save_pos': '7', 'load_pos': '8', 'erase_down': '[J', 'erase_line': '[K', 'erase': '[2J',
+		'hide_cursor': '[?25l', 'show_cursor': '[?25h'}
 	for (name, esc) in attr.items():
 		locals()[name] = esc
 
-	def fmt(cls, data, attr = None, force_ansi = False):
+	def __init__(self, stream):
+		def _call_factory(value):
+			return lambda: self._esc(value)
+
+		self._stream = stream
+		for (proc, esc) in Console.cmd.items():
+			setattr(self, proc, _call_factory(esc))
+
+	def addstr(self, data, attr=None):
+		self._stream.write(str(Console.fmt(data, attr)))
+		self._stream.flush()
+
+	def fmt(cls, data, attr=None, force_ansi=False):
 		class ColorString(object):
 			def __init__(self, data, attr):
 				(self._data, self._attr) = (data, attr)
+
 			def __len__(self):
 				return len(self._data)
+
 			def __str__(self):
 				return '\033[%sm%s\033[0m' % (str.join(';', [Console.RESET] + self._attr), self._data)
 		if force_ansi or sys.stdout.isatty():
@@ -40,29 +55,21 @@ class Console(object):
 		return re.sub(r'\x1b(>|=|\[[^A-Za-z]*[A-Za-z])', '', value)
 	fmt_strip = classmethod(fmt_strip)
 
-	def __init__(self, stream):
-		self._stream = stream
-		def callFactory(x):
-			return lambda: self._esc(x)
-		for (proc, esc) in Console.cmd.items():
-			setattr(self, proc, callFactory(esc))
+	def getmaxyx(self):
+		try:
+			winsize_ptr = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
+			winsize = struct.unpack('HHHH', winsize_ptr)
+			return (winsize[0], winsize[1])
+		except Exception:
+			return (24, 80)  # vt100 default
+
+	def move(self, row, col):
+		self._esc('[%d;%dH' % (row, col))
+
+	def setscrreg(self, top=0, bottom=0):
+		self._esc('[%d;%dr' % (top, bottom))
 
 	def _esc(self, data):
 		if self._stream.isatty():
 			self._stream.write('\033' + data)
 			self._stream.flush()
-
-	def getmaxyx(self):
-		winsize_ptr = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
-		winsize = struct.unpack('HHHH', winsize_ptr)
-		return (winsize[0], winsize[1])
-
-	def move(self, row, col):
-		self._esc('[%d;%dH' % (row, col))
-
-	def setscrreg(self, top = 0, bottom = 0):
-		self._esc('[%d;%dr' % (top, bottom))
-
-	def addstr(self, data, attr = None):
-		self._stream.write(str(Console.fmt(data, attr)))
-		self._stream.flush()

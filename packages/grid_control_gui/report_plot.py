@@ -34,10 +34,11 @@ except ImportError:
 import os, re, logging
 from grid_control.output_processor import JobInfoProcessor, JobResult
 from grid_control.report import Report
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from python_compat import irange, izip
 
-JobResultEnum = makeEnum([
+
+JobResultEnum = make_enum([
 	"TIMESTAMP_WRAPPER_START",
 	"TIMESTAMP_DEPLOYMENT_START",
 	"TIMESTAMP_DEPLOYMENT_DONE",
@@ -57,10 +58,10 @@ JobResultEnum = makeEnum([
 
 def extractJobTiming(jInfo, task):
 	jobResult = dict()
-	jobNum = jInfo[JobResult.JOBNUM]
+	jobnum = jInfo[JobResult.JOBNUM]
 
 	# intialize all with None
-	for key in JobResultEnum.enumNames:
+	for key in JobResultEnum.enum_name_list:
 		enumID = JobResultEnum.str2enum(key)
 		jobResult[enumID] = None
 
@@ -82,7 +83,7 @@ def extractJobTiming(jInfo, task):
 
 	# look for processed events, if available
 	if task is not None:
-		jobConfig = task.getJobConfig(jobNum)
+		jobConfig = task.get_job_dict(jobnum)
 		jobResult[JobResultEnum.EVENT_COUNT] = int(jobConfig["MAX_EVENTS"])
 		# make sure an undefined max event count (-1 in cmssw) is treated
 		# as unkown event count
@@ -126,13 +127,13 @@ def getJobRuntime(jobInfo):
 
 # note: can return None if no event count could be
 # determined for the job
-def getEventCount(jobInfo):
+def get_eventCount(jobInfo):
 	return jobInfo[JobResultEnum.EVENT_COUNT]
 
 
-def getEventRate(jobInfo):
-	if (getPayloadRuntime(jobInfo) > 0) and (getEventCount(jobInfo) is not None):
-		return getEventCount(jobInfo) / (getPayloadRuntime(jobInfo) / 60.0)
+def get_eventRate(jobInfo):
+	if (getPayloadRuntime(jobInfo) > 0) and (get_eventCount(jobInfo) is not None):
+		return get_eventCount(jobInfo) / (getPayloadRuntime(jobInfo) / 60.0)
 	else:
 		return None
 
@@ -219,11 +220,11 @@ def getJobActiveAtTimeSpan(jobInfo, timeStart, timeEnd):
 			getJobCount)
 
 
-def getEventRateAtTimeSpan(jobInfo, timeStart, timeEnd):
+def get_eventRateAtTimeSpan(jobInfo, timeStart, timeEnd):
 	if getJobRuntime(jobInfo) > 0:
 		return getQuantityAtTimeSpan(jobInfo, timeStart, timeEnd,
 			lambda jinf: (jinf[JobResultEnum.TIMESTAMP_CMSSW_CMSRUN1_START], jinf[JobResultEnum.TIMESTAMP_CMSSW_CMSRUN1_DONE]),
-			getEventRate)
+			get_eventRate)
 
 
 def getCompleteRateAtTimeSpan(jobInfo, timeStart, timeEnd):
@@ -283,7 +284,11 @@ def getCumQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantit
 
 
 class PlotReport(Report):
-	alias = ['plot']
+	alias_list = ['plot']
+
+	def __init__(self, job_db, task, jobs = None, config_str = ''):
+		Report.__init__(self, job_db, task, jobs, config_str)
+		self._task = task
 
 	def initHistogram(self, name, xlabel, ylabel):
 		fig = matplotlib.pyplot.figure()
@@ -425,7 +430,7 @@ class PlotReport(Report):
 		self.plotOverall(histogram, self.jobResult, timespan, lambdaExtractor, fit, unit, cumulate)
 		self.finalizeHistogram(histogram)
 
-	def display(self):
+	def show_report(self, job_db):
 		if not numpy:
 			raise Exception('Unable to find numpy!')
 		if not matplotlib:
@@ -449,7 +454,7 @@ class PlotReport(Report):
 		minCmsswTime = None
 		maxCmsswTime = None
 
-		workdir = self._jobDB.getWorkPath()
+		workdir = job_db.get_work_path()
 		for j in self._jobs:
 			try:
 				jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % j))
@@ -471,8 +476,8 @@ class PlotReport(Report):
 
 		self.produceHistogram(("payload_runtime", "Payload Runtime (min)", "Count"),
 			lambda x: getPayloadRuntime(x) / 60.0)
-		self.produceHistogram(("event_per_job", "Event per Job", "Count"), getEventCount)
-		self.produceHistogram(("event_rate", "Event Rate (Events/min)", "Count"), getEventRate)
+		self.produceHistogram(("event_per_job", "Event per Job", "Count"), get_eventCount)
+		self.produceHistogram(("event_rate", "Event Rate (Events/min)", "Count"), get_eventRate)
 		self.produceHistogram(("se_in_runtime", "SE In Runtime (s)", "Count"), getSeInRuntime)
 		self.produceHistogram(("se_in_size", "SE IN Size (MB)", "Count"), getSeInFilesize)
 		self.produceHistogram(("se_out_runtime", "SE OUT Runtime (s)", "Count"), getSeOutRuntime)
@@ -504,6 +509,6 @@ class PlotReport(Report):
 		# event rate
 		if (minCmsswTime is not None) and (maxCmsswTime is not None):
 			self.produceOverallGraph(("event_rate_total", "Time (s)", "Event Rate (Events/min)"),
-				(minCmsswTime, maxCmsswTime), getEventRateAtTimeSpan)
+				(minCmsswTime, maxCmsswTime), get_eventRateAtTimeSpan)
 		else:
 			log.info("Skipping event_rate_total")

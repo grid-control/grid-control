@@ -13,125 +13,124 @@
 # | limitations under the License.
 
 import time, logging
-from grid_control.utils.data_structures import makeEnum
+from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import md5_hex, set
 
-ParameterInfo = makeEnum(['ACTIVE', 'HASH', 'REQS', 'FILES'])
+
+ParameterInfo = make_enum(['ACTIVE', 'HASH', 'REQS', 'FILES'])  # pylint:disable=invalid-name
 
 
 class ParameterError(NestedException):
 	pass
 
 
-class ParameterMetadata(str):
-	def __new__(cls, value, untracked = False):
-		obj = str.__new__(cls, value)
-		obj.untracked = untracked
-		return obj
+class ParameterMetadata(object):
+	def __init__(self, value, untracked=False):
+		(self.value, self.untracked) = (value, untracked)
 
 	def __repr__(self):
+		return self.get_value()
+
+	def get_value(self):
 		if self.untracked:
-			return "'!%s'" % self
-		return "'%s'" % self
+			return '!' + self.value
+		return self.value
 
 
 class ParameterSource(Plugin):
-	def EmptyResyncResult(cls):
-		return (set(), set(), False)
-	EmptyResyncResult = classmethod(EmptyResyncResult)
-
-	def create(cls, pconfig, repository, *args, **kwargs):
-		return cls(*args, **kwargs)
-	create = classmethod(create)
-
 	def __init__(self):
 		self._log = logging.getLogger('parameters.source')
 		Plugin.__init__(self)
 
-	def canFinish(self):
+	def can_finish(self):
 		return True
 
-	def depends(self):
+	def create_psrc(cls, pconfig, repository, *args, **kwargs):
+		return cls(*args, **kwargs)
+	create_psrc = classmethod(create_psrc)
+
+	def fill_parameter_content(self, pnum, result):
+		raise AbstractError
+
+	def fill_parameter_metadata(self, result):
+		raise AbstractError
+
+	def get_empty_resync_result(cls):
+		return (set(), set(), False)  # (<redo>, <disable>, <size changes>)
+	get_empty_resync_result = classmethod(get_empty_resync_result)
+
+	def get_parameter_deps(self):
 		return []
 
-	def getMaxParameters(self):
+	def get_parameter_len(self):
 		return None
 
-	def fillParameterKeys(self, result):
+	def get_psrc_hash(self):
 		raise AbstractError
 
-	def fillParameterInfo(self, pNum, result):
-		raise AbstractError
-
-	def resync(self): # only needed if the parameters are opaque references (like partition idx)
-		return ParameterSource.EmptyResyncResult()
-
-	def show(self):
-		return [self.__class__.__name__ + ':']
-
-	def getUsedSources(self):
+	def get_used_psrc_list(self):
 		return [self]
 
-	def getHash(self):
-		raise AbstractError
+	def resync_psrc(self):
+		# only needed if the parameters are opaque references (like partition idx)
+		return ParameterSource.get_empty_resync_result()
 
-
-class ImmutableParameterSource(ParameterSource):
-	def __init__(self, hash_src_list):
-		ParameterSource.__init__(self)
-		self._hash = md5_hex(repr(hash_src_list))
-
-	def getHash(self):
-		return self._hash
+	def show_psrc(self):
+		return [self.__class__.__name__ + ':']
 
 
 class LimitedResyncParameterSource(ParameterSource):
 	def __init__(self):
 		ParameterSource.__init__(self)
-		(self._resyncInterval, self._resyncForce, self._resyncLast) = (0, False, time.time())
+		(self._resync_interval, self._resync_force, self._resync_last) = (0, False, time.time())
 
-	def resyncSetup(self, interval = None, force = None):
-		if interval is not None:
-			self._resyncInterval = interval
-		if force is not None:
-			self._resyncForce = force
-
-	def _resync_enabled(self):
-		return self._resyncForce or (self._resyncInterval >= 0 and (abs(time.time() - self._resyncLast) >= self._resyncInterval))
-
-	def getHash(self):
+	def get_psrc_hash(self):
 		if self._resync_enabled():
 			return md5_hex(repr(time.time()))
-		return self._hash
+		return self._get_psrc_hash()
 
-	def resync(self): # only needed if the parameters are opaque references (like partition index)
+	def resync_psrc(self):
 		result = None
 		if self._resync_enabled():
-			result = self._resync()
-			self._resyncForce = False
-			self._resyncLast = time.time()
-		return result or ParameterSource.EmptyResyncResult()
+			result = self._resync_psrc()
+			self._resync_force = False
+			self._resync_last = time.time()
+		return result or ParameterSource.get_empty_resync_result()
 
-	def _resync(self):
+	def setup_resync(self, interval=None, force=None):
+		if interval is not None:
+			self._resync_interval = interval
+		if force is not None:
+			self._resync_force = force
+
+	def _get_psrc_hash(self):
+		raise AbstractError
+
+	def _resync_enabled(self):
+		t_last_resync = abs(time.time() - self._resync_last)
+		resync_needed = self._resync_interval >= 0 and (t_last_resync >= self._resync_interval)
+		return self._resync_force or resync_needed
+
+	def _resync_psrc(self):
 		pass
 
 
 class NullParameterSource(ParameterSource):
-	alias = ['null']
-
-	def create(cls, pconfig, repository):
-		return cls()
-	create = classmethod(create)
-
-	def fillParameterKeys(self, result):
-		pass
-
-	def fillParameterInfo(self, pNum, result):
-		pass
-
-	def getHash(self):
-		return ''
+	alias_list = ['null']
 
 	def __repr__(self):
 		return 'null()'
+
+	def create_psrc(cls, pconfig, repository):
+		return cls()
+	create_psrc = classmethod(create_psrc)
+
+	def fill_parameter_content(self, pnum, result):
+		pass
+
+	def fill_parameter_metadata(self, result):
+		pass
+
+	def get_psrc_hash(self):
+		return ''

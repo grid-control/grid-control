@@ -12,14 +12,15 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+
 def init_hpf_logging():
 	import logging
 
-	logLevelDict = {'DEFAULT': logging.INFO - 1,
+	map_level_str2level = {'DEFAULT': logging.INFO - 1,
 		'INFO1': logging.DEBUG + 3, 'INFO2': logging.DEBUG + 2, 'INFO3': logging.DEBUG + 1,
 		'DEBUG1': logging.DEBUG - 1, 'DEBUG2': logging.DEBUG - 2, 'DEBUG3': logging.DEBUG - 3}
 
 	# Register new log levels
-	for name in logLevelDict:
-		setattr(logging, name.upper(), logLevelDict[name]) # Add numerical constant
-		logging.addLevelName(logLevelDict[name], name)     # Register with logging module
+	for level_str in map_level_str2level:
+		setattr(logging, level_str.upper(), map_level_str2level[level_str])  # Add numerical constant
+		logging.addLevelName(map_level_str2level[level_str], level_str)  # Register with logging module

@@ -16,13 +16,15 @@ import re, sys, time, signal, threading
 from grid_control import utils
 from grid_control.gui import GUI
 from grid_control.utils.activity import Activity
-from grid_control.utils.thread_tools import GCLock, start_thread
+from grid_control.utils.thread_tools import GCLock, start_daemon
 from grid_control_gui.ansi import Console
-from python_compat import identity, ifilter, imap, itemgetter, lmap
+from python_compat import iidfilter, imap, itemgetter, lmap
+
 
 class GUIStream(object):
 	def __init__(self, stream, console, lock):
-		(self._stream, self._console, self.logged, self._log, self._lock) = (stream, console, True, [None] * 100, lock)
+		(self._stream, self._console, self._lock) = (stream, console, lock)
+		(self.logged, self._log) = (True, [None] * 100)
 
 		# This is a list of (regular expression, GUI attributes).  The
 		# attributes are applied to matches of the regular expression in
@@ -41,12 +43,16 @@ class GUIStream(object):
 		self._match_any_attr = re.compile('(%s)' % '|'.join(imap(itemgetter(0), attrs)))
 		self._attrs = lmap(lambda expr_attr: (re.compile(expr_attr[0]), expr_attr[1]), attrs)
 
-	def _text_attributes(self, value, pos):
-		""" Retrieve the attributes for a match in value at position pos. """
-		for (regex, attr) in self._attrs:
-			match = regex.search(value)
-			if match and match.start() == pos:
-				return attr
+	def __getattr__(self, name):
+		return self._stream.__getattribute__(name)
+
+	def dump(self):
+		stored_logged = self.logged
+		self.logged = False
+		for data in str.join('', iidfilter(self._log)).splitlines():
+			self._console.erase_line()
+			self.write(data + '\n')
+		self.logged = stored_logged
 
 	def write(self, data):
 		self._lock.acquire()
@@ -62,21 +68,17 @@ class GUIStream(object):
 				idx += match.end()
 				match = self._match_any_attr.search(data[idx:])
 			self._console.addstr(data[idx:])
-			self._console.eraseLine()
+			self._console.erase_line()
 			return True
 		finally:
 			self._lock.release()
 
-	def __getattr__(self, name):
-		return self._stream.__getattribute__(name)
-
-	def dump(self):
-		stored_logged = self.logged
-		self.logged = False
-		for data in str.join('', ifilter(identity, self._log)).splitlines():
-			self._console.eraseLine()
-			self.write(data + '\n')
-		self.logged = stored_logged
+	def _text_attributes(self, value, pos):
+		""" Retrieve the attributes for a match in value at position pos. """
+		for (regex, attr) in self._attrs:
+			match = regex.search(value)
+			if match and match.start() == pos:
+				return attr
 
 
 class ANSIGUI(GUI):
@@ -84,92 +86,35 @@ class ANSIGUI(GUI):
 		config.set('report', 'BasicReport BarReport')
 		(self._stored_stdout, self._stored_stderr) = (sys.stdout, sys.stderr)
 		GUI.__init__(self, config, workflow)
-		self._reportHeight = 0
-		self._statusHeight = 1
+		self._report_height = 0
+		self._status_height = 1
 		self._old_message = None
-		self._lock = GCLock(threading.RLock()) # drawing lock
+		self._lock = GCLock(threading.RLock())  # drawing lock
 		self._last_report = 0
 		self._old_size = None
+		self._current_job_db = None
+		(self._console, self._new_stdout, self._new_stderr) = (None, None, None)
 
-	def _draw(self, fun):
+	def _draw(self, fun, *args):
 		new_size = self._console.getmaxyx()
 		if self._old_size != new_size:
 			self._old_size = new_size
 			self._schedule_update_layout()
 		self._lock.acquire()
-		self._console.hideCursor()
-		self._console.savePos()
+		self._console.hide_cursor()
+		self._console.save_pos()
 		try:
-			fun()
+			fun(*args)
 		finally:
-			self._console.loadPos()
-			self._console.showCursor()
+			self._console.load_pos()
+			self._console.show_cursor()
 			self._lock.release()
 
 	# Event handling for resizing
-	def _update_layout(self):
-		(sizey, sizex) = self._console.getmaxyx()
-		self._old_size = (sizey, sizex)
-		self._reportHeight = self._report.getHeight()
-		self._console.erase()
-		self._console.setscrreg(min(self._reportHeight + self._statusHeight + 1, sizey), sizey)
-		utils.printTabular.wraplen = sizex - 5
-		self._update_all()
-
-	def _schedule_update_layout(self, sig = None, frame = None):
-		start_thread('update layout', self._draw, self._update_layout) # using new thread to ensure RLock is free
-
-	def _wait(self, timeout):
-		oldHandler = signal.signal(signal.SIGWINCH, self._schedule_update_layout)
-		result = utils.wait(timeout)
-		signal.signal(signal.SIGWINCH, oldHandler)
-		return result
-
-	def _update_report(self):
-		if time.time() - self._last_report < 1:
-			return
-		self._last_report = time.time()
-		self._console.move(0, 0)
-		self._new_stdout.logged = False
-		self._report.display()
-		self._new_stdout.logged = True
-
-	def _update_status(self):
-		activity_message = None
-		for activity in Activity.root.get_children():
-			activity_message = activity.getMessage() + '...'
-			if len(activity_message) > 75:
-				activity_message = activity_message[:37] + '...' + activity_message[-35:]
-
-		self._console.move(self._reportHeight + 1, 0)
-		self._new_stdout.logged = False
-		if self._old_message:
-			self._stored_stdout.write(self._old_message.center(65) + '\r')
-			self._stored_stdout.flush()
-		self._old_message = activity_message
-		if activity_message:
-			self._stored_stdout.write('%s' % activity_message.center(65))
-			self._stored_stdout.flush()
-		self._new_stdout.logged = True
-
-	def _update_log(self):
-		self._console.move(self._reportHeight + 2, 0)
-		self._console.eraseDown()
-		self._new_stdout.dump()
-
-	def _update_all(self):
-		self._last_report = 0
-		self._update_report()
-		self._update_status()
-		self._update_log()
-
-	def _schedule_update_report_status(self):
-		self._draw(self._update_report)
-		self._draw(self._update_status)
-
-	def displayWorkflow(self):
+	def display_workflow(self, workflow):
+		self._current_job_db = workflow.job_manager.job_db
 		if not sys.stdout.isatty():
-			return self._workflow.process(self._wait)
+			return workflow.process(self._wait)
 
 		self._console = Console(sys.stdout)
 		self._new_stdout = GUIStream(sys.stdout, self._console, self._lock)
@@ -180,9 +125,68 @@ class ANSIGUI(GUI):
 			(sys.stdout, sys.stderr) = (self._new_stdout, self._new_stderr)
 			self._console.erase()
 			self._schedule_update_layout()
-			self._workflow.process(self._wait)
+			workflow.process(self._wait)
 		finally:
 			(sys.stdout, sys.stderr) = (self._stored_stdout, self._stored_stderr)
 			self._console.setscrreg()
 			self._console.erase()
 			self._update_all()
+
+	def _schedule_update_layout(self, sig=None, frame=None):
+		# using new thread to ensure RLock is free
+		start_daemon('update layout', self._draw, self._update_layout)
+
+	def _schedule_update_report_status(self):
+		self._draw(self._update_report)
+		self._draw(self._update_status)
+
+	def _update_all(self):
+		self._last_report = 0
+		self._update_report()
+		self._update_status()
+		self._update_log()
+
+	def _update_layout(self):
+		(sizey, sizex) = self._console.getmaxyx()
+		self._old_size = (sizey, sizex)
+		self._report_height = self._report.get_height()
+		self._console.erase()
+		self._console.setscrreg(min(self._report_height + self._status_height + 1, sizey), sizey)
+		utils.display_table.wraplen = sizex - 5
+		self._update_all()
+
+	def _update_log(self):
+		self._console.move(self._report_height + self._status_height + 1, 0)
+		self._console.erase_down()
+		self._new_stdout.dump()
+
+	def _update_report(self):
+		if time.time() - self._last_report < 1:
+			return
+		self._last_report = time.time()
+		self._console.move(0, 0)
+		self._new_stdout.logged = False
+		self._report.show_report(self._current_job_db)
+		self._new_stdout.logged = True
+
+	def _update_status(self):
+		activity_message = None
+		for activity in Activity.root.get_children():
+			activity_message = activity.get_message(truncate=75)
+
+		self._console.move(self._report_height + 1, 0)
+		self._new_stdout.logged = False
+		if self._old_message:
+			self._stored_stdout.write(self._old_message.center(65) + '\r')
+			self._stored_stdout.flush()
+		self._old_message = activity_message
+		if activity_message:
+			self._stored_stdout.write('%s' % activity_message.center(65))
+			self._stored_stdout.flush()
+		self._new_stdout.logged = True
+
+	def _wait(self, timeout):
+		handler_old = signal.signal(signal.SIGWINCH, self._schedule_update_layout)
+		result = utils.wait(timeout)
+		signal.signal(signal.SIGWINCH, handler_old)
+		return result
