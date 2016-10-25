@@ -66,7 +66,9 @@ class GridEngine_CheckJobs(CheckJobsWithProcess):
 						continue
 					if node.hasChildNodes():
 						job_info[str(node.nodeName)] = str(node.childNodes[0].nodeValue)
-				job_info[CheckInfo.WMSID] = job_info.pop('JB_jobnumber')
+				for job_number_key in ['JB_job_number', 'JB_jobnumber']:
+					if job_number_key in job_info:
+						job_info[CheckInfo.WMSID] = job_info.pop(job_number_key)
 				job_info[CheckInfo.RAW_STATUS] = job_info.pop('state')
 				if 'queue_name' in job_info:
 					queue, node = job_info['queue_name'].split('@')
