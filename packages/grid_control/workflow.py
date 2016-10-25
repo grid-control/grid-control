@@ -41,7 +41,7 @@ class Workflow(NamedPlugin):
 		self._check_space = config.get_int('workdir space', 10, on_change=None)
 
 		# Initialise task module
-		self.task = config.get_plugin(['module', 'task'], cls=TaskModule, tags=[self])
+		self.task = config.get_plugin(['module', 'task'], cls=TaskModule, bkwargs={'tags': [self]})
 		if abort == 'task':
 			return
 
@@ -50,7 +50,7 @@ class Workflow(NamedPlugin):
 
 		# Initialise workload management interface
 		self.wms = config.get_composited_plugin('backend', 'grid', 'MultiWMS',
-			cls=WMS, tags=[self, self.task])
+			cls=WMS, bkwargs={'tags': [self, self.task]})
 
 		# Subsequent config calls also include section "jobs":
 		jobs_config = config.change_view(view_class='TaggedConfigView',
@@ -58,11 +58,11 @@ class Workflow(NamedPlugin):
 
 		# Initialise monitoring module
 		monitor = jobs_config.get_composited_plugin('monitor', 'scripts', 'MultiMonitor',
-			cls=Monitoring, tags=[self, self.task], pargs=(self.task,))
+			cls=Monitoring, bkwargs={'tags': [self, self.task]}, pargs=(self.task,))
 
 		# Initialise job database
 		self.job_manager = jobs_config.get_plugin('job manager', 'SimpleJobManager',
-			cls=JobManager, tags=[self, self.task, self.wms], pargs=(self.task, monitor))
+			cls=JobManager, bkwargs={'tags': [self, self.task, self.wms]}, pargs=(self.task, monitor))
 
 		if abort == 'jobmanager':
 			return

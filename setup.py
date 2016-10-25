@@ -11,7 +11,7 @@ def _get_description():
 
 
 def _get_modules():
-	py_modules = ['gcTool', 'gcSettings', 'python_compat', 'python_compat_popen2']
+	py_modules = ['grid_control_api', 'grid_control_settings', 'python_compat', 'python_compat_popen2']
 	if sys.version_info[0] < 3:
 		py_modules.extend(['python_compat_json', 'python_compat_tarfile', 'python_compat_urllib2'])
 	return py_modules
@@ -82,7 +82,7 @@ setup(
 	py_modules=_get_modules(),
 	entry_points={
 		'console_scripts': [
-			'gridcontrol=gcTool:gc_run',
+			'gridcontrol=grid_control_api:gc_run',
 		],
 	},
 )

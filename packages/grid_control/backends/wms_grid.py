@@ -131,7 +131,7 @@ class GridWMS(BasicWMS):
 		BasicWMS.__init__(self, config, name, check_executor = check_executor, cancel_executor = cancel_executor)
 
 		self.brokerSite = config.get_plugin('site broker', 'UserBroker',
-			cls = Broker, tags = [self], pargs = ('sites', 'sites', self.getSites))
+			cls = Broker, bkwargs={'tags': [self]}, pargs = ('sites', 'sites', self.getSites))
 		self.vo = config.get('vo', self._token.getGroup())
 
 		self._submitParams = {}

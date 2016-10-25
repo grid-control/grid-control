@@ -58,7 +58,7 @@ class DataProvider(ConfigurablePlugin):
 	def bind(cls, value, **kwargs):
 		config = kwargs.pop('config')
 		datasource_name = kwargs.pop('datasource_name', 'dataset')
-		provider_name_default = config.get('%s provider' % datasource_name, 'ListProvider')
+		provider_name_default = kwargs.pop('provider_name_default', 'ListProvider')
 
 		instance_args = []
 		for entry in ifilter(str.strip, value.splitlines()):

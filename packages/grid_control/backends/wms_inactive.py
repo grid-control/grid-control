@@ -21,7 +21,7 @@ class InactiveWMS(WMS):
 	def __init__(self, config, name):
 		WMS.__init__(self, config, name)
 		self._token = config.get_composited_plugin(['proxy', 'access token'], 'TrivialAccessToken',
-			'MultiAccessToken', cls = 'AccessToken', inherit = True, tags = [self])
+			'MultiAccessToken', cls = 'AccessToken', bkwargs={'inherit': True, 'tags': [self]})
 
 	def can_submit(self, needed_time, can_currently_submit):
 		return True

@@ -132,7 +132,7 @@ def setup_dataset(config, dataset):
 	else:
 		dataSplitter = DataSplitter.load_partitions_for_script(dataset)
 
-	config = config.change_view(set_sections = None)
+	config = config.change_view(set_sections = None, default_on_change=None)
 	partProcessor = config.get_composited_plugin('partition processor',
 		'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor',
 		'MultiPartitionProcessor', cls = 'PartitionProcessor', on_change = None, pargs = ('dataset',))

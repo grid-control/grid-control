@@ -92,7 +92,7 @@ class LocalWMS(BasicWMS):
 				return lmap(lambda x: x['name'], self._nodes_finder.discover())
 
 		self.brokerSite = config.get_plugin('site broker', 'UserBroker', cls = Broker,
-			inherit = True, tags = [self], pargs = ('sites', 'sites', getNodes))
+			bkwargs={'inherit': True, 'tags': [self]}, pargs = ('sites', 'sites', getNodes))
 
 		def getQueues():
 			if queuesFinder:
@@ -102,7 +102,7 @@ class LocalWMS(BasicWMS):
 				return result
 
 		self.brokerQueue = config.get_plugin('queue broker', 'UserBroker', cls = Broker,
-			inherit = True, tags = [self], pargs = ('queue', 'queues', getQueues))
+			bkwargs={'inherit': True, 'tags': [self]}, pargs = ('queue', 'queues', getQueues))
 
 		self.scratchPath = config.get_list('scratch path', ['TMPDIR', '/tmp'], on_change = True)
 		self.submitOpts = config.get('submit options', '', on_change = None)

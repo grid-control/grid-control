@@ -23,7 +23,7 @@ from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.process_base import LocalProcess
-from python_compat import identity, ifilter, imap, imap, lfilter, lmap, md5, tarfile
+from python_compat import identity, ifilter, imap, lfilter, lmap, md5, tarfile
 
 
 class ARC_CheckJobs(CheckJobsWithProcess):

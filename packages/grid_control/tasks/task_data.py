@@ -29,8 +29,10 @@ class DataTask(TaskModule):
 		return TaskModule.get_var_alias_map(self)
 
 	def _create_datasource(self, config, datasource_name, psrc_repository):
+		provider_name_default = config.get('%s provider' % datasource_name, 'ListProvider')
 		provider = config.get_composited_plugin(datasource_name, '', ':MultiDatasetProvider:',
-			cls=DataProvider, require_plugin=False, on_change=TriggerResync(['datasets', 'parameters']))
+			cls=DataProvider, require_plugin=False, on_change=TriggerResync(['datasets', 'parameters']),
+			bkwargs={'datasource_name': datasource_name, 'provider_name_default': provider_name_default})
 
 		if provider is not None:
 			splitter_name = config.get('%s splitter' % datasource_name, 'FileBoundarySplitter')

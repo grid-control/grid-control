@@ -224,7 +224,7 @@ class StringConfigFiller(ConfigFiller):
 class PythonConfigFiller(DictConfigFiller):
 	# Class to fill config containers with settings from a python config file
 	def __init__(self, config_fn_list):
-		from gcSettings import Settings
+		from grid_control_settings import Settings
 		for config_fn in config_fn_list:
 			fp = SafeFile(config_fn)
 			try:

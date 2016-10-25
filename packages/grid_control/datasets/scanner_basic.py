@@ -301,7 +301,7 @@ class ParentLookup(InfoScanner):
 			return ([], [])
 		return ([], ['PARENT_PATH'])
 
-	def _get_lfn_part(self, lfn):
+	def _get_lfnp(self, lfn):  # get lfn parts (lfnp)
 		if lfn and self._parent_match_level:  # return looseMatch path elements in reverse order
 			# /store/local/data/file.root -> file.root (~ML1) | file.root/data/local (~ML3)
 			tmp = lfn.split('/')
@@ -321,7 +321,7 @@ class ParentLookup(InfoScanner):
 			if not isinstance(parent_lfn_list, list):
 				parent_lfn_list = [metadata_dict[key]]
 			for parent_lfn in parent_lfn_list:
-				pdn_list.append(map_plfnp2pdn.get(self._get_lfn_part(parent_lfn)))
+				pdn_list.append(map_plfnp2pdn.get(self._get_lfnp(parent_lfn)))
 		metadata_dict['PARENT_PATH'] = lfilter(identity, set(pdn_list))
 		yield (item, metadata_dict, entries, location_list, obj_dict)
 
@@ -331,5 +331,5 @@ class ParentLookup(InfoScanner):
 			map_plfnp2pdn = self._plfnp2pdn_cache.setdefault(parent_dataset_expr, {})
 			for block in DataProvider.iter_blocks_from_expr(config, parent_dataset_expr):
 				for fi in block[DataProvider.FileList]:
-					map_plfnp2pdn[self._get_lfn_part(fi[DataProvider.URL])] = block[DataProvider.Dataset]
+					map_plfnp2pdn[self._get_lfnp(fi[DataProvider.URL])] = block[DataProvider.Dataset]
 		return self._plfnp2pdn_cache.get(parent_dataset_expr, {})  # return cached mapping

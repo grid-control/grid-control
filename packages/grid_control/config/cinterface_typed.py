@@ -36,14 +36,13 @@ class TypedConfigInterface(ConfigInterface):
 			return result
 		return self._get_internal('bool', bool.__str__, _str2obj, None, option, default, **kwargs)
 
-	def get_composited_plugin(self, option, default=unspecified,
-			default_compositor=unspecified, option_compositor=None,
-			cls=Plugin, tags=None, inherit=False, require_plugin=True,
-			pargs=None, pkwargs=None, **kwargs):
+	def get_composited_plugin(self, option, default=unspecified, default_compositor=unspecified,
+			option_compositor=None, cls=Plugin, require_plugin=True,
+			pargs=None, pkwargs=None, bargs=None, bkwargs=None, **kwargs):
 		# Return composite class - default classes are also given in string form!
 		cls_list = []
-		for factory in self._get_plugin_factory_list(option, default, cls, tags, inherit, require_plugin,
-				single_plugin=False, desc='composite plugin', **kwargs):
+		for factory in self._get_plugin_factory_list(option, default, cls, require_plugin,
+				single_plugin=False, desc='composite plugin', bargs=bargs, bkwargs=bkwargs, **kwargs):
 			cls_list.append(factory.create_instance_bound(*(pargs or ()), **(pkwargs or {})))
 		if len(cls_list) == 1:
 			return cls_list[0]
@@ -51,8 +50,8 @@ class TypedConfigInterface(ConfigInterface):
 			return None
 		if not option_compositor:
 			option_compositor = join_config_locations(option, 'manager')
-		return self.get_plugin(option_compositor, default_compositor, cls, tags, inherit,
-			pargs=tuple([cls_list] + list(pargs or [])), **kwargs)
+		return self.get_plugin(option_compositor, default_compositor, cls,
+			pargs=tuple([cls_list] + list(pargs or [])), bargs=bargs, bkwargs=bkwargs, **kwargs)
 
 	def get_dict(self, option, default=unspecified, parser=identity, strfun=str, **kwargs):
 		# Returns a tuple with (<dictionary>, <keys>) - the keys are sorted by order of appearance
@@ -104,11 +103,11 @@ class TypedConfigInterface(ConfigInterface):
 			str2obj=lambda value: list(_patlist2pathlist(parse_list(value, None), must_exist)),
 			def2obj=None, option=option, default_obj=default, **kwargs)
 
-	def get_plugin(self, option, default=unspecified,
-			cls=Plugin, tags=None, inherit=False, require_plugin=True, pargs=None, pkwargs=None, **kwargs):
+	def get_plugin(self, option, default=unspecified, cls=Plugin,
+			require_plugin=True, pargs=None, pkwargs=None, bargs=None, bkwargs=None, **kwargs):
 		# Return class - default class is also given in string form!
-		factories = self._get_plugin_factory_list(option, default, cls, tags, inherit, require_plugin,
-			single_plugin=True, desc='plugin', **kwargs)
+		factories = self._get_plugin_factory_list(option, default, cls, require_plugin,
+			single_plugin=True, desc='plugin', bargs=bargs, bkwargs=bkwargs, **kwargs)
 		if factories:
 			return factories[0].create_instance_bound(*(pargs or ()), **(pkwargs or {}))
 
@@ -142,13 +141,13 @@ class TypedConfigInterface(ConfigInterface):
 		return self._set_internal('time', str_time_short, option, value, opttype, source)
 
 	def _get_plugin_factory_list(self, option, default=unspecified,
-			cls=Plugin, tags=None, inherit=False, require_plugin=True, single_plugin=False,
-			desc='plugin factories', **kwargs):
+			cls=Plugin, require_plugin=True, single_plugin=False,
+			desc='plugin factories', bargs=None, bkwargs=None, **kwargs):
 		if isinstance(cls, str):
 			cls = Plugin.get_class(cls)
 
 		def _bind_plugins(value):
-			obj_list = list(cls.bind(value, config=self, inherit=inherit, tags=tags or []))
+			obj_list = list(cls.bind(value, config=self, *(bargs or []), **(bkwargs or {})))
 			if single_plugin and len(obj_list) > 1:
 				raise ConfigError('This option only allows to specify a single plugin!')
 			if require_plugin and not obj_list:

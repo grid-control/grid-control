@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # | Copyright 2009-2016 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");

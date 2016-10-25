@@ -131,16 +131,16 @@ class BasicWMS(WMS):
 
 		# UI -> SE -> WN
 		self._sm_se_in = config.get_plugin('se input manager', 'SEStorageManager',
-			cls=StorageManager, tags=[self], pargs=('se', 'se input', 'SE_INPUT'))
+			cls=StorageManager, bkwargs={'tags': [self]}, pargs=('se', 'se input', 'SE_INPUT'))
 		self._sm_sb_in = config.get_plugin('sb input manager', 'LocalSBStorageManager',
-			cls=StorageManager, tags=[self], pargs=('sandbox', 'sandbox', 'SB_INPUT'))
+			cls=StorageManager, bkwargs={'tags': [self]}, pargs=('sandbox', 'sandbox', 'SB_INPUT'))
 		# UI <- SE <- WN
 		self._sm_se_out = config.get_plugin('se output manager', 'SEStorageManager',
-			cls=StorageManager, tags=[self], pargs=('se', 'se output', 'SE_OUTPUT'))
+			cls=StorageManager, bkwargs={'tags': [self]}, pargs=('se', 'se output', 'SE_OUTPUT'))
 		self._sm_sb_out = None
 
 		self._token = config.get_composited_plugin(['proxy', 'access token'], 'TrivialAccessToken',
-			'MultiAccessToken', cls=AccessToken, inherit=True, tags=[self])
+			'MultiAccessToken', cls=AccessToken, bkwargs={'inherit': True, 'tags': [self]})
 
 	def can_submit(self, needed_time, can_currently_submit):
 		return self._token.can_submit(needed_time, can_currently_submit)

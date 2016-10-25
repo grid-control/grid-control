@@ -25,6 +25,8 @@ class BasicPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
 		self._vn_file_names = config.get(self._get_pproc_opt('variable file names'), 'FILE_NAMES')
+		self._fn_list_delim = config.get(self._get_pproc_opt('file names delimeter'), '') or ' '
+		self._fn_list_format = config.get(self._get_pproc_opt('file names format'), '%s')
 		self._vn_max_events = config.get(self._get_pproc_opt('variable max events'), 'MAX_EVENTS')
 		self._vn_skip_events = config.get(self._get_pproc_opt('variable skip events'), 'SKIP_EVENTS')
 		self._vn_prefix = config.get(self._get_pproc_opt('variable prefix'), datasource_name.upper())
@@ -61,7 +63,7 @@ class BasicPartitionProcessor(PartitionProcessor):
 		result[ParameterInfo.ACTIVE] = result[ParameterInfo.ACTIVE] and not is_invalid
 
 	def _format_fn_list(self, url_list):
-		return str.join(' ', url_list)
+		return str.join(self._fn_list_delim, imap(lambda fn: self._fn_list_format % fn, url_list))
 
 
 class LocationPartitionProcessor(PartitionProcessor):

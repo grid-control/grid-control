@@ -87,9 +87,9 @@ SimpleJobManager options
   * ``unknown timeout`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
     Cancel jobs without status information after staying in this state for the specified time
   * ``verify chunks`` = <list of values> (default: '-1')
-    List of job chunk sizes that are enabled after passing the configured verification thresholds
+    Specifies how many jobs to submit initially, and use to verify the workflow. If sufficient jobs succeed, all remaining jobs are enabled for submission.
   * ``verify threshold / verify reqs`` = <list of values> (default: '0.5')
-    List of job verification thresholds that enable the configured job chunk sizes
+    Specifies the fraction of jobs in the verification chunk that must succeed.
 
 backend options
 ---------------
@@ -124,6 +124,8 @@ UserTask options
     Specify list of plugins that process partitions
   * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
     Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
+  * ``<datasource> provider`` = <text> (default: 'ListProvider')
+    Specify the name of the default dataset provider
   * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
     Specify the interval to check for changes in the used datasets
   * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
@@ -182,6 +184,8 @@ CMSSW options
     Specify list of plugins that process partitions
   * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
     Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
+  * ``<datasource> provider`` = <text> (default: 'ListProvider')
+    Specify the name of the default dataset provider
   * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
     Specify the interval to check for changes in the used datasets
   * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
@@ -270,6 +274,8 @@ CMSSWAdvanced options
     Specify list of plugins that process partitions
   * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
     Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
+  * ``<datasource> provider`` = <text> (default: 'ListProvider')
+    Specify the name of the default dataset provider
   * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
     Specify the interval to check for changes in the used datasets
   * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
@@ -364,8 +370,6 @@ dataset options
     Specify list of plugins that process datasets before the partitioning
   * <datasource> processor manager = <plugin> (Default: 'MultiDataProcessor')
     Specifiy compositor class to merge the different plugins given in ``<datasource> processor``
-  * ``<datasource> provider`` = <text> (default: 'ListProvider')
-    Specify the name of the default dataset provider
   * ``resync jobs`` = <enum: append|preserve|fillgap|reorder> (default: append)
     Specify how resynced jobs should be handled
   * ``resync metadata`` = <list of values> (default: '')
@@ -1022,6 +1026,8 @@ ROOTTask options
     Specify list of plugins that process partitions
   * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
     Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
+  * ``<datasource> provider`` = <text> (default: 'ListProvider')
+    Specify the name of the default dataset provider
   * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
     Specify the interval to check for changes in the used datasets
   * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
@@ -1108,18 +1114,6 @@ MultiWMS options
     Wait for the specified duration during the work steps of the job cycle
   * ``wms broker`` = <plugin[:name]> (default: 'RandomBroker')
     Specify broker plugin to select the WMS for job submission
-
-ARC options
------------
-
-  * ``job parser`` = <plugin> (default: 'JobInfoProcessor')
-    Specify plugin that checks the output sandbox of the job and returns with the job status
-  * ``site broker`` = <plugin[:name]> (default: 'UserBroker')
-    Specify broker plugin to select the site for job submission
-  * ``wait idle`` = <integer> (default: 60)
-    Wait for the specified duration if the job cycle was idle
-  * ``wait work`` = <integer> (default: 10)
-    Wait for the specified duration during the work steps of the job cycle
 
 Condor options
 --------------
@@ -1344,6 +1338,10 @@ BasicParameterFactory options
 BasicPartitionProcessor options
 -------------------------------
 
+  * ``<datasource> partition file names delimeter / partition file names delimeter`` = <text> (default: '')
+    Specify the delimeter used to concatenate the dataset file list
+  * ``<datasource> partition file names format / partition file names format`` = <text> (default: '%s')
+    Specify the format of the dataset files given to the job
   * ``<datasource> partition variable file names / partition variable file names`` = <text> (default: 'FILE_NAMES')
     Specify variable name containing the list of file names
   * ``<datasource> partition variable max events / partition variable max events`` = <text> (default: 'MAX_EVENTS')
