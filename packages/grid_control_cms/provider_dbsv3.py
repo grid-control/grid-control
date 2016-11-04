@@ -23,8 +23,8 @@ class DBS3Provider(CMSBaseProvider):
 	# required format: <dataset path>[@<instance>][#<block>]
 	alias_list = ['dbs3', 'dbs']
 
-	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None):
-		CMSBaseProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None, dataset_proc=None):
+		CMSBaseProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 		if self._dataset_instance.startswith('http'):
 			self._url = self._dataset_instance
 		else:

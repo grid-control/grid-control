@@ -29,8 +29,8 @@ class DASProvider(CMSBaseProvider):
 	# required format: <dataset path>[@<instance>][#<block>]
 	alias_list = ['das']
 
-	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None):
-		CMSBaseProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None, dataset_proc=None):
+		CMSBaseProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 		self._url = config.get('das instance', 'https://cmsweb.cern.ch/das/cache',
 			on_change=TriggerResync(['datasets', 'parameters']))
 		if self._dataset_instance.startswith('http'):
