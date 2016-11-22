@@ -30,13 +30,13 @@ CMSLocationFormat = make_enum(['hostname', 'siteDB', 'both'])  # pylint:disable=
 
 class CMSBaseProvider(DataProvider):
 	# required format: <dataset path>[@<instance>][#<block>]
-	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None):
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None, dataset_proc=None):
 		dataset_config = config.change_view(default_on_change=TriggerResync(['datasets', 'parameters']))
 		self._lumi_filter = dataset_config.get_lookup(['lumi filter', '%s lumi filter' % datasource_name],
 			default={}, parser=parse_lumi_filter, strfun=str_lumi)
 		if not self._lumi_filter.empty():
 			config.set('%s processor' % datasource_name, 'LumiDataProcessor', '+=')
-		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 		# LumiDataProcessor instantiated in DataProcessor.__ini__ will set lumi metadata as well
 		self._lumi_query = dataset_config.get_bool(
 			['lumi metadata', '%s lumi metadata' % datasource_name], default=not self._lumi_filter.empty())
