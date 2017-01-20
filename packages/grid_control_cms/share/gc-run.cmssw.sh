@@ -151,6 +151,7 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 		if [ "$CODE" != "0" ]; then
 			echo "Problem while hashing config file:"
 			echo "---------------------------"
+			cat "$DBSDIR/hash"
 			echo "Executing python $CFG_BASENAME (modified for edmConfigHash) ..."
 			python "$CFG_BASENAME" 2>&1
 			echo "---------------------------"
