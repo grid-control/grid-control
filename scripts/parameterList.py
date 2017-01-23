@@ -31,7 +31,7 @@ parser.add_bool(None, 'I', 'intervention',       default = False, help = 'Displa
 parser.add_bool(None, 'l', 'list-parameters',    default = False, help = 'Display parameter list')
 parser.add_bool(None, 'L', 'show-sources',       default = False, help = 'Show parameter sources')
 parser.add_bool(None, 't', 'untracked',          default = False, help = 'Display untracked variables')
-parser.add_bool(None, 'T', 'persistent',         default = False, help = 'Work with persistent paramters')
+parser.add_bool(None, 'T', 'persistent',         default = False, help = 'Work with persistent parameters')
 parser.add_list(None, 'p', 'parameter',          default = [],    help = 'Specify parameters')
 parser.add_text(None, 'D', 'dataset',            default = '',    help = 'Add dataset splitting (use "True" to simulate a dataset)')
 parser.add_text(None, 'j', 'job',                default = None,  help = 'Select job to display (used for unbounded parameter spaces)')
