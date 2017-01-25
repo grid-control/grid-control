@@ -12,10 +12,12 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import shlex
+import os, shlex
 from grid_control import utils
 from grid_control.config import ConfigError
+from grid_control.utils import clean_path
 from grid_control.utils.parsing import parse_dict, split_advanced, split_brackets
+from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError, Plugin
 from python_compat import imap, irange, lmap, lzip, unspecified
 
@@ -270,3 +272,18 @@ def _parse_parameter_option_list(option_list):
 			else:
 				map_vn2varexpr[varexpr] = varexpr
 	return (map_vn2varexpr, map_varexpr_suffix2opt)
+
+
+class GitParameterParser(ParameterParser):
+	alias_list = ['git']
+
+	def parse_value(self, pconfig, varexpr, vn, value):
+		path = clean_path(value)
+		version = "undefined"
+		old_wd = os.getcwd()
+		os.chdir(path)
+		git_proc = LocalProcess('git', 'rev-parse', '--short', 'HEAD')
+		if git_proc.status(10) == 0: version = git_proc.get_output(10)[:-1]
+		os.chdir(old_wd)
+		return [version]
+
