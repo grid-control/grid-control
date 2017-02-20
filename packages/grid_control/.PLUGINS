@@ -478,6 +478,8 @@
 
     * grid_control.parameters.config_param FormatParameterParser format
 
+    * grid_control.parameters.config_param GitParameterParser git
+
     * grid_control.parameters.config_param LinesParameterParser lines
 
     * grid_control.parameters.config_param ShellParameterParser shell default
