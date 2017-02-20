@@ -262,7 +262,7 @@ class GUIReport(AdaptiveBaseReport):
 			self._print_truncated(Console.fmt(desc, [Console.BOLD]), self._max_x - 24,
 				'(%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total)))
 			progressbar = JobProgressBar(sum(cat_state_dict[cat_key].values()),
-				width=max(0, self._max_x - 19))
+				width=max(0, self._max_x - 24))
 			progressbar.update(completed,
 				_sum_cat(cat_key, JobClass.ATWMS.states),
 				_sum_cat(cat_key, [Job.RUNNING, Job.DONE]),
