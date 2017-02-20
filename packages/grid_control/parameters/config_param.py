@@ -287,3 +287,16 @@ class GitParameterParser(ParameterParser):
 		os.chdir(old_wd)
 		return [version]
 
+
+class SvnParameterParser(ParameterParser):
+	alias_list = ['svn']
+
+	def parse_value(self, pconfig, varexpr, vn, value):
+		path = clean_path(value)
+		version = "undefined"
+		svn_proc = LocalProcess('svnversion', path)
+		if svn_proc.status(10) == 0: version = svn_proc.get_output(10)[:-1]
+		# different SVN versions yield different output for unversioned directories:
+		if "exported" in version or "Unversioned" in version: version = "undefined"
+		return [version]
+

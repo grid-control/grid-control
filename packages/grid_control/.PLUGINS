@@ -486,6 +486,8 @@
 
     * grid_control.parameters.config_param SplitParameterParser split
 
+    * grid_control.parameters.config_param SvnParameterParser svn
+
     * grid_control.parameters.config_param VerbatimParameterParser verbatim
 
    * grid_control.parameters.psource_base ParameterSource
