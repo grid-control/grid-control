@@ -242,7 +242,7 @@ class GUIReport(AdaptiveBaseReport):
 	def __init__(self, job_db, task, jobs=None, config_str=''):
 		(self._max_y, self._max_x) = Console(sys.stdout).getmaxyx()
 		self._max_x -= 10  # Padding
-		AdaptiveBaseReport.__init__(self, job_db, task, jobs, str(int(self._max_y / 5)))
+		AdaptiveBaseReport.__init__(self, job_db, task, jobs, config_str or str(int(self._max_y / 5)))
 
 	def get_height(self):
 		return self._cat_cur * 2 + 3
