@@ -210,8 +210,7 @@ class JobManager(NamedPlugin):
 		if not jobnum_list:
 			return (change, jobnum_list_timeout, reported)
 		for (jobnum, job_obj, state, info) in self._check_jobs_raw(wms, jobnum_list):
-			if state != Job.UNKNOWN:
-				reported.append(jobnum)
+			reported.append(jobnum)
 			if state != job_obj.state:
 				change = True
 				for (key, value) in info.items():
