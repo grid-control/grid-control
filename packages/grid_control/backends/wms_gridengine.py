@@ -15,7 +15,7 @@
 import os, xml.dom.minidom
 from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
-from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess, CheckStatus
 from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreatorViaArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
@@ -45,6 +45,13 @@ class GridEngine_CheckJobs(CheckJobsWithProcess):
 	def _parse(self, proc):
 		proc.status(timeout = self._timeout)
 		status_string = proc.stdout.read(timeout = 0)
+		if not status_string:
+			self._status = CheckStatus.ERROR
+		else:
+			for result in self._parse_status_string(status_string):
+				yield result
+
+	def _parse_status_string(self, status_string):
 		# qstat gives invalid xml in <unknown_jobs> node
 		unknown_start = status_string.find('<unknown_jobs')
 		unknown_jobs_string = ''
