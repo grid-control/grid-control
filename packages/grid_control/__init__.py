@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-__version__ = '1.9.84 (a489d154)'
+__version__ = '1.9.86 (d6d917b)'
 
 
 def _init_grid_control():

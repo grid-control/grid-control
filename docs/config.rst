@@ -137,6 +137,7 @@ SimpleJobManager options
      * BasicReport_ (alias: basicreport)
      * BasicTheme_ (alias: basic)
      * ColorBarReport_ (alias: cbar)
+     * FileReport_ (alias: file)
      * LeanHeaderReport_ (alias: leanheader)
      * LeanReport_ (alias: leanreport)
      * LeanTheme_ (alias: lean)
@@ -1679,6 +1680,7 @@ BasicConsoleGUI options
      * BasicReport_ (alias: basicreport)
      * BasicTheme_ (alias: basic)
      * ColorBarReport_ (alias: cbar)
+     * FileReport_ (alias: file)
      * LeanHeaderReport_ (alias: leanheader)
      * LeanReport_ (alias: leanreport)
      * LeanTheme_ (alias: lean)
@@ -2172,6 +2174,7 @@ ReportGUIElement options
      * BasicReport_ (alias: basicreport)
      * BasicTheme_ (alias: basic)
      * ColorBarReport_ (alias: cbar)
+     * FileReport_ (alias: file)
      * LeanHeaderReport_ (alias: leanheader)
      * LeanReport_ (alias: leanreport)
      * LeanTheme_ (alias: lean)
@@ -2277,6 +2280,14 @@ DashboardRemote options
 
 * ``task name`` = <text> (Default: '@GC_TASK_ID@_@DATASETNICK@')
     Specify the task name reported to dashboard
+
+
+.. _FileReport:
+FileReport options
+------------------
+
+* ``report file directory`` = <text>
+    Directory to store the status json files in.
 
 
 .. _ColorBarReport:
@@ -3396,6 +3407,8 @@ DefaultTupleParser options
     Specify delimeter to split tuples
 
 
+Unused: 'port' {'user_text': 'Specify the port used by the web user interface'}
+
 Unused: 'nodes broker' {'disable_dupe_check': True, 'user_text': 'Specify broker plugin to select the queue for job submission', 'broker_desc': 'Specify worker nodes for job submission'}
 
 Unused: '<name:storage_channel> path:LocalSBStorageManager' {'user_text': 'Specify the default transport URL(s) that are used to transfer files over this type of storage channel', 'default_map': {"<call:config.get_work_path('sandbox')>": '<workdir>/sandbox'}}
@@ -3408,11 +3421,17 @@ Unused: '<name:datasource_name> metadata merge mode' {'user_text': 'Specify how 
 
 Unused: 'enable chunk' {'user_text': 'Toggle chunked processing of jobs by the backend'}
 
+Unused: 'username' {'user_text': 'Specify the username protecting the web user interface', 'default_map': {'<call:get_local_username()>': '<local user name>'}}
+
 Unused: 'submit timeout' {'user_text': 'Specify timeout of the process that is used to submit jobs'}
 
 Unused: '<name:storage_channel> min size' {'user_text': 'output files below this file size (in MB) trigger a job failure', 'default_map': {'-1': 'disabled (%(default_raw)s)'}}
 
+Unused: 'password' {'default': '<random string>', 'user_text': 'Specify the password protecting the web user interface'}
+
 Unused: '<name:broker_prefix> broker prune' {'user_text': 'Toggle the removal of unused brokers from the broker pipeline'}
+
+Unused: 'hide login' {'user_text': 'Toggle displaying the login URL / account information at startup'}
 
 Unused: '<name:storage_channel> retry' {'user_text': 'Specify number of transfer retries'}
 
