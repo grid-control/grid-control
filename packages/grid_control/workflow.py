@@ -39,6 +39,7 @@ class Workflow(NamedPlugin):
 		# Workdir settings
 		self._path_work = config.get_work_path()
 		self._check_space = config.get_int('workdir space', 10, on_change=None)
+		self._check_space_timeout = config.get_int('workdir space timeout', 5, on_change=None)
 
 		# Initialise task module
 		self.task = config.get_plugin(['module', 'task'], cls=TaskModule, bkwargs={'tags': [self]})
@@ -100,7 +101,8 @@ class Workflow(NamedPlugin):
 			if not self.wms.can_submit(self._submit_time, self._submit_flag):
 				self._submit_flag = False
 			# Check free disk space
-			if (self._check_space > 0) and utils.disk_usage(self._path_work) < self._check_space:
+			if ((self._check_space) > 0 and
+			    utils.disk_usage(self._path_work, self._check_space_timeout) < self._check_space):
 				self._space_logger.warning('Not enough space left in working directory')
 			else:
 				did_wait = self._run_actions(wait, wms_timing_info)
