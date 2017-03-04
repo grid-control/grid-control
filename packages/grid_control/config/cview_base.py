@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ class ConfigView(Plugin):
 	def iter_entries(self):
 		raise AbstractError
 
-	def set(self, option, value, opttype, source):
+	def set(self, option, value, opttype, source, unique=False):
 		raise AbstractError
 
 	def set_config_name(self, name):
@@ -132,9 +132,9 @@ class HistoricalConfigView(ConfigView):
 	def iter_entries(self):
 		return self._match_entries(self._container_cur)
 
-	def set(self, option_list, value, opttype, source):
+	def set(self, option_list, value, opttype, source, unique=False):
 		entry = self._create_entry(option_list, value, opttype, source, specific=True, reverse=True)
-		self._container_cur.append(entry)
+		self._container_cur.append(entry, unique)
 		self._log.log(logging.INFO3, 'Setting option %s', entry.format(print_section=True))
 		return entry
 

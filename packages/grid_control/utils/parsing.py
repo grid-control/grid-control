@@ -1,4 +1,4 @@
-# | Copyright 2015-2016 Karlsruhe Institute of Technology
+# | Copyright 2015-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -90,7 +90,7 @@ def remove_unicode(obj):
 	elif isinstance(obj, (list, tuple, set)):
 		obj = type(obj)(imap(remove_unicode, obj))
 	elif isinstance(obj, dict):
-		result = {}
+		result = type(obj)()
 		for (key, value) in obj.items():
 			result[remove_unicode(key)] = remove_unicode(value)
 		return result
@@ -190,7 +190,7 @@ def str_dict_cfg(value, parser=identity, strfun=str):
 	(srcdict, srckeys) = value
 	result = ''
 	if srcdict.get(None) is not None:
-		result = strfun(srcdict.get(None, parser('')))
+		result = strfun(srcdict[None])
 	fmt = '\n\t%%%ds => %%%ds' % (_getmax(srckeys), _getmax(srcdict.values()))
 	return result + str.join('', imap(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
 

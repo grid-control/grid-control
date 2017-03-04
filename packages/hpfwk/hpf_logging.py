@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,10 +12,10 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import logging
+
 
 def init_hpf_logging():
-	import logging
-
 	map_level_str2level = {'DEFAULT': logging.INFO - 1,
 		'INFO1': logging.DEBUG + 3, 'INFO2': logging.DEBUG + 2, 'INFO3': logging.DEBUG + 1,
 		'DEBUG1': logging.DEBUG - 1, 'DEBUG2': logging.DEBUG - 2, 'DEBUG3': logging.DEBUG - 3}

@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -21,25 +21,25 @@ class InactiveWMS(WMS):
 	def __init__(self, config, name):
 		WMS.__init__(self, config, name)
 		self._token = config.get_composited_plugin(['proxy', 'access token'], 'TrivialAccessToken',
-			'MultiAccessToken', cls = 'AccessToken', bkwargs={'inherit': True, 'tags': [self]})
+			'MultiAccessToken', cls='AccessToken', bind_kwargs={'inherit': True, 'tags': [self]})
 
 	def can_submit(self, needed_time, can_currently_submit):
 		return True
 
-	def get_access_token(self, gc_id):
-		return self._token
+	def cancel_jobs(self, gc_id_list):
+		self._log.warning('Discarded abort of %d jobs', len(gc_id_list))
+
+	def check_jobs(self, gc_id_list):
+		self._log.warning('Discarded check of %d jobs', len(gc_id_list))
 
 	def deploy_task(self, task, monitor, transfer_se, transfer_sb):
 		return
 
-	def submit_jobs(self, jobnumList, task): # jobnumList = [1, 2, ...]
-		self._log.warning('Discarded submission of %d jobs', len(jobnumList))
-
-	def check_jobs(self, gc_id_list): # Check status and return (gc_id, job_state, job_info) for active jobs
-		self._log.warning('Discarded check of %d jobs', len(gc_id_list))
+	def get_access_token(self, gc_id):
+		return self._token
 
 	def retrieve_jobs(self, gc_id_list):
 		self._log.warning('Discarded retrieval of %d jobs', len(gc_id_list))
 
-	def cancel_jobs(self, gc_id_list):
-		self._log.warning('Discarded abort of %d jobs', len(gc_id_list))
+	def submit_jobs(self, jobnum_list, task):
+		self._log.warning('Discarded submission of %d jobs', len(jobnum_list))

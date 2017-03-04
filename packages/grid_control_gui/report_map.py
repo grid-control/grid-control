@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,6 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import os, math, random
+
+
 try:
 	import matplotlib
 	import matplotlib.pyplot
@@ -23,7 +26,6 @@ try:
 	import numpy
 except ImportError:
 	numpy = None
-import os, math, random
 from grid_control_gui.geodb import get_geo_match
 from python_compat import ifilter, imap, irange, lfilter, lmap, lzip, sorted
 
@@ -46,8 +48,7 @@ def draw_map(report):
 		urcrnrlon=bounds[1][0], urcrnrlat=bounds[1][1])
 
 	_map_positions(base_map, pos_list)
-	if False:
-		pos_list = _remove_all_overlap(pos_list)
+	# pos_list = _remove_all_overlap(pos_list)
 
 	base_map.bluemarble()
 	for pos in pos_list:

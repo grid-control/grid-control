@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.pproc_base import PartitionProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
-from grid_control.datasets.splitter_base import DataSplitter
+from grid_control.datasets.splitter_base import DataSplitter, PartitionReader
 
 
-__all__ = ['DataProcessor', 'DataProvider', 'DatasetError', 'DataSplitter', 'PartitionProcessor']
+__all__ = ['DataProcessor', 'DataProvider', 'DatasetError', 'DataSplitter',
+	'PartitionProcessor', 'PartitionReader']

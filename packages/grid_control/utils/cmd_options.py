@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -97,6 +97,7 @@ class Options(object):
 		group = self._get_group(group)
 		dest = dest or self._get_normed(option, '_')
 		self._dest.append(dest)
+		short = short or ''
 		if short.strip():
 			short = '-' + short
 		return group.add_option(short.strip(), '--' + option, dest=dest,

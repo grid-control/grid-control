@@ -1,4 +1,4 @@
-# | Copyright 2015-2016 Karlsruhe Institute of Technology
+# | Copyright 2015-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -27,9 +27,6 @@ class EmptyDataProcessor(DataProcessor):
 		self._empty_block = config.get_bool(self._get_dproc_opt('remove empty blocks'), True)
 		(self._removed_files, self._removed_blocks) = (0, 0)
 
-	def enabled(self):
-		return self._empty_block or self._empty_files
-
 	def process_block(self, block):
 		if self._empty_files:
 			def _has_entries(fi):
@@ -42,6 +39,9 @@ class EmptyDataProcessor(DataProcessor):
 				self._removed_blocks += 1
 				return
 		return block
+
+	def _enabled(self):
+		return self._empty_block or self._empty_files
 
 	def _finished(self):
 		if self._removed_files or self._removed_blocks:
@@ -56,9 +56,6 @@ class EntriesCountDataProcessor(DataProcessor):
 	def __init__(self, config, datasource_name):
 		DataProcessor.__init__(self, config, datasource_name)
 		self._limit_entries = config.get_int(self._get_dproc_opt(['limit events', 'limit entries']), -1)
-
-	def enabled(self):
-		return self._limit_entries != -1
 
 	def process_block(self, block):
 		if self.enabled():
@@ -75,6 +72,9 @@ class EntriesCountDataProcessor(DataProcessor):
 				return True
 			block[DataProvider.FileList] = lfilter(_filter_events, block[DataProvider.FileList])
 		return block
+
+	def _enabled(self):
+		return self._limit_entries != -1
 
 
 class LocationDataProcessor(DataProcessor):
@@ -108,9 +108,6 @@ class URLCountDataProcessor(DataProcessor):
 			self._get_dproc_opt(['limit files fraction', 'limit urls fraction']), -1.)
 		(self._limit_files_per_ds, self._files_per_ds) = ({}, {})
 
-	def enabled(self):
-		return (self._limit_files >= 0) or (self._limit_files_fraction >= 0)
-
 	def process(self, block_iter):
 		(self._limit_files_per_ds, self._files_per_ds) = ({}, {})  # reset counters
 		if self._limit_files_fraction >= 0:
@@ -134,6 +131,9 @@ class URLCountDataProcessor(DataProcessor):
 			self._files_per_ds[block[DataProvider.Dataset]] += len(block[DataProvider.FileList])
 		return block
 
+	def _enabled(self):
+		return (self._limit_files >= 0) or (self._limit_files_fraction >= 0)
+
 	def _reduce_fn_list(self, block, fn_list_limit_map):
 		dataset_name = block[DataProvider.Dataset]
 		fn_list_limit = fn_list_limit_map[dataset_name]
@@ -155,14 +155,14 @@ class URLDataProcessor(DataProcessor):
 			filter_parser=lambda value: self._parse_filter(config, value),
 			filter_str=lambda value: str.join('\n', value.split()))
 
-	def enabled(self):
-		return self._url_filter.get_selector() is not None
-
 	def process_block(self, block):
 		if self.enabled():
 			block[DataProvider.FileList] = self._url_filter.filter_list(block[DataProvider.FileList],
 				itemgetter(DataProvider.URL))
 		return block
+
+	def _enabled(self):
+		return self._url_filter.get_selector() is not None
 
 	def _parse_filter(self, config, value):
 		dataset_proc = DataProcessor.create_instance('NullDataProcessor')

@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,16 +13,15 @@
 # | limitations under the License.
 
 from grid_control import utils
-from grid_control.backends.wms_grid import GridWMS, Grid_CancelJobs, Grid_CheckJobs
+from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
 
 
 class Glite(GridWMS):
 	def __init__(self, config, name):
 		utils.deprecated('Please use the GliteWMS backend for grid jobs!')
 		GridWMS.__init__(self, config, name,
-			check_executor = Grid_CheckJobs(config, 'glite-job-status'),
-			cancel_executor = Grid_CancelJobs(config, 'glite-job-cancel'))
-
-		self._submitExec = utils.resolve_install_path('glite-job-submit')
-		self._outputExec = utils.resolve_install_path('glite-job-output')
-		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
+			submit_exec=utils.resolve_install_path('glite-job-submit'),
+			output_exec=utils.resolve_install_path('glite-job-output'),
+			check_executor=GridCheckJobs(config, 'glite-job-status'),
+			cancel_executor=GridCancelJobs(config, 'glite-job-cancel'))
+		self._submit_args_dict.update({'-r': self._ce, '--config-vo': self._config_fn})

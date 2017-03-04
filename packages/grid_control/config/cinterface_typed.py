@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -38,11 +38,12 @@ class TypedConfigInterface(ConfigInterface):
 
 	def get_composited_plugin(self, option, default=unspecified, default_compositor=unspecified,
 			option_compositor=None, cls=Plugin, require_plugin=True,
-			pargs=None, pkwargs=None, bargs=None, bkwargs=None, **kwargs):
+			pargs=None, pkwargs=None, bind_args=None, bind_kwargs=None, **kwargs):
 		# Return composite class - default classes are also given in string form!
 		cls_list = []
 		for factory in self._get_plugin_factory_list(option, default, cls, require_plugin,
-				single_plugin=False, desc='composite plugin', bargs=bargs, bkwargs=bkwargs, **kwargs):
+				single_plugin=False, desc='composite plugin',
+				bind_args=bind_args, bind_kwargs=bind_kwargs, **kwargs):
 			cls_list.append(factory.create_instance_bound(*(pargs or ()), **(pkwargs or {})))
 		if len(cls_list) == 1:
 			return cls_list[0]
@@ -51,7 +52,8 @@ class TypedConfigInterface(ConfigInterface):
 		if not option_compositor:
 			option_compositor = join_config_locations(option, 'manager')
 		return self.get_plugin(option_compositor, default_compositor, cls,
-			pargs=tuple([cls_list] + list(pargs or [])), bargs=bargs, bkwargs=bkwargs, **kwargs)
+			pargs=tuple([cls_list] + list(pargs or [])),
+			bind_args=bind_args, bind_kwargs=bind_kwargs, **kwargs)
 
 	def get_dict(self, option, default=unspecified, parser=identity, strfun=str, **kwargs):
 		# Returns a tuple with (<dictionary>, <keys>) - the keys are sorted by order of appearance
@@ -104,10 +106,10 @@ class TypedConfigInterface(ConfigInterface):
 			def2obj=None, option=option, default_obj=default, **kwargs)
 
 	def get_plugin(self, option, default=unspecified, cls=Plugin,
-			require_plugin=True, pargs=None, pkwargs=None, bargs=None, bkwargs=None, **kwargs):
+			require_plugin=True, pargs=None, pkwargs=None, bind_args=None, bind_kwargs=None, **kwargs):
 		# Return class - default class is also given in string form!
 		factories = self._get_plugin_factory_list(option, default, cls, require_plugin,
-			single_plugin=True, desc='plugin', bargs=bargs, bkwargs=bkwargs, **kwargs)
+			single_plugin=True, desc='plugin', bind_args=bind_args, bind_kwargs=bind_kwargs, **kwargs)
 		if factories:
 			return factories[0].create_instance_bound(*(pargs or ()), **(pkwargs or {}))
 
@@ -128,26 +130,26 @@ class TypedConfigInterface(ConfigInterface):
 		except Exception:
 			raise ConfigError(error_msg)
 
-	def set_bool(self, option, value, opttype='=', source=None):
+	def set_bool(self, option, value, opttype='=', source=None, unique=False):
 		# Setting boolean config options
-		return self._set_internal('bool', bool.__str__, option, value, opttype, source)
+		return self._set_internal('bool', bool.__str__, option, value, opttype, source, unique)
 
-	def set_int(self, option, value, opttype='=', source=None):
+	def set_int(self, option, value, opttype='=', source=None, unique=False):
 		# Setting integer config options - using strict integer (de-)serialization
-		return self._set_internal('int', int.__str__, option, value, opttype, source)
+		return self._set_internal('int', int.__str__, option, value, opttype, source, unique)
 
-	def set_time(self, option, value, opttype='=', source=None):
+	def set_time(self, option, value, opttype='=', source=None, unique=False):
 		# Set time in seconds - input base is hours
-		return self._set_internal('time', str_time_short, option, value, opttype, source)
+		return self._set_internal('time', str_time_short, option, value, opttype, source, unique)
 
 	def _get_plugin_factory_list(self, option, default=unspecified,
 			cls=Plugin, require_plugin=True, single_plugin=False,
-			desc='plugin factories', bargs=None, bkwargs=None, **kwargs):
+			desc='plugin factories', bind_args=None, bind_kwargs=None, **kwargs):
 		if isinstance(cls, str):
 			cls = Plugin.get_class(cls)
 
 		def _bind_plugins(value):
-			obj_list = list(cls.bind(value, config=self, *(bargs or []), **(bkwargs or {})))
+			obj_list = list(cls.bind(value, config=self, *(bind_args or []), **(bind_kwargs or {})))
 			if single_plugin and len(obj_list) > 1:
 				raise ConfigError('This option only allows to specify a single plugin!')
 			if require_plugin and not obj_list:
@@ -266,8 +268,8 @@ class SimpleConfigInterface(TypedConfigInterface):
 	def prompt(self, prompt):
 		return get_user_input('%s: ' % prompt)
 
-	def set_choice(self, option, value, opttype='=', source=None, obj2str=str.__str__):
-		return self._set_internal('choice', obj2str, option, value, opttype, source)
+	def set_choice(self, option, value, opttype='=', source=None, obj2str=str.__str__, unique=False):
+		return self._set_internal('choice', obj2str, option, value, opttype, source, unique)
 
 	def set_state(self, value, statename, detail=''):
 		# Set state - bool stored in hidden "state" section

@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -20,6 +20,8 @@ from python_compat import imap, reduce, set
 
 class MultiDatasetProvider(DataProvider):
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick, provider_list):
+		for provider in provider_list:
+			provider.disable_stream_singletons()
 		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
 		self._stats = DataProcessor.create_instance('SimpleStatsDataProcessor', config,
 			'dataset', self._log, 'Summary: Running over ')

@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -59,11 +59,11 @@ class BasicReport(Report):
 		for jobnum in self._jobs:
 			summary[job_db.get_job_transient(jobnum).state] += 1
 
-		def _make_per(*states):
-			return [_make_sum(*states), round(_make_sum(*states) / max(1, njobs_total) * 100.0)]
+		def _make_per(*state_list):
+			return [_make_sum(*state_list), round(_make_sum(*state_list) / max(1, njobs_total) * 100.0)]
 
-		def _make_sum(*states):
-			return sum(imap(lambda z: summary[z], states))
+		def _make_sum(*state_list):
+			return sum(imap(lambda z: summary[z], state_list))
 
 		# Print report summary
 		self._print_header('REPORT SUMMARY:')

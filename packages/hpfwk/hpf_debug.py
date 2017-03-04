@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -159,24 +159,25 @@ def _format_stack(frame_list, code_context, truncate_var_repr):
 				yield line
 
 
-def _format_variables(variable_dict, truncate_var_repr):
+def _format_variables_list(truncate_var_repr, var_dict, vn_prefix=''):
 	# Function to log local and class variables
 	max_vn_len = 0
-	for vn in variable_dict:
+	for vn in var_dict:
 		max_vn_len = max(max_vn_len, len(vn))
+	vn_list = list(var_dict)
+	vn_list.sort()
+	for vn in vn_list:
+		repr_str = _safe_repr(var_dict[vn], truncate_var_repr)
+		if 'password' in vn:
+			repr_str = '<redacted>'
+		yield '\t\t%s%s = %s' % (vn_prefix, vn.ljust(max_vn_len), repr_str)
 
-	def display(vn_list, var_dict, vn_prefix=''):
-		vn_list.sort()
-		for vn in vn_list:
-			repr_str = _safe_repr(var_dict[vn], truncate_var_repr)
-			if 'password' in vn:
-				repr_str = '<redacted>'
-			yield '\t\t%s%s = %s' % (vn_prefix, vn.ljust(max_vn_len), repr_str)
 
+def _format_variables(variable_dict, truncate_var_repr):
 	class_instance = variable_dict.pop('self', None)
 	if variable_dict:
 		yield '\tLocal variables:'
-		for line in display(list(variable_dict.keys()), variable_dict):
+		for line in _format_variables_list(truncate_var_repr, variable_dict):
 			yield line
 	if class_instance is not None:
 		yield '\tClass variables (%s):' % _safe_repr(class_instance, truncate_var_repr)
@@ -187,7 +188,7 @@ def _format_variables(variable_dict, truncate_var_repr):
 			for attr in class_instance.__slots__:
 				class_variable_dict[attr] = getattr(class_instance, attr)
 		try:
-			for line in display(list(class_variable_dict.keys()), class_variable_dict, 'self.'):
+			for line in _format_variables_list(truncate_var_repr, class_variable_dict, 'self.'):
 				yield line
 		except Exception:
 			yield '\t\t<unable to access class>'

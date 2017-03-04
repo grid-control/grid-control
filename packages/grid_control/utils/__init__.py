@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import NestedException, clear_current_exception
-from python_compat import exit_without_cleanup, get_user_input, ifilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sort_inplace, sorted, tarfile, unspecified  # pylint:disable=line-too-long
+from python_compat import exit_without_cleanup, get_user_input, ifilter, iidfilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sort_inplace, sorted, tarfile, unspecified  # pylint:disable=line-too-long
 
 
 class GCIOError(NestedException):
@@ -126,15 +126,17 @@ def display_selection(log, items_before, items_after, message, formatter, log_le
 				log.log(log_level, '   %s', formatter(item))
 
 
-def display_table(head, data, fmt_string='', fmt=None):
+def display_table(head, data, fmt_string='', fmt=None, title=None, pivot=False):
 	wraplen = get_default_property(display_table, 'wraplen', 100)
 	table_mode = get_default_property(display_table, 'mode', 'default')
 
 	if table_mode == 'parseable':
 		return ParseableTable(head, data, '|')
-	elif table_mode == 'longlist':
-		return RowTable(head, data, fmt, wraplen)
-	return ColumnTable(head, data, fmt_string, fmt, wraplen)
+	if table_mode == 'longlist':
+		pivot = not pivot
+	if pivot:
+		return RowTable(head, data, fmt, wraplen, title=title)
+	return ColumnTable(head, data, fmt_string, fmt, wraplen, title=title)
 
 
 def ensure_dir_exists(dn, name='directory', exception_type=PathError):
@@ -221,6 +223,12 @@ def get_list_difference(list_old, list_new, key_fun, on_matching_fun,
 	return (list_added, list_missing, list_matching)
 
 
+def get_local_username():
+	for username in iidfilter(imap(os.environ.get, ['LOGNAME', 'USER', 'LNAME', 'USERNAME'])):
+		return username
+	return ''
+
+
 def get_path_pkg(*args):
 	return clean_path(os.path.join(os.environ['GC_PACKAGES_PATH'], *args))
 
@@ -248,7 +256,10 @@ def get_user_bool(text, default):
 			log.critical('Invalid input! Answer with %s or "%s"', valid, choices[-1])
 
 	ask_user_fun = get_default_property(get_user_bool, 'ask_user_fun', _get_user_input)
-	return ask_user_fun(text, QM(default, 'yes', 'no'), ['yes', 'no'])
+	default_str = 'no'
+	if default:
+		default_str = 'yes'
+	return ask_user_fun(text, default_str, ['yes', 'no'])
 
 
 def get_version():
@@ -327,12 +338,6 @@ def prune_processors(do_prune, processor_list, log, message, formatter=None, id_
 	selected = filter_processors(processor_list, id_fun or _get_class_name)
 	display_selection(log, processor_list, selected, message, formatter or _get_class_name)
 	return selected
-
-
-def QM(cond, value1, value2):
-	if cond:
-		return value1
-	return value2
 
 
 def remove_files(args):
@@ -431,7 +436,7 @@ def split_list(iterable, fun, sort_key=unspecified):
 	return (result_true, result_false)
 
 
-def split_opt(opt, delim, empty=''):
+def split_opt(opt, delim):
 	""" Split option strings into fixed tuples
 	>>> split_opt('abc : ghi # def', ['#', ':'])
 	('abc', 'def', 'ghi')
@@ -451,7 +456,7 @@ def split_opt(opt, delim, empty=''):
 		except Exception:
 			return old_result + ['']
 	result = imap(str.strip, reduce(_get_delimeter_part, delim, [opt]))
-	return tuple(imap(lambda x: QM(x == '', empty, x), result))
+	return tuple(result)
 
 
 def swap(value1, value2):
@@ -575,7 +580,9 @@ class PersistentDict(dict):
 		dict.__init__(self)
 		self._fmt = DictFormat(delimeter)
 		self._fn = filename
-		key_parser = {None: QM(lower_case_key, lambda k: parse_type(k.lower()), parse_type)}
+		key_parser = {None: parse_type}
+		if lower_case_key:
+			key_parser[None] = lambda k: parse_type(k.lower())
 		try:
 			self.update(self._fmt.parse(open(filename), key_parser=key_parser))
 		except Exception:

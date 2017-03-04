@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -29,9 +29,39 @@ class ConsoleTable(Table):
 		self._log.info(msg)
 
 
-class ColumnTable(ConsoleTable):
-	def __init__(self, head, data, fmt_string='', fmt=None, wrap_len=100):
+class JSONTable(ConsoleTable):
+	def __init__(self, head, data):
 		ConsoleTable.__init__(self)
+		self._write_line(json.dumps({'data': data, 'header': head}, sort_keys=True))
+
+
+class ParseableTable(ConsoleTable):
+	def __init__(self, head, data, delimeter='|'):
+		ConsoleTable.__init__(self)
+		head = list(head)
+		self._delimeter = delimeter
+		self._write_line(str.join(self._delimeter, imap(lambda x: x[1], head)))
+		for entry in data:
+			if isinstance(entry, dict):
+				self._write_line(str.join(self._delimeter, imap(lambda x: str(entry.get(x[0], '')), head)))
+
+
+class UserConsoleTable(ConsoleTable):
+	def __init__(self, title=None):
+		ConsoleTable.__init__(self)
+		self._write_line('')
+		if title:
+			title_len = 0
+			for line in title.splitlines():
+				self._write_line(line)
+				title_len = max(title_len, len(line))
+			self._write_line('=' * title_len)
+			self._write_line('')
+
+
+class ColumnTable(UserConsoleTable):
+	def __init__(self, head, data, fmt_string='', fmt=None, wrap_len=100, title=None):
+		UserConsoleTable.__init__(self, title)
 		self._wrap_len = wrap_len
 		head = list(head)
 		just_fun = self._get_just_fun_dict(head, fmt_string)
@@ -42,9 +72,8 @@ class ColumnTable(ConsoleTable):
 		def _get_key_padded_name(key, name):
 			return (key, name.center(lendict[key]))
 		headentry = dict(ismap(_get_key_padded_name, head))
-		self._log.info('')
 		self._print_table(headwrap, headentry, entries, just, lendict)
-		self._log.info('')
+		self._write_line('')
 
 	def _format_data(self, head, data, just_fun, fmt):
 		# adjust to lendict of column (considering escape sequence correction)
@@ -153,27 +182,9 @@ class ColumnTable(ConsoleTable):
 		return (headwrap, lendict)
 
 
-class JSONTable(ConsoleTable):
-	def __init__(self, head, data):
-		ConsoleTable.__init__(self)
-		self._write_line(json.dumps({'data': data, 'header': head}, sort_keys=True))
-
-
-class ParseableTable(ConsoleTable):
-	def __init__(self, head, data, delimeter='|'):
-		ConsoleTable.__init__(self)
-		head = list(head)
-		self._delimeter = delimeter
-		self._write_line(str.join(self._delimeter, imap(lambda x: x[1], head)))
-		for entry in data:
-			if isinstance(entry, dict):
-				self._write_line(str.join(self._delimeter, imap(lambda x: str(entry.get(x[0], '')), head)))
-
-
-class RowTable(ConsoleTable):
-	def __init__(self, head, data, fmt=None, wrap_len=100):
-		ConsoleTable.__init__(self)
-		self._log.info('')
+class RowTable(UserConsoleTable):
+	def __init__(self, head, data, fmt=None, wrap_len=100, title=None):
+		UserConsoleTable.__init__(self, title)
 		head = list(head)
 
 		def _get_header_name(key, name):
@@ -192,4 +203,4 @@ class RowTable(ConsoleTable):
 			elif show_line:
 				self._write_line(('=' * (maxhead + 2)) + '=+=' + '=' * min(30, wrap_len - maxhead - 10))
 				show_line = False
-		self._log.info('')
+		self._write_line('')

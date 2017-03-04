@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -36,12 +36,12 @@ class Workflow(NamedPlugin):
 		sys.stdout = SimpleActivityStream(sys.stdout, register_callback=True)
 		sys.stderr = SimpleActivityStream(sys.stderr)
 
-		# Workdir settings
+		# Work directory settings
 		self._path_work = config.get_work_path()
 		self._check_space = config.get_int('workdir space', 10, on_change=None)
 
 		# Initialise task module
-		self.task = config.get_plugin(['module', 'task'], cls=TaskModule, bkwargs={'tags': [self]})
+		self.task = config.get_plugin(['module', 'task'], cls=TaskModule, bind_kwargs={'tags': [self]})
 		if abort == 'task':
 			return
 
@@ -50,7 +50,7 @@ class Workflow(NamedPlugin):
 
 		# Initialise workload management interface
 		self.wms = config.get_composited_plugin('backend', 'grid', 'MultiWMS',
-			cls=WMS, bkwargs={'tags': [self, self.task]})
+			cls=WMS, bind_kwargs={'tags': [self, self.task]})
 
 		# Subsequent config calls also include section "jobs":
 		jobs_config = config.change_view(view_class='TaggedConfigView',
@@ -58,11 +58,11 @@ class Workflow(NamedPlugin):
 
 		# Initialise monitoring module
 		monitor = jobs_config.get_composited_plugin('monitor', 'scripts', 'MultiMonitor',
-			cls=Monitoring, bkwargs={'tags': [self, self.task]}, pargs=(self.task,))
+			cls=Monitoring, bind_kwargs={'tags': [self, self.task]}, pargs=(self.task,))
 
 		# Initialise job database
 		self.job_manager = jobs_config.get_plugin('job manager', 'SimpleJobManager',
-			cls=JobManager, bkwargs={'tags': [self, self.task, self.wms]}, pargs=(self.task, monitor))
+			cls=JobManager, bind_kwargs={'tags': [self, self.task, self.wms]}, pargs=(self.task, monitor))
 
 		if abort == 'jobmanager':
 			return

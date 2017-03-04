@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -130,7 +130,7 @@ def handle_abort_interrupt(signum, frame):
 
 
 # create workflow from config and do initial processing steps
-def gc_create_workflow(config):
+def gc_create_workflow(config, do_freeze=True, **kwargs):
 	# set up signal handler for interrupts and debug session requests
 	signal.signal(signal.SIGURG, handle_debug_interrupt)
 	signal.signal(signal.SIGINT, handle_abort_interrupt)
@@ -145,11 +145,11 @@ def gc_create_workflow(config):
 			log = logging.getLogger('workflow')
 			log.warning('Starting initialization of %s!', global_config.get_work_path())
 			global_config.set_state(True, 'init')
-		workdir_create_msg = 'Do you want to create the working directory %s?'
+		work_dn_create_msg = 'Do you want to create the working directory %s?'
 		if global_config.get_choice_yes_no('workdir create', True,
-				interactive_msg=workdir_create_msg % global_config.get_work_path()):
+				interactive_msg=work_dn_create_msg % global_config.get_work_path()):
 			utils.ensure_dir_exists(global_config.get_work_path(), 'work directory')
-	for package_paths in global_config.get_path_list('package paths', []):
+	for package_paths in global_config.get_path_list('package paths', [], on_change=None):
 		init_hpf_plugins(package_paths)
 
 	# Query config settings before config is frozen
@@ -159,8 +159,9 @@ def gc_create_workflow(config):
 	(action_delete, action_reset) = get_actions(config.change_view(set_sections=['action']))
 
 	# Create workflow and freeze config settings
-	workflow = global_config.get_plugin('workflow', 'Workflow:global', cls='Workflow')
-	config.factory.freeze(write_config=config.get_state('init', detail='config'))
+	workflow = global_config.get_plugin('workflow', 'Workflow:global', cls='Workflow', pkwargs=kwargs)
+	if do_freeze:
+		config.factory.freeze(write_config=config.get_state('init', detail='config'))
 
 	# Give config help
 	if help_cfg or help_scfg:

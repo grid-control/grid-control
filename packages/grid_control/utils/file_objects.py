@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -76,7 +76,7 @@ class ZipFile(object):
 
 class VirtualFile(BytesBufferBase):
 	def __init__(self, name, lines):
-		BytesBufferBase.__init__(self, str2bytes(str.join('', lines)))  # pylint:non-parent-init-called
+		BytesBufferBase.__init__(self, str2bytes(str.join('', lines)))
 		self.name = name
 		self.size = len(self.getvalue())
 

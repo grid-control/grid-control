@@ -1,4 +1,4 @@
-# | Copyright 2010-2016 Karlsruhe Institute of Technology
+# | Copyright 2010-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 from grid_control.datasets.provider_base import DataProvider
-from grid_control.datasets.splitter_base import DataSplitter
+from grid_control.datasets.splitter_base import DataSplitter, PartitionError
 from hpfwk import AbstractError
 from python_compat import imap, itemgetter, reduce
 
@@ -23,9 +23,10 @@ class FileLevelSplitter(DataSplitter):
 	def divide_blocks(self, block_iter):
 		raise AbstractError
 
-	def partition_blocks_raw(self, block_iter, event_first=0):
+	def split_partitions(self, block_iter, entry_first=0):
 		for sub_block in self.divide_blocks(block_iter):
-			yield self._finish_partition(sub_block, dict(), sub_block[DataProvider.FileList])
+			if sub_block[DataProvider.FileList]:
+				yield self._finish_partition(sub_block, dict(), sub_block[DataProvider.FileList])
 
 	def _create_sub_block(self, block_template, fi_list):
 		partition = dict(block_template)
@@ -45,39 +46,41 @@ class BlockBoundarySplitter(FileLevelSplitter):
 class FLSplitStacker(FileLevelSplitter):
 	alias_list = ['pipeline']
 
-	def partition_blocks_raw(self, block_iter, event_first=0):
-		def _create_fls(fls_name):
-			return FileLevelSplitter.create_instance(fls_name, self._config, self._datasource_name)
-		for block in block_iter:
-			splitter_name_list = self._setup(self._splitter_name_list, block)
-			splitter_iter = imap(_create_fls, splitter_name_list[:-1])
-			splitter_final = DataSplitter.create_instance(splitter_name_list[-1],
-				self._config, self._datasource_name)
-			for sub_block in reduce(lambda x, y: y.divide_blocks(x), splitter_iter, [block]):
-				for partition in splitter_final.partition_blocks_raw([sub_block]):
-					yield partition
+	def __init__(self, config, datasource_name):
+		FileLevelSplitter.__init__(self, config, datasource_name)
+		part_name_list = config.get_list(self._get_part_opt('splitter stack'), ['BlockBoundarySplitter'])
+		self._part_list = []
+		for part_name in part_name_list[:-1]:
+			self._part_list.append(FileLevelSplitter.create_instance(part_name, config, datasource_name))
+		self._part_final = DataSplitter.create_instance(part_name_list[-1], config, datasource_name)
 
-	def _configure_splitter(self, config):
-		self._config = config
-		self._splitter_name_list = self._query_config(config.get_list,
-			'splitter stack', ['BlockBoundarySplitter'])
+	def split_partitions(self, block_iter, entry_first=0):
+		for block in block_iter:
+			for sub_block in reduce(lambda x, y: y.divide_blocks(x), self._part_list, [block]):
+				for partition in self._part_final.split_partitions([sub_block]):
+					yield partition
 
 
 class FileBoundarySplitter(FileLevelSplitter):
 	# Split dataset along block boundaries into jobs with 'files per job' files
 	alias_list = ['files']
 
+	def __init__(self, config, datasource_name):
+		FileLevelSplitter.__init__(self, config, datasource_name)
+		self._files_per_job = config.get_lookup(self._get_part_opt('files per job'),
+			parser=int, strfun=int.__str__)
+
 	def divide_blocks(self, block_iter):
 		for block in block_iter:
 			fi_idx_start = 0
-			files_per_job = self._setup(self._files_per_job, block)
+			files_per_job = self._files_per_job.lookup(DataProvider.get_block_id(block))
+			if files_per_job <= 0:
+				raise PartitionError('Invalid number of files per job: %d' % files_per_job)
 			while fi_idx_start < len(block[DataProvider.FileList]):
 				fi_list = block[DataProvider.FileList][fi_idx_start:fi_idx_start + files_per_job]
 				fi_idx_start += files_per_job
-				yield self._create_sub_block(block, fi_list)
-
-	def _configure_splitter(self, config):
-		self._files_per_job = self._query_config(config.get_int, 'files per job')
+				if fi_list:
+					yield self._create_sub_block(block, fi_list)
 
 
 class HybridSplitter(FileLevelSplitter):
@@ -85,17 +88,22 @@ class HybridSplitter(FileLevelSplitter):
 	# If file has #events > 'events per job', use just the single file (=> job has more events!)
 	alias_list = ['hybrid']
 
+	def __init__(self, config, datasource_name):
+		FileLevelSplitter.__init__(self, config, datasource_name)
+		self._entries_per_job = config.get_lookup(
+			self._get_part_opt(['events per job', 'entries per job']), parser=int, strfun=int.__str__)
+
 	def divide_blocks(self, block_iter):
 		for block in block_iter:
-			(events, fi_list) = (0, [])
-			events_per_job = self._setup(self._events_per_job, block)
+			(entries, fi_list) = (0, [])
+			entries_per_job = self._entries_per_job.lookup(DataProvider.get_block_id(block))
+			if entries_per_job <= 0:
+				raise PartitionError('Invalid number of entries per job: %d' % entries_per_job)
 			for fi in block[DataProvider.FileList]:
-				if (len(fi_list) > 0) and (events + fi[DataProvider.NEntries] > events_per_job):
+				if fi_list and (entries + fi[DataProvider.NEntries] > entries_per_job):
 					yield self._create_sub_block(block, fi_list)
-					(events, fi_list) = (0, [])
+					(entries, fi_list) = (0, [])
 				fi_list.append(fi)
-				events += fi[DataProvider.NEntries]
-			yield self._create_sub_block(block, fi_list)
-
-	def _configure_splitter(self, config):
-		self._events_per_job = self._query_config(config.get_int, 'events per job')
+				entries += fi[DataProvider.NEntries]
+			if fi_list:
+				yield self._create_sub_block(block, fi_list)

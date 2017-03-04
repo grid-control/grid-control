@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -206,8 +206,8 @@ class Plugin(object):
 	get_class_info_list = classmethod(get_class_info_list)
 
 	def get_class_name_list(cls):
-		for parent_cls in cls.__bases__:
-			if hasattr(parent_cls, 'alias_list') and (cls.alias_list == parent_cls.alias_list):
+		for parent_cls in _filter_plugin_parents(cls):
+			if cls.alias_list == parent_cls.alias_list:
 				return [cls.__name__]  # class aliases are not inherited
 		return [cls.__name__] + cls.alias_list
 	get_class_name_list = classmethod(get_class_name_list)
@@ -215,10 +215,9 @@ class Plugin(object):
 	def iter_class_bases(cls, add_current_cls=True):
 		if add_current_cls:
 			yield cls
-		for parent_cls in cls.__bases__:
-			if issubclass(parent_cls, Plugin):
-				for entry in parent_cls.iter_class_bases():
-					yield entry
+		for parent_cls in _filter_plugin_parents(cls):
+			for entry in parent_cls.iter_class_bases():
+				yield entry
 	iter_class_bases = classmethod(iter_class_bases)
 
 	def register_class(cls, module_name, cls_name, alias_list, base_cls_names):
@@ -279,6 +278,17 @@ class Plugin(object):
 			raise PluginError(msg)
 	_get_class_checked = classmethod(_get_class_checked)
 
+	def _repr_base(self, args=None, short_cls_name=True):
+		if args is not None:
+			args = ':%s' % args
+		if short_cls_name:
+			cls_name_len_list = []
+			for cls_name in self.get_class_name_list():
+				cls_name_len_list.append((len(cls_name), cls_name))
+			cls_name_len_list.sort()
+			return '<%s%s>' % (cls_name_len_list[0][1], args or '')
+		return '<%s%s>' % (self.__class__.__name__, args or '')
+
 
 def _filter_class_with_parent(exc, log, cls_iter, cls_parent, cls_list_bad_parents):
 	for cls in cls_iter:
@@ -291,6 +301,12 @@ def _filter_class_with_parent(exc, log, cls_iter, cls_parent, cls_list_bad_paren
 				_get_fq_class_name(cls), _get_fq_class_name(cls_parent))
 		except Exception:
 			exc.collect()
+
+
+def _filter_plugin_parents(cls):
+	for parent_cls in cls.__bases__:
+		if issubclass(parent_cls, Plugin):
+			yield parent_cls
 
 
 def _get_class_list_from_modules(exc, log, cls_name, cls_module_list):

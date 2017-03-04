@@ -1,4 +1,4 @@
-# | Copyright 2012-2016 Karlsruhe Institute of Technology
+# | Copyright 2012-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -18,9 +18,12 @@ from python_compat import ifilter, imap
 
 
 class ThreadedMultiWMS(MultiWMS):
-	def _forwardCall(self, args, assignFun, callFun):
-		argMap = self._getMapID2Backend(args, assignFun)
-		def makeGenerator(wmsPrefix):
-			return callFun(self._wmsMap[wmsPrefix], argMap[wmsPrefix])
-		for result in tchain(imap(makeGenerator, ifilter(argMap.__contains__, self._wmsMap))):
+	def _forward_call(self, args, assign_fun, call_fun):
+		backend_name2args = self._get_map_backend_name2args(args, assign_fun)
+
+		def _make_generator(backend_name):
+			return call_fun(self._map_backend_name2backend[backend_name], backend_name2args[backend_name])
+
+		backend_name_iter = ifilter(backend_name2args.__contains__, self._map_backend_name2backend)
+		for result in tchain(imap(_make_generator, backend_name_iter)):
 			yield result

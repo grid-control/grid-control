@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ class ConfigDataProvider(DataProvider):
 		def _on_change(config, old_obj, cur_obj, cur_entry, obj2str):
 			self._log.critical('Dataset %r changed', dataset_expr)
 			return TriggerResync(['datasets', 'parameters'])(config, old_obj, cur_obj, cur_entry, obj2str)
-		ds_config.get('%s hash' % datasource_name, self.get_hash(), persistent=True, on_change=_on_change)
+		ds_config.get('dataset hash', self._get_dataset_hash(), persistent=True, on_change=_on_change)
 
 	def _iter_blocks_raw(self):
 		yield copy.deepcopy(self._block)  # dataset processors might modify metadata inplace

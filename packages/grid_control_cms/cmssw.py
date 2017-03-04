@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -161,7 +161,7 @@ class CMSSW(SCRAMTask):
 		config.set('se input timeout', '0:30')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
-		config.set('dataset processor', 'LumiDataProcessor', '+=')
+		config.set('dataset processor', 'LumiDataProcessor', '+=', unique=True)
 		config.set('partition processor',
 			'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor ' +
 			'LFNPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
@@ -275,9 +275,12 @@ class CMSSW(SCRAMTask):
 		# Get environment variables for gc_config.sh
 		data = SCRAMTask.get_task_dict(self)
 		data.update(dict(self._cmssw_search_dict))
-		data['GZIP_OUT'] = utils.QM(self._do_gzip_std_output, 'yes', 'no')
-		data['SE_RUNTIME'] = utils.QM(self._project_area_tarball_on_se, 'yes', 'no')
-		data['HAS_RUNTIME'] = utils.QM(self._project_area, 'yes', 'no')
+		if self._do_gzip_std_output:
+			data['GZIP_OUT'] = 'yes'
+		if self._project_area_tarball_on_se:
+			data['SE_RUNTIME'] = 'yes'
+		if self._project_area:
+			data['HAS_RUNTIME'] = 'yes'
 		data['CMSSW_EXEC'] = 'cmsRun'
 		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self._config_fn_list))
 		data['CMSSW_OLD_RELEASETOP'] = self._old_release_top
@@ -348,8 +351,8 @@ class CMSSW(SCRAMTask):
 		finally:
 			fp.close()
 
-	def _create_datasource(self, config, name, psrc_repository):
-		psrc_data = SCRAMTask._create_datasource(self, config, name, psrc_repository)
+	def _create_datasource(self, config, name, psrc_repository, psrc_list):
+		psrc_data = SCRAMTask._create_datasource(self, config, name, psrc_repository, psrc_list)
 		if psrc_data is not None:
 			self._needed_vn_set.update(psrc_data.get_needed_dataset_keys())
 		return psrc_data

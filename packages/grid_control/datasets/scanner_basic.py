@@ -1,4 +1,4 @@
-# | Copyright 2010-2016 Karlsruhe Institute of Technology
+# | Copyright 2010-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -229,9 +229,9 @@ class OutputDirsFromConfig(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		ext_config_fn = config.get_path('source config')
-		ext_config_raw = create_config(ext_config_fn, use_default_files=True)
+		ext_config_raw = create_config(ext_config_fn, load_only_old_config=True)
 		ext_config = ext_config_raw.change_view(set_sections=['global'])
-		self._ext_workdir = ext_config.get_work_path()
+		self._ext_work_dn = ext_config.get_work_path()
 		logging.getLogger().disabled = True
 		self._ext_workflow = ext_config.get_plugin('workflow', 'Workflow:global',
 			cls='Workflow', pargs=('task',))
@@ -250,8 +250,8 @@ class OutputDirsFromConfig(InfoScanner):
 		for jobnum in self._selected:
 			progress.update_progress(jobnum)
 			metadata_dict['GC_JOBNUM'] = jobnum
-			obj_dict.update({'GC_TASK': self._ext_task, 'GC_WORKDIR': self._ext_workdir})
-			job_output_dn = os.path.join(self._ext_workdir, 'output', 'job_%d' % jobnum)
+			obj_dict.update({'GC_TASK': self._ext_task, 'GC_WORKDIR': self._ext_work_dn})
+			job_output_dn = os.path.join(self._ext_work_dn, 'output', 'job_%d' % jobnum)
 			yield (job_output_dn, metadata_dict, entries, location_list, obj_dict)
 		progress.finish()
 
@@ -259,8 +259,8 @@ class OutputDirsFromConfig(InfoScanner):
 class OutputDirsFromWork(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._ext_workdir = config.get_path('source directory')
-		self._ext_output_dir = os.path.join(self._ext_workdir, 'output')
+		self._ext_work_dn = config.get_path('source directory')
+		self._ext_output_dir = os.path.join(self._ext_work_dn, 'output')
 		if not os.path.isdir(self._ext_output_dir):
 			raise DatasetError('Unable to find task output directory %s' % repr(self._ext_output_dir))
 		self._selector = JobSelector.create(config.get('source job selector', ''))
@@ -274,7 +274,7 @@ class OutputDirsFromWork(InfoScanner):
 				metadata_dict['GC_JOBNUM'] = int(dn.split('_')[1])
 			except Exception:
 				continue
-			obj_dict['GC_WORKDIR'] = self._ext_workdir
+			obj_dict['GC_WORKDIR'] = self._ext_work_dn
 			if self._selector and not self._selector(metadata_dict['GC_JOBNUM'], None):
 				continue
 			job_output_dn = os.path.join(self._ext_output_dir, dn)
@@ -293,7 +293,7 @@ class ParentLookup(InfoScanner):
 		self._parent_merge = config.get_bool('merge parents', False)
 		# cached "parent lfn parts" (plfnp) to "parent dataset name" (pdn) maps
 		self._plfnp2pdn_cache = {}  # the maps are stored for different parent_dataset_expr
-		self._empty_config = create_config()
+		self._empty_config = create_config(use_default_files=False, load_old_config=False)
 		self._read_plfnp_map(config, self._parent_source)  # read from configured parent source
 
 	def get_guard_keysets(self):
@@ -312,9 +312,9 @@ class ParentLookup(InfoScanner):
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		# if parent source is not defined, try to get datacache from GC_WORKDIR
 		map_plfnp2pdn = dict(self._plfnp2pdn_cache.get(self._parent_source, {}))
-		datacache_path = os.path.join(obj_dict.get('GC_WORKDIR', ''), 'datacache.dat')
-		if os.path.exists(datacache_path):  # extend configured parent source with datacache if it exists
-			map_plfnp2pdn.update(self._read_plfnp_map(self._empty_config, datacache_path))
+		datacache_fn = os.path.join(obj_dict.get('GC_WORKDIR', ''), 'datacache.dat')
+		if os.path.exists(datacache_fn):  # extend configured parent source with datacache if it exists
+			map_plfnp2pdn.update(self._read_plfnp_map(self._empty_config, datacache_fn))
 		pdn_list = []  # list with parent dataset names
 		for key in ifilter(metadata_dict.__contains__, self._parent_keys):
 			parent_lfn_list = metadata_dict[key]
@@ -329,7 +329,7 @@ class ParentLookup(InfoScanner):
 		if parent_dataset_expr and (parent_dataset_expr not in self._plfnp2pdn_cache):
 			# read parent source and fill lfnMap with parent_lfn_parts -> parent dataset name mapping
 			map_plfnp2pdn = self._plfnp2pdn_cache.setdefault(parent_dataset_expr, {})
-			for block in DataProvider.iter_blocks_from_expr(config, parent_dataset_expr):
+			for block in DataProvider.iter_blocks_from_expr(self._empty_config, parent_dataset_expr):
 				for fi in block[DataProvider.FileList]:
 					map_plfnp2pdn[self._get_lfnp(fi[DataProvider.URL])] = block[DataProvider.Dataset]
 		return self._plfnp2pdn_cache.get(parent_dataset_expr, {})  # return cached mapping

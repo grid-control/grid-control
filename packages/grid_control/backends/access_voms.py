@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -24,13 +24,13 @@ class VomsAccessToken(GridAccessToken):
 	def __init__(self, config, name):
 		GridAccessToken.__init__(self, config, name, 'voms-proxy-info')
 
-	def _getProxyArgs(self):
-		if self._proxyPath:
-			return ['--all', '--file', self._proxyPath]
+	def get_auth_fn_list(self):
+		return [self._get_proxy_info('path')]
+
+	def _get_proxy_info_arguments(self):
+		if self._proxy_fn:
+			return ['--all', '--file', self._proxy_fn]
 		return ['--all']
 
-	def getAuthFiles(self):
-		return [self._getProxyInfo('path')]
-
 	def _get_timeleft(self, cached):
-		return self._getProxyInfo('timeleft', parse_time, cached)
+		return self._get_proxy_info('timeleft', parse_time, cached)

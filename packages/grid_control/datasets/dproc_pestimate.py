@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ from grid_control.config import join_config_locations
 from grid_control.datasets.dproc_base import DataProcessor
 from grid_control.datasets.provider_base import DataProvider
 from hpfwk import clear_current_exception
-from python_compat import iidfilter
+from python_compat import iidfilter, sorted
 
 
 class PartitionEstimator(DataProcessor):
@@ -34,20 +34,20 @@ class PartitionEstimator(DataProcessor):
 		if self.enabled():
 			self._config = config
 
-	def enabled(self):
-		return (self._target_jobs > 0) or (self._target_jobs_ds > 0)
+	def disable_stream_singletons(self):
+		self._disabled = True
+
+	def must_complete_for_partition(self):
+		return True
 
 	def process(self, block_iter):
 		if self.enabled() and self._config:
 			block_list = list(DataProcessor.process(self, block_iter))
-			if self._target_jobs > 0:
-				self._set_split_opt(self._config, 'files per job', self._files[None], self._target_jobs)
-				self._set_split_opt(self._config, 'events per job', self._entries[None], self._target_jobs)
-			if self._target_jobs_ds > 0:
-				for nick in iidfilter(self._files):
-					block_config = self._config.change_view(set_sections=['dataset %s' % nick])
-					self._set_split_opt(block_config, 'files per job', self._files[nick], self._target_jobs_ds)
-					self._set_split_opt(block_config, 'events per job', self._entries[nick], self._target_jobs_ds)
+			if (self._target_jobs > 0) or (self._target_jobs_ds > 0):
+				self._set_split_opt(self._config, 'files per job', dict(self._files),
+					self._target_jobs, self._target_jobs_ds)
+				self._set_split_opt(self._config, 'events per job', dict(self._entries),
+					self._target_jobs, self._target_jobs_ds)
 			self._config = None
 			return block_list
 		return block_iter
@@ -61,8 +61,22 @@ class PartitionEstimator(DataProcessor):
 			_inc(block.get(DataProvider.Nickname))
 		return block
 
-	def _set_split_opt(self, config, name, work_units, target_partitions):
+	def _enabled(self):
+		return (self._target_jobs > 0) or (self._target_jobs_ds > 0)
+
+	def _set_split_opt(self, config, name, work_unit_dict,
+			target_partitions, target_partitions_by_nick):
+		def _get_target_partitions(work_units, target):
+			return str(max(1, int(work_units / float(target) + 0.5)))
+		new_config_str = ''
+		global_work_units = work_unit_dict.pop(None)
+		if target_partitions > 0:
+			new_config_str = _get_target_partitions(global_work_units, target_partitions)
+		if target_partitions_by_nick > 0:
+			for nick in iidfilter(sorted(work_unit_dict)):
+				new_config_str += '\n\t%s => %s' % (nick,
+					_get_target_partitions(work_unit_dict[nick], target_partitions_by_nick))
 		try:
-			config.set_int(name, max(1, int(work_units / float(target_partitions) + 0.5)))
+			config.set(name, new_config_str)
 		except Exception:
 			clear_current_exception()

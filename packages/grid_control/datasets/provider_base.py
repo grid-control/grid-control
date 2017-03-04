@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -56,29 +56,12 @@ class DataProvider(ConfigurablePlugin):
 			'LocationDataProcessor', 'MultiDataProcessor', cls=DataProcessor, pargs=(datasource_name,))
 
 	def bind(cls, value, **kwargs):
-		config = kwargs.pop('config')
-		datasource_name = kwargs.pop('datasource_name', 'dataset')
-		provider_name_default = kwargs.pop('provider_name_default', 'ListProvider')
-
-		instance_args = []
-		for entry in ifilter(str.strip, value.splitlines()):
-			(nickname, provider_name, dataset_name) = ('', provider_name_default, None)
-			tmp = lmap(str.strip, entry.split(':', 2))
-			if len(tmp) == 3:  # use tmp[...] to avoid false positives for unpacking checker ...
-				(nickname, provider_name, dataset_name) = (tmp[0], tmp[1], tmp[2])
-				if dataset_name.startswith('/'):
-					dataset_name = '/' + dataset_name.lstrip('/')
-			elif len(tmp) == 2:
-				(nickname, dataset_name) = (tmp[0], tmp[1])
-			elif len(tmp) == 1:
-				dataset_name = tmp[0]
-
-			provider = cls.get_class(provider_name)
-			bind_value = str.join(':', [nickname, provider_name, dataset_name])
-			instance_args.append([bind_value, provider, config, datasource_name, dataset_name, nickname])
-		for instance_arg in instance_args:
-			if len(instance_args) > 1:
-				yield InstanceFactory(*instance_arg, dataset_proc=NullDataProcessor())
+		instance_arg_list = cls.parse_bind_args(value, **kwargs)
+		for (instance_idx, instance_arg) in enumerate(instance_arg_list):
+			if len(instance_arg_list) > 1:
+				(bind_value, provider, config, datasource_name, dataset_expr, nickname) = instance_arg
+				yield InstanceFactory(bind_value, provider, config,
+					datasource_name + ' provider %d' % (instance_idx + 1), dataset_expr, nickname)
 			else:
 				yield InstanceFactory(*instance_arg)
 	bind = classmethod(bind)
@@ -90,6 +73,11 @@ class DataProvider(ConfigurablePlugin):
 	def clear_cache(self):
 		self._cache_block = None
 		self._cache_dataset = None
+
+	def disable_stream_singletons(self):
+		self._dataset_processor.disable_stream_singletons()
+		if not self._dataset_processor.enabled():
+			self._dataset_processor = NullDataProcessor()
 
 	def get_block_id(cls, block):
 		if block.get(DataProvider.BlockName, '') in ['', '0']:
@@ -112,13 +100,6 @@ class DataProvider(ConfigurablePlugin):
 				if abort():
 					raise DatasetError('Received abort request during dataset name retrieval!')
 		return list(self._cache_dataset)
-
-	def get_hash(self):
-		buffer = StringBuffer()
-		block_iter_processed = self._dataset_processor.process(self.iter_blocks_normed())
-		for _ in DataProvider.save_to_stream(buffer, block_iter_processed):
-			pass
-		return md5_hex(buffer.getvalue())
 
 	def get_query_interval(self):
 		# Define how often the dataprovider can be queried automatically
@@ -159,6 +140,33 @@ class DataProvider(ConfigurablePlugin):
 		return DataProvider.create_instance('ListProvider', create_config(load_old_config=False,
 			config_dict={'dataset': {'dataset processor': 'NullDataProcessor'}}), 'dataset', path)
 	load_from_file = staticmethod(load_from_file)
+
+	def need_init_query(self):
+		return self._dataset_processor.must_complete_for_partition()
+
+	def parse_bind_args(cls, value, **kwargs):
+		config = kwargs.pop('config')
+		datasource_name = kwargs.pop('datasource_name', 'dataset')
+		provider_name_default = kwargs.pop('provider_name_default', 'ListProvider')
+
+		instance_args = []
+		for entry in ifilter(str.strip, value.splitlines()):
+			(nickname, provider_name, dataset_expr) = ('', provider_name_default, None)
+			tmp = lmap(str.strip, entry.split(':', 2))
+			if len(tmp) == 3:  # use tmp[...] to avoid false positives for unpacking checker ...
+				(nickname, provider_name, dataset_expr) = (tmp[0], tmp[1], tmp[2])
+				if dataset_expr.startswith('/'):
+					dataset_expr = '/' + dataset_expr.lstrip('/')
+			elif len(tmp) == 2:
+				(nickname, dataset_expr) = (tmp[0], tmp[1])
+			elif len(tmp) == 1:
+				dataset_expr = tmp[0]
+
+			provider = cls.get_class(provider_name)
+			bind_value = str.join(':', [nickname, provider_name, dataset_expr])
+			instance_args.append((bind_value, provider, config, datasource_name, dataset_expr, nickname))
+		return instance_args
+	parse_bind_args = classmethod(parse_bind_args)
 
 	def parse_block_id(cls, block_id_str):
 		block_id_parts = block_id_str.split('#', 1)
@@ -202,16 +210,21 @@ class DataProvider(ConfigurablePlugin):
 	resync_blocks = staticmethod(resync_blocks)
 
 	def save_to_file(path, block_iter, strip_metadata=False):
+		for _ in DataProvider.save_to_file_iter(path, block_iter, strip_metadata):
+			pass
+	save_to_file = staticmethod(save_to_file)
+
+	def save_to_file_iter(path, block_iter, strip_metadata=False):
 		# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
 		if os.path.dirname(path):
 			ensure_dir_exists(os.path.dirname(path), 'dataset cache directory')
 		fp = open(path, 'w')
 		try:
-			for _ in DataProvider.save_to_stream(fp, block_iter, strip_metadata):
-				pass
+			for block in DataProvider.save_to_stream(fp, block_iter, strip_metadata):
+				yield block
 		finally:
 			fp.close()
-	save_to_file = staticmethod(save_to_file)
+	save_to_file_iter = staticmethod(save_to_file_iter)
 
 	def save_to_stream(stream, block_iter, strip_metadata=False):
 		writer = StringBuffer()
@@ -279,6 +292,12 @@ class DataProvider(ConfigurablePlugin):
 					'through processing pipeline!')
 		self._raise_on_abort()
 		return self._cache_block
+
+	def _get_dataset_hash(self):
+		buffer = StringBuffer()
+		for _ in DataProvider.save_to_stream(buffer, self.iter_blocks_normed()):
+			pass
+		return md5_hex(buffer.getvalue())
 
 	def _iter_blocks_raw(self):
 		# List of (partial or complete) block dicts with format

@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, random, logging
+import os, time, random, logging
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, NoVarCheck, TriggerInit
@@ -21,7 +21,6 @@ from grid_control.parameters import ParameterAdapter, ParameterFactory, Paramete
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.parsing import str_guid
 from hpfwk import AbstractError
-from time import strftime, time
 from python_compat import ichain, ifilter, imap, izip, lchain, lmap, lru_cache, md5_hex
 
 
@@ -30,7 +29,7 @@ class JobNamePlugin(ConfigurablePlugin):
 		raise AbstractError
 
 
-class TaskModule(NamedPlugin):
+class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 	config_section_list = NamedPlugin.config_section_list + ['task']
 	config_tag_name = 'task'
 
@@ -50,10 +49,10 @@ class TaskModule(NamedPlugin):
 		self._job_timeout = jobs_config.get_time('node timeout', -1, on_change=init_sandbox)
 
 		# Compute / get task ID
-		self.task_id = config.get('task id', 'GC' + md5_hex(str(time()))[:12], persistent=True)
-		self.task_date = config.get('task date', strftime('%Y-%m-%d'),
+		self.task_id = config.get('task id', 'GC' + md5_hex(str(time.time()))[:12], persistent=True)
+		self.task_date = config.get('task date', time.strftime('%Y-%m-%d'),
 			persistent=True, on_change=init_sandbox)
-		self.task_time = config.get('task time', strftime('%H%M%S'),
+		self.task_time = config.get('task time', time.strftime('%H%M%S'),
 			persistent=True, on_change=init_sandbox)
 		self.task_config_name = config.get_config_name()
 		self._job_name_generator = config.get_plugin('job name generator',
@@ -87,7 +86,7 @@ class TaskModule(NamedPlugin):
 		psrc_repository = {}
 		self._setup_repository(config, psrc_repository)
 		pfactory = config.get_plugin('internal parameter factory', 'BasicParameterFactory',
-			cls=ParameterFactory, bkwargs={'tags': [self], 'inherit': True})
+			cls=ParameterFactory, bind_kwargs={'tags': [self], 'inherit': True})
 		self.source = config.get_plugin('parameter adapter', 'TrackedParameterAdapter',
 			cls=ParameterAdapter, pargs=(pfactory.get_psrc(psrc_repository),))
 		self._log.log(logging.DEBUG3, 'Using parameter adapter %s', repr(self.source))
@@ -167,7 +166,7 @@ class TaskModule(NamedPlugin):
 	def get_transient_variables(self):
 		def create_guid():
 			return str_guid(str.join('', imap(lambda x: "%02x" % x, imap(random.randrange, [256] * 16))))
-		return {'GC_DATE': strftime("%F"), 'GC_TIMESTAMP': strftime("%s"),
+		return {'GC_DATE': time.strftime("%F"), 'GC_TIMESTAMP': time.strftime("%s"),
 			'GC_GUID': create_guid(), 'RANDOM': str(random.randrange(0, 900000000))}
 
 	def get_var_alias_map(self):

@@ -1,4 +1,4 @@
-# | Copyright 2010-2016 Karlsruhe Institute of Technology
+# | Copyright 2010-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -47,7 +47,9 @@ class ROOTTask(UserTask):
 
 	def get_command(self):
 		cmd = './gc-run.root.sh %s $@ > job.stdout 2> job.stderr' % self._executable
-		return utils.QM(self._is_builtin, '', 'chmod u+x %s; ' % self._executable) + cmd
+		if self._is_builtin:
+			return cmd
+		return 'chmod u+x %s; %s' % (self._executable, cmd)
 
 	def get_sb_in_fpi_list(self):
 		return UserTask.get_sb_in_fpi_list(self) + self._lib_fn_list + [

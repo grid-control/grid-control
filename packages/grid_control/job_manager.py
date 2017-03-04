@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ from grid_control.utils.parsing import str_time_long
 from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
 
 
-class JobManager(NamedPlugin):
+class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 	config_section_list = NamedPlugin.config_section_list + ['jobs']
 	config_tag_name = 'jobmgr'
 
@@ -93,8 +93,11 @@ class JobManager(NamedPlugin):
 			utils.wait(2)
 
 	def check(self, task, wms):
+		check_chunk_size = -1
+		if self._chunks_enabled:
+			check_chunk_size = self._chunks_check
 		jobnum_list = self._sample(self.job_db.get_job_list(ClassSelector(JobClass.PROCESSING)),
-			utils.QM(self._chunks_enabled, self._chunks_check, -1))
+			check_chunk_size)
 
 		# Check jobs in the jobnum_list and return changes, timeouts and successfully reported jobs
 		(change, jobnum_list_timeout, reported) = self._check_get_jobnum_list(wms, jobnum_list)
@@ -148,10 +151,14 @@ class JobManager(NamedPlugin):
 
 	def retrieve(self, task, wms):
 		change = False
+		retrieve_chunk_size = -1
+		if self._chunks_enabled:
+			retrieve_chunk_size = self._chunks_retrieve
 		jobnum_list = self._sample(self.job_db.get_job_list(ClassSelector(JobClass.DONE)),
-			utils.QM(self._chunks_enabled, self._chunks_retrieve, -1))
+			retrieve_chunk_size)
 
-		for (jobnum, exit_code, data, outputdir) in wms.retrieve_jobs(self._get_wms_args(jobnum_list)):
+		job_output_iter = wms.retrieve_jobs(self._get_wms_args(jobnum_list))
+		for (jobnum, exit_code, data, outputdir) in job_output_iter:
 			job_obj = self.job_db.get_job(jobnum)
 			if job_obj is None:
 				continue
@@ -359,8 +366,10 @@ class JobManager(NamedPlugin):
 				err_str_list.append('have hit their maximum number of retries')
 			if (n_retry_ok != 0) and (n_mod_ok <= 0):
 				err_str_list.append('are vetoed by the task module')
-			self._log.log_time(logging.WARNING, 'All remaining jobs %s!',
-				str.join(utils.QM(n_retry_ok or n_mod_ok, ' or ', ' and '), err_str_list))
+			err_delim = ' and '
+			if n_retry_ok or n_mod_ok:
+				err_delim = ' or '
+			self._log.log_time(logging.WARNING, 'All remaining jobs %s!', str.join(err_delim, err_str_list))
 		self._show_blocker = not (len(jobnum_list_ready) > 0 and len(jobnum_list) == 0)
 
 		# Determine number of jobs to submit
@@ -390,8 +399,12 @@ class JobManager(NamedPlugin):
 		jobnum_len = int(math.log10(max(1, len(self.job_db))) + 1)
 		job_status_str_list = ['Job %s state changed from %s to %s ' % (
 			str(jobnum).ljust(jobnum_len), Job.enum2str(state_old), Job.enum2str(state))]
-		if message is not None:
-			job_status_str_list.append(message)
+
+		def _add_msg(msg_list, msg):
+			if msg:
+				msg_list.append(msg)
+
+		_add_msg(job_status_str_list, message)
 		if show_wms and job_obj.gc_id:
 			job_status_str_list.append('(WMS:%s)' % job_obj.gc_id.split('.')[1])
 		if (state == Job.SUBMITTED) and (job_obj.attempt > 1):
@@ -404,16 +417,15 @@ class JobManager(NamedPlugin):
 			if (job_obj.get('runtime') or 0) >= 0:
 				job_status_str_list.append('(runtime %s)' % str_time_long(job_obj.get('runtime') or 0))
 		elif state == Job.FAILED:
-			msg = []
+			msg_list = []
 			exit_code = job_obj.get('retcode')
 			if exit_code:
-				msg.append('error code: %d' % exit_code)
+				msg_list.append('error code: %d' % exit_code)
 				if self._log.isEnabledFor(logging.DEBUG) and (exit_code in self._map_error_code2message):
-					msg.append(self._map_error_code2message[exit_code])
-			if job_obj.get('dest'):
-				msg.append(job_obj.get('dest'))
-			if len(msg):
-				job_status_str_list.append('(%s)' % str.join(' - ', msg))
+					msg_list.append(self._map_error_code2message[exit_code])
+			_add_msg(msg_list, job_obj.get('dest'))
+			if len(msg_list):
+				job_status_str_list.append('(%s)' % str.join(' - ', msg_list))
 		self._log.log_time(logging.INFO, str.join(' ', job_status_str_list))
 
 
@@ -457,7 +469,9 @@ class SimpleJobManager(JobManager):
 
 		if self._defect_tries and (change is not None):
 			# make 'raster' iteratively smaller
-			self._defect_raster = utils.QM(reported, 1, self._defect_raster + 1)
+			self._defect_raster += 1
+			if reported:
+				self._defect_raster = 1
 			for jobnum in ifilter(lambda x: x not in reported, jobnum_list):
 				self._defect_counter[jobnum] = self._defect_counter.get(jobnum, 0) + 1
 			jobnum_list_kick = lfilter(lambda jobnum: self._defect_counter[jobnum] >= self._defect_tries,

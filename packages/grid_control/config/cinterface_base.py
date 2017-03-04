@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -53,11 +53,11 @@ class ConfigInterface(object):
 		return result
 
 	def get_work_path(self, *fn_list):
-		return os.path.join(self._config_view.config_vault['path:workdir'], *fn_list)
+		return os.path.join(self._config_view.config_vault['path:work_dn'], *fn_list)
 
-	def set(self, option, value, opttype='=', source=None, obj2str=str.__str__):
+	def set(self, option, value, opttype='=', source=None, obj2str=str.__str__, unique=False):
 		# Setting string config options - whitespace around the value will get discarded
-		return self._set_internal('string', obj2str, option, value, opttype, source)
+		return self._set_internal('string', obj2str, option, value, opttype, source, unique)
 
 	def write(self, stream, **kwargs):
 		# Write settings to file
@@ -112,7 +112,7 @@ class ConfigInterface(object):
 			return self._process_entries(old_entry, cur_entry, desc, obj2str, str2obj, on_change, on_valid)
 		except Exception:
 			if unspecified(default_obj):
-				default_str = 'no default'
+				default_str = 'no default'  # pylint:disable=redefined-variable-type
 			elif not default_str:
 				default_str = repr(default_obj)
 			raise ConfigError('Unable to get %r from option %r (%s)' % (desc, option_str, default_str))
@@ -142,7 +142,7 @@ class ConfigInterface(object):
 			return on_valid(cur_entry.format_opt(), cur_obj)
 		return cur_obj
 
-	def _set_internal(self, desc, obj2str, option, set_obj, opttype, source):
+	def _set_internal(self, desc, obj2str, option, set_obj, opttype, source, unique):
 		try:
 			value = obj2str(set_obj)
 		except Exception:
@@ -150,7 +150,7 @@ class ConfigInterface(object):
 		try:
 			if not source:
 				source = '<%s by %s>' % (desc, self._get_caller())
-			entry = self._config_view.set(norm_config_locations(option), value, opttype, source)
+			entry = self._config_view.set(norm_config_locations(option), value, opttype, source, unique)
 			self._log.log(logging.INFO2, 'Setting %s %s %s ', desc,
 				ConfigEntry.OptTypeDesc[opttype], entry.format(print_section=True))
 			return entry

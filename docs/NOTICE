@@ -1,6 +1,6 @@
 grid-control (https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control)
 
-Copyright (C) 2007-2016 Karlsruhe Institute of Technology
+Copyright (C) 2007-2017 Karlsruhe Institute of Technology
 
 Maintained by: Fred Stober             <grid-control-dev@googlegroups.com>
 
@@ -9,7 +9,6 @@ Maintained by: Fred Stober             <grid-control-dev@googlegroups.com>
                Jana Saout              <jana@saout.de>
                Manuel Giffels          <manuel.giffels@cern.ch>
                Thomas Hauth            <thomas.hauth@cern.ch>
-               Armin Burgmeier         <burgmeier@ekp.uni-karlsruhe.de>
                Armin Scheurer          <contact@armin-scheurer.de>
                Andreas Oehler          <andreasoehler@gmx.net>
                Matthias Wolf           <matthias.wolf.60@nd.edu>
@@ -17,14 +16,16 @@ Maintained by: Fred Stober             <grid-control-dev@googlegroups.com>
                Jochen Ott              <ott@ekp.uni-karlsruhe.de>
                Thomas Müller           <tmuller@cern.ch>
                Manuel Zeise            <manuel.zeise@sap.com>
-               Joram Berger            <joram.berger@cern.ch>
                Klaus Rabbertz          <klaus.rabbertz@cern.ch>
+               Armin Burgmeier         <burgmeier@ekp.uni-karlsruhe.de>
                Artur Akhmetshin        <artur.akhmetshin@cern.ch>
-               Joosep Pata             <joosep.pata@cern.ch>
+               Johannes Lange          <johannes.lange@rwth-aachen.de>
                Frank Fischer           <frank.fischer@student.kit.edu>
+               Joosep Pata             <joosep.pata@cern.ch>
                Oliver Oberst           <oliver.oberst@de.ibm.com>
                Eike Schlieckau         <eike.schlieckau@desy.de>
                Benjamin Klein          <klein@ekp.physik.uni-karlsruhe.de>
+               Joram Berger            <joram.berger@cern.ch>
                Benjamin Treiber        <benjamin.treiber@gmail.com>
                Dominik Haitz           <dhaitz@ekp.uni-karlsruhe.de>
                Stefan Wayand           <stefan.wayand@cern.ch>

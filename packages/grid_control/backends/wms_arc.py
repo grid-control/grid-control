@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,37 +12,36 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
-from grid_control.backends.broker_base import Broker
-from grid_control.backends.jdl_writer import JDLWriter
-from grid_control.backends.wms import BackendError, BasicWMS, WMS
+from grid_control.backends.wms import BasicWMS
 from grid_control.job_db import Job
-from grid_control.utils.activity import Activity
-from grid_control.utils.file_objects import SafeFile
-from grid_control.utils.process_base import LocalProcess
-from python_compat import identity, ifilter, imap, lfilter, lmap, md5, tarfile
+from python_compat import imap
 
 
-class ARC_CheckJobs(CheckJobsWithProcess):
+class ARC(BasicWMS):
+	config_section_list = BasicWMS.config_section_list + ['arc']
+
+
+class ARCCancelJobs(CancelJobsWithProcessBlind):
+	def __init__(self, config):
+		CancelJobsWithProcessBlind.__init__(self, config, 'arckill')
+
+
+class ARCCheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		CheckJobsWithProcess.__init__(self, config,
-			ProcessCreatorAppendArguments(config, 'arcstat', ['-all']), status_map = {
-			'accepted': Job.QUEUED,
-			'deleted': Job.ABORTED,
-			'failed': Job.ABORTED,
-			'finished': Job.DONE,
-			'finishing': Job.RUNNING,
-			'hold': Job.WAITING,
-			'killed': Job.CANCELLED,
-			'other': Job.WAITING,
-			'preparing': Job.READY,
-			'queuing': Job.QUEUED,
-			'running': Job.RUNNING,
-			'submitting': Job.SUBMITTED,
-		})
+			ProcessCreatorAppendArguments(config, 'arcstat', ['-all']), status_map={
+				Job.ABORTED: ['deleted', 'failed'],
+				Job.CANCELLED: ['killed'],
+				Job.DONE: ['finished'],
+				Job.QUEUED: ['accepted', 'queuing'],
+				Job.READY: ['preparing'],
+				Job.RUNNING: ['finishing', 'running'],
+				Job.SUBMITTED: ['submitting'],
+				Job.WAITING: ['hold', 'other'],
+			})
 
 	def _parse(self, proc):
 		job_info = {}
@@ -61,12 +60,3 @@ class ARC_CheckJobs(CheckJobsWithProcess):
 			elif value:
 				job_info[key] = value
 		yield job_info
-
-
-class ARC_CancelJobs(CancelJobsWithProcessBlind):
-	def __init__(self, config):
-		CancelJobsWithProcessBlind.__init__(self, config, 'arckill')
-
-
-class ARC(BasicWMS):
-	config_section_list = BasicWMS.config_section_list + ['arc']

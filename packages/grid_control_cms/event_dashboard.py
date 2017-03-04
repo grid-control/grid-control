@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
 import os, time
 from grid_control.job_db import Job
 from grid_control.monitoring import Monitoring
-from grid_control.utils import filter_dict, get_path_share, get_version, merge_dict_list
+from grid_control.utils import filter_dict, get_local_username, get_path_share, get_version, merge_dict_list  # pylint:disable=line-too-long
 from grid_control.utils.thread_tools import GCThreadPool
 from grid_control_cms.DashboardAPI.DashboardAPI import DashboardAPI
 from python_compat import identity
@@ -55,13 +55,13 @@ class DashBoard(Monitoring):
 		# Called on job submission
 		token = wms.get_access_token(job_obj.gc_id)
 		job_config_dict = self._task.get_job_dict(jobnum)
-		self._start_publish(job_obj, jobnum, 'submission', [{'user': os.environ['LOGNAME'],
-			'GridName': '/CN=%s' % token.getUsername(), 'CMSUser': token.getUsername(),
+		self._start_publish(job_obj, jobnum, 'submission', [{'user': get_local_username(),
+			'GridName': '/CN=%s' % token.get_user_name(), 'CMSUser': token.get_user_name(),
 			'tool': 'grid-control', 'JSToolVersion': get_version(),
-			'SubmissionType':'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
+			'SubmissionType': 'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
 			'application': job_config_dict.get('SCRAM_PROJECTVERSION', self._app),
 			'exe': job_config_dict.get('CMSSW_EXEC', 'shellscript'), 'taskType': self._tasktype,
-			'scheduler': wms.get_object_name(), 'vo': token.getGroup(),
+			'scheduler': wms.get_object_name(), 'vo': token.get_group(),
 			'nevtJob': job_config_dict.get('MAX_EVENTS', 0),
 			'datasetFull': job_config_dict.get('DATASETPATH', 'none')}])
 

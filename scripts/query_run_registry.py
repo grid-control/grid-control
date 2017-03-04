@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# | Copyright 2010-2016 Karlsruhe Institute of Technology
+# | Copyright 2010-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -18,11 +18,18 @@ try:
 except ImportError:
 	from xmlrpc.client import ServerProxy
 import sys
-from gcSupport import utils
+from gc_scripts import utils
 from grid_control_cms.lumi_tools import format_lumi, merge_lumi_list, parse_lumi_from_json
 
 
-server = ServerProxy('http://pccmsdqm04.cern.ch/runregistry/xmlrpc')
-data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupName': 'Collisions10'})
-runs = parse_lumi_from_json(data)
-sys.stdout.write('lumi filter = %s\n' % utils.wrap_list(format_lumi(merge_lumi_list(runs)), 60, ',\n\t'))
+def _main():
+	server = ServerProxy('http://pccmsdqm04.cern.ch/runregistry/xmlrpc')
+	data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json',
+		{'groupName': 'Collisions10'})
+	runs = parse_lumi_from_json(data)
+	lumi_filter_str = utils.wrap_list(format_lumi(merge_lumi_list(runs)), 60, ',\n\t')
+	sys.stdout.write('lumi filter = %s\n' % lumi_filter_str)
+
+
+if __name__ == '__main__':
+	sys.exit(_main())

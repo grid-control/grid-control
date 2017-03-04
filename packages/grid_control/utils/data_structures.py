@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ def make_enum(members=None, cls=None, use_hash=True):
 		except Exception:
 			if unspecified(default):
 				raise
-			enum = default
+			enum = default  # pylint:disable=redefined-variable-type
 		if enum not in cls.enum_value_list:
 			allowed_str = str.join(', ', imap(lambda nv: '%s=%s', _map_name2value.items()))
 			raise Exception('Invalid enum value %s (allowed are %r)' % (repr(value), allowed_str))

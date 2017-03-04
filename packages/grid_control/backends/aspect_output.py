@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -19,8 +19,12 @@ from python_compat import tarfile
 
 
 class RetrieveJobs(BackendExecutor):
-	def execute(self, wms_id_list): # yields list of (wms_id, local_output_dir)
+	def execute(self, wms_id_list):  # yields list of (wms_id, local_output_dir)
 		raise AbstractError
+
+
+class RetrieveAndPurgeJobs(RetrieveJobs):
+	pass
 
 
 class RetrieveJobsEmulateWildcard(RetrieveJobs):
@@ -28,11 +32,7 @@ class RetrieveJobsEmulateWildcard(RetrieveJobs):
 		RetrieveJobs.__init__(self, config)
 		(self._executor, self._wildcard_file) = (executor, 'GC_WC.tar.gz')
 
-	def setup(self, log):
-		RetrieveJobs.setup(self, log)
-		self._executor.setup(log)
-
-	def execute(self, wms_id_list): # yields list of (wms_id, local_output_dir)
+	def execute(self, wms_id_list):  # yields list of (wms_id, local_output_dir)
 		for (wms_id, local_output_dir) in self._executor.execute(self, wms_id_list):
 			if local_output_dir and os.path.exists(local_output_dir):
 				fn_wildcard_tar = os.path.join(local_output_dir, self._wildcard_file)
@@ -48,6 +48,6 @@ class RetrieveJobsEmulateWildcard(RetrieveJobs):
 						self._log.error('Unable to remove wildcard emulation file %s', fn_wildcard_tar)
 			yield (wms_id, local_output_dir)
 
-
-class RetrieveAndPurgeJobs(RetrieveJobs):
-	pass
+	def setup(self, log):
+		RetrieveJobs.setup(self, log)
+		self._executor.setup(log)

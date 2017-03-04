@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ import time, logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException
-from python_compat import irange
+from python_compat import irange, sorted
 
 
 class JobError(NestedException):
@@ -58,8 +58,16 @@ make_enum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORT
 
 
 class JobClassHolder(object):
-	def __init__(self, *states):
-		self.states = states
+	def __init__(self, *state_list):
+		self.state_list = state_list
+
+	def get_name(self, state_list):
+		for prop_name in dir(self):
+			prop = getattr(self, prop_name)
+			if isinstance(prop, JobClassHolder):
+				if sorted(getattr(prop, 'state_list')) == sorted(state_list):
+					return prop_name
+	get_name = classmethod(get_name)
 
 
 class JobDB(ConfigurablePlugin):

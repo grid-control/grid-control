@@ -1,4 +1,4 @@
-# | Copyright 2008-2016 Karlsruhe Institute of Technology
+# | Copyright 2008-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
-from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_local import LocalWMS
@@ -22,37 +22,37 @@ from grid_control.job_db import Job
 from python_compat import identity, ifilter, izip, next
 
 
-class LSF_CheckJobs(CheckJobsWithProcess):
+class LSFCancelJobs(CancelJobsWithProcessBlind):
+	def __init__(self, config):
+		CancelJobsWithProcessBlind.__init__(self, config, 'bkill', unknown_id='is not found')
+
+
+class LSFCheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		CheckJobsWithProcess.__init__(self, config,
-			ProcessCreatorAppendArguments(config, 'bjobs', ['-aw']), status_map = {
-			'PEND':  Job.QUEUED,  'PSUSP': Job.WAITING,
-			'USUSP': Job.WAITING, 'SSUSP': Job.WAITING,
-			'RUN':   Job.RUNNING, 'DONE':  Job.DONE,
-			'WAIT':  Job.WAITING, 'EXIT':  Job.FAILED,
-			'UNKWN': Job.FAILED,  'ZOMBI': Job.FAILED,
-		})
+			ProcessCreatorAppendArguments(config, 'bjobs', ['-aw']), status_map={
+				Job.DONE: ['DONE', 'EXIT', 'UNKWN', 'ZOMBI'],
+				Job.QUEUED: ['PEND'],
+				Job.RUNNING: ['RUN'],
+				Job.WAITING: ['PSUSP', 'USUSP', 'SSUSP', 'WAIT'],
+			})
+
+	def _handle_error(self, proc):
+		self._filter_proc_log(proc, self._errormsg, blacklist=['is not found'])
 
 	def _parse(self, proc):
-		status_iter = proc.stdout.iter(self._timeout)
+		status_iter = proc.stdout.iter(timeout=self._timeout)
 		next(status_iter)
-		tmpHead = [CheckInfo.WMSID, 'user', CheckInfo.RAW_STATUS, CheckInfo.QUEUE, 'from', CheckInfo.WN, 'job_name']
+		tmp_head = [CheckInfo.WMSID, 'user', CheckInfo.RAW_STATUS,
+			CheckInfo.QUEUE, 'from', CheckInfo.WN, 'job_name']
 		for line in ifilter(identity, status_iter):
 			try:
 				tmp = line.split()
-				job_info = dict(izip(tmpHead, tmp[:7]))
+				job_info = dict(izip(tmp_head, tmp[:7]))
 				job_info['submit_time'] = str.join(' ', tmp[7:10])
 				yield job_info
 			except Exception:
 				raise BackendError('Error reading job info:\n%s' % line)
-
-	def _handle_error(self, proc):
-		self._filter_proc_log(proc, self._errormsg, blacklist = ['is not found'])
-
-
-class LSF_CancelJobs(CancelJobsWithProcessBlind):
-	def __init__(self, config):
-		CancelJobsWithProcessBlind.__init__(self, config, 'bkill', unknownID = 'is not found')
 
 
 class LSF(LocalWMS):
@@ -60,16 +60,11 @@ class LSF(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.resolve_install_path('bsub'),
-			cancel_executor = LSF_CancelJobs(config),
-			check_executor = CheckJobsMissingState(config, LSF_CheckJobs(config)))
+			submit_exec=utils.resolve_install_path('bsub'),
+			cancel_executor=LSFCancelJobs(config),
+			check_executor=CheckJobsMissingState(config, LSFCheckJobs(config)))
 
-
-	def get_job_arguments(self, jobnum, sandbox):
-		return repr(sandbox)
-
-
-	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
+	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
 		params = ' -J %s' % job_name
 		# Job requirements
@@ -83,7 +78,9 @@ class LSF(LocalWMS):
 		params += ' -o "%s" -e "%s"' % (stdout, stderr)
 		return params
 
-
-	def parseSubmitOutput(self, data):
+	def parse_submit_output(self, data):
 		# Job <34020017> is submitted to queue <1nh>.
 		return data.split()[1].strip('<>').strip()
+
+	def _get_job_arguments(self, jobnum, sandbox):
+		return repr(sandbox)

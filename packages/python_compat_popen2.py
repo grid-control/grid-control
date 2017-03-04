@@ -16,13 +16,15 @@ try:
 except (AttributeError, ValueError):
     MAXFD = 256
 
-_active = []
+_ACTIVE = []
+
 
 def _cleanup():
-    for inst in _active[:]:
+    for inst in _ACTIVE[:]:
         inst.poll()
 
-class Popen3:
+
+class Popen3(object):
     """Class representing a child process.  Normally instances are created
     by the factory functions popen2() and popen3()."""
 
@@ -56,14 +58,14 @@ class Popen3:
             self.childerr = os.fdopen(errout, 'r', bufsize)
         else:
             self.childerr = None
-        _active.append(self)
+        _ACTIVE.append(self)
 
     def _run_child(self, cmd):
         if isinstance(cmd, str):
             cmd = ['/bin/sh', '-c', cmd]
-        for i in irange(3, MAXFD):
+        for fd_close in irange(3, MAXFD):
             try:
-                os.close(i)
+                os.close(fd_close)
             except OSError:
                 pass
         try:
@@ -79,7 +81,7 @@ class Popen3:
                 pid, sts = os.waitpid(self.pid, os.WNOHANG)
                 if pid == self.pid:
                     self.sts = sts
-                    _active.remove(self)
+                    _ACTIVE.remove(self)
             except os.error:
                 pass
         return self.sts
@@ -93,14 +95,14 @@ class Popen3:
                 pid, sts = (None, None)
             if pid == self.pid:
                 self.sts = sts
-                _active.remove(self)
+                _ACTIVE.remove(self)
         return self.sts
 
 
 class Popen4(Popen3):
     childerr = None
 
-    def __init__(self, cmd, bufsize=-1):
+    def __init__(self, cmd, bufsize=-1):  # pylint:disable=super-init-not-called
         _cleanup()
         p2cread, p2cwrite = os.pipe()
         c2pread, c2pwrite = os.pipe()
@@ -115,7 +117,7 @@ class Popen4(Popen3):
         self.tochild = os.fdopen(p2cwrite, 'w', bufsize)
         os.close(c2pwrite)
         self.fromchild = os.fdopen(c2pread, 'r', bufsize)
-        _active.append(self)
+        _ACTIVE.append(self)
 
 
 if sys.platform[:3] == "win" or sys.platform == "os2emx":
@@ -126,22 +128,22 @@ if sys.platform[:3] == "win" or sys.platform == "os2emx":
         """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
         specified, it sets the buffer size for the I/O pipes.  The file objects
         (child_stdout, child_stdin) are returned."""
-        w, r = os.popen2(cmd, mode, bufsize)
-        return r, w
+        stream_w, stream_r = os.popen2(cmd, mode, bufsize)
+        return stream_r, stream_w
 
     def popen3(cmd, bufsize=-1, mode='t'):
         """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
         specified, it sets the buffer size for the I/O pipes.  The file objects
         (child_stdout, child_stdin, child_stderr) are returned."""
-        w, r, e = os.popen3(cmd, mode, bufsize)
-        return r, w, e
+        stream_w, stream_r, stream_e = os.popen3(cmd, mode, bufsize)
+        return stream_r, stream_w, stream_e
 
     def popen4(cmd, bufsize=-1, mode='t'):
         """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is
         specified, it sets the buffer size for the I/O pipes.  The file objects
         (child_stdout_stderr, child_stdin) are returned."""
-        w, r = os.popen4(cmd, mode, bufsize)
-        return r, w
+        stream_w, stream_r = os.popen4(cmd, mode, bufsize)
+        return stream_r, stream_w
 else:
     def popen2(cmd, bufsize=-1, mode='t'):
         """Execute the shell command 'cmd' in a sub-process.  If 'bufsize' is

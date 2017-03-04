@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ class ParameterSource(Plugin):
 class LimitedResyncParameterSource(ParameterSource):
 	def __init__(self):
 		ParameterSource.__init__(self)
-		(self._resync_interval, self._resync_force, self._resync_last) = (0, False, time.time())
+		(self._resync_interval, self._resync_force, self._resync_last) = (-1, False, time.time())
 
 	def get_psrc_hash(self):
 		if self._resync_enabled():

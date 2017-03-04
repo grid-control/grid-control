@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -27,43 +27,211 @@ from grid_control.utils.process_base import LocalProcess
 from python_compat import identity, ifilter, imap, lfilter, lmap, md5, parsedate, tarfile
 
 
-GridStatusMap = {
-	'aborted':   Job.ABORTED,
-	'cancelled': Job.ABORTED,
-	'cleared':   Job.ABORTED,
-	'done':      Job.DONE,
-	'failed':    Job.ABORTED,
-	'queued':    Job.QUEUED,
-	'ready':     Job.READY,
-	'running':   Job.RUNNING,
-	'scheduled': Job.QUEUED,
-	'submitted': Job.SUBMITTED,
-	'waiting':   Job.WAITING,
+GridStatusMap = {  # FIXME: mismatch between CheckJobs API and GliteWMSDirect usage!
+	Job.ABORTED: ['aborted', 'cancelled', 'cleared', 'failed'],
+	Job.DONE: ['done'],
+	Job.QUEUED: ['scheduled', 'queued'],
+	Job.READY: ['ready'],
+	Job.RUNNING: ['running'],
+	Job.SUBMITTED: ['submitted'],
+	Job.WAITING: ['waiting'],
 }
 
 
-def jdlEscape(value):
-	repl = { '\\': r'\\', '\"': r'\"', '\n': r'\n' }
-	return '"' + str.join('', imap(lambda char: repl.get(char, char), value)) + '"'
+class GridWMS(BasicWMS):
+	config_section_list = BasicWMS.config_section_list + ['grid']
+
+	def __init__(self, config, name, submit_exec, output_exec,
+			check_executor, cancel_executor, jdl_writer=None):
+		config.set('access token', 'VomsProxy')
+		BasicWMS.__init__(self, config, name,
+			check_executor=check_executor, cancel_executor=cancel_executor)
+
+		self._broker_site = config.get_plugin('site broker', 'UserBroker',
+			cls=Broker, bind_kwargs={'tags': [self]}, pargs=('sites', 'sites', self._get_site_list))
+		self._vo = config.get('vo', self._token.get_group())
+
+		self._submit_exec = submit_exec
+		self._submit_args_dict = {}
+		self._output_exec = output_exec
+		self._ce = config.get('ce', '', on_change=None)
+		self._config_fn = config.get_path('config', '', on_change=None)
+		self._sb_warn_size = config.get_int('warn sb size', 5, on_change=None)
+		self._job_dn = config.get_work_path('jobs')
+		self._jdl_writer = jdl_writer or JDLWriter()
+
+	def _explain_error(self, proc, code):
+		if 'Keyboard interrupt raised by user' in proc.stderr.read_log():
+			return True
+		return False
+
+	def _get_jobs_output(self, gc_id_jobnum_list):
+		# Get output of jobs and yield output dirs
+		if len(gc_id_jobnum_list) == 0:
+			raise StopIteration
+
+		root_dn = os.path.join(self._path_output, 'tmp')
+		try:
+			if len(gc_id_jobnum_list) == 1:
+				# For single jobs create single subdir
+				tmp_dn = os.path.join(root_dn, md5(gc_id_jobnum_list[0][0]).hexdigest())
+			else:
+				tmp_dn = root_dn
+			utils.ensure_dir_exists(tmp_dn)
+		except Exception:
+			raise BackendError('Temporary path "%s" could not be created.' % tmp_dn, BackendError)
+
+		map_gc_id2jobnum = dict(gc_id_jobnum_list)
+		jobs = self._write_wms_id_list(gc_id_jobnum_list)
+
+		activity = Activity('retrieving %d job outputs' % len(gc_id_jobnum_list))
+		proc = LocalProcess(self._output_exec, '--noint',
+			'--logfile', '/dev/stderr', '-i', jobs, '--dir', tmp_dn)
+
+		# yield output dirs
+		todo = map_gc_id2jobnum.values()
+		current_jobnum = None
+		for line in imap(str.strip, proc.stdout.iter(timeout=60)):
+			if line.startswith(tmp_dn):
+				todo.remove(current_jobnum)
+				output_dn = line.strip()
+				if os.path.exists(output_dn):
+					if 'GC_WC.tar.gz' in os.listdir(output_dn):
+						wildcard_tar = os.path.join(output_dn, 'GC_WC.tar.gz')
+						try:
+							tarfile.TarFile.open(wildcard_tar, 'r:gz').extractall(output_dn)
+							os.unlink(wildcard_tar)
+						except Exception:
+							self._log.error('Can\'t unpack output files contained in %s', wildcard_tar)
+				yield (current_jobnum, line.strip())
+				current_jobnum = None
+			else:
+				current_jobnum = map_gc_id2jobnum.get(self._create_gc_id(line), current_jobnum)
+		exit_code = proc.status(timeout=0, terminate=True)
+		activity.finish()
+
+		if exit_code != 0:
+			if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout=0):
+				utils.remove_files([jobs, root_dn])
+				raise StopIteration
+			else:
+				self._log.log_process(proc, files={'jobs': SafeFile(jobs).read()})
+			self._log.error('Trying to recover from error ...')
+			for dn in os.listdir(root_dn):
+				yield (None, os.path.join(root_dn, dn))
+
+		# return unretrievable jobs
+		for jobnum in todo:
+			yield (jobnum, None)
+
+		utils.remove_files([jobs, tmp_dn])
+
+	def _get_site_list(self):
+		return None
+
+	def _make_jdl(self, jobnum, task):
+		job_config_fn = os.path.join(self._job_dn, 'job_%d.var' % jobnum)
+		sb_in_src_list = lmap(lambda d_s_t: d_s_t[1], self._get_in_transfer_info_list(task))
+		sb_out_target_list = lmap(lambda d_s_t: d_s_t[2], self._get_out_transfer_info_list(task))
+		wildcard_list = lfilter(lambda x: '*' in x, sb_out_target_list)
+		if len(wildcard_list):
+			self._write_job_config(job_config_fn, jobnum, task, {'GC_WC': str.join(' ', wildcard_list)})
+			sb_out_fn_list = lfilter(lambda x: x not in wildcard_list, sb_out_target_list) + ['GC_WC.tar.gz']
+		else:
+			self._write_job_config(job_config_fn, jobnum, task, {})
+			sb_out_fn_list = sb_out_target_list
+		# Warn about too large sandboxes
+		sb_in_size_list = lmap(os.path.getsize, sb_in_src_list)
+		if sb_in_size_list:
+			sb_in_size = sum(sb_in_size_list)
+			if (self._sb_warn_size > 0) and (sb_in_size > self._sb_warn_size * 1024 * 1024):
+				user_msg = 'Sandbox is very large (%d bytes) and can cause issues with the WMS!' % sb_in_size
+				user_msg += ' Do you want to continue?'
+				if not utils.get_user_bool(user_msg, False):
+					sys.exit(os.EX_OK)
+				self._sb_warn_size = 0
+
+		reqs = self._broker_site.broker(task.get_requirement_list(jobnum), WMS.SITES)
+
+		def _format_str_list(str_list):
+			return '{ %s }' % str.join(', ', imap(lambda x: '"%s"' % x, str_list))
+
+		contents = {
+			'Executable': '"gc-run.sh"',
+			'Arguments': '"%d"' % jobnum,
+			'StdOutput': '"gc.stdout"',
+			'StdError': '"gc.stderr"',
+			'InputSandbox': _format_str_list(sb_in_src_list + [job_config_fn]),
+			'OutputSandbox': _format_str_list(sb_out_fn_list),
+			'VirtualOrganisation': '"%s"' % self._vo,
+			'Rank': '-other.GlueCEStateEstimatedResponseTime',
+			'RetryCount': 2
+		}
+		return self._jdl_writer.format(reqs, contents)
+
+	def _submit_job(self, jobnum, task):
+		# Submit job and yield (jobnum, WMS ID, other data)
+		jdl_fd, jdl_fn = tempfile.mkstemp('.jdl')
+		try:
+			jdl_line_list = self._make_jdl(jobnum, task)
+			utils.safe_write(os.fdopen(jdl_fd, 'w'), jdl_line_list)
+		except Exception:
+			utils.remove_files([jdl_fn])
+			raise BackendError('Could not write jdl data to %s.' % jdl_fn)
+
+		try:
+			submit_arg_list = []
+			for key_value in utils.filter_dict(self._submit_args_dict, value_filter=identity).items():
+				submit_arg_list.extend(key_value)
+			submit_arg_list.append(jdl_fn)
+
+			activity = Activity('submitting job %d' % jobnum)
+			proc = LocalProcess(self._submit_exec, '--nomsg', '--noint',
+				'--logfile', '/dev/stderr', *submit_arg_list)
+
+			wms_id = None
+			stripped_stdout_iter = imap(str.strip, proc.stdout.iter(timeout=60))
+			for line in ifilter(lambda x: x.startswith('http'), stripped_stdout_iter):
+				wms_id = line
+			exit_code = proc.status(timeout=0, terminate=True)
+
+			activity.finish()
+
+			if (exit_code != 0) or (wms_id is None):
+				if self._explain_error(proc, exit_code):
+					pass
+				else:
+					self._log.log_process(proc, files={'jdl': SafeFile(jdl_fn).read()})
+		finally:
+			utils.remove_files([jdl_fn])
+		job_data = {'jdl': str.join('', jdl_line_list)}
+		return (jobnum, self._create_gc_id(wms_id), job_data)
+
+	def _write_wms_id_list(self, gc_id_jobnum_list):
+		try:
+			job_fd, job_fn = tempfile.mkstemp('.jobids')
+			utils.safe_write(os.fdopen(job_fd, 'w'), str.join('\n', self._iter_wms_ids(gc_id_jobnum_list)))
+		except Exception:
+			raise BackendError('Could not write wms ids to %s.' % job_fn)
+		return job_fn
 
 
-class Grid_ProcessCreator(ProcessCreatorViaStdin):
-	def __init__(self, config, cmd, args):
-		ProcessCreatorViaStdin.__init__(self, config)
-		(self._cmd, self._args) = (utils.resolve_install_path(cmd), args)
+class GridCancelJobs(CancelJobsWithProcess):
+	def __init__(self, config, cancel_exec):
+		proc_factory = GridProcessCreator(config, cancel_exec,
+			['--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin'])
+		CancelJobsWithProcess.__init__(self, config, proc_factory)
 
-	def _arguments(self):
-		return [self._cmd] + self._args
-
-	def _stdin_message(self, wms_id_list):
-		return str.join('\n', wms_id_list)
+	def _parse(self, wms_id_list, proc):  # yield list of (wms_id, job_status)
+		for line in ifilter(lambda x: x.startswith('- '), proc.stdout.iter(self._timeout)):
+			yield (line.strip('- \n'),)
 
 
-class Grid_CheckJobs(CheckJobsWithProcess):
+class GridCheckJobs(CheckJobsWithProcess):
 	def __init__(self, config, check_exec):
-		proc_factory = Grid_ProcessCreator(config, check_exec,
+		proc_factory = GridProcessCreator(config, check_exec,
 			['--verbosity', 1, '--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin'])
-		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map = GridStatusMap)
+		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map=GridStatusMap)
 
 	def _fill(self, job_info, key, value):
 		if key.startswith('current status'):
@@ -89,6 +257,9 @@ class Grid_CheckJobs(CheckJobsWithProcess):
 		elif value:
 			job_info[key] = value
 
+	def _handle_error(self, proc):
+		self._filter_proc_log(proc, self._errormsg, discard_list=['Keyboard interrupt raised by user'])
+
 	def _parse(self, proc):
 		job_info = {}
 		discard = False
@@ -109,184 +280,14 @@ class Grid_CheckJobs(CheckJobsWithProcess):
 				self._fill(job_info, key, value)
 		yield job_info
 
-	def _handle_error(self, proc):
-		self._filter_proc_log(proc, self._errormsg, discardlist = ['Keyboard interrupt raised by user'])
 
+class GridProcessCreator(ProcessCreatorViaStdin):
+	def __init__(self, config, cmd, args):
+		ProcessCreatorViaStdin.__init__(self, config)
+		(self._cmd, self._args) = (utils.resolve_install_path(cmd), args)
 
-class Grid_CancelJobs(CancelJobsWithProcess):
-	def __init__(self, config, cancel_exec):
-		proc_factory = Grid_ProcessCreator(config, cancel_exec,
-			['--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin'])
-		CancelJobsWithProcess.__init__(self, config, proc_factory)
+	def _arguments(self):
+		return [self._cmd] + self._args
 
-	def _parse(self, wms_id_list, proc): # yield list of (wms_id, job_status)
-		for line in ifilter(lambda x: x.startswith('- '), proc.stdout.iter(self._timeout)):
-			yield (line.strip('- \n'),)
-
-
-class GridWMS(BasicWMS):
-	config_section_list = BasicWMS.config_section_list + ['grid']
-	def __init__(self, config, name, check_executor, cancel_executor, jdlWriter = None):
-		config.set('access token', 'VomsProxy')
-		BasicWMS.__init__(self, config, name, check_executor = check_executor, cancel_executor = cancel_executor)
-
-		self.brokerSite = config.get_plugin('site broker', 'UserBroker',
-			cls = Broker, bkwargs={'tags': [self]}, pargs = ('sites', 'sites', self.getSites))
-		self.vo = config.get('vo', self._token.getGroup())
-
-		self._submitParams = {}
-		self._ce = config.get('ce', '', on_change = None)
-		self._configVO = config.get_path('config', '', on_change = None)
-		self._warnSBSize = config.get_int('warn sb size', 5, on_change = None)
-		self._jobPath = config.get_work_path('jobs')
-		self._jdl_writer = jdlWriter or JDLWriter()
-
-
-	def getSites(self):
-		return None
-
-
-	def makeJDL(self, jobnum, module):
-		cfgPath = os.path.join(self._jobPath, 'job_%d.var' % jobnum)
-		sbIn = lmap(lambda d_s_t: d_s_t[1], self._get_in_transfer_info_list(module))
-		sbOut = lmap(lambda d_s_t: d_s_t[2], self._get_out_transfer_info_list(module))
-		wcList = lfilter(lambda x: '*' in x, sbOut)
-		if len(wcList):
-			self._write_job_config(cfgPath, jobnum, module, {'GC_WC': str.join(' ', wcList)})
-			sandboxOutJDL = lfilter(lambda x: x not in wcList, sbOut) + ['GC_WC.tar.gz']
-		else:
-			self._write_job_config(cfgPath, jobnum, module, {})
-			sandboxOutJDL = sbOut
-		# Warn about too large sandboxes
-		sbSizes = lmap(os.path.getsize, sbIn)
-		if sbSizes and (self._warnSBSize > 0) and (sum(sbSizes) > self._warnSBSize * 1024 * 1024):
-			if not utils.get_user_bool('Sandbox is very large (%d bytes) and can cause issues with the WMS! Do you want to continue?' % sum(sbSizes), False):
-				sys.exit(os.EX_OK)
-			self._warnSBSize = 0
-
-		reqs = self.brokerSite.brokerAdd(module.get_requirement_list(jobnum), WMS.SITES)
-		formatStrList = lambda strList: '{ %s }' % str.join(', ', imap(lambda x: '"%s"' % x, strList))
-		contents = {
-			'Executable': '"gc-run.sh"',
-			'Arguments': '"%d"' % jobnum,
-			'StdOutput': '"gc.stdout"',
-			'StdError': '"gc.stderr"',
-			'InputSandbox': formatStrList(sbIn + [cfgPath]),
-			'OutputSandbox': formatStrList(sandboxOutJDL),
-			'VirtualOrganisation': '"%s"' % self.vo,
-			'Rank': '-other.GlueCEStateEstimatedResponseTime',
-			'RetryCount': 2
-		}
-		return self._jdl_writer.format(reqs, contents)
-
-
-	def writeWMSIds(self, ids):
-		try:
-			fd, jobs = tempfile.mkstemp('.jobids')
-			utils.safe_write(os.fdopen(fd, 'w'), str.join('\n', self._iter_wms_ids(ids)))
-		except Exception:
-			raise BackendError('Could not write wms ids to %s.' % jobs)
-		return jobs
-
-
-	def explainError(self, proc, code):
-		if 'Keyboard interrupt raised by user' in proc.stderr.read_log():
-			return True
-		return False
-
-
-	# Submit job and yield (jobnum, WMS ID, other data)
-	def _submit_job(self, jobnum, module):
-		fd, jdl = tempfile.mkstemp('.jdl')
-		try:
-			jdlData = self.makeJDL(jobnum, module)
-			utils.safe_write(os.fdopen(fd, 'w'), jdlData)
-		except Exception:
-			utils.remove_files([jdl])
-			raise BackendError('Could not write jdl data to %s.' % jdl)
-
-		try:
-			submitArgs = []
-			for key_value in utils.filter_dict(self._submitParams, value_filter = identity).items():
-				submitArgs.extend(key_value)
-			submitArgs.append(jdl)
-
-			activity = Activity('submitting job %d' % jobnum)
-			proc = LocalProcess(self._submitExec, '--nomsg', '--noint', '--logfile', '/dev/stderr', *submitArgs)
-
-			gc_id = None
-			for line in ifilter(lambda x: x.startswith('http'), imap(str.strip, proc.stdout.iter(timeout = 60))):
-				gc_id = line
-			exit_code = proc.status(timeout = 0, terminate = True)
-
-			activity.finish()
-
-			if (exit_code != 0) or (gc_id is None):
-				if self.explainError(proc, exit_code):
-					pass
-				else:
-					self._log.log_process(proc, files = {'jdl': SafeFile(jdl).read()})
-		finally:
-			utils.remove_files([jdl])
-		return (jobnum, utils.QM(gc_id, self._create_gc_id(gc_id), None), {'jdl': str.join('', jdlData)})
-
-
-	# Get output of jobs and yield output dirs
-	def _get_jobs_output(self, ids):
-		if len(ids) == 0:
-			raise StopIteration
-
-		basePath = os.path.join(self._path_output, 'tmp')
-		try:
-			if len(ids) == 1:
-				# For single jobs create single subdir
-				tmpPath = os.path.join(basePath, md5(ids[0][0]).hexdigest())
-			else:
-				tmpPath = basePath
-			utils.ensure_dir_exists(tmpPath)
-		except Exception:
-			raise BackendError('Temporary path "%s" could not be created.' % tmpPath, BackendError)
-
-		jobnumMap = dict(ids)
-		jobs = self.writeWMSIds(ids)
-
-		activity = Activity('retrieving %d job outputs' % len(ids))
-		proc = LocalProcess(self._outputExec, '--noint', '--logfile', '/dev/stderr', '-i', jobs, '--dir', tmpPath)
-
-		# yield output dirs
-		todo = jobnumMap.values()
-		currentJobNum = None
-		for line in imap(str.strip, proc.stdout.iter(timeout = 60)):
-			if line.startswith(tmpPath):
-				todo.remove(currentJobNum)
-				outputDir = line.strip()
-				if os.path.exists(outputDir):
-					if 'GC_WC.tar.gz' in os.listdir(outputDir):
-						wildcardTar = os.path.join(outputDir, 'GC_WC.tar.gz')
-						try:
-							tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
-							os.unlink(wildcardTar)
-						except Exception:
-							self._log.error('Can\'t unpack output files contained in %s', wildcardTar)
-				yield (currentJobNum, line.strip())
-				currentJobNum = None
-			else:
-				currentJobNum = jobnumMap.get(self._create_gc_id(line), currentJobNum)
-		exit_code = proc.status(timeout = 0, terminate = True)
-		activity.finish()
-
-		if exit_code != 0:
-			if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout = 0):
-				utils.remove_files([jobs, basePath])
-				raise StopIteration
-			else:
-				self._log.log_process(proc, files = {'jobs': SafeFile(jobs).read()})
-			self._log.error('Trying to recover from error ...')
-			for dirName in os.listdir(basePath):
-				yield (None, os.path.join(basePath, dirName))
-
-		# return unretrievable jobs
-		for jobnum in todo:
-			yield (jobnum, None)
-
-		utils.remove_files([jobs, basePath])
+	def _stdin_message(self, wms_id_list):
+		return str.join('\n', wms_id_list)

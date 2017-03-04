@@ -116,20 +116,6 @@ UserTask options
 
   * ``wall time`` = <duration hh[:mm[:ss]]>
     Requested wall time also used for checking the proxy lifetime
-  * ``<datasource>`` = <list of [<nickname> : [<protocol> :]] <dataset specifier> > (default: '')
-    List of datasets to process (including optional nickname and dataset provider information)
-  * <datasource> manager = <plugin> (Default: ':MultiDatasetProvider:')
-    Specifiy compositor class to merge the different plugins given in ``<datasource>``
-  * ``<datasource> partition processor / partition processor`` = <list of plugins> (default: 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor')
-    Specify list of plugins that process partitions
-  * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
-    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
-  * ``<datasource> provider`` = <text> (default: 'ListProvider')
-    Specify the name of the default dataset provider
-  * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
-    Specify the interval to check for changes in the used datasets
-  * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
-    Specify the dataset splitter plugin to partition the dataset
   * ``cpu time`` = <duration hh[:mm[:ss]]> (default: <wall time>)
     Requested cpu time
   * ``cpus`` = <integer> (default: 1)
@@ -170,26 +156,14 @@ UserTask options
     Persistent date when the task was started.
   * ``task id`` = <text> (default: 'GC <manual>)
     Persistent task identifier that is generated at the start of the task
+  * ``task time`` = <text> (default: current time: HHMMSS)
+    Persistent time when the task was started.
 
 CMSSW options
 -------------
 
   * ``wall time`` = <duration hh[:mm[:ss]]>
     Requested wall time also used for checking the proxy lifetime
-  * ``<datasource>`` = <list of [<nickname> : [<protocol> :]] <dataset specifier> > (default: '')
-    List of datasets to process (including optional nickname and dataset provider information)
-  * <datasource> manager = <plugin> (Default: ':MultiDatasetProvider:')
-    Specifiy compositor class to merge the different plugins given in ``<datasource>``
-  * ``<datasource> partition processor / partition processor`` = <list of plugins> (default: 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor')
-    Specify list of plugins that process partitions
-  * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
-    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
-  * ``<datasource> provider`` = <text> (default: 'ListProvider')
-    Specify the name of the default dataset provider
-  * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
-    Specify the interval to check for changes in the used datasets
-  * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
-    Specify the dataset splitter plugin to partition the dataset
   * ``area files`` = <list of values> (default: '-.* -config bin lib python module */data *.xml *.sql *.db *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*')
     List of files that should be taken from the CMSSW project area for running the job
   * ``arguments`` = <text> (default: '')
@@ -258,6 +232,8 @@ CMSSW options
     Persistent date when the task was started.
   * ``task id`` = <text> (default: 'GC <manual>)
     Persistent task identifier that is generated at the start of the task
+  * ``task time`` = <text> (default: current time: HHMMSS)
+    Persistent time when the task was started.
   * ``vo software dir / cmssw dir`` = <text> (default: '')
     This option allows to override of the VO_CMS_SW_DIR environment variable
 
@@ -266,20 +242,6 @@ CMSSWAdvanced options
 
   * ``wall time`` = <duration hh[:mm[:ss]]>
     Requested wall time also used for checking the proxy lifetime
-  * ``<datasource>`` = <list of [<nickname> : [<protocol> :]] <dataset specifier> > (default: '')
-    List of datasets to process (including optional nickname and dataset provider information)
-  * <datasource> manager = <plugin> (Default: ':MultiDatasetProvider:')
-    Specifiy compositor class to merge the different plugins given in ``<datasource>``
-  * ``<datasource> partition processor / partition processor`` = <list of plugins> (default: 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor')
-    Specify list of plugins that process partitions
-  * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
-    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
-  * ``<datasource> provider`` = <text> (default: 'ListProvider')
-    Specify the name of the default dataset provider
-  * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
-    Specify the interval to check for changes in the used datasets
-  * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
-    Specify the dataset splitter plugin to partition the dataset
   * ``area files`` = <list of values> (default: '-.* -config bin lib python module */data *.xml *.sql *.db *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*')
     List of files that should be taken from the CMSSW project area for running the job
   * ``arguments`` = <text> (default: '')
@@ -356,20 +318,36 @@ CMSSWAdvanced options
     Persistent date when the task was started.
   * ``task id`` = <text> (default: 'GC <manual>)
     Persistent task identifier that is generated at the start of the task
+  * ``task time`` = <text> (default: current time: HHMMSS)
+    Persistent time when the task was started.
   * ``vo software dir / cmssw dir`` = <text> (default: '')
     This option allows to override of the VO_CMS_SW_DIR environment variable
 
 dataset options
 ---------------
 
+  * ``<datasource>`` = <list of [<nickname> : [<provider> :]] <dataset specifier> > (default: '')
+    List of datasets to process (including optional nickname and dataset provider information)
+  * <datasource> manager = <plugin> (Default: ':MultiDatasetProvider:')
+    Specifiy compositor class to merge the different plugins given in ``<datasource>``
   * ``<datasource> default query interval`` = <duration hh[:mm[:ss]]> (default: 00:01:00)
     Specify the default limit for the dataset query interval
   * ``<datasource> nickname source / nickname source`` = <plugin> (default: 'SimpleNickNameProducer')
     Specify nickname plugin that determines the nickname for datasets
+  * ``<datasource> partition processor / partition processor`` = <list of plugins> (default: 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor')
+    Specify list of plugins that process partitions
+  * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
+    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
   * ``<datasource> processor`` = <list of plugins> (default: 'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor')
     Specify list of plugins that process datasets before the partitioning
   * <datasource> processor manager = <plugin> (Default: 'MultiDataProcessor')
     Specifiy compositor class to merge the different plugins given in ``<datasource> processor``
+  * ``<datasource> provider / default provider`` = <text> (default: 'ListProvider')
+    Specify the name of the default dataset provider
+  * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
+    Specify the interval to check for changes in the used datasets
+  * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
+    Specify the dataset splitter plugin to partition the dataset
   * ``resync jobs`` = <enum: append|preserve|fillgap|reorder> (default: append)
     Specify how resynced jobs should be handled
   * ``resync metadata`` = <list of values> (default: '')
@@ -408,8 +386,6 @@ interactive options
 
   * ``<option name>`` = <boolean>
     Toggle to switch interactive questions on and off
-  * ``<datasource> partition resync / partition resync`` = <boolean> (default: False)
-    Toggle interactivity of dataset resyncs
   * ``dataset name assignment`` = <boolean> (default: True)
     Toggle interactive question about issues with the bijectivity of the dataset / block name assignments in the scan provider
   * ``delete jobs`` = <boolean> (default: True)
@@ -700,38 +676,48 @@ DBSInfoProvider options
 EventBoundarySplitter options
 -----------------------------
 
-  * ``events per job`` = <integer>
+  * ``<datasource> entries per job / <datasource> events per job / entries per job / events per job`` = <lookup specifier>
     Set granularity of dataset splitter
+  * ``<datasource> entries per job matcher`` = <plugin> (Default: start)
+    Specifiy matcher plugin that is used to match the lookup expressions
 
 FLSplitStacker options
 ----------------------
 
-  * ``splitter stack`` = <list of plugins> (default: 'BlockBoundarySplitter')
+  * ``<datasource> splitter stack / splitter stack`` = <list of plugins> (default: 'BlockBoundarySplitter')
     Specify sequence of dataset splitters. All dataset splitters except for the last one have to be of type 'FileLevelSplitter', splitting only along file boundaries.
 
 FileBoundarySplitter options
 ----------------------------
 
-  * ``files per job`` = <integer>
+  * ``<datasource> files per job / files per job`` = <lookup specifier>
     Set granularity of dataset splitter
+  * ``<datasource> files per job matcher`` = <plugin> (Default: start)
+    Specifiy matcher plugin that is used to match the lookup expressions
 
 HybridSplitter options
 ----------------------
 
-  * ``events per job`` = <integer>
+  * ``<datasource> entries per job / <datasource> events per job / entries per job / events per job`` = <lookup specifier>
     Set guideline for the granularity of the dataset splitter
+  * ``<datasource> entries per job matcher`` = <plugin> (Default: start)
+    Specifiy matcher plugin that is used to match the lookup expressions
 
 RunSplitter options
 -------------------
 
-  * ``run range`` = <integer> (default: 1)
+  * ``<datasource> run range / run range`` = <lookup specifier> (default: {None: 1})
     Specify number of sequential runs that are processed per job
+  * ``<datasource> run range matcher`` = <plugin> (Default: start)
+    Specifiy matcher plugin that is used to match the lookup expressions
 
 UserMetadataSplitter options
 ----------------------------
 
-  * ``split metadata`` = <list of values> (default: '')
+  * ``split metadata`` = <lookup specifier> (default: {})
     Specify the name of the metadata variable that is used to partition the dataset into equivalence classes.
+  * ``split metadata matcher`` = <plugin> (Default: start)
+    Specifiy matcher plugin that is used to match the lookup expressions
 
 AddFilePrefix options
 ---------------------
@@ -1018,20 +1004,6 @@ ROOTTask options
     Path to the executable
   * ``wall time`` = <duration hh[:mm[:ss]]>
     Requested wall time also used for checking the proxy lifetime
-  * ``<datasource>`` = <list of [<nickname> : [<protocol> :]] <dataset specifier> > (default: '')
-    List of datasets to process (including optional nickname and dataset provider information)
-  * <datasource> manager = <plugin> (Default: ':MultiDatasetProvider:')
-    Specifiy compositor class to merge the different plugins given in ``<datasource>``
-  * ``<datasource> partition processor / partition processor`` = <list of plugins> (default: 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor')
-    Specify list of plugins that process partitions
-  * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
-    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
-  * ``<datasource> provider`` = <text> (default: 'ListProvider')
-    Specify the name of the default dataset provider
-  * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
-    Specify the interval to check for changes in the used datasets
-  * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
-    Specify the dataset splitter plugin to partition the dataset
   * ``cpu time`` = <duration hh[:mm[:ss]]> (default: <wall time>)
     Requested cpu time
   * ``cpus`` = <integer> (default: 1)
@@ -1074,6 +1046,8 @@ ROOTTask options
     Persistent date when the task was started.
   * ``task id`` = <text> (default: 'GC <manual>)
     Persistent task identifier that is generated at the start of the task
+  * ``task time`` = <text> (default: current time: HHMMSS)
+    Persistent time when the task was started.
 
 InactiveWMS options
 -------------------
@@ -1118,22 +1092,20 @@ MultiWMS options
 Condor options
 --------------
 
-  * ``classaddata`` = <list of values> (default: '')
+  * ``classad data / classaddata`` = <list of values> (default: '')
     List of classAds to manually add to the job submission file
-  * ``debuglog`` = <text> (default: '')
-    Path to a debug log file
-  * ``jdldata`` = <list of values> (default: '')
+  * ``email / notifyemail`` = <text> (default: '')
+    Specify the email address for job notifications
+  * ``jdl data / jdldata`` = <list of values> (default: '')
     List of jdl lines to manually add to the job submission file
   * ``job parser`` = <plugin> (default: 'JobInfoProcessor')
     Specify plugin that checks the output sandbox of the job and returns with the job status
-  * ``notifyemail`` = <text> (default: '')
-    Specify the email address for job notifications
+  * ``pool host list / poolhostlist`` = <list of values> (default: '')
+    Specify list of pool hosts
   * ``poolargs query`` = <dictionary> (default: {})
     Specify keys for condor pool ClassAds
   * ``poolargs req`` = <dictionary> (default: {})
     Specify keys for condor pool ClassAds
-  * ``poolhostlist`` = <list of values> (default: '')
-    Specify list of pool hosts
   * ``remote dest`` = <text> (default: '@')
     Specify remote destination
   * ``remote type`` = <enum: LOCAL|SPOOL|SSH|GSISSH> (default: LOCAL)
@@ -1276,7 +1248,7 @@ GridEngine options
     Specifiy matcher plugin that is used to match the lookup expressions
   * ``submit options`` = <text> (default: '')
     Specify additional job submission options
-  * ``user`` = <text> (default: ${LOGNAME})
+  * ``user`` = <text> (default: <local user name>)
     Specify batch system user name
   * ``wait idle`` = <integer> (default: 60)
     Wait for the specified duration if the job cycle was idle

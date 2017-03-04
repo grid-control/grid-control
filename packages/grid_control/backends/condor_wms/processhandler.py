@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,336 +12,185 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, math, stat, time, signal, logging
+import os, math, stat, time, logging
 from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError
 from grid_control.config import ConfigError
 from grid_control.utils import ensure_dir_exists, resolve_install_path
-from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException, Plugin
 
-
-class CondorProcessError(BackendError):
-	def __init__(self, msg, proc):
-		(cmd, status, stdout, stderr) = (proc.cmd, proc.wait(), proc.getOutput(), proc.getError())
-		BackendError.__init__(msg + '\n\tCommand: %s Return code: %s\nstdout: %s\nstderr: %s' % (cmd, status, stdout, stderr))
 
 class TimeoutError(NestedException):
 	pass
 
-# placeholder for function arguments
-defaultArg = object()
 
-# Legacy context implementation: use as "with timeout(3):" or "timeout(3)\n...\ntimeout.cancel()"
-class TimeoutContext(object):
-	def __init__(self, duration = 1, exception = TimeoutError):
-		"""
-		Set a timeout to occur in duration, raising exception.
-		This implementation is not thread-safe and only one timeout may be active at a time.
-		"""
-		self._active     = True
-		self._duration   = duration
-		self._handlerOld = signal.signal( signal.SIGALRM, self._onTimeout )
-		if ( signal.alarm( int(duration) ) != 0 ):
-			raise TimeoutError("Bug! Timeout set while previous timeout was active.")
-	def _onTimeout(self, sigNum, frame):
-		raise TimeoutError("Timeout after %d seconds." % self._duration )
-	def cancel(self):
-		if self._active:
-			signal.alarm(0)
-			signal.signal( signal.SIGALRM, self._handlerOld )
-			self._active = False
-	# Context methods
-	def __enter__(self):
-		return self
-	def __exit__(self, exc_type, exc_value, traceback):
-		self.cancel()
+class CondorProcessError(BackendError):
+	def __init__(self, msg, proc):
+		(cmd, status, stdout, stderr) = (proc.cmd, proc.wait(), proc.get_output(), proc.get_error())
+		BackendError.__init__(msg +
+			'\n\tCommand: %s Return code: %s\nstdout: %s\nstderr: %s' % (cmd, status, stdout, stderr))
 
 
-################################
-# Process Handlers
-# create interface for initializing a set of commands sharing a similar setup, e.g. remote commands through SSH
-
-# Process Handler:
 class ProcessHandler(Plugin):
+	# create interface for initializing a set of commands sharing a similar setup
 	def __init__(self, **kwargs):
 		self._log = logging.getLogger('backend.condor')
-	def LoggedExecute(self, cmd, args = '', **kwargs):
+
+	def get_domain(self):
 		raise AbstractError
-	def LoggedCopyToRemote(self, source, dest, **kwargs):
+
+	def logged_copy_from_remote(self, source, dest):
 		raise AbstractError
-	def LoggedCopyFromRemote(self, source, dest, **kwargs):
+
+	def logged_copy_to_remote(self, source, dest):
 		raise AbstractError
-	def getDomain(self):
+
+	def logged_execute(self, cmd, args=''):
 		raise AbstractError
 
 
-# local Processes - ensures uniform interfacing as with remote connections
 class LocalProcessHandler(ProcessHandler):
-	cpy="cp -r"
-	# return instance of LoggedExecute with input properly wrapped
-	def LoggedExecute(self, cmd, args = '', **kwargs):
-		return LoggedProcess( cmd , args )
+	# local Processes - ensures uniform interfacing as with remote connections
+	def get_domain(self):
+		return 'localhost'
 
-	def LoggedCopyToRemote(self, source, dest, **kwargs):
-		return LoggedProcess( self.cpy, " ".join([source, dest]) )
+	def logged_copy_from_remote(self, source, dest):
+		return LoggedProcess('cp -r', '%s %s' % (source, dest))
 
-	def LoggedCopyFromRemote(self, source, dest, **kwargs):
-		return LoggedProcess( self.cpy, " ".join([source, dest]) )
+	def logged_copy_to_remote(self, source, dest):
+		return LoggedProcess('cp -r', '%s %s' % (source, dest))
 
-	def getDomain(self):
-		return "localhost"
+	def logged_execute(self, cmd, args=''):
+		return LoggedProcess(cmd, args)
 
 
-# remote Processes via SSH
 class SSHProcessHandler(ProcessHandler):
+	# remote Processes via SSH
 	# track lifetime and quality of command socket
-	socketTimestamp=0
-	socketFailCount=0
-	# older versions of ssh/gsissh will propagate an end of master incorrectly to children - rotate sockets
-	socketIdNow=0
+	# old versions of ssh/gsissh will incorrectly notify children about end of master - rotate sockets
 	def __init__(self, **kwargs):
 		ProcessHandler.__init__(self, **kwargs)
-		self.__initcommands(**kwargs)
-		self.defaultArgs="-vvv -o BatchMode=yes -o ForwardX11=no " + kwargs.get("defaultArgs","")
-		self.socketArgs=""
-		self.socketEnforce=kwargs.get("sshLinkEnforce",True)
+		ssh_default_args = ' -vvv -o BatchMode=yes -o ForwardX11=no'
+		self._shell_cmd = resolve_install_path('ssh') + ssh_default_args
+		self._copy_cmd = resolve_install_path('scp') + ssh_default_args + ' -r'
+		self._ssh_link_id = 0
+		self._ssh_link_args = ''
+		self._ssh_link_timestamp = 0
+		self._ssh_link_fail_count = 0
+		self._ssh_link_master_proc = None
 		try:
-			self.remoteHost = kwargs["remoteHost"]
+			self._remote_host = kwargs['remote_host']
 		except Exception:
-			raise ConfigError("Request to initialize SSH-Type RemoteProcessHandler without remote host.")
+			raise ConfigError('Request to initialize SSH-Type RemoteProcessHandler without remote host.')
+
 		try:
-			self.sshLinkBase=os.path.abspath(kwargs["sshLink"])
+			self._ssh_link_base = os.path.abspath(kwargs['sshLink'])
 			# older ssh/gsissh puts a maximum length limit on control paths, use a different one
-			if ( len(self.sshLinkBase)>= 107):
-				self.sshLinkBase=os.path.expanduser("~/.ssh/%s"%os.path.basename(self.sshLinkBase))
-			self.sshLink=self.sshLinkBase
-			self._secureSSHLink(initDirectory=True)
-			self._socketHandler()
+			if len(self._ssh_link_base) >= 107:
+				self._ssh_link_base = os.path.expanduser('~/.ssh/%s' % os.path.basename(self._ssh_link_base))
+			self._ssh_link = self._ssh_link_base
+			_ssh_link_secure(self._ssh_link, init_dn=True)
+			self._get_ssh_link()
 		except KeyError:
-			self.sshLink=False
+			self._ssh_link = False
+
 		# test connection once
-		testProcess = self.LoggedExecute( "exit" )
-		if testProcess.wait() != 0:
-			testProcess.getError()
-			raise CondorProcessError('Failed to validate remote connection.', testProcess)
-	def __initcommands(self, **kwargs):
-		self.cmd = resolve_install_path("ssh")
-		self.cpy = resolve_install_path("scp") + " -r"
+		proc_test = self.logged_execute('exit')
+		if proc_test.wait() != 0:
+			raise CondorProcessError('Failed to validate remote connection.', proc_test)
 
-	# return instance of LoggedExecute with input properly wrapped
-	def LoggedExecute(self, cmd, args = '', **kwargs):
-		self._socketHandler()
-		return LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgs, self.remoteHost, self._argFormat(cmd + " " + args)]) )
-	def LoggedCopyToRemote(self, source, dest, **kwargs):
-		self._socketHandler()
-		return LoggedProcess( " ".join([self.cpy, self.defaultArgs, self.socketArgs, source, self._remotePath(dest)]) )
-	def LoggedCopyFromRemote(self, source, dest, **kwargs):
-		self._socketHandler()
-		return LoggedProcess( " ".join([self.cpy, self.defaultArgs, self.socketArgs, self._remotePath(source), dest]) )
+	def get_domain(self):
+		return self._remote_host
 
-	# Socket creation and cleanup
-	def _CreateSocket(self, duration = 60):
-		args = [self.cmd, self.defaultArgs, "-o ControlMaster=yes", self.socketArgsDef, self.remoteHost, self._argFormat("sleep %d" % duration)]
-		self.__ControlMaster = LoggedProcess(" ".join(args))
-		timeout = 0
-		while not os.path.exists(self.sshLink):
-			time.sleep(0.5)
-			timeout += 0.5
-			if timeout == 5:
-				self._log.log(logging.INFO1, 'SSH socket still not available after 5 seconds...\n%s', self.sshLink)
-				self._log.log(logging.INFO2, 'Socket process: %s', self.__ControlMaster.cmd)
-			if timeout == 10:
-				return False
-	def _CleanSocket(self):
-		if not os.path.exists(self.sshLink):
-			self._log.error('No Socket %s', self.sshLink)
+	def logged_copy_from_remote(self, source, dest):
+		return LoggedProcess(str.join(' ', [self._copy_cmd, self._get_ssh_link(),
+			self._remote_path(source), dest]))
+
+	def logged_copy_to_remote(self, source, dest):
+		return LoggedProcess(str.join(' ', [self._copy_cmd, self._get_ssh_link(),
+			source, self._remote_path(dest)]))
+
+	def logged_execute(self, cmd, args=''):
+		return LoggedProcess(str.join('', [self._shell_cmd, self._get_ssh_link(),
+			self._remote_host, _format_args_ssh(cmd + ' ' + args)]))
+
+	def _clean_socket(self):
+		if not os.path.exists(self._ssh_link):
+			self._log.error('No Socket %s', self._ssh_link)
 			return True
-		self._log.info('Killing Socket %s', self.sshLink)
-#		killSocket = LoggedProcess( " ".join([self.cmd, self.defaultArgs, self.socketArgsDef, "-O exit", self.remoteHost]) )
-#		while killSocket.poll() == -1:
-#			print "poll", killSocket.poll()
-#			time.sleep(0.5)
-#			timeout += 0.5
-#			if timeout == 5:
-#				self._log.log(logging.INFO1, 'Failed to cancel ssh Socket...\n%s', self.sshLink)
-#				return False
-#		print "done", killSocket.poll()
+		self._log.info('Killing Socket %s', self._ssh_link)
 		timeout = 0
-		while os.path.exists(self.sshLink):
+		while os.path.exists(self._ssh_link):
 			self._log.error('exists %d', timeout)
 			time.sleep(0.5)
 			timeout += 0.5
-			#if timeout == 5:
-			#	self._log.log(logging.INFO1, 'Failed to remove ssh Socket...\n%s', self.sshLink)
-			#	return False
 		return True
 
-	def getDomain(self):
-		return self.remoteHost
-
-	# Helper functions
-	def _argFormat(self, args):
-		return "'" + args.replace("'", "'\\''") + "'"
-	def _remotePath(self, path):
-		return "%s:%s" % (self.remoteHost,path)
-
-	# handler for creating, validating and publishing/denying ssh link socket
-	def _socketHandler(self, maxFailCount=5):
-		if self.sshLink:
-			if self._refreshSSHLink():
-				if self.socketArgs!=self.socketArgsDef:
-					self.socketArgs=self.socketArgsDef
-			else:
-				self.socketFailCount+=1
-				if self.socketArgs!="":
-					self.socketArgs=""
-				if self.socketFailCount>maxFailCount:
-					self._log.error('Failed to create secure socket %s more than %s times!\nDisabling further attempts.', self.sshLink, maxFailCount)
-					self.sshLink=False
-
-	# make sure the link file and directory are properly protected
-	# 	@sshLink:	location of the link
-	#	@directory:	secure only directory (for initializing)
-	def _secureLinkDirectory(self, sshLink, enforce = True):
-		try:
-			sshLinkDir = ensure_dir_exists(os.path.dirname(sshLink), 'SSH link direcory', BackendError)
-		except Exception:
-			if not self.socketEnforce:
+	def _create_socket(self, ssh_link_arg, duration=60):
+		# Socket creation and cleanup
+		args = [self._shell_cmd, '-o ControlMaster=yes', ssh_link_arg,
+			self._remote_host, _format_args_ssh('sleep %d' % duration)]
+		self._ssh_link_master_proc = LoggedProcess(str.join(' ', args))
+		timeout = 0
+		while not os.path.exists(self._ssh_link):
+			time.sleep(0.5)
+			timeout += 0.5
+			if timeout == 5:
+				self._log.log(logging.INFO1,
+					'SSH socket still not available after 5 seconds...\n%s', self._ssh_link)
+				self._log.log(logging.INFO2, 'Socket process: %s', self._ssh_link_master_proc.cmd)
+			if timeout == 10:
 				return False
-			raise
-		if sshLinkDir!=os.path.dirname(os.path.expanduser("~/.ssh/")):
-			try:
-				os.chmod(sshLinkDir, stat.S_IRWXU)
-			except Exception:
-				if self.socketEnforce:
-					raise BackendError("Could not secure directory for SSHLink:\n	%s" % sshLinkDir)
-				else:
-					return False
-		return True
-	def _secureLinkSocket(self, sshLink, enforce = True):
-		if os.path.exists(sshLink):
-			if stat.S_ISSOCK(os.stat(sshLink).st_mode):
-				try:
-					os.chmod(sshLink, stat.S_IRWXU)
-				except Exception:
-					if self.socketEnforce:
-						raise BackendError("Could not secure SSHLink:\n	%s" % sshLink)
-					else:
-						return False
-			else:
-				if self.socketEnforce:
-					raise BackendError("Non-socket object already exists for SSHLink:\n	%s" % sshLink)
-				else:
-					return False
-		return True
-	def _secureSSHLink(self, initDirectory=False):
-		if self._secureLinkDirectory(self.sshLink) and (initDirectory or self._secureLinkSocket(self.sshLink)):
-			return True
-		return False
 
-	# keep a process active in the background to speed up connecting by providing an active socket
-	def _refreshSSHLink(self, minSeconds=5, maxSeconds=20):
+	def _get_ssh_link(self, sec_min=5, sec_max=20, max_retries=5):
+		if not self._ssh_link:
+			return ''
+		# keep a process active in the background to speed up connecting by providing an active socket
 		# if there is a link, ensure it'll still live for minimum lifetime
-		if os.path.exists(self.sshLink) and stat.S_ISSOCK(os.stat(self.sshLink).st_mode):
-			if ( time.time() - self.socketTimestamp < maxSeconds-minSeconds ):
-				return True
+		if os.path.exists(self._ssh_link) and stat.S_ISSOCK(os.stat(self._ssh_link).st_mode):
+			if time.time() - self._ssh_link_timestamp < sec_max - sec_min:
+				return self._ssh_link_args
 		# stop already existing socket master
-		if not self._CleanSocket():
-			return False
+		if not self._clean_socket():
+			self._ssh_link_fail_count += 1
+			if self._ssh_link_fail_count > max_retries:
+				self._log.error('Failed to create secure socket %s more than %s times!\n' +
+					'Disabling further attempts.', self._ssh_link, max_retries)
+				self._ssh_link = False
+			return ''
 		# rotate socket
-		self.socketIdNow = (self.socketIdNow + 1) % (math.ceil(1.0*maxSeconds/(maxSeconds-minSeconds)) + 1)
-		self.sshLink = self.sshLinkBase+str(self.socketIdNow)
-		self.socketArgsDef = "-o ControlPath=" + self.sshLink
+		ssh_link_id_cyle = (math.ceil(sec_max / float(sec_max - sec_min)) + 1)
+		self._ssh_link_id = (self._ssh_link_id + 1) % ssh_link_id_cyle
+		self._ssh_link = self._ssh_link_base + str(self._ssh_link_id)
+		new_ssh_link_args = '-o ControlPath=' + self._ssh_link
 		# start new socket
-		self._CreateSocket(maxSeconds)
-		self.socketTimestamp = time.time()
-		return self._secureSSHLink()
+		self._create_socket(new_ssh_link_args, sec_max)
+		self._ssh_link_timestamp = time.time()
+		_ssh_link_secure(self._ssh_link, init_dn=False)
+		self._ssh_link_args = new_ssh_link_args
+		return self._ssh_link_args
 
-# remote Processes via GSISSH
-class GSISSHProcessHandler(SSHProcessHandler):
-	# commands to use - overwritten by inheriting class
-	def __initcommands(self, **kwargs):
-		resolve_install_path('gsissh')
-		resolve_install_path('gsiscp')
+	def _remote_path(self, path):
+		return '%s:%s' % (self._remote_host, path)
 
-# Helper class handling commands through remote interfaces
-class RemoteProcessHandler(object):
-	# enum for connection type - LOCAL exists to ensure uniform interfacing with local programms if needed
-	RPHType = make_enum(['LOCAL', 'SSH', 'GSISSH'])
 
-	# helper functions - properly prepare argument string for passing via interface
-	def _argFormatSSH(self, args):
-		return "'" + args.replace("'", "'\\''") + "'"
-	def _argFormatLocal(self, args):
-		return args
+def _format_args_ssh(args):
+	return '\'' + args.replace('\'', "'\\''") + '\''
 
-	# template for input for connection types
-	RPHTemplate = {
-		RPHType.LOCAL: {
-			'command'	: "%(args)s %(cmdargs)s %%(cmd)s",
-			'copy'		: "cp -r %(args)s %(cpargs)s %%(source)s %%(dest)s",
-			'path'		: "%(path)s",
-			'argFormat'	: _argFormatLocal
-			},
-		RPHType.SSH: {
-			'command'	: "ssh %%(args)s %%(cmdargs)s %(rhost)s %%%%(cmd)s",
-			'copy'		: "scp -r %%(args)s %%(cpargs)s %%%%(source)s %%%%(dest)s",
-			'path'		: "%(host)s:%(path)s",
-			'argFormat'	: _argFormatSSH
-			},
-		RPHType.GSISSH: {
-			'command'	: "gsissh %%(args)s  %%(cmdargs)s %(rhost)s %%%%(cmd)s",
-			'copy'		: "gsiscp -r %%(args)s %%(cpargs)s %%%%(source)s %%%%(dest)s",
-			'path'		: "%(host)s:%(path)s",
-			'argFormat'	: _argFormatSSH
-			},
-		}
-	def __init__(self, remoteType="", **kwargs):
-		self._log = logging.getLogger('backend.condor')
-		self.cmd=False
-		# pick requested remote connection
+
+def _ssh_link_secure(ssh_link_fn, init_dn):
+	ssh_link_dn = ensure_dir_exists(os.path.dirname(ssh_link_fn), 'SSH link direcory', BackendError)
+	if ssh_link_dn != os.path.dirname(os.path.expanduser('~/.ssh/')):
 		try:
-			self.remoteType = self.RPHType.str2enum(remoteType)
-			self.cmd = self.RPHTemplate[self.remoteType]["command"]
-			self.copy = self.RPHTemplate[self.remoteType]["copy"]
-			self.path = self.RPHTemplate[self.remoteType]["path"]
-			self.argFormat = self.RPHTemplate[self.remoteType]["argFormat"]
+			os.chmod(ssh_link_dn, stat.S_IRWXU)
 		except Exception:
-			raise ConfigError("Request to initialize RemoteProcessHandler of unknown type: %s" % remoteType)
-		# destination should be of type: [user@]host
-		if self.remoteType==self.RPHType.SSH or self.remoteType==self.RPHType.GSISSH:
-			try:
-				self.cmd = self.cmd % { "rhost" : kwargs["host"] }
-				self.copy = self.copy % { "rhost" : kwargs["host"] }
-				self.host = kwargs["host"]
-			except Exception:
-				raise ConfigError("Request to initialize RemoteProcessHandler of type %s without remote host." % self.RPHType.enum2str(self.remoteType))
-		# add default arguments for all commands
-		self.cmd = self.cmd % { "cmdargs" : kwargs.get("cmdargs",""), "args" : kwargs.get("args","") }
-		self.copy = self.copy % { "cpargs" : kwargs.get("cpargs",""), "args" : kwargs.get("args","") }
-		# test connection once
-		proc = LoggedProcess(self.cmd % { "cmd" : "exit"})
-		ret = proc.getAll()[0]
-		if ret != 0:
-			raise CondorProcessError('Validation of remote connection failed!', proc)
-		self._log.log(logging.INFO2, 'Remote interface initialized:\n\tCmd: %s\n\tCp : %s', self.cmd, self.copy)
-
-	# return instance of LoggedExecute with input properly wrapped
-	def LoggedExecute(self, cmd, args = '', argFormat=defaultArg):
-		if argFormat is defaultArg:
-			argFormat=self.argFormat
-		return LoggedProcess( self.cmd % { "cmd" : argFormat(self, "%s %s" % ( cmd, args )) } )
-
-	def LoggedCopyToRemote(self, source, dest):
-		return LoggedProcess( self.copy % { "source" : source, "dest" : self.path%{"host":self.host,"path":dest} } )
-
-	def LoggedCopyFromRemote(self, source, dest):
-		return LoggedProcess( self.copy % { "source" : self.path%{"host":self.host,"path":source}, "dest" : dest } )
-
-	def LoggedCopy(self, source, dest, remoteKey="<remote>"):
-		if source.startswith(remoteKey):
-			source = self.path%{"host":self.host,"path":source[len(remoteKey):]}
-		if dest.startswith(remoteKey):
-			dest = self.path%{"host":self.host,"path":dest[len(remoteKey):]}
-		return LoggedProcess( self.copy % { "source" : "%s:%s"%(self.host,source), "dest" : dest } )
+			raise BackendError('Could not secure directory for SSHLink %s' % ssh_link_dn)
+	if init_dn:
+		return
+	if os.path.exists(ssh_link_fn):
+		if not stat.S_ISSOCK(os.stat(ssh_link_fn).st_mode):
+			raise BackendError('Non-socket object already exists for SSHLink %s' % ssh_link_fn)
+		try:
+			os.chmod(ssh_link_fn, stat.S_IRWXU)
+		except Exception:
+			raise BackendError('Could not secure SSHLink %s' % ssh_link_fn)

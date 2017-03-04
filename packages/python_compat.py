@@ -12,6 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+# pylint:disable=invalid-name,wrong-import-position
 import os, sys, logging, itertools
 
 
@@ -184,6 +185,7 @@ any = resolve_fun('<builtin>:any', _any)  # >= py-2.5
 BytesBuffer = resolve_fun('cStringIO:StringIO', 'io:BytesIO')  # < py-2.6
 exit_without_cleanup = resolve_fun('os:_exit')
 get_current_thread = resolve_fun('threading:current_thread', 'threading:currentThread')  # >= py-2.6
+get_thread_state = resolve_fun('threading:Thread.is_alive', 'threading:Thread.isAlive')  # >= py-2.6
 get_user_input = resolve_fun('<builtin-py2>:raw_input', '<builtin-py3>:input')  # < py-3.0
 ichain = resolve_fun('itertools:chain.from_iterable', _ichain)  # >= py-2.6
 ifilter = resolve_fun('itertools:ifilter', '<builtin-py3>:filter')  # < py-3.0
@@ -272,11 +274,11 @@ else:
 
 
 __all__ = ['all', 'any', 'bytes2str', 'BytesBuffer', 'BytesBufferBase', 'exit_without_cleanup',
-	'get_current_thread', 'get_thread_name', 'get_user_input', 'iidfilter', 'lidfilter',
-	'ichain', 'identity', 'ifilter', 'imap', 'irange', 'ismap', 'itemgetter', 'izip', 'json',
-	'lchain', 'lfilter', 'lmap', 'lrange', 'lru_cache', 'lsmap', 'lzip', 'md5', 'md5_hex',
-	'next', 'parsedate', 'reduce', 'relpath', 'resolve_fun', 'rsplit', 'set',
-	'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile', 'unicode',
+	'get_current_thread', 'get_thread_name', 'get_thread_state', 'get_user_input',
+	'iidfilter', 'lidfilter', 'ichain', 'identity', 'ifilter', 'imap', 'irange', 'ismap',
+	'itemgetter', 'izip', 'json', 'lchain', 'lfilter', 'lmap', 'lrange', 'lru_cache',
+	'lsmap', 'lzip', 'md5', 'md5_hex', 'next', 'parsedate', 'reduce', 'relpath', 'resolve_fun',
+	'rsplit', 'set', 'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile', 'unicode',
 	'unspecified', 'when_unspecified']
 
 

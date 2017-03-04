@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -139,8 +139,8 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		if init_requested and not init_needed and (source.get_parameter_len() is not None):
 			self._log.warning('Re-Initialization will overwrite the current mapping ' +
 				'between jobs and parameter/dataset content! This can lead to invalid results!')
-			user_msg = 'Do you want to perform a syncronization between '
-			user_msg += 'the current mapping and the new one to avoid this?'
+			user_msg = ('Do you want to perform a syncronization between ' +
+				'the current mapping and the new one to avoid this?')
 			if utils.get_user_bool(user_msg, True):
 				init_requested = False
 		do_init = init_requested or init_needed
@@ -156,6 +156,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 			self._log.info('Parameter hash has changed')
 			self._log.debug('\told hash: %s', self._psrc_hash_stored)
 			self._log.debug('\tnew hash: %s', psrc_hash)
+			self._log.log(logging.DEBUG1, '\tnew src: %s', self._psrc_raw)
 			config.set_state(True, 'init', detail='config')
 		do_resync = (resync_requested or resync_needed) and not do_init
 

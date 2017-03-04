@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,15 +14,8 @@
 
 from grid_control import utils
 from grid_control.backends.jdl_writer import JDLWriter
-from grid_control.backends.wms_grid import GridWMS, Grid_CancelJobs, Grid_CheckJobs
+from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
 from python_compat import imap
-
-
-class EDGJDL(JDLWriter):
-	def _format_reqs_storage(self, locations):
-		if locations:
-			location_iter = imap(lambda x: '(target.GlueSEUniqueID == %s)' % self._escape(x), locations)
-			return 'anyMatch(other.storage.CloseSEs, %s)' % str.join(' || ', location_iter)
 
 
 class EuropeanDataGrid(GridWMS):
@@ -30,10 +23,16 @@ class EuropeanDataGrid(GridWMS):
 
 	def __init__(self, config, name):
 		GridWMS.__init__(self, config, name,
-			check_executor = Grid_CheckJobs(config, 'edg-job-status'),
-			cancel_executor = Grid_CancelJobs(config, 'edg-job-cancel'),
-			jdlWriter = EDGJDL())
+			submit_exec=utils.resolve_install_path('edg-job-submit'),
+			output_exec=utils.resolve_install_path('edg-job-get-output'),
+			check_executor=GridCheckJobs(config, 'edg-job-status'),
+			cancel_executor=GridCancelJobs(config, 'edg-job-cancel'),
+			jdl_writer=EDGJDL())
+		self._submit_args_dict.update({'-r': self._ce, '--config-vo': self._config_fn})
 
-		self._submitExec = utils.resolve_install_path('edg-job-submit')
-		self._outputExec = utils.resolve_install_path('edg-job-get-output')
-		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
+
+class EDGJDL(JDLWriter):
+	def _format_reqs_storage(self, locations):
+		if locations:
+			location_iter = imap(lambda x: '(target.GlueSEUniqueID == %s)' % self._escape(x), locations)
+			return 'anyMatch(other.storage.CloseSEs, %s)' % str.join(' || ', location_iter)

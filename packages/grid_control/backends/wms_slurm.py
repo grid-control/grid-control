@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
-from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_local import LocalWMS
@@ -22,19 +22,16 @@ from grid_control.job_db import Job
 from python_compat import identity, ifilter
 
 
-class SLURM_CheckJobs(CheckJobsWithProcess):
+class SLURMCheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		proc_factory = ProcessCreatorAppendArguments(config,
-			'sacct', ['-n', '-o', 'jobid,partition,state,exitcode', '-j'], lambda wms_id_list: [str.join(',', wms_id_list)])
-		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map = {
-			'PENDING': Job.WAITING,    # idle (waiting for a machine to execute on)
-			'RUNNING': Job.RUNNING,    # running
-			'COMPLETED': Job.DONE,     # running
-			'COMPLETING': Job.DONE,    # running
-			'CANCELLED+': Job.ABORTED, # removed
-			'NODE_FAIL': Job.ABORTED,  # removed
-			'CANCELLED': Job.ABORTED,  # removed
-			'FAILED': Job.ABORTED,     # submit error
+			'sacct', ['-n', '-o', 'jobid,partition,state,exitcode', '-j'],
+			lambda wms_id_list: [str.join(',', wms_id_list)])
+		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map={
+			Job.ABORTED: ['CANCELLED+', 'NODE_FAIL', 'CANCELLED', 'FAILED'],
+			Job.DONE: ['COMPLETED', 'COMPLETING'],
+			Job.RUNNING: ['RUNNING'],
+			Job.WAITING: ['PENDING'],
 		})
 
 	def _parse(self, proc):
@@ -54,16 +51,11 @@ class SLURM(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.resolve_install_path('sbatch'),
-			check_executor = CheckJobsMissingState(config, SLURM_CheckJobs(config)),
-			cancel_executor = CancelJobsWithProcessBlind(config, 'scancel', unknownID = 'not in queue !'))
+			submit_exec=utils.resolve_install_path('sbatch'),
+			check_executor=CheckJobsMissingState(config, SLURMCheckJobs(config)),
+			cancel_executor=CancelJobsWithProcessBlind(config, 'scancel', unknown_id='not in queue !'))
 
-
-	def get_job_arguments(self, jobnum, sandbox):
-		return repr(sandbox)
-
-
-	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
+	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
 		params = ' -J "%s"' % job_name
 		# processes and IO paths
@@ -72,7 +64,9 @@ class SLURM(LocalWMS):
 			params += ' -p %s' % reqs[WMS.QUEUES][0]
 		return params
 
-
-	def parseSubmitOutput(self, data):
+	def parse_submit_output(self, data):
 		# job_submit: Job 121195 has been submitted.
 		return int(data.split()[3].strip())
+
+	def _get_job_arguments(self, jobnum, sandbox):
+		return repr(sandbox)

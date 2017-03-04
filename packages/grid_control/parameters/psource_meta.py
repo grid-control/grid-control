@@ -1,4 +1,4 @@
-# | Copyright 2012-2016 Karlsruhe Institute of Technology
+# | Copyright 2012-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -59,14 +59,14 @@ class MultiParameterSource(ParameterSource):  # Meta processing of parameter psr
 	def __init__(self, *psrc_list):
 		ParameterSource.__init__(self)
 		self._psrc_list = _strip_null_sources(psrc_list)
-		self._psrc_max_list = lmap(lambda p: p.get_parameter_len(), self._psrc_list)
+		self._psrc_max_list = lmap(lambda psrc: psrc.get_parameter_len(), self._psrc_list)
 		self._psrc_max = self._init_psrc_max()
 
 	def __repr__(self):
 		return '%s(%s)' % (self.alias_list[0], str.join(', ', imap(repr, self._psrc_list)))
 
 	def can_finish(self):
-		return all(imap(lambda p: p.can_finish(), self._psrc_list))
+		return all(imap(lambda psrc: psrc.can_finish(), self._psrc_list))
 
 	def fill_parameter_metadata(self, result):
 		map_vn2psrc = {}
@@ -88,10 +88,11 @@ class MultiParameterSource(ParameterSource):  # Meta processing of parameter psr
 		return self._psrc_max
 
 	def get_psrc_hash(self):
-		return md5_hex(self.__class__.__name__ + str(lmap(lambda p: p.get_psrc_hash(), self._psrc_list)))
+		child_psrc_hash = str(lmap(lambda psrc: psrc.get_psrc_hash(), self._psrc_list))
+		return md5_hex(self.__class__.__name__ + child_psrc_hash)
 
 	def get_used_psrc_list(self):
-		return [self] + lchain(imap(lambda ps: ps.get_used_psrc_list(), self._psrc_list))
+		return [self] + lchain(imap(lambda psrc: psrc.get_used_psrc_list(), self._psrc_list))
 
 	def resync_psrc(self):
 		psrc_max_old = self._psrc_max

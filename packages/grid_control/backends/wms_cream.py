@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -25,22 +25,29 @@ from grid_control.utils.process_base import LocalProcess
 from python_compat import imap, irange, md5, tarfile
 
 
-class CREAM_CheckJobs(CheckJobsWithProcess):
+class CREAMCancelJobs(CancelJobsWithProcessBlind):
+	def __init__(self, config):
+		CancelJobsWithProcessBlind.__init__(self, config,
+			'glite-ce-job-cancel', ['--noint', '--logfile', '/dev/stderr'])
+
+
+class CREAMPurgeJobs(CancelJobsWithProcessBlind):
+	def __init__(self, config):
+		CancelJobsWithProcessBlind.__init__(self, config,
+			'glite-ce-job-purge', ['--noint', '--logfile', '/dev/stderr'])
+
+
+class CREAMCheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		proc_factory = ProcessCreatorAppendArguments(config,
 			'glite-ce-job-status', ['--level', '0', '--logfile', '/dev/stderr'])
-		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map = {
-			'ABORTED':        Job.ABORTED,
-			'CANCELLED':      Job.ABORTED,
-			'DONE-FAILED':    Job.DONE,
-			'DONE-OK':        Job.DONE,
-			'HELD':           Job.WAITING,
-			'IDLE':           Job.QUEUED,
-			'PENDING':        Job.WAITING,
-			'REALLY-RUNNING': Job.RUNNING,
-			'REGISTERED':     Job.QUEUED,
-			'RUNNING':        Job.RUNNING,
-			'UNKNOWN':        Job.UNKNOWN,
+		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map={
+			Job.ABORTED: ['ABORTED', 'CANCELLED'],
+			Job.DONE: ['DONE-FAILED', 'DONE-OK'],
+			Job.QUEUED: ['IDLE', 'REGISTERED'],
+			Job.RUNNING: ['REALLY-RUNNING', 'RUNNING'],
+			Job.UNKNOWN: ['UNKNOWN'],
+			Job.WAITING: ['HELD', 'PENDING'],
 		})
 
 	def _parse(self, proc):
@@ -63,108 +70,98 @@ class CREAM_CheckJobs(CheckJobsWithProcess):
 		yield job_info
 
 
-class CREAM_PurgeJobs(CancelJobsWithProcessBlind):
-	def __init__(self, config):
-		CancelJobsWithProcessBlind.__init__(self, config,
-			'glite-ce-job-purge', ['--noint', '--logfile', '/dev/stderr'])
-
-
-class CREAM_CancelJobs(CancelJobsWithProcessBlind):
-	def __init__(self, config):
-		CancelJobsWithProcessBlind.__init__(self, config,
-			'glite-ce-job-cancel', ['--noint', '--logfile', '/dev/stderr'])
-
-
 class CreamWMS(GridWMS):
 	alias_list = ['cream']
 
 	def __init__(self, config, name):
-		cancel_executor = CancelAndPurgeJobs(config, CREAM_CancelJobs(config), CREAM_PurgeJobs(config))
-		GridWMS.__init__(self, config, name, check_executor = CREAM_CheckJobs(config),
-			cancel_executor = ChunkedExecutor(config, 'cancel', cancel_executor))
+		cancel_executor = CancelAndPurgeJobs(config, CREAMCancelJobs(config), CREAMPurgeJobs(config))
+		GridWMS.__init__(self, config, name,
+			submit_exec=utils.resolve_install_path('glite-ce-job-submit'),
+			output_exec=utils.resolve_install_path('glite-ce-job-output'),
+			check_executor=CREAMCheckJobs(config),
+			cancel_executor=ChunkedExecutor(config, 'cancel', cancel_executor))
 
-		self._job_lenPerChunk = config.get_int('job chunk size', 10, on_change = None)
+		self._chunk_size = config.get_int('job chunk size', 10, on_change=None)
+		self._submit_args_dict.update({'-r': self._ce, '--config-vo': self._config_fn})
+		self._output_regex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored' + \
+			' in the dir (?P<output_dn>.*)$'
 
-		self._submitExec = utils.resolve_install_path('glite-ce-job-submit')
-		self._outputExec = utils.resolve_install_path('glite-ce-job-output')
-		self._submitParams.update({'-r': self._ce, '--config-vo': self._configVO })
+		self._use_delegate = False
+		if self._use_delegate is False:
+			self._submit_args_dict['-a'] = ' '
 
-		self._outputRegex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored in the dir (?P<outputDir>.*)$'
-
-		self._useDelegate = False
-		if self._useDelegate is False:
-			self._submitParams.update({ '-a': ' ' })
-
-	def makeJDL(self, jobnum, module):
-		return ['[\n'] + GridWMS.makeJDL(self, jobnum, module) + ['OutputSandboxBaseDestUri = "gsiftp://localhost";\n]']
+	def _make_jdl(self, jobnum, task):
+		return ['[\n'] + GridWMS._make_jdl(self, jobnum, task) + [
+			'OutputSandboxBaseDestUri = "gsiftp://localhost";\n]']
 
 	# Get output of jobs and yield output dirs
-	def _get_jobs_output(self, allIds):
-		if len(allIds) == 0:
+	def _get_jobs_output(self, gc_id_jobnum_list):
+		if len(gc_id_jobnum_list) == 0:
 			raise StopIteration
 
-		basePath = os.path.join(self._path_output, 'tmp')
+		tmp_dn = os.path.join(self._path_output, 'tmp')
 		try:
-			if len(allIds) == 1:
+			if len(gc_id_jobnum_list) == 1:
 				# For single jobs create single subdir
-				basePath = os.path.join(basePath, md5(allIds[0][0]).hexdigest())
-			utils.ensure_dir_exists(basePath)
+				tmp_dn = os.path.join(tmp_dn, md5(gc_id_jobnum_list[0][0]).hexdigest())
+			utils.ensure_dir_exists(tmp_dn)
 		except Exception:
-			raise BackendError('Temporary path "%s" could not be created.' % basePath, BackendError)
-		
-		activity = Activity('retrieving %d job outputs' % len(allIds))
-		for ids in imap(lambda x: allIds[x:x+self._job_lenPerChunk], irange(0, len(allIds), self._job_lenPerChunk)):
-			jobnumMap = dict(ids)
+			raise BackendError('Temporary path "%s" could not be created.' % tmp_dn, BackendError)
+
+		activity = Activity('retrieving %d job outputs' % len(gc_id_jobnum_list))
+		chunk_pos_iter = irange(0, len(gc_id_jobnum_list), self._chunk_size)
+		for ids in imap(lambda x: gc_id_jobnum_list[x:x + self._chunk_size], chunk_pos_iter):
+			map_gc_id2jobnum = dict(ids)
 			jobs = ' '.join(self._iter_wms_ids(ids))
 			log = tempfile.mktemp('.log')
 
-			proc = LocalProcess(self._outputExec, '--noint', '--logfile', log, '--dir', basePath, jobs)
+			proc = LocalProcess(self._output_exec, '--noint', '--logfile', log, '--dir', tmp_dn, jobs)
 
 			# yield output dirs
-			todo = jobnumMap.values()
+			todo = map_gc_id2jobnum.values()
 			done = []
-			currentJobNum = None
-			for line in imap(str.strip, proc.stdout.iter(timeout = 20)):
-				match = re.match(self._outputRegex, line)
+			current_jobnum = None
+			for line in imap(str.strip, proc.stdout.iter(timeout=20)):
+				match = re.match(self._output_regex, line)
 				if match:
-					currentJobNum = jobnumMap.get(self._create_gc_id(match.groupdict()['rawId']))
-					todo.remove(currentJobNum)
+					current_jobnum = map_gc_id2jobnum.get(self._create_gc_id(match.groupdict()['rawId']))
+					todo.remove(current_jobnum)
 					done.append(match.groupdict()['rawId'])
-					outputDir = match.groupdict()['outputDir']
-					if os.path.exists(outputDir):
-						if 'GC_WC.tar.gz' in os.listdir(outputDir):
-							wildcardTar = os.path.join(outputDir, 'GC_WC.tar.gz')
+					output_dn = match.groupdict()['output_dn']
+					if os.path.exists(output_dn):
+						if 'GC_WC.tar.gz' in os.listdir(output_dn):
+							wildcard_tar = os.path.join(output_dn, 'GC_WC.tar.gz')
 							try:
-								tarfile.TarFile.open(wildcardTar, 'r:gz').extractall(outputDir)
-								os.unlink(wildcardTar)
+								tarfile.TarFile.open(wildcard_tar, 'r:gz').extractall(output_dn)
+								os.unlink(wildcard_tar)
 							except Exception:
-								self._log.error('Can\'t unpack output files contained in %s', wildcardTar)
-					yield (currentJobNum, outputDir)
-					currentJobNum = None
-			exit_code = proc.status(timeout = 10, terminate = True)
+								self._log.error('Can\'t unpack output files contained in %s', wildcard_tar)
+					yield (current_jobnum, output_dn)
+					current_jobnum = None
+			exit_code = proc.status(timeout=10, terminate=True)
 
 			if exit_code != 0:
 				if 'Keyboard interrupt raised by user' in proc.stdout.read_log():
-					utils.remove_files([log, basePath])
+					utils.remove_files([log, tmp_dn])
 					raise StopIteration
 				else:
 					self._log.log_process(proc)
 				self._log.error('Trying to recover from error ...')
-				for dirName in os.listdir(basePath):
-					yield (None, os.path.join(basePath, dirName))
+				for dn in os.listdir(tmp_dn):
+					yield (None, os.path.join(tmp_dn, dn))
 		activity.finish()
 
 		# return unretrievable jobs
 		for jobnum in todo:
 			yield (jobnum, None)
 
-		purgeLog = tempfile.mktemp('.log')
-		purgeProc = LocalProcess(utils.resolve_install_path('glite-ce-job-purge'),
-			'--noint', '--logfile', purgeLog, str.join(' ', done))
-		exit_code = purgeProc.status(timeout = 60)
+		purge_log_fn = tempfile.mktemp('.log')
+		purge_proc = LocalProcess(utils.resolve_install_path('glite-ce-job-purge'),
+			'--noint', '--logfile', purge_log_fn, str.join(' ', done))
+		exit_code = purge_proc.status(timeout=60)
 		if exit_code != 0:
-			if self.explainError(purgeProc, exit_code):
+			if self._explain_error(purge_proc, exit_code):
 				pass
 			else:
 				self._log.log_process(proc)
-		utils.remove_files([log, purgeLog, basePath])
+		utils.remove_files([log, purge_log_fn, tmp_dn])

@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 import re, fnmatch, logging
 from grid_control.config.config_entry import join_config_locations
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.utils import QM
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.parsing import str_dict
 from hpfwk import AbstractError, Plugin
@@ -23,6 +22,12 @@ from python_compat import lfilter, sorted, unspecified
 
 
 ListOrder = make_enum(['source', 'matcher'])  # pylint: disable=invalid-name
+
+
+def _match_result(value):
+	if value:
+		return 1
+	return -1
 
 
 class MatcherHolder(object):
@@ -159,7 +164,7 @@ class BasicMatcher(Matcher):
 
 		class FunctionObject(MatcherHolder):
 			def match(self, value):
-				return QM(matcher(_get_case(self._case, value), self._selector), 1, -1)
+				return _match_result(matcher(_get_case(self._case, value), self._selector))
 		return _get_fixed_matcher_object_case(self, FunctionObject, selector, self._case)
 
 	def get_positive_selector(self, selector):
@@ -170,9 +175,8 @@ class BasicMatcher(Matcher):
 	match_function = staticmethod(match_function)
 
 	def matcher(self, value, selector):
-		bool_match_result = self.__class__.match_function(
-			_get_case(self._case, value), _get_case(self._case, selector))
-		return QM(bool_match_result, 1, -1)
+		return _match_result(self.__class__.match_function(
+			_get_case(self._case, value), _get_case(self._case, selector)))
 
 
 class BlackWhiteMatcher(Matcher):
@@ -211,7 +215,7 @@ class ExprMatcher(Matcher):
 	def create_matcher(self, selector):
 		class FunctionObject(MatcherHolder):
 			def match(self, value):
-				return QM(self._matcher(_get_case(self._case, value)), 1, -1)
+				return _match_result(self._matcher(_get_case(self._case, value)))
 
 			def _assign_selector(self, selector_fixed):
 				self._matcher = _get_fun_from_expr(selector_fixed)
@@ -222,7 +226,7 @@ class ExprMatcher(Matcher):
 
 	def matcher(self, value, selector):
 		match_fun = _get_fun_from_expr(_get_case(self._case, selector))
-		return QM(match_fun(_get_case(self._case, value)), 1, -1)
+		return _match_result(match_fun(_get_case(self._case, value)))
 
 
 class RegExMatcher(Matcher):
@@ -235,7 +239,7 @@ class RegExMatcher(Matcher):
 	def create_matcher(self, selector):
 		class FunctionObject(MatcherHolder):
 			def match(self, value):
-				return QM(self._regex.search(_get_case(self._case, value)) is not None, 1, -1)
+				return _match_result(self._regex.search(_get_case(self._case, value)) is not None)
 
 			def _assign_selector(self, selector_fixed):
 				self._regex = re.compile(selector_fixed)
@@ -247,7 +251,7 @@ class RegExMatcher(Matcher):
 
 	def matcher(self, value, selector):
 		re_match = re.search(_get_case(self._case_regex, selector), _get_case(self._case, value))
-		return QM(re_match is not None, 1, -1)
+		return _match_result(re_match is not None)
 
 
 class MediumListFilter(ListFilter):

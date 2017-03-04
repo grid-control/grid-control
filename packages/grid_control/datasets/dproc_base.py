@@ -1,4 +1,4 @@
-# | Copyright 2015-2016 Karlsruhe Institute of Technology
+# | Copyright 2015-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ from grid_control.config import join_config_locations
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import prune_processors
 from hpfwk import AbstractError, NestedException
+from python_compat import imap
 
 
 class DataProcessorError(NestedException):
@@ -31,9 +32,16 @@ class DataProcessor(ConfigurablePlugin):
 		self._log_debug = None
 		if self._log.isEnabledFor(logging.DEBUG):
 			self._log_debug = self._log
+		self._disabled = False
+
+	def disable_stream_singletons(self):
+		pass
 
 	def enabled(self):
-		return True
+		return self._enabled() and not self._disabled
+
+	def must_complete_for_partition(self):
+		return False
 
 	def process(self, block_iter):
 		for block in block_iter:
@@ -53,6 +61,9 @@ class DataProcessor(ConfigurablePlugin):
 	def process_block(self, block):
 		raise AbstractError
 
+	def _enabled(self):
+		return True
+
 	def _finished(self):
 		pass
 
@@ -63,9 +74,21 @@ class DataProcessor(ConfigurablePlugin):
 class MultiDataProcessor(DataProcessor):
 	def __init__(self, config, processor_list, datasource_name):
 		DataProcessor.__init__(self, config, datasource_name)
-		do_prune = config.get_bool(self._get_dproc_opt('processor prune'), True)
-		self._processor_list = prune_processors(do_prune, processor_list,
+		self._do_prune = config.get_bool(self._get_dproc_opt('processor prune'), True)
+		self._processor_list = prune_processors(self._do_prune, processor_list,
 			self._log, 'Removed %d inactive dataset processors!')
+
+	def __repr__(self):
+		return str.join('->', imap(repr, self._processor_list))
+
+	def disable_stream_singletons(self):
+		for processor in self._processor_list:
+			processor.disable_stream_singletons()
+		self._processor_list = prune_processors(self._do_prune, self._processor_list,
+			self._log, 'Removed %d singleton dataset processors!')
+
+	def must_complete_for_partition(self):
+		return True in imap(lambda dp: dp.must_complete_for_partition(), self._processor_list)
 
 	def process(self, block_iter):
 		for processor in self._processor_list:

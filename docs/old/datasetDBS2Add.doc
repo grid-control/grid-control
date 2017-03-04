@@ -13,11 +13,43 @@
 #-#  limitations under the License.
 
 import os, re, time, base64, locale, operator, optparse, xml.dom.minidom
-from gcSupport import *
+from gc_scripts import *
 from grid_control_cms import provider_dbsv2
 from grid_control_cms.DBSAPI.dbsApiException import DbsBadRequest, DbsException
 from grid_control_cms.DBSAPI.dbsMigrateApi import DbsMigrateApi
 from grid_control_cms.provider_dbsv2 import *
+
+#	parser.add_bool('proc', 'b', 'batch',                default=False,
+#		help='Enable non-interactive batch mode [Default: Interactive mode]')
+#	parser.add_text(None, 'D', 'display-dataset',    default=None,
+#		help='Display information associated with dataset key(s) (accepts "all")')
+#	parser.add_text(None, 'C', 'display-config',     default=None,
+#		help='Display information associated with config hash(es) (accepts "all")')
+#	parser.add_text(None, 'k', 'dataset-key-select', default='',
+#		help='Specify dataset keys to process')
+
+def filter_blocks(opts, blocks):
+	return blocks
+#	if opts.incremental:
+		# Query target DBS for all found datasets and perform dataset resync with "supposed" state
+#		dNames = set(ximap(lambda b: b[DataProvider.Dataset], blocks))
+#		dNames = xfilter(lambda ds: hasDataset(opts.dbsTarget, ds), dNames) - todo
+#		config = get_script_config(config_dict={None: {'dbs instance': opts.dbsTarget}})
+#		oldBlocks = xreduce(xoperator.add, ximap(lambda ds: DBSApiv2(config, None, ds, None).get_block_list_cached(show_stats=False), dNames), [])
+#		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resync_blocks(oldBlocks, blocks)
+#		if len(blocksMissing) or len(blocksChanged):
+#			if not utils.get_user_bool(' * WARNING: Block structure has changed! Continue?', False):
+#				sys.exit(os.EX_OK)
+		# Search for blocks which were partially added and generate "pseudo"-blocks with left over files
+#		setOldBlocks = set(ximap(lambda x: x[DataProvider.BlockName], oldBlocks))
+#		setAddedBlocks = set(ximap(lambda x: x[DataProvider.BlockName], blocksAdded))
+#		blockCollision = set.intersection(setOldBlocks, setAddedBlocks)
+#		if blockCollision and opts.closeBlock: # Block are closed and contents have changed
+#			for block in blocksAdded:
+#				if block[DataProvider.BlockName] in blockCollision:
+#					block[DataProvider.BlockName] = str_guid(xmd5(str(time.time())).hexdigest())
+#		blocks = blocksAdded
+
 
 class DBSInfoProvider(datasets.GCProvider):
 	def __init__(self, config, section, datasetExpr, datasetNick, datasetID = 0):
@@ -398,10 +430,10 @@ try:
 	if len(args) != 1:
 		utils.exit_with_usage(usage, 'Neither work directory nor config file specified!')
 	if os.path.isdir(args[0]):
-		opts.workDir = os.path.abspath(os.path.normpath(args[0]))
+		opts.work_dn = os.path.abspath(os.path.normpath(args[0]))
 	else:
-		opts.workDir = Config(args[0]).get_work_path()
-	opts.tmpDir = os.path.join(opts.workDir, 'dbs')
+		opts.work_dn = Config(args[0]).get_work_path()
+	opts.tmpDir = os.path.join(opts.work_dn, 'dbs')
 	if not os.path.exists(opts.tmpDir):
 		os.mkdir(opts.tmpDir)
 	# Lock file in case several instances of this program are running

@@ -1,4 +1,4 @@
-# | Copyright 2011-2016 Karlsruhe Institute of Technology
+# | Copyright 2011-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -34,7 +34,8 @@ class FileClassSplitter(FileLevelSplitter):
 					yield self._create_sub_block(block, partition_fi_list)
 					(partition_fi_list, fi_class_active) = ([], fi_class_current)
 				partition_fi_list.append(fi)
-			yield self._create_sub_block(block, partition_fi_list)
+			if partition_fi_list:
+				yield self._create_sub_block(block, partition_fi_list)
 
 	def _get_fi_class(self, fi, block):
 		raise AbstractError
@@ -43,12 +44,14 @@ class FileClassSplitter(FileLevelSplitter):
 class UserMetadataSplitter(FileClassSplitter):
 	alias_list = ['metadata']
 
-	def _configure_splitter(self, config):
-		self._metadata_user_list = self._query_config(config.get_list, 'split metadata', [])
+	def __init__(self, config, datasource_name):
+		FileClassSplitter.__init__(self, config, datasource_name)
+		self._metadata_user_list = config.get_lookup('split metadata', {},
+			parser=str.split, strfun=lambda x: str.join(' ', x))
 
 	def _get_fi_class(self, fi, block):
 		metadata_name_list = block.get(DataProvider.Metadata, [])
-		metadata_name_list_selected = self._setup(self._metadata_user_list, block)
+		metadata_name_list_selected = self._metadata_user_list.lookup(DataProvider.get_block_id(block))
 		metadata_idx_list = lmap(lambda metadata_name: safe_index(metadata_name_list, metadata_name),
 			metadata_name_list_selected)
 

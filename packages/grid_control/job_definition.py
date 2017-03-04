@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
+
+from grid_control.utils.data_structures import UniqueList
 
 
 class JobDef(object):
@@ -40,10 +42,11 @@ class JobDef(object):
 		self.memory = self._combine_req(max, self.memory, value)
 
 	def require_software(self, value):
-		self.software = self._combine_req(lambda l, i: l + i, self.software, [value])
+		if value is not None:
+			self.software = UniqueList(self.software + [value])
 
-	def require_storage(self, selist):
-		self.storage = self._combine_req(lambda l, i: l + i, self.storage, selist)
+	def require_storage(self, se_list):
+		self.storage = UniqueList(self.storage + (se_list or []))
 
 	def require_wall_time(self, value):
 		self.time_wall = self._combine_req(max, self.time_wall, value)

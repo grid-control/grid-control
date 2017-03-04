@@ -1,4 +1,4 @@
-# | Copyright 2010-2016 Karlsruhe Institute of Technology
+# | Copyright 2010-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
 from grid_control.utils import filter_dict, get_user_bool, intersect_first_dict, replace_with_dict, split_opt  # pylint:disable=line-too-long
 from grid_control.utils.data_structures import UniqueList
-from hpfwk import Plugin, PluginError
+from hpfwk import Plugin, PluginError, clear_current_exception
 from python_compat import ifilter, imap, itemgetter, lchain, lmap, lsmap, md5_hex, sorted
 
 
@@ -192,7 +192,7 @@ class GCProviderSetup(Plugin):
 
 class GCProvider(ScanProviderBase):
 	# Get dataset information just from grid-control instance
-	# required format: <path to config file / workdir> [%<job selector]
+	# required format: <path to config file / work directory> [%<job selector]
 	alias_list = ['gc']
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None, dataset_proc=None):
@@ -215,6 +215,7 @@ class GCProvider(ScanProviderBase):
 			try:
 				scan_holder = GCProviderSetup.get_class('GCProviderSetup_' + ext_task_cls.__name__)
 			except PluginError:
+				clear_current_exception()
 				continue
 			scanner_list += scan_holder.scanner_list
 			break

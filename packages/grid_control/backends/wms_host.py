@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,22 +14,28 @@
 
 from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
-from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from python_compat import ifilter, imap, izip, lmap, next
 
 
-class Host_CheckJobs(CheckJobsWithProcess):
+class HostCancelJobs(CancelJobsWithProcessBlind):
+	def __init__(self, config):
+		CancelJobsWithProcessBlind.__init__(self, config, 'kill', ['-9'], unknown_id='No such process')
+
+	def _handle_error(self, proc):
+		self._filter_proc_log(proc, self._errormsg, blacklist=self._blacklist, log_empty=False)
+
+
+class HostCheckJobs(CheckJobsWithProcess):
 	def __init__(self, config):
 		CheckJobsWithProcess.__init__(self, config,
 			ProcessCreatorAppendArguments(config, 'ps', ['wwup']))
 
-	def _parse_status(self, value, default):
-		if 'Z' in value:
-			return Job.UNKNOWN
-		return Job.RUNNING
+	def _handle_error(self, proc):
+		self._filter_proc_log(proc, self._errormsg, blacklist=['Unknown Job Id'], log_empty=False)
 
 	def _parse(self, proc):
 		status_iter = proc.stdout.iter(self._timeout)
@@ -41,16 +47,10 @@ class Host_CheckJobs(CheckJobsWithProcess):
 			job_info.update({CheckInfo.QUEUE: 'localqueue', CheckInfo.WN: 'localhost'})
 			yield job_info
 
-	def _handle_error(self, proc):
-		self._filter_proc_log(proc, self._errormsg, blacklist = ['Unknown Job Id'], log_empty = False)
-
-
-class Host_CancelJobs(CancelJobsWithProcessBlind):
-	def __init__(self, config):
-		CancelJobsWithProcessBlind.__init__(self, config, 'kill', ['-9'], unknownID = 'No such process')
-
-	def _handle_error(self, proc):
-		self._filter_proc_log(proc, self._errormsg, blacklist = self._blacklist, log_empty = False)
+	def _parse_status(self, value, default):
+		if 'Z' in value:
+			return Job.UNKNOWN
+		return Job.RUNNING
 
 
 class Host(LocalWMS):
@@ -59,18 +59,15 @@ class Host(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submitExec = utils.get_path_share('gc-host.sh'),
-			check_executor = CheckJobsMissingState(config, Host_CheckJobs(config)),
-			cancel_executor = Host_CancelJobs(config))
+			submit_exec=utils.get_path_share('gc-host.sh'),
+			check_executor=CheckJobsMissingState(config, HostCheckJobs(config)),
+			cancel_executor=HostCancelJobs(config))
 
-
-	def get_job_arguments(self, jobnum, sandbox):
-		return ''
-
-
-	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
+	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		return '%d "%s" "%s" "%s"' % (jobnum, sandbox, stdout, stderr)
 
-
-	def parseSubmitOutput(self, data):
+	def parse_submit_output(self, data):
 		return data.strip()
+
+	def _get_job_arguments(self, jobnum, sandbox):
+		return ''

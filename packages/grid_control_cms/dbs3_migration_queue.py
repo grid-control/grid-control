@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import pickle, logging
+import time, pickle, logging
 
 
 try:
@@ -20,7 +20,6 @@ try:
 except ImportError:
 	deque = list  # pylint:disable=invalid-name
 from hpfwk import NestedException
-from time import time
 from python_compat import set
 
 
@@ -91,10 +90,10 @@ class MigrationSubmittedState(object):
 	def __init__(self, migration_task):
 		self.migration_task = migration_task
 		self.max_poll_interval = 10
-		self.last_poll_time = time()
+		self.last_poll_time = time.time()
 
 	def run(self):
-		if abs(self.last_poll_time - time()) > self.max_poll_interval:
+		if abs(self.last_poll_time - time.time()) > self.max_poll_interval:
 			# check migration status
 			try:
 				migration_details = self.migration_task.migration_request['migration_details']
@@ -103,14 +102,14 @@ class MigrationSubmittedState(object):
 					migration_rqst_id=migration_request_id)
 				self.migration_task.logger.debug("%s has migration_status=%s" % (
 					self.migration_task, request_status[0]['migration_status']))
-				self.last_poll_time = time()
+				self.last_poll_time = time.time()
 			except AttributeError:
 				# simulation
 				logging.warning("Simulation")
 				request_status = [{'migration_status': 2}]
 				self.migration_task.logger.debug("%s has migration_status=%s" % (
 					self.migration_task, request_status[0]['migration_status']))
-				self.last_poll_time = time()
+				self.last_poll_time = time.time()
 
 			if request_status[0]['migration_status'] == 2:
 				# migration okay
@@ -157,7 +156,6 @@ class MigrationTask(object):
 		self.__dict__.update(state)
 		return True
 
-
 	def __str__(self):
 		return repr(self)
 
@@ -175,6 +173,7 @@ class MigrationTask(object):
 
 	def run(self):
 		self.state.run()
+
 
 class DBS3MigrationQueue(deque):
 	_unique_queued_tasks = set()

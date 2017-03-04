@@ -30,13 +30,13 @@
 
     * grid_control.backends.backend_tools BackendDiscovery
 
-     * grid_control.backends.wms_gridengine GridEngine_Discover_Nodes
+     * grid_control.backends.wms_gridengine GridEngineDiscoverNodes
 
-     * grid_control.backends.wms_gridengine GridEngine_Discover_Queues
+     * grid_control.backends.wms_gridengine GridEngineDiscoverQueues
 
-     * grid_control.backends.wms_pbs PBS_Discover_Nodes
+     * grid_control.backends.wms_pbs PBSDiscoverNodes
 
-     * grid_control.backends.wms_pbs PBS_Discover_Queues
+     * grid_control.backends.wms_pbs PBSDiscoverQueues
 
     * grid_control.backends.backend_tools BackendExecutor
 
@@ -48,19 +48,19 @@
 
        * grid_control.backends.aspect_cancel CancelJobsWithProcessBlind
 
-        * grid_control.backends.wms_arc ARC_CancelJobs
+        * grid_control.backends.wms_arc ARCCancelJobs
 
-        * grid_control.backends.wms_cream CREAM_CancelJobs
+        * grid_control.backends.wms_cream CREAMCancelJobs
 
-        * grid_control.backends.wms_cream CREAM_PurgeJobs
+        * grid_control.backends.wms_cream CREAMPurgeJobs
 
-        * grid_control.backends.wms_host Host_CancelJobs
+        * grid_control.backends.wms_host HostCancelJobs
 
-        * grid_control.backends.wms_lsf LSF_CancelJobs
+        * grid_control.backends.wms_lsf LSFCancelJobs
 
-       * grid_control.backends.wms_condor Condor_CancelJobs
+       * grid_control.backends.wms_condor CondorCancelJobs
 
-       * grid_control.backends.wms_grid Grid_CancelJobs
+       * grid_control.backends.wms_grid GridCancelJobs
 
       * grid_control.backends.wms_local LocalPurgeJobs
 
@@ -70,27 +70,27 @@
 
       * grid_control.backends.aspect_status CheckJobsWithProcess
 
-       * grid_control.backends.wms_arc ARC_CheckJobs
+       * grid_control.backends.wms_arc ARCCheckJobs
 
-       * grid_control.backends.wms_cream CREAM_CheckJobs
+       * grid_control.backends.wms_cream CREAMCheckJobs
 
-       * grid_control.backends.wms_condor Condor_CheckJobs
+       * grid_control.backends.wms_condor CondorCheckJobs
 
-       * grid_control.backends.wms_gridengine GridEngine_CheckJobs
+       * grid_control.backends.wms_grid GridCheckJobs
 
-       * grid_control.backends.wms_grid Grid_CheckJobs
+       * grid_control.backends.wms_gridengine GridEngineCheckJobs
 
-       * grid_control.backends.wms_host Host_CheckJobs
+       * grid_control.backends.wms_host HostCheckJobs
 
-       * grid_control.backends.wms_jms JMS_CheckJobs
+       * grid_control.backends.wms_jms JMSCheckJobs
 
-       * grid_control.backends.wms_lsf LSF_CheckJobs
+       * grid_control.backends.wms_lsf LSFCheckJobs
 
-       * grid_control.backends.wms_pbs PBS_CheckJobs
+       * grid_control.backends.wms_pbs PBSCheckJobs
 
-       * grid_control.backends.wms_slurm SLURM_CheckJobs
+       * grid_control.backends.wms_slurm SLURMCheckJobs
 
-      * grid_control.backends.wms_glitewms_direct GliteWMSDirect_CheckJobs
+      * grid_control.backends.wms_glitewms_direct GliteWMSDirectCheckJobs
 
      * grid_control.backends.backend_tools ForwardingExecutor
 
@@ -392,27 +392,19 @@
 
     * grid_control.datasets.splitter_base PartitionResyncHandler
 
+     * grid_control.datasets.splitter_resync DefaultPartitionResyncHandler
+
     * grid_control.backends.backend_tools ProcessCreator
 
      * grid_control.backends.backend_tools ProcessCreatorViaArguments
 
-      * grid_control.backends.wms_gridengine GridEngine_CheckJobsProcessCreator
+      * grid_control.backends.wms_gridengine GridEngineCheckJobsProcessCreator
 
       * grid_control.backends.backend_tools ProcessCreatorAppendArguments
 
      * grid_control.backends.backend_tools ProcessCreatorViaStdin
 
-      * grid_control.backends.wms_grid Grid_ProcessCreator
-
-   * grid_control.datasets.splitter_base DataSplitterIO
-
-    * grid_control.datasets.splitter_io DataSplitterIOAuto
-
-    * grid_control.datasets.splitter_io DataSplitterIOBase
-
-     * grid_control.datasets.splitter_io DataSplitterIOV1 version_1
-
-     * grid_control.datasets.splitter_io DataSplitterIOV2 version_2
+      * grid_control.backends.wms_grid GridProcessCreator
 
    * grid_control.config.matcher_base DictLookup
 
@@ -440,6 +432,8 @@
 
     * grid_control.job_selector MultiJobSelector
 
+    * grid_control.job_selector NullJobSelector null
+
     * grid_control.job_selector RegExSelector
 
      * grid_control.job_selector BackendSelector backend wms
@@ -450,7 +444,7 @@
 
      * grid_control.job_selector SiteSelector site
 
-     * grid_control.job_selector StateSelector state
+    * grid_control.job_selector StateSelector state
 
     * grid_control.job_selector StuckSelector stuck
 
@@ -532,7 +526,9 @@
 
     * grid_control.parameters.psource_base LimitedResyncParameterSource
 
-     * grid_control.parameters.psource_data DataParameterSource data
+     * grid_control.parameters.psource_data BaseDataParameterSource
+
+      * grid_control.parameters.psource_data DataParameterSource data
 
     * grid_control.parameters.psource_meta MultiParameterSource
 
@@ -562,6 +558,28 @@
 
     * grid_control.parameters.config_param DefaultTupleParser tuple default
 
+   * grid_control.datasets.splitter_base PartitionReader
+
+    * grid_control.datasets.splitter_io FilePartitionReader
+
+     * grid_control.datasets.splitter_io AutoPartitionReader auto
+
+     * grid_control.datasets.splitter_io TarPartitionReader
+
+      * grid_control.datasets.splitter_io TarPartitionReaderV1 version_1
+
+      * grid_control.datasets.splitter_io TarPartitionReaderV2 version_2 auto
+
+    * grid_control.datasets.splitter_io TrivialPartitionReader
+
+   * grid_control.datasets.splitter_base PartitionWriter
+
+    * grid_control.datasets.splitter_io TarPartitionWriter
+
+     * grid_control.datasets.splitter_io TarPartitionWriterV1 version_1
+
+     * grid_control.datasets.splitter_io TarPartitionWriterV2 version_2 auto
+
    * grid_control.backends.htcondor_wms.processadapter ProcessAdapterInterface
 
     * grid_control.backends.htcondor_wms.processadapter LocalProcessAdapter
@@ -575,8 +593,6 @@
     * grid_control.backends.condor_wms.processhandler LocalProcessHandler
 
     * grid_control.backends.condor_wms.processhandler SSHProcessHandler
-
-     * grid_control.backends.condor_wms.processhandler GSISSHProcessHandler
 
    * grid_control.report Report
 

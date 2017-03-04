@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,8 +13,10 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import os, sys
+
+
 def update_plugin_files():
-	import os, sys
 	base_dir = os.path.abspath(os.path.dirname(__file__))
 	sys.path.append(base_dir)
 	from hpfwk.hpf_plugin import create_plugin_file
@@ -31,6 +33,7 @@ def update_plugin_files():
 		package = os.path.abspath(os.path.join(base_dir, package))
 		if os.path.isdir(package):
 			create_plugin_file(package, select)
+
 
 if __name__ == '__main__':
 	update_plugin_files()

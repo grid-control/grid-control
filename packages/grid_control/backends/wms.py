@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -82,6 +82,8 @@ class WMS(NamedPlugin):
 		raise AbstractError  # Return (jobnum, gc_id, data) for successfully submitted jobs
 
 	def _create_gc_id(self, wms_id):
+		if not wms_id:
+			return None
 		return 'WMSID.%s.%s' % (self._name, wms_id)
 
 	def _get_map_wms_id2gc_id(self, gc_id_list):
@@ -131,16 +133,17 @@ class BasicWMS(WMS):
 
 		# UI -> SE -> WN
 		self._sm_se_in = config.get_plugin('se input manager', 'SEStorageManager',
-			cls=StorageManager, bkwargs={'tags': [self]}, pargs=('se', 'se input', 'SE_INPUT'))
+			cls=StorageManager, bind_kwargs={'tags': [self]}, pargs=('se', 'se input', 'SE_INPUT'))
 		self._sm_sb_in = config.get_plugin('sb input manager', 'LocalSBStorageManager',
-			cls=StorageManager, bkwargs={'tags': [self]}, pargs=('sandbox', 'sandbox', 'SB_INPUT'))
+			cls=StorageManager, bind_kwargs={'tags': [self]}, pargs=('sandbox', 'sandbox', 'SB_INPUT'))
 		# UI <- SE <- WN
 		self._sm_se_out = config.get_plugin('se output manager', 'SEStorageManager',
-			cls=StorageManager, bkwargs={'tags': [self]}, pargs=('se', 'se output', 'SE_OUTPUT'))
+			cls=StorageManager, bind_kwargs={'tags': [self]}, pargs=('se', 'se output', 'SE_OUTPUT'))
 		self._sm_sb_out = None
 
 		self._token = config.get_composited_plugin(['proxy', 'access token'], 'TrivialAccessToken',
-			'MultiAccessToken', cls=AccessToken, bkwargs={'inherit': True, 'tags': [self]})
+			'MultiAccessToken', cls=AccessToken, bind_kwargs={'inherit': True, 'tags': [self]})
+		self._output_fn_list = None
 
 	def can_submit(self, needed_time, can_currently_submit):
 		return self._token.can_submit(needed_time, can_currently_submit)
@@ -168,7 +171,7 @@ class BasicWMS(WMS):
 		self._sm_se_in.add_file_list(lmap(lambda d_s_t: d_s_t[2], task.get_se_in_fn_list()))
 		# Transfer common SE files
 		if transfer_se:
-			self._sm_se_in.doTransfer(task.get_se_in_fn_list())
+			self._sm_se_in.do_transfer(task.get_se_in_fn_list())
 
 		def _convert(fn_list):
 			for fn in fn_list:
@@ -280,7 +283,7 @@ class BasicWMS(WMS):
 		task_config_dict = utils.merge_dict_list(
 			imap(lambda x: x.get_task_dict(), [monitor, task] + sm_list))
 		task_config_dict.update({'GC_DEPFILES': str.join(' ', dep_list),
-			'GC_USERNAME': self._token.getUsername(), 'GC_WMS_NAME': self._name})
+			'GC_USERNAME': self._token.get_user_name(), 'GC_WMS_NAME': self._name})
 		task_config_str_list = utils.DictFormat(escape_strings=True).format(
 			task_config_dict, format='export %s%s%s\n')
 		vn_alias_dict = dict(izip(monitor.get_task_dict().keys(), monitor.get_task_dict().keys()))

@@ -1,23 +1,23 @@
 {
-        "_comment" : "Identifier when reporting about this pool",
-        "NiceName" : "EKP HTCondor",
-        "_comment" : "URIs for contacting User Pool schedulers ('submit nodes')",
-        "ScheddURIs" : [
-                "ssh://ekpcms6.ekpplus.cluster.de:22",
-                "ssh://ekpcms6.physik.uni-karlsruhe.de:22"
-        ],
-        "_comment" : "Pool configuration for issuing job requests as '[-+]?NAME' or ['[-+]?NAME',FMT]",
+	"_comment" : "Identifier when reporting about this pool",
+	"NiceName" : "EKP HTCondor",
+	"_comment" : "URIs for contacting User Pool schedulers ('submit nodes')",
+	"ScheddURIs" : [
+		"ssh://ekpcms6.ekpplus.cluster.de:22",
+		"ssh://ekpcms6.physik.uni-karlsruhe.de:22"
+	],
+	"_comment" : "Pool configuration for issuing job requests as '[-+]?NAME' or ['[-+]?NAME',FMT]",
 		"_comment" : "NAME marks the WMS attribute (e.g. SITE)",
 		"_comment" : "[-+] marks a black/white list",
 		"_comment" : "FMT marks an optional format string",
-        "jobFeatureMap" : {
-                "-SITES"    : "+VETOED_Sites",
-                "+SITES"    : "+DESIRED_Sites",
-                "WALLTIME"  : "+DESIRED_Walltime",
-                "STORAGE"   : "+DESIRED_SEs"
-        },
-        "_comment" : "Pool configuration for information in the queue",
-        "queueQueryMap" : {
-                "Queue" : [ "MATCH_EXP_JOB_GLIDEIN_Entry_Name" ]
-        }
+	"jobFeatureMap" : {
+		"-SITES"    : "+VETOED_Sites",
+		"+SITES"    : "+DESIRED_Sites",
+		"WALLTIME"  : "+DESIRED_Walltime",
+		"STORAGE"   : "+DESIRED_SEs"
+	},
+	"_comment" : "Pool configuration for information in the queue",
+	"queueQueryMap" : {
+		"Queue" : [ "MATCH_EXP_JOB_GLIDEIN_Entry_Name" ]
+	}
 }

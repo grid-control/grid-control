@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ def join_config_locations(opt_first, *opt_list):
 		return lchain(imap(lambda opt: join_config_locations(opt.strip(), *opt_list), opt_first))
 	if not opt_list:  # only first option -> clean and return
 		return [opt_first.strip()]
-	return lmap(lambda opt: opt_first + ' ' + opt, join_config_locations(*opt_list))
+	return lmap(lambda opt: (opt_first + ' ' + opt).strip(), join_config_locations(*opt_list))
 
 
 def norm_config_locations(value):
@@ -48,12 +48,17 @@ class ConfigContainer(object):
 		self._content = {}
 		self._content_default = {}
 
-	def append(self, entry):
+	def append(self, entry, unique=False):
 		if self._read_only:
 			raise APIError('Config container is read-only!')
 		self._counter += 1
 		entry.order = self._counter
-		self._content.setdefault(entry.option, []).append(entry)
+		option_list = self._content.setdefault(entry.option, [])
+		if unique:
+			existing_values = imap(lambda e: (e.section, e.value), option_list)
+			if (entry.section, entry.value) in existing_values:
+				return
+		option_list.append(entry)
 
 	def get_default_entry(self, entry):
 		return self._content_default.get(entry.option, {}).get(entry.section)
@@ -69,21 +74,7 @@ class ConfigContainer(object):
 		return ifilter(filter_fun, ichain(source_list))
 
 	def resolve(self):
-		so_entries_dict = {}
-		for option in self._content:
-			for entry in self._content[option]:
-				so_entries_dict.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
-		so_value_dict = {}
-		for section in so_entries_dict:
-			for option in so_entries_dict[section]:
-				result = ''
-				try:
-					(entry, _) = ConfigEntry.process_entries(so_entries_dict[section][option])
-					if entry:
-						result = entry.value
-				except ConfigError:  # eg. by '-=' without value
-					clear_current_exception()
-				so_value_dict.setdefault(section, {})[option] = result
+		so_value_dict = self._get_value_dict()
 		for option in self._content:
 			for entry in self._content[option]:
 				subst_dict = dict(so_value_dict.get('default', {}))
@@ -110,6 +101,24 @@ class ConfigContainer(object):
 
 	def set_read_only(self):
 		self._read_only = True
+
+	def _get_value_dict(self):
+		so_entries_dict = {}
+		for option in self._content:
+			for entry in self._content[option]:
+				so_entries_dict.setdefault(entry.section, {}).setdefault(entry.option, []).append(entry)
+		so_value_dict = {}
+		for section in so_entries_dict:
+			for option in so_entries_dict[section]:
+				result = ''
+				try:
+					(entry, _) = ConfigEntry.process_entries(so_entries_dict[section][option])
+					if entry:
+						result = entry.value
+				except ConfigError:  # eg. by '-=' without value
+					clear_current_exception()
+				so_value_dict.setdefault(section, {})[option] = result
+		return so_value_dict
 
 
 class ConfigEntry(object):
@@ -170,8 +179,8 @@ class ConfigEntry(object):
 		return '[%s] %s' % (self.section, self.option)
 
 	def process_entries(cls, entry_iter):
-		result = None
 		entry_iter = iter(entry_iter)
+		result = None
 		entry_list_used = []
 		modifier_list = []
 		for entry in entry_iter:
@@ -182,15 +191,11 @@ class ConfigEntry(object):
 					modifier_list = []
 				else:
 					modifier_list.append(entry)
-			if entry.opttype in ['+=', '^=']:  # modifier options
+			elif entry.opttype in ['+=', '^=']:  # modifier options
 				modifier_list.append(entry)
 			elif entry.opttype in ['*=', '!=', '?=', '=']:  # set options
 				if entry.opttype == '*=':  # this option can not be changed by other config entries
-					log = logging.getLogger('config')
-					log.debug('The following matching entries following %s are discarded:%s',
-						entry.format(print_section=True),
-						str.join('', imap(lambda e: '\n\t' + e.format(print_section=True), entry_iter)))
-					return (entry, [entry])
+					return _discard_following(entry, entry_iter)
 				elif entry.opttype == '=':  # set but don't apply collected modifiers
 					# subsequent modifiers apply!
 					entry_list_used = [entry]
@@ -276,6 +281,14 @@ class ConfigEntry(object):
 			entry.accessed = True
 		return cls.process_entries(entry_list)
 	_process_and_mark_entries = classmethod(_process_and_mark_entries)
+
+
+def _discard_following(entry, entry_iter):
+	log = logging.getLogger('config')
+	log.debug('The following matching entries following %s are discarded:%s',
+		entry.format(print_section=True),
+		str.join('', imap(lambda e: '\n\t' + e.format(print_section=True), entry_iter)))
+	return (entry, [entry])
 
 
 def _norm_config_location(value):

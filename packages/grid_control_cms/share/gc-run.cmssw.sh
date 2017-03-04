@@ -1,5 +1,5 @@
 #!/bin/bash
-# | Copyright 2008-2016 Karlsruhe Institute of Technology
+# | Copyright 2008-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -55,9 +55,9 @@ fi
 checkdir "SCRAM project area" "$SCRAM_PROJECTVERSION"
 cd "$SCRAM_PROJECTVERSION"
 
-if ! [ "$HAS_RUNTIME" = no ]; then
+if [ "$HAS_RUNTIME" = "yes" ]; then
 
-	if [ "$SE_RUNTIME" = yes ]; then
+	if [ "$SE_RUNTIME" = "yes" ]; then
 		echo "Rename CMSSW environment package: ${GC_TASK_ID}.tar.gz"
 		mv `_find ${GC_TASK_ID}.tar.gz` runtime.tar.gz || fail 101
 		export SE_INPUT_FILES="${SE_INPUT_FILES/${GC_TASK_ID}.tar.gz/}"

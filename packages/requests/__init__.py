@@ -52,7 +52,7 @@ __copyright__ = 'Copyright 2015 Kenneth Reitz'
 try:
     from .packages.urllib3.contrib import pyopenssl
     pyopenssl.inject_into_urllib3()
-except ImportError:
+except Exception: # ImportError is not generic enough for incompatible ssl libs
     pass
 
 from . import utils

@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -349,9 +349,10 @@ class ProcessReadStream(ProcessStream):
 				self._log += self._iter_buffer
 			yield self._iter_buffer
 
-	def read(self, timeout):
+	def read(self, timeout, full=True):
+		# read (full/partial) content from buffer after waiting for up timeout seconds, 
 		result = self._buffer.get(timeout, default='')
-		while True:
+		while full:
 			try:
 				result += self._buffer.get(timeout=0)
 			except IndexError:
@@ -368,7 +369,7 @@ class ProcessReadStream(ProcessStream):
 		while True:
 			if timeout is not None:
 				timeout_left = max(0, t_end - time.time())
-			result += self.read(timeout=timeout_left)
+			result += self.read(timeout=timeout_left, full=False)
 			if cond(result) or self._event_finished.is_set():
 				break
 			if timeout_left <= 0:

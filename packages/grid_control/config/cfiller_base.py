@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
 
 import os, sys, logging
 from grid_control.config.config_entry import ConfigEntry, ConfigError
-from grid_control.utils import PersistentDict, exec_wrapper, get_file_name, get_path_pkg, resolve_path  # pylint:disable=line-too-long
+from grid_control.utils import exec_wrapper, get_file_name, get_path_pkg, resolve_path
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.parsing import parse_list
+from grid_control.utils.persistency import load_dict
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from hpfwk import AbstractError, Plugin
 from python_compat import imap, irange, itemgetter, lfilter, lidfilter, rsplit
@@ -46,7 +47,7 @@ class CompatConfigFiller(ConfigFiller):
 	def __init__(self, persistency_file):
 		self._persistency_dict = {}
 		if os.path.exists(persistency_file):
-			self._persistency_dict = PersistentDict(persistency_file, ' = ')
+			self._persistency_dict = load_dict(persistency_file, ' = ')
 
 	def fill(self, container):
 		def _set_persistent_setting(section, key):

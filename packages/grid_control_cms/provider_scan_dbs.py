@@ -1,4 +1,4 @@
-# | Copyright 2015-2016 Karlsruhe Institute of Technology
+# | Copyright 2015-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -36,14 +36,14 @@ class DBSInfoProvider(GCProvider):
 		GCProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
 		self._discovery = config.get_bool('discovery', False)
 
-	def _get_block_name(self, key, data):
-		return str_guid(key)
+	def _get_block_name(self, metadata_dict, hash_block):
+		return str_guid(hash_block)
 
-	def _get_dataset_name(self, key, data):
+	def _get_dataset_name(self, metadata_dict, hash_dataset):
 		if self._discovery:
-			return GCProvider._get_dataset_name(self, key, data)
-		if 'CMSSW_DATATIER' not in data:
-			raise DatasetError('Incompatible data tiers in dataset: %s' % data)
+			return GCProvider._get_dataset_name(self, metadata_dict, hash_dataset)
+		if 'CMSSW_DATATIER' not in metadata_dict:
+			raise DatasetError('Incompatible data tiers in dataset: %s' % repr(metadata_dict))
 
 		def _get_path_components(path):
 			if path:
@@ -53,7 +53,7 @@ class DBSInfoProvider(GCProvider):
 
 		(primary, processed, tier) = (None, None, None)
 		# In case of a child dataset, use the parent infos to construct new path
-		for parent in data.get('PARENT_PATH', []):
+		for parent in metadata_dict.get('PARENT_PATH', []):
 			if len(user_dataset_part_list) == 3:
 				(primary, processed, tier) = user_dataset_part_list
 			else:
@@ -68,12 +68,12 @@ class DBSInfoProvider(GCProvider):
 		if len(user_dataset_part_list) == 2:
 			(processed, tier) = user_dataset_part_list
 		elif len(user_dataset_part_list) == 1:
-			(processed, tier) = (user_dataset_part_list[0], data['CMSSW_DATATIER'])
+			(processed, tier) = (user_dataset_part_list[0], metadata_dict['CMSSW_DATATIER'])
 		elif len(user_dataset_part_list) == 0:
-			(processed, tier) = ('Dataset_%s' % key, data['CMSSW_DATATIER'])
+			(processed, tier) = ('Dataset_%s' % hash_dataset, metadata_dict['CMSSW_DATATIER'])
 
 		raw_dataset_name = '/%s/%s/%s' % (primary, processed, tier)
 		if None in (primary, processed, tier):
 			raise DatasetError('Invalid dataset name supplied: %r\nresulting in %s' % (
 				self._dataset_pattern, raw_dataset_name))
-		return utils.replace_with_dict(raw_dataset_name, data)
+		return utils.replace_with_dict(raw_dataset_name, metadata_dict)

@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -39,9 +39,6 @@ class EntriesConsistencyDataProcessor(DataChecker):
 		self._mode = config.get_enum(self._get_dproc_opt('check entry consistency'),
 			DatasetCheckMode, DatasetCheckMode.abort)
 
-	def enabled(self):
-		return self._mode != DatasetCheckMode.ignore
-
 	def process_block(self, block):
 		# Check entry consistency
 		events = sum(imap(itemgetter(DataProvider.NEntries), block[DataProvider.FileList]))
@@ -50,6 +47,9 @@ class EntriesConsistencyDataProcessor(DataChecker):
 			error_msg = error_msg % (DataProvider.get_block_id(block), block[DataProvider.NEntries], events)
 			self._handle_error(error_msg, self._mode)
 		return block
+
+	def _enabled(self):
+		return self._mode != DatasetCheckMode.ignore
 
 
 class NickNameConsistencyProcessor(DataChecker):
@@ -66,9 +66,6 @@ class NickNameConsistencyProcessor(DataChecker):
 			DatasetCheckMode, DatasetCheckMode.abort)
 		self._check_collision_data = {}
 
-	def enabled(self):
-		return DatasetCheckMode.ignore not in (self._check_consistency, self._check_collision)
-
 	def process_block(self, block):  # Get nickname and check for collisions
 		dataset_name = block[DataProvider.Dataset]
 		nick = block[DataProvider.Nickname]
@@ -83,6 +80,9 @@ class NickNameConsistencyProcessor(DataChecker):
 					nick, self._check_collision_data[nick], dataset_name), self._check_collision)
 		return block
 
+	def _enabled(self):
+		return DatasetCheckMode.ignore not in (self._check_consistency, self._check_collision)
+
 
 class UniqueDataProcessor(DataChecker):
 	alias_list = ['unique']
@@ -95,9 +95,6 @@ class UniqueDataProcessor(DataChecker):
 			DatasetUniqueMode, DatasetUniqueMode.abort)
 		(self._recorded_url, self._recorded_block) = (set(), set())
 
-	def enabled(self):
-		return [self._check_url, self._check_block] != 2 * [DatasetUniqueMode.ignore]
-
 	def process(self, block_iter):
 		self._recorded_url = set()  # reset records
 		self._recorded_block = set()
@@ -107,23 +104,8 @@ class UniqueDataProcessor(DataChecker):
 		# Check uniqueness of URLs
 		url_hash_list = []
 		if self._check_url != DatasetUniqueMode.ignore:
-			def _process_fi_list(fi_list):
-				for fi in fi_list:
-					url_hash = md5_hex(repr((fi[DataProvider.URL], fi[DataProvider.NEntries],
-						fi.get(DataProvider.Metadata))))
-					if url_hash in self._recorded_url:
-						msg = 'Multiple occurences of URL: %r!' % fi[DataProvider.URL]
-						msg += ' (This check can be configured with %r)' % 'dataset check unique url'
-						if self._check_url == DatasetUniqueMode.warn:
-							self._log.warning(msg)
-						elif self._check_url == DatasetUniqueMode.abort:
-							raise DatasetError(msg)
-						elif self._check_url == DatasetUniqueMode.skip:
-							continue
-					self._recorded_url.add(url_hash)
-					url_hash_list.append(url_hash)
-					yield fi
-			block[DataProvider.FileList] = list(_process_fi_list(block[DataProvider.FileList]))
+			block[DataProvider.FileList] = list(self._process_fi_list(url_hash_list,
+				block[DataProvider.FileList]))
 			url_hash_list.sort()
 
 		# Check uniqueness of blocks
@@ -142,3 +124,23 @@ class UniqueDataProcessor(DataChecker):
 					return None
 			self._recorded_block.add(block_hash)
 		return block
+
+	def _enabled(self):
+		return [self._check_url, self._check_block] != 2 * [DatasetUniqueMode.ignore]
+
+	def _process_fi_list(self, url_hash_list, fi_list):
+		for fi in fi_list:
+			url_hash = md5_hex(repr((fi[DataProvider.URL], fi[DataProvider.NEntries],
+				fi.get(DataProvider.Metadata))))
+			if url_hash in self._recorded_url:
+				msg = 'Multiple occurences of URL: %r!' % fi[DataProvider.URL]
+				msg += ' (This check can be configured with %r)' % 'dataset check unique url'
+				if self._check_url == DatasetUniqueMode.warn:
+					self._log.warning(msg)
+				elif self._check_url == DatasetUniqueMode.abort:
+					raise DatasetError(msg)
+				elif self._check_url == DatasetUniqueMode.skip:
+					continue
+			self._recorded_url.add(url_hash)
+			url_hash_list.append(url_hash)
+			yield fi

@@ -1,4 +1,4 @@
-# | Copyright 2012-2016 Karlsruhe Institute of Technology
+# | Copyright 2012-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -27,16 +27,22 @@ class VariablesReport(Report):
 		self._selector = JobSelector.create(config_str, task=task)
 
 	def show_report(self, job_db):
-		task_config = self._task.get_task_dict()
+		task_config = {}
+		if self._task:
+			task_config = self._task.get_task_dict()
 		header = lzip(task_config, task_config)
-		header.extend(imap(lambda key: (key, '<%s>' % key), self._task.get_transient_variables()))
+		if self._task:
+			header.extend(imap(lambda key: (key, '<%s>' % key), self._task.get_transient_variables()))
 		variables = set()
 		entries = []
 		for jobnum in job_db.get_job_list(self._selector):
-			job_config = self._task.get_job_dict(jobnum)
+			job_config = {}
+			if self._task:
+				job_config = self._task.get_job_dict(jobnum)
 			variables.update(job_config)
 			entry = dict(task_config)
-			entry.update(self._task.get_transient_variables())
+			if self._task:
+				entry.update(self._task.get_transient_variables())
 			entry.update(job_config)
 			entries.append(entry)
 		display_table(sorted(header + lzip(variables, variables)), entries)

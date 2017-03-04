@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -16,13 +16,18 @@ from grid_control.datasets import DataProvider, DataSplitter
 from python_compat import imap
 
 
-class RunSplitter(DataSplitter.get_class('FileClassSplitter')):
+FileClassSplitter = DataSplitter.get_class('FileClassSplitter')  # pylint:disable=invalid-name
+
+
+class RunSplitter(FileClassSplitter):
 	alias_list = ['runs']
 
-	def _configure_splitter(self, config):
-		self._run_range = self._query_config(config.get_int, 'run range', 1)
+	def __init__(self, config, datasource_name):
+		FileClassSplitter.__init__(self, config, datasource_name)
+		self._run_range = config.get_lookup(self._get_part_opt('run range'), {None: 1},
+			parser=int, strfun=int.__str__)
 
 	def _get_fi_class(self, fi, block):
-		run_range = self._setup(self._run_range, block)
+		run_range = self._run_range.lookup(DataProvider.get_block_id(block))
 		metadata_idx = block[DataProvider.Metadata].index('Runs')
 		return tuple(imap(lambda r: int(r / run_range), fi[DataProvider.Metadata][metadata_idx]))

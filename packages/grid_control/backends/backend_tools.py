@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -24,9 +24,55 @@ class BackendError(NestedException):
 	pass
 
 
+class BackendDiscovery(ConfigurablePlugin):
+	def discover(self):
+		raise AbstractError
+
+
+class BackendExecutor(ConfigurablePlugin):
+	def __init__(self, config):
+		ConfigurablePlugin.__init__(self, config)
+		self._log = None
+
+	def setup(self, log):
+		self._log = log
+
+	# log process helper function for backends
+	def _filter_proc_log(self, proc, message=None, blacklist=None, discard_list=None, log_empty=True):
+		if (not blacklist) and (not discard_list):
+			return self._log.log_process(proc)
+		blacklist = lmap(str.lower, blacklist or [])
+		discard_list = lmap(str.lower, discard_list or [])
+
+		def _is_on_list(line, lst):
+			return any(imap(line.__contains__, lst))
+
+		do_log = log_empty  # log if stderr is empty
+		for line in ifilter(identity, imap(str.lower, proc.stderr.read_log().splitlines())):
+			if _is_on_list(line, discard_list):  # line on discard list -> dont log
+				return
+			if not _is_on_list(line, blacklist):  # line not on blacklist -> do log
+				return self._log.log_process(proc, msg=message)
+			do_log = False  # don't log if all stderr lines are blacklisted
+		if do_log:
+			return self._log.log_process(proc, msg=message)
+
+
 class ProcessCreator(ConfigurablePlugin):
 	def create_proc(self, wms_id_list):
 		raise AbstractError
+
+
+class ForwardingExecutor(BackendExecutor):
+	def __init__(self, config, executor):
+		BackendExecutor.__init__(self, config)
+		self._executor = executor
+
+	def get_status(self):  # FIXME: not part of the BackendExecutor interface!
+		return self._executor.get_status()
+
+	def setup(self, log):
+		self._executor.setup(log)
 
 
 class ProcessCreatorViaArguments(ProcessCreator):
@@ -35,18 +81,6 @@ class ProcessCreatorViaArguments(ProcessCreator):
 
 	def _arguments(self, wms_id_list):
 		raise AbstractError
-
-
-class ProcessCreatorAppendArguments(ProcessCreatorViaArguments):
-	def __init__(self, config, cmd, args = None, fmt = identity):
-		ProcessCreatorViaArguments.__init__(self, config)
-		(self._cmd, self._args, self._fmt) = (utils.resolve_install_path(cmd), args or [], fmt)
-
-	def create_proc(self, wms_id_list):
-		return LocalProcess(*self._arguments(wms_id_list))
-
-	def _arguments(self, wms_id_list):
-		return [self._cmd] + self._args + self._fmt(wms_id_list)
 
 
 class ProcessCreatorViaStdin(ProcessCreator):
@@ -63,57 +97,32 @@ class ProcessCreatorViaStdin(ProcessCreator):
 		raise AbstractError
 
 
-class BackendExecutor(ConfigurablePlugin):
-	def setup(self, log):
-		self._log = log
-
-	# log process helper function for backends
-	def _filter_proc_log(self, proc, message = None, blacklist = None, discardlist = None, log_empty = True):
-		if (not blacklist) and (not discardlist):
-			return self._log.log_process(proc)
-		blacklist = lmap(str.lower, blacklist or [])
-		discardlist = lmap(str.lower, discardlist or [])
-		def is_on_list(line, lst):
-			return any(imap(line.__contains__, lst))
-		do_log = log_empty # log if stderr is empty
-		for line in ifilter(identity, imap(str.lower, proc.stderr.read_log().splitlines())):
-			if is_on_list(line, discardlist): # line on discard list -> dont log
-				return
-			if not is_on_list(line, blacklist): # line not on blacklist -> do log
-				return self._log.log_process(proc, msg = message)
-			do_log = False # don't log if all stderr lines are blacklisted
-		if do_log:
-			return self._log.log_process(proc, msg = message)
-
-
-class ForwardingExecutor(BackendExecutor):
-	def __init__(self, config, executor):
-		BackendExecutor.__init__(self, config)
-		self._executor = executor
-
-	def setup(self, log):
-		self._executor.setup(log)
-
-	def get_status(self): # FIXME: not part of the BackendExecutor interface!
-		return self._executor.get_status()
-
-
 class ChunkedExecutor(ForwardingExecutor):
-	def __init__(self, config, option_prefix, executor, def_chunk_size = 5, def_chunk_interval = 5):
+	def __init__(self, config, option_prefix, executor, def_chunk_size=5, def_chunk_interval=5):
 		ForwardingExecutor.__init__(self, config, executor)
-		self._chunk_size = config.get_int(join_config_locations(option_prefix, 'chunk size'), def_chunk_size, on_change = None)
-		self._chunk_time = config.get_int(join_config_locations(option_prefix, 'chunk interval'), def_chunk_interval, on_change = None)
+		self._chunk_size = config.get_int(join_config_locations(option_prefix, 'chunk size'),
+			def_chunk_size, on_change=None)
+		self._chunk_time = config.get_int(join_config_locations(option_prefix, 'chunk interval'),
+			def_chunk_interval, on_change=None)
 
 	def execute(self, wms_id_list, *args, **kwargs):
 		do_wait = False
-		for wms_idChunk in imap(lambda x: wms_id_list[x:x + self._chunk_size], irange(0, len(wms_id_list), self._chunk_size)):
+		chunk_pos_iter = irange(0, len(wms_id_list), self._chunk_size)
+		for wms_id_chunk in imap(lambda x: wms_id_list[x:x + self._chunk_size], chunk_pos_iter):
 			if do_wait and not utils.wait(self._chunk_time):
 				break
 			do_wait = True
-			for result in self._executor.execute(wms_idChunk, *args, **kwargs):
+			for result in self._executor.execute(wms_id_chunk, *args, **kwargs):
 				yield result
 
 
-class BackendDiscovery(ConfigurablePlugin):
-	def discover(self):
-		raise AbstractError
+class ProcessCreatorAppendArguments(ProcessCreatorViaArguments):
+	def __init__(self, config, cmd, args=None, fmt=identity):
+		ProcessCreatorViaArguments.__init__(self, config)
+		(self._cmd, self._args, self._fmt) = (utils.resolve_install_path(cmd), args or [], fmt)
+
+	def create_proc(self, wms_id_list):
+		return LocalProcess(*self._arguments(wms_id_list))
+
+	def _arguments(self, wms_id_list):
+		return [self._cmd] + self._args + self._fmt(wms_id_list)

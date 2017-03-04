@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -25,7 +25,8 @@ from python_compat import lfilter
 
 
 def create_config(config_file=None, config_dict=None, use_default_files=False,
-		additional=None, register=False, load_old_config=True):
+		additional=None, register=False, path_base=None,
+		load_old_config=True, load_only_old_config=False):
 	filler_list = []
 	if use_default_files:
 		filler_list.append(ConfigFiller.create_instance('DefaultFilesConfigFiller'))
@@ -35,7 +36,11 @@ def create_config(config_file=None, config_dict=None, use_default_files=False,
 		filler_list.append(ConfigFiller.create_instance('DictConfigFiller', config_dict))
 	filler_list.extend(additional or [])
 	filler = ConfigFiller.create_instance('MultiConfigFiller', filler_list)
-	config = ConfigFactory(filler, config_file, load_old_config).get_config()
+	config = ConfigFactory(filler, config_file, load_old_config, path_base).get_config()
+	if load_only_old_config:
+		return create_config(config_file=os.path.join(config.get_work_path(), 'work.conf'),
+			use_default_files=False, load_old_config=False, path_base=config_file,
+			register=register)
 	if register:
 		GCLogHandler.config_instances.append(config)
 	return config
@@ -43,7 +48,7 @@ def create_config(config_file=None, config_dict=None, use_default_files=False,
 
 class ConfigFactory(object):
 	# Main config interface
-	def __init__(self, filler=None, config_file_path=None, load_old_config=True):
+	def __init__(self, filler=None, config_file_path=None, load_old_config=True, path_base=None):
 		def _get_name(prefix=''):
 			if config_file_path:
 				return ('%s.%s' % (prefix, get_file_name(config_file_path))).strip('.')
@@ -52,12 +57,14 @@ class ConfigFactory(object):
 			return 'unnamed'
 
 		try:
-			path_main = os.getcwd()
+			config_dn = os.getcwd()
 		except Exception:
 			raise ConfigError('The current directory does not exist!')
 		if config_file_path:
-			path_main = os.path.dirname(resolve_path(config_file_path,
+			config_dn = os.path.dirname(resolve_path(config_file_path,
 				search_path_list=[os.getcwd()], exception_type=ConfigError))
+		if path_base:
+			config_dn = os.path.dirname(resolve_path(path_base, search_path_list=[os.getcwd()]))
 
 		# Init config containers
 		self._container_cur = ConfigContainer('current')
@@ -71,24 +78,24 @@ class ConfigFactory(object):
 
 		# Create config view and temporary config interface
 		self._view = SimpleConfigView(_get_name(), container_old, self._container_cur)
-		self._view.config_vault['path:search'] = UniqueList([os.getcwd(), path_main])
+		self._view.config_vault['path:search'] = UniqueList([os.getcwd(), config_dn])
 
 		# Determine work directory using config interface with "global" scope
 		tmp_config = SimpleConfigInterface(self._view.get_view(set_sections=['global']))
-		workdir_base = tmp_config.get_path('workdir base', path_main, must_exist=False)
-		workdir_default = os.path.join(workdir_base, _get_name('work'))
-		workdir_path = tmp_config.get_path('workdir', workdir_default, must_exist=False)
-		self._view.config_vault['path:workdir'] = workdir_path  # tmp_config still has undefinied
+		work_dn_base = tmp_config.get_path('workdir base', config_dn, must_exist=False)
+		work_dn_default = os.path.join(work_dn_base, _get_name('work'))
+		work_dn = tmp_config.get_path('workdir', work_dn_default, must_exist=False)
+		self._view.config_vault['path:work_dn'] = work_dn  # tmp_config still has undefinied
 		# Set dynamic plugin search path
 		sys.path.extend(tmp_config.get_path_list('plugin paths', [os.getcwd()]))
 
 		# Determine and load stored config settings
-		self._config_path_min = os.path.join(workdir_path, 'current.conf')  # Minimal config file
-		self._config_path_old = os.path.join(workdir_path, 'work.conf')  # Config file with saved settings
+		self._config_path_min = os.path.join(work_dn, 'current.conf')  # Minimal config file
+		self._config_path_old = os.path.join(work_dn, 'work.conf')  # Config file with saved settings
 		filler_list_old = []
 		if load_old_config and os.path.exists(self._config_path_old):
 			filler_list_old.append(GeneralFileConfigFiller([self._config_path_old]))
-		old_persistency_file = os.path.join(workdir_path, 'task.dat')
+		old_persistency_file = os.path.join(work_dn, 'task.dat')
 		if os.path.exists(old_persistency_file):
 			filler_list_old.append(ConfigFiller.create_instance('CompatConfigFiller', old_persistency_file))
 		for filler in filler_list_old:

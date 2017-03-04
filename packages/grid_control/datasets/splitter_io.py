@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,93 +13,41 @@
 # | limitations under the License.
 
 import os, gzip
-from grid_control.datasets.splitter_base import DataSplitter, DataSplitterIO, PartitionError
-from grid_control.utils import DictFormat, split_list
+from grid_control.datasets.splitter_base import DataSplitter, PartitionReader, PartitionWriter
+from grid_control.utils import DictFormat
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parse_bool, parse_json, parse_list
-from grid_control.utils.thread_tools import GCLock
-from hpfwk import AbstractError, clear_current_exception
-from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lfilter, lmap, tarfile
+from hpfwk import AbstractError, NestedException, clear_current_exception
+from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lmap, tarfile
 
 
-class PartitionReader(object):
-	def __init__(self, path):
-		activity = Activity('Reading dataset partition file')
-		self._lock = GCLock()
-		self._fmt = DictFormat()
-		self._tar = tarfile.open(path, 'r:')
-
-		metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), key_parser={None: str})
-		self._partition_len = metadata.pop('MaxJobs')
-		self.splitter_name = metadata.pop('ClassName')
-		(metadata_item_list_general, metadata_item_list_specific) = split_list(metadata.items(),
-			fun=lambda k_v: not k_v[0].startswith('['))
-		self.metadata = {'dataset': dict(metadata_item_list_general)}
-		for (key, value) in metadata_item_list_specific:
-			section, option = key.split(']', 1)
-			self.metadata.setdefault('dataset %s' % section.lstrip('['), {})[option.strip()] = value
-		activity.finish()
-
-		self._map_enum2parser = {
-			None: str,
-			DataSplitter.NEntries: int, DataSplitter.Skipped: int,
-			DataSplitter.Invalid: parse_bool,
-			DataSplitter.Locations: lambda x: parse_list(x, ','),
-			DataSplitter.MetadataHeader: parse_json,
-			DataSplitter.Metadata: lambda x: parse_json(x.strip("'"))
-		}
-
-	def __getitem__(self, partition_num):
-		if partition_num >= self._partition_len:
-			raise IndexError('Invalid dataset partition %s' % repr(partition_num))
-		try:
-			self._lock.acquire()
-			return self._get_partition(partition_num)
-		finally:
-			self._lock.release()
-
-	def get_partition_len(self):
-		return self._partition_len
-
-	def _combine_partition_parts(self, partition, url_list):
-		if DataSplitter.CommonPrefix in partition:
-			url_list = imap(lambda x: '%s/%s' % (partition[DataSplitter.CommonPrefix], x), url_list)
-		partition[DataSplitter.FileList] = lmap(str.strip, url_list)
-		return partition
-
-	def _get_partition(self, partition_num):
-		raise AbstractError
+class PartitionReaderError(NestedException):
+	pass
 
 
-class DataSplitterIOAuto(DataSplitterIO):
-	def import_partition_source(self, path):
-		try:
-			version = int(tarfile.open(path, 'r:').extractfile('Version').read())
-		except Exception:
-			version = 1
-		reader = DataSplitterIO.create_instance('version_%s' % version)
-		return reader.import_partition_source(path)
-
-	def save_partitions_and_info(self, progress, path, partition_iter, splitter_info_dict):
-		writer = DataSplitterIOV2()
-		return writer.save_partitions_and_info(progress, path, partition_iter, splitter_info_dict)
+class FilePartitionReader(PartitionReader):
+	def __init__(self, path, partition_len=None):
+		PartitionReader.__init__(self, partition_len)
 
 
-class DataSplitterIOBase(DataSplitterIO):
+class TrivialPartitionReader(PartitionReader):
+	def __init__(self, partition_iter):
+		self._partition_data = list(partition_iter)
+		PartitionReader.__init__(self, len(self._partition_data))
+
+	def get_partition_unchecked(self, partition_num):
+		return self._partition_data[partition_num]
+
+
+class TarPartitionWriter(PartitionWriter):
 	def __init__(self):
+		PartitionWriter.__init__(self)
 		self._fmt = DictFormat()  # use a single instance to save time
 
-	def import_partition_source(self, path):
-		# Save as outer_tar file to allow random access to mapping data with little memory overhead
-		try:
-			return self._load_partition_source(path)
-		except Exception:
-			raise PartitionError("No valid dataset splitting found in '%s'." % path)
-
-	def save_partitions_and_info(self, progress, path, partition_iter, splitter_info_dict):
+	def save_partitions(self, path, partition_iter, progress=None):
 		outer_tar = tarfile.open(path, 'w:')
-		self._save_partitions_and_info(progress, outer_tar, partition_iter, splitter_info_dict)
+		self._save_partitions(outer_tar, partition_iter, progress)
 		outer_tar.close()
 
 	def _add_to_tar(self, tar, fn, data):
@@ -145,17 +93,51 @@ class DataSplitterIOBase(DataSplitterIO):
 			return lmap(lambda x: x.replace(commonprefix + '/', ''), url_list)
 		return url_list
 
-	def _load_partition_source(self, path):
-		raise AbstractError
-
-	def _save_partitions_and_info(self, progress, outer_tar, partition_iter, splitter_info_dict):
+	def _save_partitions(self, outer_tar, partition_iter, progress):
 		raise AbstractError
 
 
-class CachingPartitionReader(PartitionReader):
+class AutoPartitionReader(FilePartitionReader):
+	alias_list = ['auto']
+
+	def __new__(cls, path):
+		try:
+			version = int(tarfile.open(path, 'r:').extractfile('Version').read())
+		except Exception:
+			version = 1
+		return FilePartitionReader.create_instance('version_%s' % version, path)
+
+
+class TarPartitionReader(FilePartitionReader):
 	def __init__(self, path):
-		PartitionReader.__init__(self, path)
+		activity = Activity('Reading dataset partition file')
+		self._fmt = DictFormat()
+		try:
+			self._tar = tarfile.open(path, 'r:')
+
+			metadata = self._fmt.parse(self._tar.extractfile('Metadata').readlines(), key_parser={None: str})
+			FilePartitionReader.__init__(self, path, metadata.pop('MaxJobs'))
+			self._metadata = metadata
+			activity.finish()
+		except Exception:
+			raise PartitionReaderError('No valid dataset splitting found in %s' % path)
+
+		self._map_enum2parser = {
+			None: str,
+			DataSplitter.NEntries: int, DataSplitter.Skipped: int,
+			DataSplitter.Invalid: parse_bool,
+			DataSplitter.Locations: lambda x: parse_list(x, ','),
+			DataSplitter.MetadataHeader: parse_json,
+			DataSplitter.Metadata: lambda x: parse_json(x.strip("'"))
+		}
 		(self._cache_nested_fn, self._cache_nested_tar) = (None, None)
+
+	def _combine_partition_parts(self, partition, url_list):
+		if DataSplitter.CommonPrefix in partition:
+			common_prefix = partition.pop(DataSplitter.CommonPrefix)
+			url_list = imap(lambda x: '%s/%s' % (common_prefix, x), url_list)
+		partition[DataSplitter.FileList] = lmap(str.strip, url_list)
+		return partition
 
 	def _get_nested_tar(self, nested_fn):
 		if self._cache_nested_fn != nested_fn:  # caching gives 3-4x speedup for sequential access
@@ -169,20 +151,18 @@ class CachingPartitionReader(PartitionReader):
 		return tarfile.open(mode='r', fileobj=nested_tar_fp)
 
 
-class DataSplitterIOV1(DataSplitterIOBase):
+class TarPartitionWriterV1(TarPartitionWriter):
 	alias_list = ['version_1']
 
-	def _load_partition_source(self, path):
-		return TarPartitionReaderV1(path)
-
-	def _save_partitions_and_info(self, progress, outer_tar, partition_iter, splitter_info_dict):
+	def _save_partitions(self, outer_tar, partition_iter, progress):
 		# Write the splitting info grouped into nested_tars
 		(partition_num, nested_tar) = (-1, None)
 		for (partition_num, partition) in enumerate(partition_iter):
 			if partition_num % 100 == 0:
 				self._close_nested_tar(outer_tar, nested_tar)
 				nested_tar = self._create_nested_tar('%03dXX.tgz' % int(partition_num / 100))
-				progress.update_progress(partition_num)
+				if progress:
+					progress.update_progress(partition_num)
 			# Determine shortest way to store file list
 			url_list = partition.pop(DataSplitter.FileList)
 			url_list_reduced = self._get_reduced_url_list(partition, url_list)  # can modify partition
@@ -199,21 +179,18 @@ class DataSplitterIOV1(DataSplitterIOBase):
 			partition[DataSplitter.FileList] = url_list
 		self._close_nested_tar(outer_tar, nested_tar)
 		# Write metadata to allow reconstruction of data splitter
-		splitter_info_dict['MaxJobs'] = partition_num + 1
+		splitter_info_dict = {'MaxJobs': partition_num + 1}
 		self._add_to_tar(outer_tar, 'Metadata', self._fmt.format(splitter_info_dict))
 
 
-class DataSplitterIOV2(DataSplitterIOBase):
-	alias_list = ['version_2']
+class TarPartitionWriterV2(TarPartitionWriter):
+	alias_list = ['version_2', 'auto']
 
 	def __init__(self):
-		DataSplitterIOBase.__init__(self)
+		TarPartitionWriter.__init__(self)
 		self._partition_chunk_size = 100
 
-	def _load_partition_source(self, path):
-		return TarPartitionReaderV2(path, self._partition_chunk_size)
-
-	def _save_partitions_and_info(self, progress, outer_tar, partition_iter, splitter_info_dict):
+	def _save_partitions(self, outer_tar, partition_iter, progress):
 		# Write the splitting info grouped into nested_tars
 		(partition_num, last_valid_pnum, nested_tar) = (-1, -1, None)
 		for (partition_num, partition) in enumerate(partition_iter):
@@ -223,7 +200,8 @@ class DataSplitterIOV2(DataSplitterIOBase):
 				self._close_nested_tar(outer_tar, nested_tar)
 				nested_tar = self._create_nested_tar(
 					'%03dXX.tgz' % int(partition_num / self._partition_chunk_size))
-				progress.update_progress(partition_num)
+				if progress:
+					progress.update_progress(partition_num)
 			# Determine shortest way to store file list
 			url_list = partition.pop(DataSplitter.FileList)
 			url_list_reduced = self._get_reduced_url_list(partition, url_list)  # can modify partition
@@ -237,30 +215,33 @@ class DataSplitterIOV2(DataSplitterIOBase):
 			partition[DataSplitter.FileList] = url_list
 		self._close_nested_tar(outer_tar, nested_tar)
 		# Write metadata to allow reconstruction of data splitter
-		splitter_info_dict['MaxJobs'] = last_valid_pnum + 1
-		for (fn, data) in [('Metadata', self._fmt.format(splitter_info_dict)), ('Version', '2')]:
+		for (fn, data) in [('Metadata', 'MaxJobs=%d' % (last_valid_pnum + 1)), ('Version', '2')]:
 			self._add_to_tar(outer_tar, fn, data)
 
 
-class TarPartitionReaderV1(CachingPartitionReader):
+class TarPartitionReaderV1(TarPartitionReader):
+	alias_list = ['version_1']
+
 	# Save as outer_tar file to allow random access to mapping data with little memory overhead
-	def _get_partition(self, key):
-		nested_tar = self._get_nested_tar('%03dXX.tgz' % (key / 100))
-		partition = self._fmt.parse(nested_tar.extractfile('%05d/info' % key).readlines(),
+	def get_partition_unchecked(self, partition_num):
+		nested_tar = self._get_nested_tar('%03dXX.tgz' % (partition_num / 100))
+		partition = self._fmt.parse(nested_tar.extractfile('%05d/info' % partition_num).readlines(),
 			key_parser={None: DataSplitter.intstr2enum}, value_parser=self._map_enum2parser)
-		url_list = lmap(bytes2str, nested_tar.extractfile('%05d/list' % key).readlines())
+		url_list = lmap(bytes2str, nested_tar.extractfile('%05d/list' % partition_num).readlines())
 		return self._combine_partition_parts(partition, url_list)
 
 
-class TarPartitionReaderV2(CachingPartitionReader):
-	def __init__(self, path, partition_chunk_size):
-		CachingPartitionReader.__init__(self, path)
-		self._partition_chunk_size = partition_chunk_size
+class TarPartitionReaderV2(TarPartitionReader):
+	alias_list = ['version_2', 'auto']
 
-	def _get_partition(self, partition_num):
+	def __init__(self, path):
+		TarPartitionReader.__init__(self, path)
+		self._partition_chunk_size = self._metadata.pop('ChunkSize', 100)
+
+	def get_partition_unchecked(self, partition_num):
 		nested_tar = self._get_nested_tar('%03dXX.tgz' % (partition_num / self._partition_chunk_size))
 		partition_str_list = lmap(bytes2str, nested_tar.extractfile('%05d' % partition_num).readlines())
-		partition = self._fmt.parse(lfilter(lambda x: not x.startswith('='), partition_str_list),
+		partition = self._fmt.parse(ifilter(lambda x: not x.startswith('='), partition_str_list),
 			key_parser={None: DataSplitter.intstr2enum}, value_parser=self._map_enum2parser)
 		url_list = imap(lambda x: x[1:], ifilter(lambda x: x.startswith('='), partition_str_list))
 		return self._combine_partition_parts(partition, url_list)

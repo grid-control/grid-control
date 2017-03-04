@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -102,7 +102,7 @@ def logging_create_handlers(config, logger_name):
 		if handler_str == 'stdout':
 			handler = StdoutStreamHandler()
 		elif handler_str == 'stderr':
-			handler = StderrStreamHandler()
+			handler = StderrStreamHandler()  # pylint:disable=redefined-variable-type
 		elif handler_str == 'file':
 			handler = logging.FileHandler(config.get(logger_name + ' file', on_change=None), 'w')
 		elif handler_str == 'debug_file':
@@ -183,15 +183,15 @@ def logging_setup(config):
 	display_logger = config.get_bool('display logger', False, on_change=None)
 
 	# Find logger names in options
-	logger_names = set()
+	logger_names_set = set()
 	for option in config.get_option_list():
 		if option in ['debug mode', 'display logger']:
 			pass
 		elif option.count(' ') == 0:
-			logger_names.add('')
+			logger_names_set.add('')
 		else:
-			logger_names.add(option.split(' ')[0].strip())
-	logger_names = sorted(logger_names)
+			logger_names_set.add(option.split(' ')[0].strip())
+	logger_names = sorted(logger_names_set)
 	logger_names.reverse()
 	for logger_name in logger_names:
 		logging_create_handlers(config, logger_name)

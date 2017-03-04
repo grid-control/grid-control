@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -22,13 +22,18 @@ class ARCAccessToken(GridAccessToken):
 	def __init__(self, config, name):
 		GridAccessToken.__init__(self, config, name, 'arcproxy')
 
-	def _getProxyArgs(self):
-		if self._proxyPath:
-			return ['-I', '--proxy', self._proxyPath]
+	def get_auth_fn_list(self):
+		return [self._get_proxy_info('proxy path')]
+
+	def _get_proxy_info_arguments(self):
+		if self._proxy_fn:
+			return ['-I', '--proxy', self._proxy_fn]
 		return ['-I']
 
-	def getAuthFiles(self):
-		return [self._getProxyInfo('proxy path')]
+	def _get_timeleft(self, cached):
+		return min(
+			self._get_proxy_info('time left for proxy', self._parse_time, cached),
+			self._get_proxy_info('time left for ac', self._parse_time, cached))
 
 	def _parse_time(self, time_str):
 		result = 0
@@ -37,8 +42,3 @@ class ARCAccessToken(GridAccessToken):
 		for (entry, value) in izip(imap(lambda x: x[:3], tmp[1::2]), imap(int, tmp[::2])):
 			result += entry_map[entry] * value
 		return result
-
-	def _get_timeleft(self, cached):
-		return min(
-			self._getProxyInfo('time left for proxy', self._parse_time, cached),
-			self._getProxyInfo('time left for ac', self._parse_time, cached))

@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -20,30 +20,30 @@ class Broker(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['broker']
 	config_tag_name = 'broker'
 
-	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+	def __init__(self, config, name, broker_prefix, item_name, discover_fun):
 		NamedPlugin.__init__(self, config, name)
-		(self._itemsStart, self._itemsDiscovered, self._itemName) = (None, False, itemName)
-		self._nEntries = config.get_int('%s entries' % broker_prefix, 0, on_change = None)
-		self._nRandom = config.get_bool('%s randomize' % broker_prefix, False, on_change = None)
+		(self._item_list_start, self._item_list_discovered, self._item_name) = (None, False, item_name)
+		self._num_entries = config.get_int('%s entries' % broker_prefix, 0, on_change=None)
+		self._randomize = config.get_bool('%s randomize' % broker_prefix, False, on_change=None)
 
-	def _discover(self, discoverFun, cached = True):
-		if not cached or (self._itemsDiscovered is False):
-			self._itemsDiscovered = discoverFun()
-			msg = 'an unknown number of'
-			if self._itemsDiscovered is not None:
-				msg = str(len(self._itemsDiscovered))
-			self._log.info('Broker discovered %s %s', msg, self._itemName)
-		return self._itemsDiscovered
+	def broker(self, reqs, req_enum):
+		result = self._broker(reqs, self._item_list_start)
+		if result is not None:
+			reqs.append((req_enum, result))
+		return reqs
 
 	def _broker(self, reqs, items):
-		if items and self._nRandom:
-			return random.sample(items, self._nEntries or len(items))
-		elif items and self._nEntries:
-			return items[:self._nEntries]
+		if items and self._randomize:
+			return random.sample(items, self._num_entries or len(items))
+		elif items and self._num_entries:
+			return items[:self._num_entries]
 		return items
 
-	def brokerAdd(self, reqs, reqEntry):
-		result = self._broker(reqs, self._itemsStart)
-		if result is not None:
-			reqs.append((reqEntry, result))
-		return reqs
+	def _discover(self, discover_fun, cached=True):
+		if not cached or (self._item_list_discovered is False):
+			self._item_list_discovered = discover_fun()
+			msg = 'an unknown number of'
+			if self._item_list_discovered is not None:
+				msg = str(len(self._item_list_discovered))
+			self._log.info('Broker discovered %s %s', msg, self._item_name)
+		return self._item_list_discovered

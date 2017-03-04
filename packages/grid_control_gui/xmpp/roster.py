@@ -121,7 +121,7 @@ class Roster(PlugIn):
     def getAsk(self,jid):
         """ Returns 'ask' value of contact 'jid'."""
         return self._getItemData(jid,'ask')
-    def getGroups(self,jid):
+    def get_groups(self,jid):
         """ Returns groups list that contact 'jid' belongs to."""
         return self._getItemData(jid,'groups')
     def getName(self,jid):

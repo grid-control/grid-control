@@ -1,4 +1,4 @@
-# | Copyright 2011-2016 Karlsruhe Institute of Technology
+# | Copyright 2011-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ class CMSOverlay:
 		config.set('grid', 'sites', '-samtest -cmsprodhi', append = True)
 
 		# Rewrite cms storage urls:
-		hnName = readJSON('https://cmsweb.cern.ch/sitedb/json/index/dnUserName', {'dn': getFQUsername()})
+		hnName = readJSON('https://cmsweb.cern.ch/sitedb/json/index/dnUserName', {'dn': get_fq_user_name()})
 		if not hnName:
 			raise ConfigError('Unable to map grid certificate to hypernews name!')
 

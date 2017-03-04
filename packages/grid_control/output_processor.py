@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ from python_compat import bytes2str, ifilter, izip
 
 
 JobResult = make_enum(['JOBNUM', 'EXITCODE', 'RAW'])  # pylint:disable=invalid-name
+FileInfo = make_enum(['Hash', 'NameLocal', 'NameDest', 'Path', 'Size'])  # pylint:disable=invalid-name
 
 
 class JobResultError(NestedException):
@@ -114,8 +115,7 @@ class FileInfoProcessor(JobInfoProcessor):
 				return ifilter(lambda key_value: key_value[0].startswith(key_prefix), job_data_dict.items())
 
 			# parse old job info data format for files
-			old_fmt_header = [FileInfoProcessor.Hash, FileInfoProcessor.NameLocal,
-				FileInfoProcessor.NameDest, FileInfoProcessor.Path]
+			old_fmt_header = [FileInfo.Hash, FileInfo.NameLocal, FileInfo.NameDest, FileInfo.Path]
 			for (file_key, file_data) in get_items_with_key('FILE'):
 				file_idx = file_key.replace('FILE', '').rjust(1, '0')
 				result[int(file_idx)] = dict(izip(old_fmt_header, file_data.strip('"').split('  ')))
@@ -124,6 +124,5 @@ class FileInfoProcessor(JobInfoProcessor):
 				(file_idx, file_prop) = file_key.replace('OUTPUT_FILE_', '').split('_')
 				if isinstance(file_data, str):
 					file_data = file_data.strip('"')
-				result.setdefault(int(file_idx), {})[FileInfoProcessor.str2enum(file_prop)] = file_data
+				result.setdefault(int(file_idx), {})[FileInfo.str2enum(file_prop)] = file_data
 			return list(result.values())
-make_enum(['Hash', 'NameLocal', 'NameDest', 'Path'], FileInfoProcessor)

@@ -13,7 +13,7 @@
 #-#  limitations under the License.
 
 import os, sys, optparse
-from gcSupport import getConfig
+from gc_scripts import get_script_config
 
 #from grid_control.utils import display_table, wrap_list
 #from grid_control_cms.lumi_tools import format_lumi, merge_lumi_list
@@ -41,7 +41,7 @@ parser.add_option('-p', '--parents', dest='parents')
 (opts, args) = parser.parse_args()
 
 if opts.lumiranges:
-	dummyConfig = getConfig(config_dict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False,
+	dummyConfig = get_script_config(config_dict={'dummy': {'lumi filter': '-', 'dbs blacklist T1': False,
 		'remove empty blocks': False, 'remove empty files': False}})
 	provider = DataProvider.create(dummyConfig, 'dummy', opts.lumiranges, 'DBSApiv2')
 	blocks = provider.get_block_list_cached(show_stats = False)

@@ -1,4 +1,4 @@
-# | Copyright 2012-2016 Karlsruhe Institute of Technology
+# | Copyright 2012-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -211,6 +211,18 @@ class FormatParameterParser(ParameterParser):
 		return ('format', vn, value, fsource, fdefault)  # special format!
 
 
+class GitParameterParser(ParameterParser):
+	alias_list = ['git']
+
+	def parse_value(self, pconfig, varexpr, vn, value):
+		old_wd = os.getcwd()
+		os.chdir(clean_path(value))
+		git_proc = LocalProcess('git', 'rev-parse', '--short', 'HEAD')
+		version = git_proc.get_output(timeout=10, raise_errors=False)
+		os.chdir(old_wd)
+		return [version.strip() or 'undefined']
+
+
 class LinesParameterParser(ParameterParser):
 	alias_list = ['lines']
 
@@ -231,6 +243,18 @@ class SplitParameterParser(ParameterParser):
 	def parse_value(self, pconfig, varexpr, vn, value):
 		delimeter = pconfig.get(varexpr, 'delimeter', ',')
 		return lmap(str.strip, value.split(delimeter))
+
+
+class SvnParameterParser(ParameterParser):
+	alias_list = ['svn']
+
+	def parse_value(self, pconfig, varexpr, vn, value):
+		svn_proc = LocalProcess('svnversion', clean_path(value))
+		version = svn_proc.get_output(timeout=10, raise_errors=False).strip().lower()
+		# different SVN versions yield different output for unversioned directories:
+		if ('exported' in version) or ('unversioned' in version):
+			version = None
+		return [version or 'undefined']
 
 
 class VerbatimParameterParser(ParameterParser):
@@ -272,31 +296,3 @@ def _parse_parameter_option_list(option_list):
 			else:
 				map_vn2varexpr[varexpr] = varexpr
 	return (map_vn2varexpr, map_varexpr_suffix2opt)
-
-
-class GitParameterParser(ParameterParser):
-	alias_list = ['git']
-
-	def parse_value(self, pconfig, varexpr, vn, value):
-		path = clean_path(value)
-		version = "undefined"
-		old_wd = os.getcwd()
-		os.chdir(path)
-		git_proc = LocalProcess('git', 'rev-parse', '--short', 'HEAD')
-		if git_proc.status(10) == 0: version = git_proc.get_output(10)[:-1]
-		os.chdir(old_wd)
-		return [version]
-
-
-class SvnParameterParser(ParameterParser):
-	alias_list = ['svn']
-
-	def parse_value(self, pconfig, varexpr, vn, value):
-		path = clean_path(value)
-		version = "undefined"
-		svn_proc = LocalProcess('svnversion', path)
-		if svn_proc.status(10) == 0: version = svn_proc.get_output(10)[:-1]
-		# different SVN versions yield different output for unversioned directories:
-		if "exported" in version or "Unversioned" in version: version = "undefined"
-		return [version]
-

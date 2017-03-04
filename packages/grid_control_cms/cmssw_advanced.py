@@ -1,4 +1,4 @@
-# | Copyright 2010-2016 Karlsruhe Institute of Technology
+# | Copyright 2010-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ def str_lumi_nice(lumifilter):
 	return '%s ... %s (%d entries)' % (lumi_filter_str[0], lumi_filter_str[-1], len(lumi_filter_str))
 
 
-class CMSSWAdvanced(CMSSW):
+class CMSSWAdvanced(CMSSW):  # pylint:disable=too-many-ancestors
 	alias_list = ['CMSSW_Advanced']
 	config_section_list = CMSSW.config_section_list + ['CMSSW_Advanced']
 
@@ -38,30 +38,35 @@ class CMSSWAdvanced(CMSSW):
 		head = [('DATASETNICK', 'Nickname')]
 
 		# Mapping between nickname and config files:
-		self._nmCfg = config.get_lookup('nickname config', {}, default_matcher='regex',
+		self._nm_cfg = config.get_lookup('nickname config', {}, default_matcher='regex',
 			parser=lambda x: lmap(str.strip, x.split(',')), strfun=lambda x: str.join(',', x))
-		if not self._nmCfg.empty():
-			all_config_fn_list = sorted(set(ichain(self._nmCfg.get_values())))
+		if not self._nm_cfg.empty():
+			all_config_fn_list = sorted(set(ichain(self._nm_cfg.get_values())))
 			config.set('config file', str.join('\n', all_config_fn_list))
 			head.append((1, 'Config file'))
 		elif config.get('config file', ''):
 			raise ConfigError("Please use 'nickname config' instead of 'config file'")
 
-		# Mapping between nickname and constants - only display - work is handled by the 'normal' parameter factory
+		# Mapping between nickname and constants - configure and display
+		# work is handled by the 'normal' parameter factory
 		nm_const_vn_list = config.get_list('nickname constants', [], on_change=None)
-		param_config = config.change_view(view_class='TaggedConfigView', set_classes=None, set_names=None, add_sections=['parameters'])
-		param_config.set('constants', str.join(' ', nm_const_vn_list), '+=')
+		param_config = config.change_view(view_class='TaggedConfigView',
+			set_classes=None, set_names=None, add_sections=['parameters'])
+		param_config.set('constants', str.join(' ', nm_const_vn_list), '+=', unique=True)
 		for const_vn in nm_const_vn_list:
 			param_config.set(const_vn + ' matcher', 'regex')
 			param_config.set(const_vn + ' lookup', 'DATASETNICK')
 			head.append((const_vn, const_vn))
 
-		# Mapping between nickname and lumi filter - only display - work is handled by the 'normal' lumi filter
+		# Mapping between nickname and lumi filter - configure and display
+		# work is handled by the 'normal' lumi filter
 		config.set('lumi filter matcher', 'regex')
 		if 'nickname lumi filter' in config.get_option_list():
-			config.set('lumi filter', str_dict_cfg(config.get_dict('nickname lumi filter', {}, on_change=None)))
-		self._nmLumi = config.get_lookup('lumi filter', {}, parser=parse_lumi_filter, strfun=str_lumi, on_change=None)
-		if not self._nmLumi.empty():
+			config.set('lumi filter',
+				str_dict_cfg(config.get_dict('nickname lumi filter', {}, on_change=None)))
+		self._nm_lumi = config.get_lookup('lumi filter', {},
+			parser=parse_lumi_filter, strfun=str_lumi, on_change=None)
+		if not self._nm_lumi.empty():
 			head.append((2, 'Lumi filter'))
 
 		CMSSW.__init__(self, config, name)
@@ -69,7 +74,7 @@ class CMSSWAdvanced(CMSSW):
 
 	def get_job_dict(self, jobnum):
 		data = CMSSW.get_job_dict(self, jobnum)
-		config_fn_list = self._nmCfg.lookup(data.get('DATASETNICK'), [], is_selector=False)
+		config_fn_list = self._nm_cfg.lookup(data.get('DATASETNICK'), [], is_selector=False)
 		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, config_fn_list))
 		return data
 
@@ -92,7 +97,8 @@ class CMSSWAdvanced(CMSSW):
 				tmp = {'DATASETNICK': nick}
 				for src in ps_lookup:
 					src.fill_parameter_content(None, tmp)
-				tmp[1] = str.join(', ', imap(os.path.basename, self._nmCfg.lookup(nick, '', is_selector=False)))
-				tmp[2] = str_lumi_nice(self._nmLumi.lookup(nick, '', is_selector=False))
+				tmp[1] = str.join(', ', imap(os.path.basename,
+					self._nm_cfg.lookup(nick, '', is_selector=False)))
+				tmp[2] = str_lumi_nice(self._nm_lumi.lookup(nick, '', is_selector=False))
 				report.append(tmp)
 			utils.display_table(head, report, 'cl')

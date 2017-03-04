@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,48 +12,71 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, xml.dom.minidom
+import xml.dom.minidom
 from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
-from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreatorViaArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
+from grid_control.utils import get_local_username
 from grid_control.utils.parsing import parse_time
 from grid_control.utils.process_base import LocalProcess
 from python_compat import any, imap, izip, lmap, set, sorted
 
 
-class GridEngine_CheckJobsProcessCreator(ProcessCreatorViaArguments):
+class GridEngineDiscoverNodes(BackendDiscovery):
 	def __init__(self, config):
-		ProcessCreatorViaArguments.__init__(self, config)
-		self._cmd = utils.resolve_install_path('qstat')
-		self._user = config.get('user', os.environ.get('LOGNAME', ''), on_change = None)
+		BackendDiscovery.__init__(self, config)
+		self._config_exec = utils.resolve_install_path('qconf')
 
-	def _arguments(self, wms_id_list):
-		if not self._user:
-			return [self._cmd, '-xml']
-		return [self._cmd, '-xml', '-u', self._user]
+	def discover(self):
+		nodes = set()
+		proc = LocalProcess(self._config_exec, '-shgrpl')
+		for group in proc.stdout.iter(timeout=10):
+			yield {'name': group.strip()}
+			proc_g = LocalProcess(self._config_exec, '-shgrp_resolved', group)
+			for host_list in proc_g.stdout.iter(timeout=10):
+				nodes.update(host_list.split())
+			proc_g.status_raise(timeout=0)
+		for host in sorted(nodes):
+			yield {'name': host.strip()}
+		proc.status_raise(timeout=0)
 
 
-class GridEngine_CheckJobs(CheckJobsWithProcess):
-	def __init__(self, config, user = None):
-		CheckJobsWithProcess.__init__(self, config, GridEngine_CheckJobsProcessCreator(config))
+class GridEngineDiscoverQueues(BackendDiscovery):
+	def __init__(self, config):
+		BackendDiscovery.__init__(self, config)
+		self._config_exec = utils.resolve_install_path('qconf')
+
+	def discover(self):
+		tags = ['h_vmem', 'h_cpu', 's_rt']
+		reqs = dict(izip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
+		parser = dict(izip(tags, [int, parse_time, parse_time]))
+
+		proc = LocalProcess(self._config_exec, '-sql')
+		for queue in imap(str.strip, proc.stdout.iter(timeout=10)):
+			proc_q = LocalProcess(self._config_exec, '-sq', queue)
+			queue_dict = {'name': queue}
+			for line in proc_q.stdout.iter(timeout=10):
+				attr, value = lmap(str.strip, line.split(' ', 1))
+				if (attr in tags) and (value != 'INFINITY'):
+					queue_dict[reqs[attr]] = parser[attr](value)
+			proc_q.status_raise(timeout=0)
+			yield queue_dict
+		proc.status_raise(timeout=0)
+
+
+class GridEngineCheckJobs(CheckJobsWithProcess):
+	def __init__(self, config, user=None):
+		CheckJobsWithProcess.__init__(self, config, GridEngineCheckJobsProcessCreator(config))
 
 	def _parse(self, proc):
-		proc.status(timeout = self._timeout)
-		status_string = proc.stdout.read(timeout = 0)
-		# qstat gives invalid xml in <unknown_jobs> node
-		unknown_start = status_string.find('<unknown_jobs')
-		unknown_jobs_string = ''
-		if unknown_start >= 0:
-			unknown_end_tag = '</unknown_jobs>'
-			unknown_end = status_string.find(unknown_end_tag) + len(unknown_end_tag)
-			unknown_jobs_string = status_string[unknown_start:unknown_end]
-			unknown_jobs_string_fixed = unknown_jobs_string.replace('<>', '<unknown_job>').replace('</>', '</unknown_job>')
-			status_string = status_string.replace(unknown_jobs_string, unknown_jobs_string_fixed)
+		proc.status(timeout=self._timeout)
+		status_string_raw = proc.stdout.read(timeout=0)
+		status_string = _fix_unknown_jobs_xml(status_string_raw)
 		try:
 			dom = xml.dom.minidom.parseString(status_string)
 		except Exception:
@@ -66,9 +89,9 @@ class GridEngine_CheckJobs(CheckJobsWithProcess):
 						continue
 					if node.hasChildNodes():
 						job_info[str(node.nodeName)] = str(node.childNodes[0].nodeValue)
-				for job_number_key in ['JB_job_number', 'JB_jobnumber']:
-					if job_number_key in job_info:
-						job_info[CheckInfo.WMSID] = job_info.pop(job_number_key)
+				for jobnum_key in ['JB_jobnum', 'JB_jobnumber']:
+					if jobnum_key in job_info:
+						job_info[CheckInfo.WMSID] = job_info.pop(jobnum_key)
 				job_info[CheckInfo.RAW_STATUS] = job_info.pop('state')
 				if 'queue_name' in job_info:
 					queue, node = job_info['queue_name'].split('@')
@@ -88,68 +111,27 @@ class GridEngine_CheckJobs(CheckJobsWithProcess):
 		return Job.READY
 
 
-class GridEngine_Discover_Nodes(BackendDiscovery):
-	def __init__(self, config):
-		BackendDiscovery.__init__(self, config)
-		self._configExec = utils.resolve_install_path('qconf')
-
-	def discover(self):
-		nodes = set()
-		proc = LocalProcess(self._configExec, '-shgrpl')
-		for group in proc.stdout.iter(timeout = 10):
-			yield {'name': group.strip()}
-			proc_g = LocalProcess(self._configExec, '-shgrp_resolved', group)
-			for host_list in proc_g.stdout.iter(timeout = 10):
-				nodes.update(host_list.split())
-			proc_g.status_raise(timeout = 0)
-		for host in sorted(nodes):
-			yield {'name': host.strip()}
-		proc.status_raise(timeout = 0)
-
-
-class GridEngine_Discover_Queues(BackendDiscovery):
-	def __init__(self, config):
-		BackendDiscovery.__init__(self, config)
-		self._configExec = utils.resolve_install_path('qconf')
-
-	def discover(self):
-		tags = ['h_vmem', 'h_cpu', 's_rt']
-		reqs = dict(izip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
-		parser = dict(izip(tags, [int, parse_time, parse_time]))
-
-		proc = LocalProcess(self._configExec, '-sql')
-		for queue in imap(str.strip, proc.stdout.iter(timeout = 10)):
-			proc_q = LocalProcess(self._configExec, '-sq', queue)
-			queueInfo = {'name': queue}
-			for line in proc_q.stdout.iter(timeout = 10):
-				attr, value = lmap(str.strip, line.split(' ', 1))
-				if (attr in tags) and (value != 'INFINITY'):
-					queueInfo[reqs[attr]] = parser[attr](value)
-			proc_q.status_raise(timeout = 0)
-			yield queueInfo
-		proc.status_raise(timeout = 0)
-
-
-class GridEngine(PBSGECommon):
+class GridEngine(PBSGECommon):  # pylint:disable=too-many-ancestors
 	alias_list = ['SGE', 'UGE', 'OGE']
 	config_section_list = PBSGECommon.config_section_list + ['GridEngine'] + alias_list
 
 	def __init__(self, config, name):
 		cancel_executor = CancelJobsWithProcessBlind(config, 'qdel',
-			fmt = lambda wms_id_list: [str.join(',', wms_id_list)], unknownID = ['Unknown Job Id'])
+			fmt=lambda wms_id_list: [str.join(',', wms_id_list)], unknown_id='Unknown Job Id')
 		PBSGECommon.__init__(self, config, name,
-			cancel_executor = cancel_executor,
-			check_executor = CheckJobsMissingState(config, GridEngine_CheckJobs(config)),
-			nodesFinder = GridEngine_Discover_Nodes(config),
-			queuesFinder = GridEngine_Discover_Queues(config))
-		self._project = config.get('project name', '', on_change = None)
-		self._configExec = utils.resolve_install_path('qconf')
+			cancel_executor=cancel_executor,
+			check_executor=CheckJobsMissingState(config, GridEngineCheckJobs(config)),
+			nodes_finder=GridEngineDiscoverNodes(config),
+			queues_finder=GridEngineDiscoverQueues(config))
+		self._project = config.get('project name', '', on_change=None)
+		self._config_exec = utils.resolve_install_path('qconf')
 
+	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
+		def _time_str(secs):
+			return '%02d:%02d:%02d' % (secs / 3600, (secs / 60) % 60, secs % 60)
 
-	def getSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
-		timeStr = lambda s: '%02d:%02d:%02d' % (s / 3600, (s / 60) % 60, s % 60)
-		reqMap = { WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
-			WMS.WALLTIME: ('s_rt', timeStr), WMS.CPUTIME: ('h_cpu', timeStr) }
+		req_map = {WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
+			WMS.WALLTIME: ('s_rt', _time_str), WMS.CPUTIME: ('h_cpu', _time_str)}
 		# Restart jobs = no
 		params = ' -r n -notify'
 		if self._project:
@@ -162,9 +144,35 @@ class GridEngine(PBSGECommon):
 			params += ' -q %s' % str.join(',', imap(lambda node: '%s@%s' % (queue, node), nodes))
 		elif nodes:
 			raise ConfigError('Please also specify queue when selecting nodes!')
-		return params + PBSGECommon.getCommonSubmitArguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr, reqMap)
+		return params + PBSGECommon._get_common_submit_arguments(self, jobnum, job_name,
+			reqs, sandbox, stdout, stderr, req_map)
 
-
-	def parseSubmitOutput(self, data):
+	def parse_submit_output(self, data):
 		# Your job 424992 ("test.sh") has been submitted
 		return data.split()[2].strip()
+
+
+class GridEngineCheckJobsProcessCreator(ProcessCreatorViaArguments):
+	def __init__(self, config):
+		ProcessCreatorViaArguments.__init__(self, config)
+		self._cmd = utils.resolve_install_path('qstat')
+		self._user = config.get('user', get_local_username(), on_change=None)
+
+	def _arguments(self, wms_id_list):
+		if not self._user:
+			return [self._cmd, '-xml']
+		return [self._cmd, '-xml', '-u', self._user]
+
+
+def _fix_unknown_jobs_xml(status_string):
+	(uk_start_tag, uk_end_tag) = ('<unknown_jobs', '</unknown_jobs>')  # start: <unknown_jobs xmlns...
+	(new_start_tag, new_end_tag) = ('<unknown_job>', '</unknown_job>')
+	# qstat gives invalid xml in <unknown_jobs> node
+	uk_start = status_string.find(uk_start_tag)
+	uk_jobs_string = ''
+	if uk_start >= 0:
+		uk_end = status_string.find(uk_end_tag) + len(uk_end_tag)
+		uk_jobs_string = status_string[uk_start:uk_end]  # select xml in "unknown_jobs" node
+		uk_jobs_string_fixed = uk_jobs_string.replace('<>', new_start_tag).replace('</>', new_end_tag)
+		return status_string.replace(uk_jobs_string, uk_jobs_string_fixed)
+	return status_string

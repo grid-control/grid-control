@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -61,18 +61,7 @@ def get_workflow_graph(workflow):
 
 def _get_graph(instance, graph=None, visited=None):
 	graph = graph or {}
-
-	children = []
-	for attr in dir(instance):
-		try:
-			child = getattr(instance, attr)
-			try:
-				children.extend(child)
-				children.extend(child.values())
-			except Exception:
-				children.append(child)
-		except Exception:
-			pass
+	children = _get_instance_children(instance)
 
 	visited = visited or set()
 	for child in children:
@@ -100,6 +89,21 @@ def _get_graph(instance, graph=None, visited=None):
 			_get_graph(child, graph, visited)
 
 	return (graph, list(visited))
+
+
+def _get_instance_children(instance):
+	children = []
+	for attr in dir(instance):
+		try:
+			child = getattr(instance, attr)
+			try:
+				children.extend(child)
+				children.extend(child.values())
+			except Exception:
+				children.append(child)
+		except Exception:
+			pass
+	return children
 
 
 def _get_node_color(instance, color_map):
