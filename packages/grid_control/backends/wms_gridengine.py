@@ -15,7 +15,7 @@
 import xml.dom.minidom
 from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
-from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
+from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess, CheckStatus  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreatorViaArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
@@ -79,6 +79,22 @@ class GridEngineCheckJobs(CheckJobsWithProcess):
 		proc.status(timeout=self._timeout)
 		status_string_raw = proc.stdout.read(timeout=0)
 		status_string = _fix_unknown_jobs_xml(status_string_raw)
+		if not status_string:
+			self._status = CheckStatus.ERROR
+		else:
+			for result in self._parse_status_string(status_string):
+				yield result
+
+	def _parse_status(self, value, default):
+		if any(imap(value.__contains__, ['E', 'e'])):
+			return Job.UNKNOWN
+		if any(imap(value.__contains__, ['h', 's', 'S', 'T', 'w'])):
+			return Job.QUEUED
+		if any(imap(value.__contains__, ['r', 't'])):
+			return Job.RUNNING
+		return Job.READY
+
+	def _parse_status_string(self, status_string):
 		try:
 			dom = xml.dom.minidom.parseString(status_string)
 		except Exception:
@@ -102,15 +118,6 @@ class GridEngineCheckJobs(CheckJobsWithProcess):
 			except Exception:
 				raise BackendError('Error reading job info:\n%s' % job_node.toxml())
 			yield job_info
-
-	def _parse_status(self, value, default):
-		if any(imap(value.__contains__, ['E', 'e'])):
-			return Job.UNKNOWN
-		if any(imap(value.__contains__, ['h', 's', 'S', 'T', 'w'])):
-			return Job.QUEUED
-		if any(imap(value.__contains__, ['r', 't'])):
-			return Job.RUNNING
-		return Job.READY
 
 
 class GridEngine(PBSGECommon):  # pylint:disable=too-many-ancestors
