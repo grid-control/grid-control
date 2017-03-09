@@ -50,6 +50,8 @@ Workflow options
     Toggle to control the submission of jobs
   * ``submission time requirement`` = <duration hh[:mm[:ss]]> (default: <wall time>)
     Toggle to control the submission of jobs
+  * ``workdir space timeout`` = <integer> (default: 5)
+    Specify timeout for workdir space check
 
 SimpleJobManager options
 ------------------------
