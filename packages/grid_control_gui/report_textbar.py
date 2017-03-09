@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,10 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
 from grid_control.job_db import JobClass
 from grid_control.job_selector import ClassSelector
-from grid_control.report import Report
+from grid_control.report import ConsoleReport
 
 
 class BasicProgressBar(object):
@@ -47,11 +46,11 @@ class BasicProgressBar(object):
 		self._bar = self._bar[0:text_pos] + text + self._bar[text_pos + len(text):]
 
 
-class BarReport(Report):
+class BarReport(ConsoleReport):
 	alias_list = ['bar']
 
 	def __init__(self, job_db, task, jobs=None, config_str=''):
-		Report.__init__(self, job_db, task, jobs, config_str)
+		ConsoleReport.__init__(self, job_db, task, jobs, config_str)
 		self._bar = BasicProgressBar(0, len(job_db), 65)
 
 	def get_height(self):
@@ -59,4 +58,4 @@ class BarReport(Report):
 
 	def show_report(self, job_db):
 		self._bar.update(len(job_db.get_job_list(ClassSelector(JobClass.SUCCESS))))
-		sys.stdout.write(str(self._bar) + '\n')
+		self._output.info(str(self._bar))

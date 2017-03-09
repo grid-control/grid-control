@@ -116,9 +116,11 @@
 
      * grid_control.datasets.dproc_basic EntriesCountDataProcessor events EventsCountDataProcessor
 
+     * grid_control.datasets.dproc_WIP LeveeDataProcessor levee
+
      * grid_control.datasets.dproc_basic LocationDataProcessor location
 
-     * grid_control.datasets.dproc_reorg MergeDataProcessor merge
+     * grid_control.datasets.dproc_WIP MergeDataProcessor merge
 
      * grid_control.datasets.dproc_base MultiDataProcessor
 
@@ -134,7 +136,7 @@
 
      * grid_control.datasets.dproc_sort SortingDataProcessor sort
 
-     * grid_control.datasets.dproc_reorg SplitDataProcessor split
+     * grid_control.datasets.dproc_WIP SplitDataProcessor split
 
      * grid_control.datasets.dproc_stats StatsDataProcessor
 
@@ -536,7 +538,7 @@
 
       * grid_control.parameters.psource_meta ZipLongParameterSource zip
 
-       * grid_control.parameters.psource_devel CombineParameterSource combine
+       * grid_control.parameters.psource_WIP CombineParameterSource combine
 
       * grid_control.parameters.psource_meta ZipShortParameterSource szip
 
@@ -596,7 +598,9 @@
 
    * grid_control.report Report
 
-    * grid_control.report BasicReport basic
+    * grid_control.report ConsoleReport
+
+     * grid_control.report BasicReport basic
 
     * grid_control.report LocationReport location
 

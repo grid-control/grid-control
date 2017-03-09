@@ -19,6 +19,7 @@ from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWM
 from grid_control.utils.activity import Activity
 from grid_control.utils.parsing import parse_str
 from grid_control.utils.process_base import LocalProcess
+from hpfwk import clear_current_exception
 from python_compat import md5_hex, sort_inplace
 
 
@@ -107,6 +108,7 @@ class DiscoverGliteEndpointsLazy(object):  # TODO: Move to broker infrastructure
 					ping_dict[wms] = (parse_str(ping, float), parse_str(ping_time, float, 0))
 			return (ping_dict.keys(), tmp.keys(), ping_dict, 0)
 		except Exception:
+			clear_current_exception()
 			return ([], [], {}, None)
 
 	def _match_sites(self, endpoint):

@@ -24,6 +24,10 @@ from hpfwk import APIError
 from python_compat import ifilter, iidfilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5_hex, set, sort_inplace, sorted  # pylint:disable=line-too-long
 
 
+# TrackingInfo enum values == fast resync tuple indices
+TrackingInfo = make_enum(['ACTIVE', 'HASH', 'pnum'], use_hash=False)  # pylint:disable=invalid-name
+
+
 class ParameterAdapter(ConfigurablePlugin):
 	def __init__(self, config, source):
 		ConfigurablePlugin.__init__(self, config)
@@ -117,12 +121,9 @@ class BasicParameterAdapter(ResyncParameterAdapter):
 			self._can_submit_map = {}  # invalidate cache on changes
 		return result
 
-# Parameter parameter adapter that tracks changes in the underlying parameter source
-
-TrackingInfo = make_enum(['ACTIVE', 'HASH', 'pnum'], use_hash=False)  # pylint:disable=invalid-name
-
 
 class TrackedParameterAdapter(BasicParameterAdapter):
+	# Parameter parameter adapter that tracks changes in the underlying parameter source
 	def __init__(self, config, source):
 		self._psrc_raw = source
 		BasicParameterAdapter.__init__(self, config, source)

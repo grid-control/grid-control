@@ -14,7 +14,7 @@
 
 import os
 from grid_control.backends.backend_tools import BackendExecutor
-from hpfwk import AbstractError
+from hpfwk import AbstractError, clear_current_exception
 from python_compat import tarfile
 
 
@@ -41,11 +41,13 @@ class RetrieveJobsEmulateWildcard(RetrieveJobs):
 						tarfile.TarFile.open(fn_wildcard_tar, 'r:gz').extractall(local_output_dir)
 					except Exception:
 						self._log.error('Unable to unpack output files contained in %s', fn_wildcard_tar)
+						clear_current_exception()
 						continue
 					try:
 						os.unlink(fn_wildcard_tar)
 					except Exception:
 						self._log.error('Unable to remove wildcard emulation file %s', fn_wildcard_tar)
+						clear_current_exception()
 			yield (wms_id, local_output_dir)
 
 	def setup(self, log):

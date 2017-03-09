@@ -197,13 +197,12 @@ def _get_job_selector_and_task(config, job_selector_str, require_task):
 		try:  # try to build job selector without task
 			return (None, JobSelector.create(job_selector_str))
 		except TaskNeededException:
-			pass
+			clear_current_exception()
 	task = gc_create_workflow(config, abort='task').task
 	return (task, JobSelector.create(job_selector_str, task=task))
 
 
-__all__ = ['Activity', 'ClassSelector', 'FileInfo', 'FileInfoProcessor', 'FileMutex', 'Job',
-	'JobClass', 'JobSelector', 'Plugin', 'ScriptOptions', 'display_plugin_list',
-	'display_plugin_list_for', 'gc_create_config', 'get_cmssw_info', 'get_plugin_list',
-	'get_script_object', 'get_script_object_cmdline', 'iter_jobnum_output_dn',
-	'iter_output_files', 'utils']
+__all__ = ['Activity', 'ClassSelector', 'display_plugin_list', 'display_plugin_list_for',
+	'FileInfo', 'FileInfoProcessor', 'FileMutex', 'gc_create_config', 'get_cmssw_info',
+	'get_plugin_list', 'get_script_object', 'get_script_object_cmdline', 'iter_jobnum_output_dn',
+	'iter_output_files', 'Job', 'JobClass', 'JobSelector', 'Plugin', 'ScriptOptions', 'utils']

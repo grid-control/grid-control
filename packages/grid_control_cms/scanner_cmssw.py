@@ -1,4 +1,4 @@
-# | Copyright 2010-2016 Karlsruhe Institute of Technology
+# | Copyright 2010-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.datasets import DatasetError
 from grid_control.datasets.provider_scan import GCProviderSetup
 from grid_control.datasets.scanner_base import InfoScanner
+from hpfwk import clear_current_exception
 from python_compat import all, bytes2str, ifilter, imap, lfilter, tarfile
 
 
@@ -117,6 +118,7 @@ class ObjectsFromCMSSW(InfoScanner):
 				config_content_env = utils.exec_wrapper(config_content)
 				self._stored_globaltag[config_hash] = config_content_env['process'].GlobalTag.globaltag.value()
 			except Exception:
+				clear_current_exception()
 				self._stored_globaltag[config_hash] = 'unknown:All'
 		config_summary['CMSSW_GLOBALTAG'] = self._stored_globaltag[config_hash]
 
@@ -125,6 +127,7 @@ class ObjectsFromCMSSW(InfoScanner):
 			try:
 				config_summary[key] = regex.search(config_content).group(1).strip('\"\' ') or default
 			except Exception:
+				clear_current_exception()
 				config_summary[key] = default
 		_search_config_file('CMSSW_ANNOTATION', self._regex_annotation, None)
 		_search_config_file('CMSSW_DATATIER', self._regex_datatier, 'USER')
@@ -203,6 +206,7 @@ def _read_list(base, container, items):
 	try:
 		return base.getElementsByTagName(container)[0].getElementsByTagName(items)
 	except Exception:
+		clear_current_exception()
 		return []
 
 
@@ -210,4 +214,5 @@ def _read_tag(base, tag, default=None):
 	try:
 		return str(base.getElementsByTagName(tag)[0].childNodes[0].data)
 	except Exception:
+		clear_current_exception()
 		return default

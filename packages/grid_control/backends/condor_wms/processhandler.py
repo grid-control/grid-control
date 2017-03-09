@@ -17,7 +17,7 @@ from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError
 from grid_control.config import ConfigError
 from grid_control.utils import ensure_dir_exists, resolve_install_path
-from hpfwk import AbstractError, NestedException, Plugin
+from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception
 
 
 class TimeoutError(NestedException):
@@ -92,6 +92,7 @@ class SSHProcessHandler(ProcessHandler):
 			_ssh_link_secure(self._ssh_link, init_dn=True)
 			self._get_ssh_link()
 		except KeyError:
+			clear_current_exception()
 			self._ssh_link = False
 
 		# test connection once

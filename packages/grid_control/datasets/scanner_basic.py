@@ -21,6 +21,7 @@ from grid_control.job_selector import JobSelector
 from grid_control.utils import DictFormat, clean_path, filter_dict, split_opt
 from grid_control.utils.activity import ProgressActivity
 from grid_control.utils.parsing import parse_str
+from hpfwk import clear_current_exception
 from python_compat import identity, ifilter, imap, irange, izip, lfilter, lmap, set, sorted
 
 
@@ -56,6 +57,7 @@ class DetermineEntries(InfoScanner):
 				entries = int(os.popen('%s %s' % (self._entries_cmd, item)).readlines()[-1])
 			except Exception:
 				self._log.log(logging.INFO2, 'Unable to determine entries with %r %r', self._entries_cmd, item)
+				clear_current_exception()
 		yield (item, metadata_dict, entries, location_list, obj_dict)
 
 
@@ -138,6 +140,7 @@ class JobInfoFromOutputDir(InfoScanner):
 				yield (item, metadata_dict, entries, location_list, obj_dict)
 		except Exception:
 			self._log.log(logging.INFO2, 'Unable to parse job info file %r', job_info_path)
+			clear_current_exception()
 
 
 class MatchDelimeter(InfoScanner):
@@ -273,6 +276,7 @@ class OutputDirsFromWork(InfoScanner):
 			try:
 				metadata_dict['GC_JOBNUM'] = int(dn.split('_')[1])
 			except Exception:
+				clear_current_exception()
 				continue
 			obj_dict['GC_WORKDIR'] = self._ext_work_dn
 			if self._selector and not self._selector(metadata_dict['GC_JOBNUM'], None):

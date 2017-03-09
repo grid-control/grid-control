@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,181 +12,163 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import re, sys, time, signal, threading
-from grid_control import utils
+import re, sys, signal, threading
 from grid_control.gui import GUI
-from grid_control.utils.activity import Activity
-from grid_control.utils.thread_tools import GCLock, start_daemon
+from grid_control.logging_setup import GCStreamHandler, StderrStreamHandler, StdoutStreamHandler
+from grid_control.utils.thread_tools import GCEvent, GCLock, start_daemon
 from grid_control_gui.ansi import Console
-from python_compat import iidfilter, imap, itemgetter, lmap
+from grid_control_gui.display_elements import ActivityElement, LogElement, ReportElement
+from hpfwk import DebugInterface, ignore_exception
+from python_compat import lmap
+
+
+class GUILayout(object):
+	def __init__(self, console_lock):
+		(self._console_lock, self._element_list, self._layout_list) = (console_lock, [], [])
+		(self._redraw_event, self._redraw_thread, self._redraw_shutdown) = (GCEvent(), None, False)
+		self._old_resize_handler = None
+		DebugInterface.callback_list.append((self.finish_display, self.initial_display))
+
+	def __del__(self):
+		self._redraw_thread.join()
+
+	def add_element(self, element_cls, *args):
+		self._element_list.append(element_cls(self, self._redraw_event, *args))
+
+	def finish_display(self):
+		try:
+			self._redraw_shutdown = True
+			self._redraw_event.set()
+			for element in self._element_list:
+				element.draw_finish()
+			self._redraw_thread.join()
+		finally:
+			Console.save_pos()
+			Console.setscrreg()
+			Console.load_pos()
+			Console.show_cursor()
+			Console.wrap_on()
+		signal.signal(signal.SIGWINCH, self._old_resize_handler)
+
+	def initial_display(self):
+		self._redraw_shutdown = False
+		self._old_resize_handler = signal.signal(signal.SIGWINCH, self._schedule_redraw)
+		self._redraw_thread = start_daemon('GUI draw thread', self._redraw)
+		self._console_lock.acquire()
+		try:
+			self._update_layout()
+			for element in self._element_list:
+				element.draw_init()
+			for idx, element in enumerate(self._element_list):
+				if isinstance(element, LogElement):
+					Console.move(self._layout_list[idx][0])
+		finally:
+			self._console_lock.release()
+
+	def _redraw(self):
+		while not self._redraw_shutdown:
+			force_redraw = self._redraw_event.wait(timeout=1)
+			self._console_lock.acquire()
+			try:
+				force_redraw = self._update_layout() or force_redraw
+				Console.hide_cursor()
+				for element in self._element_list:
+					element.redraw(force=force_redraw)
+				Console.show_cursor()
+				sys.stdout.flush()
+				sys.stderr.flush()
+				self._redraw_event.clear()
+			finally:
+				self._console_lock.release()
+
+	def _schedule_redraw(self, *args, **kwargs):
+		self._redraw_event.set()
+
+	def _update_layout(self):
+		pos = 0
+		height_total = sum(lmap(lambda element: element.get_height() or 0, self._element_list))
+		height_avail = Console.getmaxyx()[0] - 1
+		layout_list = []
+		for element in self._element_list:
+			height = element.get_height()
+			if height is None:
+				height = height_avail - height_total
+			element.set_layout(pos, height)
+			layout_list.append((pos, height))
+			pos += height
+		if self._layout_list != layout_list:
+			self._layout_list = layout_list
+			return True
 
 
 class GUIStream(object):
-	def __init__(self, stream, console, lock):
-		(self._stream, self._console, self._lock) = (stream, console, lock)
-		(self.logged, self._log) = (True, [None] * 100)
-
+	def __init__(self, stream):
+		self._stream = stream
 		# This is a list of (regular expression, GUI attributes).  The
 		# attributes are applied to matches of the regular expression in
 		# the output written into this stream.  Lookahead expressions
 		# should not overlap with other regular expressions.
-		attrs = [
-			(r'DONE(?!:)', [Console.COLOR_BLUE, Console.BOLD]),
-			(r'FAILED(?!:)', [Console.COLOR_RED, Console.BOLD]),
-			(r'SUCCESS(?!:)', [Console.COLOR_GREEN, Console.BOLD]),
-			(r'(?<=DONE:)\s+[1-9]\d*', [Console.COLOR_BLUE, Console.BOLD]),
-			(r'(?<=Failing jobs:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
-			(r'(?<=FAILED:)\s+[1-9]\d*', [Console.COLOR_RED, Console.BOLD]),
-			(r'(?<=Successful jobs:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
-			(r'(?<=SUCCESS:)\s+[1-9]\d*', [Console.COLOR_GREEN, Console.BOLD]),
+		rcmp = re.compile
+		self._regex_attr_list = [
+			(rcmp(r'DONE(?!:)'), Console.COLOR_BLUE + Console.BOLD),
+			(rcmp(r'FAILED(?!:)'), Console.COLOR_RED + Console.BOLD),
+			(rcmp(r'SUCCESS(?!:)'), Console.COLOR_GREEN + Console.BOLD),
+			(rcmp(r'(?<=DONE:)\s+[1-9]\d*'), Console.COLOR_BLUE + Console.BOLD),
+			(rcmp(r'(?<=Failing jobs:)\s+[1-9]\d*'), Console.COLOR_RED + Console.BOLD),
+			(rcmp(r'(?<=FAILED:)\s+[1-9]\d*'), Console.COLOR_RED + Console.BOLD),
+			(rcmp(r'(?<=Successful jobs:)\s+[1-9]\d*'), Console.COLOR_GREEN + Console.BOLD),
+			(rcmp(r'(?<=SUCCESS:)\s+[1-9]\d*'), Console.COLOR_GREEN + Console.BOLD),
 		]
-		self._match_any_attr = re.compile('(%s)' % '|'.join(imap(itemgetter(0), attrs)))
-		self._attrs = lmap(lambda expr_attr: (re.compile(expr_attr[0]), expr_attr[1]), attrs)
 
 	def __getattr__(self, name):
 		return self._stream.__getattribute__(name)
 
-	def dump(self):
-		stored_logged = self.logged
-		self.logged = False
-		for data in str.join('', iidfilter(self._log)).splitlines():
-			self._console.erase_line()
-			self.write(data + '\n')
-		self.logged = stored_logged
-
-	def write(self, data):
-		self._lock.acquire()
-		try:
-			if self.logged:
-				self._log.pop(0)
-				self._log.append(data)
-			idx = 0
-			match = self._match_any_attr.search(data[idx:])
-			while match:
-				self._console.addstr(data[idx:idx + match.start()])
-				self._console.addstr(match.group(0), self._text_attributes(data[idx:], match.start()))
-				idx += match.end()
-				match = self._match_any_attr.search(data[idx:])
-			self._console.addstr(data[idx:])
-			self._console.erase_line()
-			return True
-		finally:
-			self._lock.release()
-
-	def _text_attributes(self, value, pos):
-		""" Retrieve the attributes for a match in value at position pos. """
-		for (regex, attr) in self._attrs:
-			match = regex.search(value)
-			if match and match.start() == pos:
-				return attr
+	def write(self, value):
+		value = value.replace('\n', '\033[K\n')  # perform erase_line at each newline
+		for (regex, attr) in self._regex_attr_list:
+			value = regex.sub(lambda match: Console.RESET + attr + match.group(0) + Console.RESET, value)
+		self._stream.write(value)
 
 
 class ANSIGUI(GUI):
+	def __new__(cls, config, workflow):
+		if not sys.stdout.isatty():
+			return GUI.create_instance('SimpleConsole', config, workflow)
+		return GUI.__new__(cls)
+
 	def __init__(self, config, workflow):
 		config.set('report', 'BasicReport BarReport')
-		(self._stored_stdout, self._stored_stderr) = (sys.stdout, sys.stderr)
 		GUI.__init__(self, config, workflow)
-		self._report_height = 0
-		self._status_height = 1
-		self._old_message = None
-		self._lock = GCLock(threading.RLock())  # drawing lock
-		self._last_report = 0
-		self._old_size = None
-		self._current_job_db = None
-		(self._console, self._new_stdout, self._new_stderr) = (None, None, None)
-
-	def _draw(self, fun, *args):
-		new_size = self._console.getmaxyx()
-		if self._old_size != new_size:
-			self._old_size = new_size
-			self._schedule_update_layout()
-		self._lock.acquire()
-		self._console.hide_cursor()
-		self._console.save_pos()
+		self._console_lock = GCLock(threading.RLock())  # terminal output lock
+		self._layout = GUILayout(self._console_lock)
 		try:
-			fun(*args)
-		finally:
-			self._console.load_pos()
-			self._console.show_cursor()
-			self._lock.release()
+			self._layout.add_element(ActivityElement)
+			self._layout.add_element(ReportElement, self._report, workflow.job_manager.job_db)
+			self._layout.add_element(LogElement)
+			self._layout.initial_display()
+		except Exception:
+			self._layout.finish_display()
+			raise
 
-	# Event handling for resizing
-	def display_workflow(self, workflow):
-		self._current_job_db = workflow.job_manager.job_db
-		if not sys.stdout.isatty():
-			return workflow.process(self._wait)
-
-		self._console = Console(sys.stdout)
-		self._new_stdout = GUIStream(sys.stdout, self._console, self._lock)
-		self._new_stderr = GUIStream(sys.stderr, self._console, self._lock)
-		Activity.callbacks.append(self._schedule_update_report_status)
+	def start_display(self):
+		old_logout = self._set_gui_stream(StdoutStreamHandler, sys.stdout)  # ensure exclusive access for
+		old_logerr = self._set_gui_stream(StderrStreamHandler, sys.stderr)  # logging to stdout/stderr
 		try:
-			# Main cycle - GUI mode
-			(sys.stdout, sys.stderr) = (self._new_stdout, self._new_stderr)
-			self._console.erase()
-			self._schedule_update_layout()
-			workflow.process(self._wait)
-		finally:
-			(sys.stdout, sys.stderr) = (self._stored_stdout, self._stored_stderr)
-			self._console.setscrreg()
-			self._console.erase()
-			self._update_all()
+			try:
+				self._workflow.process()
+			finally:
+				self._layout.finish_display()
+				for (handler, stream) in [(StdoutStreamHandler, old_logout), (StderrStreamHandler, old_logerr)]:
+					handler.stream = stream
+					ignore_exception(Exception, None, lambda obj: obj.enable_activity_callback(), stream)
+				GCStreamHandler.set_global_lock()
+		except (KeyboardInterrupt, SystemExit, Exception):
+			Console.move(Console.getmaxyx()[0])
+			raise
 
-	def _schedule_update_layout(self, sig=None, frame=None):
-		# using new thread to ensure RLock is free
-		start_daemon('update layout', self._draw, self._update_layout)
-
-	def _schedule_update_report_status(self):
-		self._draw(self._update_report)
-		self._draw(self._update_status)
-
-	def _update_all(self):
-		self._last_report = 0
-		self._update_report()
-		self._update_status()
-		self._update_log()
-
-	def _update_layout(self):
-		(sizey, sizex) = self._console.getmaxyx()
-		self._old_size = (sizey, sizex)
-		self._report_height = self._report.get_height()
-		self._console.erase()
-		self._console.setscrreg(min(self._report_height + self._status_height + 1, sizey), sizey)
-		utils.display_table.wraplen = sizex - 5
-		self._update_all()
-
-	def _update_log(self):
-		self._console.move(self._report_height + self._status_height + 1, 0)
-		self._console.erase_down()
-		self._new_stdout.dump()
-
-	def _update_report(self):
-		if time.time() - self._last_report < 1:
-			return
-		self._last_report = time.time()
-		self._console.move(0, 0)
-		self._new_stdout.logged = False
-		self._report.show_report(self._current_job_db)
-		self._new_stdout.logged = True
-
-	def _update_status(self):
-		activity_message = None
-		for activity in Activity.root.get_children():
-			activity_message = activity.get_message(truncate=75)
-
-		self._console.move(self._report_height + 1, 0)
-		self._new_stdout.logged = False
-		if self._old_message:
-			self._stored_stdout.write(self._old_message.center(65) + '\r')
-			self._stored_stdout.flush()
-		self._old_message = activity_message
-		if activity_message:
-			self._stored_stdout.write('%s' % activity_message.center(65))
-			self._stored_stdout.flush()
-		self._new_stdout.logged = True
-
-	def _wait(self, timeout):
-		handler_old = signal.signal(signal.SIGWINCH, self._schedule_update_layout)
-		result = utils.wait(timeout)
-		signal.signal(signal.SIGWINCH, handler_old)
-		return result
+	def _set_gui_stream(self, stream_handler_cls, stream):
+		old_stream = stream_handler_cls.stream
+		ignore_exception(Exception, None, lambda stream: stream.disable_activity_callback(), old_stream)
+		stream_handler_cls.set_global_lock(self._console_lock)
+		stream_handler_cls.stream = GUIStream(stream)
+		return old_stream

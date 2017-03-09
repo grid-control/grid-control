@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -18,6 +18,11 @@ from hpfwk import AbstractError
 
 
 DataProcessorMergeMode = make_enum(['intersection', 'union', 'separate'])  # pylint: disable=invalid-name
+
+
+class LeveeDataProvider(DataProcessor):
+	# levee: accumulate and hide dataset information until a threshold is reached - then publish it
+	alias_list = ['levee']
 
 
 class MergeDataProcessor(DataProcessor):

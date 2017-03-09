@@ -63,11 +63,11 @@ class Host(LocalWMS):
 			check_executor=CheckJobsMissingState(config, HostCheckJobs(config)),
 			cancel_executor=HostCancelJobs(config))
 
-	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
-		return '%d "%s" "%s" "%s"' % (jobnum, sandbox, stdout, stderr)
-
 	def parse_submit_output(self, data):
 		return data.strip()
 
 	def _get_job_arguments(self, jobnum, sandbox):
 		return ''
+
+	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
+		return '%d "%s" "%s" "%s"' % (jobnum, sandbox, stdout, stderr)

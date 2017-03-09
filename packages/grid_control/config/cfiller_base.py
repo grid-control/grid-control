@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, logging
+import os, logging
 from grid_control.config.config_entry import ConfigEntry, ConfigError
 from grid_control.utils import exec_wrapper, get_file_name, get_path_pkg, resolve_path
 from grid_control.utils.data_structures import UniqueList
@@ -20,7 +20,7 @@ from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.parsing import parse_list
 from grid_control.utils.persistency import load_dict
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
-from hpfwk import AbstractError, Plugin
+from hpfwk import AbstractError, Plugin, clear_current_exception, ignore_exception
 from python_compat import imap, irange, itemgetter, lfilter, lidfilter, rsplit
 
 
@@ -137,24 +137,8 @@ class FileConfigFiller(ConfigFiller):
 		except Exception:
 			raise ConfigError('Error while reading configuration file "%s"!' % config_fn)
 
-	def _parse_line_option(self, exception_intro, content_configfile, config_fn, idx, line):
-		(option, value) = line.split('=', 1)
-		(self._cur_option, self._cur_value, self._cur_indices) = (option.strip(), value.strip(), [idx])
-
-	def _parse_line_option_continued(self, exception_intro, content_configfile, config_fn, idx, line):
-		self._cur_value += '\n' + line.strip()
-		self._cur_indices += [idx]
-
-	def _parse_line_section(self, exception_intro, content_configfile, config_fn, idx, line):
-		self._cur_section = line[1:line.index(']')].strip()
-		self._parse_line(exception_intro, content_configfile, config_fn,
-			idx, line[line.index(']') + 1:].strip())
-
-	def _parse_line_strip_comments(self, exception_intro, content_configfile, config_fn, idx, line):
-		return rsplit(line, ';', 1)[0].rstrip()
-
-	# Not using ConfigParser anymore! Ability to read duplicate options is needed
 	def _parse_line(self, exception_intro, content_configfile, config_fn, idx, line):
+		# Not using ConfigParser anymore! Ability to read duplicate options is needed
 		def _protected_call(fun, exception_msg, line):
 			try:
 				return fun(exception_intro, content_configfile, config_fn, idx, line)
@@ -177,6 +161,22 @@ class FileConfigFiller(ConfigFiller):
 			_protected_call(self._parse_line_option, 'Unable to parse config option!', line)
 		else:
 			raise ConfigError(exception_intro_ext + '\nPlease use "key = value" syntax or indent values!')
+
+	def _parse_line_option(self, exception_intro, content_configfile, config_fn, idx, line):
+		(option, value) = line.split('=', 1)
+		(self._cur_option, self._cur_value, self._cur_indices) = (option.strip(), value.strip(), [idx])
+
+	def _parse_line_option_continued(self, exception_intro, content_configfile, config_fn, idx, line):
+		self._cur_value += '\n' + line.strip()
+		self._cur_indices += [idx]
+
+	def _parse_line_section(self, exception_intro, content_configfile, config_fn, idx, line):
+		self._cur_section = line[1:line.index(']')].strip()
+		self._parse_line(exception_intro, content_configfile, config_fn,
+			idx, line[line.index(']') + 1:].strip())
+
+	def _parse_line_strip_comments(self, exception_intro, content_configfile, config_fn, idx, line):
+		return rsplit(line, ';', 1)[0].rstrip()
 
 	def _store_option(self, exception_intro, content_configfile, config_fn):
 		def _assert_set(cond, msg):
@@ -242,17 +242,14 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 		def _resolve_hostname():
 			import socket
 			host = socket.gethostname()
-			try:
-				return socket.gethostbyaddr(host)[0]
-			except Exception:
-				return host
+			return ignore_exception(Exception, host, lambda: socket.gethostbyaddr(host)[0])
 
 		try:
 			hostname = hang_protection(_resolve_hostname, timeout=5)
 		except TimeoutException:
+			clear_current_exception()
 			hostname = None
-			sys.stderr.write('System call to resolve hostname is hanging!\n')
-			sys.stderr.flush()
+			logging.getLogger('console').warning('System call to resolve hostname is hanging!')
 
 		def get_default_config_fn_iter():  # return possible default config files
 			if hostname:  # host / domain specific

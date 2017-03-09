@@ -16,13 +16,6 @@
 import os, sys, logging, itertools
 
 
-def get_thread_name(thread):
-	try:  # Python >= 2.6
-		return thread.name
-	except Exception:
-		return thread.getName()
-
-
 def identity(value):
 	return value
 
@@ -37,8 +30,8 @@ def lidfilter(value):
 
 def resolve_fun(*args):
 	_log = logging.getLogger('python_compat')
-	module_map = {'<builtin-py2>': ['__builtin__'], '<builtin-py3>': ['builtins'],
-		'<builtin>': ['__builtin__', 'builtins']}
+	module_map = {'<builtin>': ['__builtin__', 'builtins'],
+		'<builtin-py2>': ['__builtin__'], '<builtin-py3>': ['builtins']}
 	for location in args:
 		if isinstance(location, str):
 			module_name_raw, member_name = location.split(':', 1)
@@ -65,6 +58,32 @@ def when_unspecified(value, result):
 	if value == unspecified:
 		return result
 	return value
+
+
+class GroupIterator(object):
+	def __init__(self, iterable, key=None):
+		self._key_fun = key or identity
+		self._key_ref = self._key_cur = self._value = unspecified
+		self._iterator = iter(iterable)
+
+	def __iter__(self):
+		return self
+
+	def __next__(self):
+		return self.next()
+
+	def next(self):
+		while self._key_cur == self._key_ref:
+			self._value = next(self._iterator)
+			self._key_cur = self._key_fun(self._value)
+		self._key_ref = self._key_cur
+		return (self._key_cur, self._group_iter(self._key_ref))
+
+	def _group_iter(self, key_ref):
+		while self._key_cur == key_ref:
+			yield self._value
+			self._value = next(self._iterator)
+			self._key_cur = self._key_fun(self._value)
 
 
 def _all(iterable):
@@ -184,9 +203,8 @@ all = resolve_fun('<builtin>:all', _all)  # >= py-2.5
 any = resolve_fun('<builtin>:any', _any)  # >= py-2.5
 BytesBuffer = resolve_fun('cStringIO:StringIO', 'io:BytesIO')  # < py-2.6
 exit_without_cleanup = resolve_fun('os:_exit')
-get_current_thread = resolve_fun('threading:current_thread', 'threading:currentThread')  # >= py-2.6
-get_thread_state = resolve_fun('threading:Thread.is_alive', 'threading:Thread.isAlive')  # >= py-2.6
 get_user_input = resolve_fun('<builtin-py2>:raw_input', '<builtin-py3>:input')  # < py-3.0
+groupby = resolve_fun('itertools:groupby', GroupIterator)  # >= py-2.4
 ichain = resolve_fun('itertools:chain.from_iterable', _ichain)  # >= py-2.6
 ifilter = resolve_fun('itertools:ifilter', '<builtin-py3>:filter')  # < py-3.0
 imap = resolve_fun('itertools:imap', '<builtin-py3>:map')  # < py-3.0
@@ -274,9 +292,8 @@ else:
 
 
 __all__ = ['all', 'any', 'bytes2str', 'BytesBuffer', 'BytesBufferBase', 'exit_without_cleanup',
-	'get_current_thread', 'get_thread_name', 'get_thread_state', 'get_user_input',
-	'iidfilter', 'lidfilter', 'ichain', 'identity', 'ifilter', 'imap', 'irange', 'ismap',
-	'itemgetter', 'izip', 'json', 'lchain', 'lfilter', 'lmap', 'lrange', 'lru_cache',
+	'get_user_input', 'ichain', 'identity', 'ifilter', 'iidfilter', 'imap', 'irange', 'ismap',
+	'itemgetter', 'izip', 'json', 'lchain', 'lfilter', 'lidfilter', 'lmap', 'lrange', 'lru_cache',
 	'lsmap', 'lzip', 'md5', 'md5_hex', 'next', 'parsedate', 'reduce', 'relpath', 'resolve_fun',
 	'rsplit', 'set', 'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile', 'unicode',
 	'unspecified', 'when_unspecified']

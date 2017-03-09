@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -18,12 +18,14 @@ from grid_control.gc_exceptions import InstallationError
 from grid_control.gui import GUI
 from grid_control.job_db import Job
 from grid_control_gui.plugin_graph import get_graph_image, get_workflow_graph
+from hpfwk import clear_current_exception
 from python_compat import lmap, lzip, sorted
 
 
 try:
 	import cherrypy
 except Exception:
+	clear_current_exception()
 	cherrypy = None  # pylint:disable=invalid-name
 
 
@@ -121,7 +123,7 @@ class CPWebserver(GUI):
 		return result
 	index.exposed = True
 
-	def display_workflow(self, workflow):
+	def start_display(self):
 		basic_auth = {'tools.auth_basic.on': True, 'tools.auth_basic.realm': 'earth',
 			'tools.auth_basic.checkpassword': cherrypy.lib.auth_basic.checkpassword_dict({'user': '123'})}
 		cherrypy.log.screen = False
@@ -129,7 +131,7 @@ class CPWebserver(GUI):
 		cherrypy.server.socket_port = 12345
 		cherrypy.tree.mount(self, '/', {'/': basic_auth})
 		cherrypy.engine.start()
-		workflow.process(wait=self._process_queue)
+		self._workflow.process(wait=self._process_queue)
 		cherrypy.engine.exit()
 		cherrypy.server.stop()
 

@@ -49,7 +49,7 @@ def collapse_psp_list(psp_list, tracked_list, opts):
 		psp['COLLATE_JOBS'] = len(psp_dict[hash_str])
 		psp['COLLATE_NICK'] = len(psp_dict_nicks[hash_str])
 		return psp
-	psp_list = sorted(lmap(_do_collate, psp_dict), key=lambda x: tuple(map(str, x.values())))
+	psp_list = sorted(imap(_do_collate, psp_dict), key=lambda x: tuple(imap(str, x.values())))
 	return (header_list, psp_list)
 
 

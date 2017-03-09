@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -15,27 +15,12 @@
 import os, logging
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.parsing import parse_json
-from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import identity, json
-
-
-try:
-	from urllib import urlencode
-except Exception:
-	from urllib.parse import urlencode
+from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception
+from python_compat import identity, json, resolve_fun
 
 
 class RestError(NestedException):
 	pass
-
-
-class RestSession(Plugin):
-	def __init__(self):
-		pass
-
-	def request(self, mode, url, headers, params=None, data=None, cert=None):
-		raise AbstractError
-make_enum(['GET', 'PUT', 'POST', 'DELETE'], RestSession)
 
 
 class RestClient(object):
@@ -44,11 +29,12 @@ class RestClient(object):
 		self._log = logging.getLogger('webservice')
 		(self._cert, self._url, self._headers) = (cert, url, default_headers)
 		self._process_result = process_result or identity
-		self._process_data = process_data or urlencode
+		self._process_data = process_data or resolve_fun('urllib.parse:urlencode', 'urllib:urlencode')
 		if not session:
 			try:
 				self._session = RestSession.create_instance('RequestsSession')
 			except Exception:
+				clear_current_exception()
 				# pulling in incompatible dependencies can cause many different types of exceptions
 				self._session = RestSession.create_instance('Urllib2Session')
 
@@ -84,6 +70,13 @@ class RestClient(object):
 				(url, params, self._cert, self._session.__class__.__name__))
 
 
+class RestSession(Plugin):
+	def request(self, mode, url, headers, params=None, data=None, cert=None):
+		raise AbstractError
+
+make_enum(['GET', 'PUT', 'POST', 'DELETE'], RestSession)
+
+
 class JSONRestClient(RestClient):
 	def __init__(self, cert=None, url=None, default_headers=None, process_result=None):
 		RestClient.__init__(self, cert, url,
@@ -106,6 +99,7 @@ class GridJSONRestClient(JSONRestClient):
 		try:
 			self._get_current_cert()
 		except Exception:
+			clear_current_exception()
 			self._log.warning(self._fmt_cert_error('Using this webservice requires a valid grid proxy!'))
 
 	def _fmt_cert_error(self, msg):

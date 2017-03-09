@@ -1,4 +1,4 @@
-# | Copyright 2012-2016 Karlsruhe Institute of Technology
+# | Copyright 2012-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ from grid_control.backends import WMS
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.utils.parsing import parse_time, parse_type, str_dict
+from hpfwk import ignore_exception
 from python_compat import imap, lmap, md5_hex
 
 
@@ -227,10 +228,7 @@ class TransformParameterSource(SingleParameterSource):
 
 	def fill_parameter_content(self, pnum, result):
 		tmp = dict(imap(lambda k_v: (str(k_v[0]), parse_type(str(k_v[1]))), result.items()))
-		try:
-			result[self._key] = eval(self._fmt, tmp)  # pylint:disable=eval-used
-		except Exception:
-			result[self._key] = self._default
+		result[self._key] = ignore_exception(Exception, self._default, eval, self._fmt, tmp)
 
 	def show_psrc(self):
 		return ['%s: var = %s, expr = %r, default = %r' %

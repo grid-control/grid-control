@@ -24,7 +24,7 @@ from grid_control.output_processor import JobResult
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
-from hpfwk import AbstractError, NestedException, clear_current_exception
+from hpfwk import AbstractError, NestedException, clear_current_exception, ignore_exception
 from python_compat import ichain, identity, imap, izip, lchain, lmap, set, sorted
 
 
@@ -199,11 +199,13 @@ class BasicWMS(WMS):
 					shutil.rmtree(target)
 			except IOError:
 				self._log.exception('%r cannot be removed', target)
+				clear_current_exception()
 				return False
 			try:
 				shutil.move(source, target)
 			except IOError:
 				self._log.exception('Error moving job output directory from %r to %r', source, target)
+				clear_current_exception()
 				return False
 			return True
 
@@ -222,11 +224,9 @@ class BasicWMS(WMS):
 
 			# jobnum_input != None, output_dn != None => Job retrieval from WMS was ok
 			job_fn = os.path.join(output_dn, 'job.info')
-			try:
-				job_info = self._job_parser.process(output_dn)
-			except Exception:
+			job_info = ignore_exception(Exception, None, self._job_parser.process, output_dn)
+			if job_info is None:
 				self._log.exception('Unable to parse job.info')
-				job_info = None
 			if job_info:
 				jobnum = job_info[JobResult.JOBNUM]
 				if jobnum != jobnum_input:
@@ -240,10 +240,7 @@ class BasicWMS(WMS):
 
 			# Clean empty output_dns
 			for sub_dn in imap(lambda x: x[0], os.walk(output_dn, topdown=False)):
-				try:
-					os.rmdir(sub_dn)
-				except Exception:
-					clear_current_exception()
+				ignore_exception(Exception, None, os.rmdir, sub_dn)
 
 			if os.path.exists(output_dn):
 				# Preserve failed job

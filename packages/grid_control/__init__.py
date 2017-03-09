@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@ __version__ = '$Revision: 1942$'[11:-1]
 
 
 def init_grid_control():
+	if init_grid_control.flag:
+		return
+	init_grid_control.flag = True
 	import os, sys
 	packages_base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 	sys.path.insert(1, packages_base_path)  # packages bundled with grid-control have priority
@@ -29,5 +32,6 @@ def init_grid_control():
 
 	from grid_control.logging_setup import logging_defaults
 	logging_defaults()
+init_grid_control.flag = False  # <global-state>
 
 init_grid_control()

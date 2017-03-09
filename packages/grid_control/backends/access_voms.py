@@ -12,8 +12,6 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# Generic base class for authentication proxies GCSCF:
-
 from grid_control.backends.access_grid import GridAccessToken
 from grid_control.utils.parsing import parse_time
 

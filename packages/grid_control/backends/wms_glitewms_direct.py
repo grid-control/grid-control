@@ -14,10 +14,9 @@
 
 import os, sys
 from grid_control import utils
-from grid_control.backends.aspect_status import CheckInfo, CheckJobs
+from grid_control.backends.aspect_status import CheckInfo, CheckJobs, expand_status_map
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_glitewms import GliteWMS
-from grid_control.backends.wms_grid import GridStatusMap
 from grid_control.job_db import Job
 from hpfwk import ExceptionCollector, clear_current_exception
 from python_compat import imap, lmap, lzip
@@ -27,7 +26,7 @@ class GliteWMSDirectCheckJobs(CheckJobs):
 	def __init__(self, config, status_fun):
 		CheckJobs.__init__(self, config)
 		self._status_fun = status_fun
-		self._status_map = GridStatusMap
+		self._status_map = expand_status_map(GliteWMS.grid_status_map)
 
 	def execute(self, wms_id_list):  # yields list of (wms_id, job_status, job_info)
 		exc = ExceptionCollector()
@@ -66,10 +65,12 @@ class GliteWMSDirect(GliteWMS):  # pylint:disable=too-many-ancestors
 				try:  # new parameter json
 					job_status = wmsui_api.getStatus(wmsui_api.getJobIdfromList(None, [wms_id])[0], 0)
 				except Exception:
+					clear_current_exception()
 					job_status = wmsui_api.getStatus(wmsui_api.getJobIdfromList([wms_id])[0], 0)
 				return lmap(lambda name: (name.lower(),
 					job_status.getAttribute(glite_state_name_list.index(name))), glite_state_name_list)
 		except Exception:  # gLite 3.1
+			clear_current_exception()
 			try:
 				from glite_wmsui_LbWrapper import Status
 				wrapper_status = Status()
@@ -83,6 +84,7 @@ class GliteWMSDirect(GliteWMS):  # pylint:disable=too-many-ancestors
 					info = wrapper_status.loadStatus()
 					return lzip(imap(str.lower, job_status.states_names), info[0:job_status.ATTR_MAX])
 			except Exception:
+				clear_current_exception()
 				_get_status_direct = None
 		sys.path = stored_sys_path
 

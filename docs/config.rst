@@ -445,6 +445,24 @@ Matcher options
   * ``<prefix> case sensitive`` = <boolean>
     Toggle case sensitivity for the matcher
 
+GridEngineDiscoverNodes options
+-------------------------------
+
+  * ``discovery timeout`` = <integer> (default: 30)
+    Specify timeout of the process that is used to discover backend featues
+
+GridEngineDiscoverQueues options
+--------------------------------
+
+  * ``discovery timeout`` = <integer> (default: 30)
+    Specify timeout of the process that is used to discover backend featues
+
+PBSDiscoverNodes options
+------------------------
+
+  * ``discovery timeout`` = <integer> (default: 30)
+    Specify timeout of the process that is used to discover backend featues
+
 CheckJobsWithProcess options
 ----------------------------
 
@@ -490,6 +508,14 @@ LumiDataProcessor options
     Specify if the lumi filter requires the run and lumi information (strict) or just the run information (weak)
   * ``<datasource> lumi keep / lumi keep`` = <enum: RunLumi|Run|none> (default: <Run/none depending on active/inactive lumi filter>)
     Specify which lumi metadata to retain
+
+MergeDataProcessor options
+--------------------------
+
+  * ``<datasource> location merge mode`` = <enum: intersection|union|separate> (default: intersection)
+    Specify how the location information should be processed by the dataset block merge procedure
+  * ``<datasource> metadata merge mode`` = <enum: intersection|union|separate> (default: union)
+    Specify how the metadata information should be processed by the dataset block merge procedure
 
 MultiDataProcessor options
 --------------------------

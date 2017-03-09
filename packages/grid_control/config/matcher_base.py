@@ -24,12 +24,6 @@ from python_compat import lfilter, sorted, unspecified
 ListOrder = make_enum(['source', 'matcher'])  # pylint: disable=invalid-name
 
 
-def _match_result(value):
-	if value:
-		return 1
-	return -1
-
-
 class MatcherHolder(object):
 	def __init__(self, selector, case):
 		self._case = case
@@ -328,3 +322,9 @@ def _get_fixed_matcher_object_case(instance, matcher_class, selector, case):
 
 def _get_fun_from_expr(selector):
 	return eval('lambda value: (%s) == True' % selector)  # pylint:disable=eval-used
+
+
+def _match_result(value):
+	if value:
+		return 1
+	return -1

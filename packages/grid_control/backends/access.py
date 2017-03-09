@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# Generic base class for authentication proxies GCSCF:
+# Generic base class for authentication proxies
 
 import os, time, logging
 from grid_control.gc_exceptions import UserError

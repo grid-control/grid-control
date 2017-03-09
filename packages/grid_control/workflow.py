@@ -12,11 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys, time, logging
+import time, logging
 from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.gc_plugin import NamedPlugin
-from grid_control.gui import GUI, SimpleActivityStream
+from grid_control.gui import GUI
 from grid_control.job_manager import JobManager
 from grid_control.logging_setup import LogEveryNsec
 from grid_control.monitoring import Monitoring
@@ -32,17 +32,13 @@ class Workflow(NamedPlugin):
 	def __init__(self, config, name, abort=None):
 		NamedPlugin.__init__(self, config, name)
 
-		# Initial activity stream
-		sys.stdout = SimpleActivityStream(sys.stdout, register_callback=True)
-		sys.stderr = SimpleActivityStream(sys.stderr)
-
 		# Work directory settings
 		self._path_work = config.get_work_path()
 		self._check_space = config.get_int('workdir space', 10, on_change=None)
 
 		# Initialise task module
 		self.task = config.get_plugin(['module', 'task'], cls=TaskModule, bind_kwargs={'tags': [self]})
-		if abort == 'task':
+		if (abort == 'task') or utils.abort():
 			return
 
 		self._log.log(logging.INFO, 'Current task ID: %s', self.task.task_id)
@@ -51,26 +47,33 @@ class Workflow(NamedPlugin):
 		# Initialise workload management interface
 		self.wms = config.get_composited_plugin('backend', 'grid', 'MultiWMS',
 			cls=WMS, bind_kwargs={'tags': [self, self.task]})
+		if utils.abort():
+			return
 
 		# Subsequent config calls also include section "jobs":
 		jobs_config = config.change_view(view_class='TaggedConfigView',
 			add_sections=['jobs'], add_tags=[self])
+		if utils.abort():
+			return
 
 		# Initialise monitoring module
 		monitor = jobs_config.get_composited_plugin('monitor', 'scripts', 'MultiMonitor',
 			cls=Monitoring, bind_kwargs={'tags': [self, self.task]}, pargs=(self.task,))
+		if utils.abort():
+			return
 
 		# Initialise job database
 		self.job_manager = jobs_config.get_plugin('job manager', 'SimpleJobManager',
 			cls=JobManager, bind_kwargs={'tags': [self, self.task, self.wms]}, pargs=(self.task, monitor))
-
-		if abort == 'jobmanager':
+		if (abort == 'jobmanager') or utils.abort():
 			return
 
 		# Prepare work package
 		self.wms.deploy_task(self.task, monitor,
 			transfer_se=config.get_state('init', detail='storage'),
 			transfer_sb=config.get_state('init', detail='sandbox'))
+		if utils.abort():
+			return
 
 		# Configure workflow settings
 		self._action_list = jobs_config.get_list('action',
@@ -84,7 +87,6 @@ class Workflow(NamedPlugin):
 			self.task.wall_time, on_change=None)
 
 		# Initialise GUI
-		(sys.stdout, sys.stderr) = (sys.stdout.finish(), sys.stderr.finish())
 		self._gui = config.get_plugin('gui', 'SimpleConsole', cls=GUI, on_change=None, pargs=(self,))
 
 		self._space_logger = logging.getLogger('workflow.space')
@@ -114,7 +116,7 @@ class Workflow(NamedPlugin):
 		self.job_manager.finish()
 
 	def run(self):
-		self._gui.display_workflow(workflow=self)
+		self._gui.start_display()
 
 	def _run_actions(self, wait, wms_timing_info):
 		did_wait = False

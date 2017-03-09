@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys, logging
+import logging
 from grid_control import utils
 from grid_control.job_db import Job
 from hpfwk import AbstractError, Plugin
@@ -27,7 +27,6 @@ class Report(Plugin):
 		if task is not None:
 			(self._task_id, self._task_name) = (task.task_id, task.task_config_name)
 		# FIXME: really store task for later access? maybe just use task during init run?
-		self._header = self._get_header(45)
 		self._log = logging.getLogger('report')
 
 	def get_height(self):
@@ -35,6 +34,13 @@ class Report(Plugin):
 
 	def show_report(self, job_db):
 		raise AbstractError
+
+
+class ConsoleReport(Report):
+	def __init__(self, job_db=None, task=None, jobs=None, config_str=''):
+		Report.__init__(self, job_db, task, jobs, config_str)
+		self._header = self._get_header(45)
+		self._output = logging.getLogger('console.report')
 
 	def _get_header(self, max_len=45):
 		tmp = self._task_name + ' / ' + self._task_id
@@ -47,11 +53,11 @@ class Report(Plugin):
 		return ''
 
 
-class BasicReport(Report):
+class BasicReport(ConsoleReport):
 	alias_list = ['basic']
 
 	def get_height(self):
-		return 8 + int((len(Job.enum_name_list) + 1) / 2)
+		return 7 + int((len(Job.enum_name_list) + 1) / 2)
 
 	def show_report(self, job_db):
 		njobs_total = len(job_db)
@@ -66,41 +72,29 @@ class BasicReport(Report):
 			return sum(imap(lambda z: summary[z], state_list))
 
 		# Print report summary
-		self._print_header('REPORT SUMMARY:')
-		jobov_succ = _make_per(Job.SUCCESS)
-		self._write_line(('Total number of jobs:%9d     ' +
-			'Successful jobs:%8d  %3d%%') % tuple([njobs_total] + jobov_succ))
+		title = 'REPORT SUMMARY:'
+		self._output.info('-' * 65)
+		self._output.info(title + self._header.rjust(65 - len(title)))
+		self._output.info('-' * 15)
+		self._output.info('Total number of jobs:%9d     Successful jobs:%8d  %3d%%',
+			*([njobs_total] + _make_per(Job.SUCCESS)))
 		njobs_assigned = _make_sum(Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED, Job.RUNNING)
-		jobov_fail = _make_per(Job.ABORTED, Job.CANCELLED, Job.FAILED)
-		self._write_line(('Jobs assigned to WMS:%9d        ' +
-			'Failing jobs:%8d  %3d%%') % tuple([njobs_assigned] + jobov_fail))
-		self._write_line('')
+		self._output.info('Jobs assigned to WMS:%9d        Failing jobs:%8d  %3d%%',
+			*([njobs_assigned] + _make_per(Job.ABORTED, Job.CANCELLED, Job.FAILED)))
 		ignored = njobs_total - sum(summary.values())
 		ignored_str = ''
 		if ignored:
 			ignored_str = '(Jobs    IGNORED:%8d  %3d%%)' % (ignored, ignored / max(1, njobs_total) * 100.0)
-		self._write_line('Detailed Status Information:      ' + ignored_str)
-		tmp = []
+		self._output.info('Detailed Status Information:      ' + ignored_str)
+		output_str_list = []
 		for (sid, sname) in izip(Job.enum_value_list, Job.enum_name_list):
-			tmp.append('Jobs  %9s:%8d  %3d%%' % tuple([sname] + _make_per(sid)))
-			if len(tmp) == 2:
-				self._write_line(str.join('     ', tmp))
-				tmp = []
-		if tmp:
-			self._write_line(tmp[0])
-		self._write_line('-' * 65)
-
-	def _print_header(self, message, level=-1, width=65):
-		self._write_line('-' * width, width)
-		self._write_line(message + self._header.rjust(width - len(message)), width)
-		self._write_line('-' * 15, width)
-
-	def _write_line(self, content, width=65, newline=True):
-		content = content.ljust(width)
-		if newline:
-			content += '\n'
-		sys.stdout.write(content)
-		sys.stdout.flush()
+			output_str_list.append('Jobs  %9s:%8d  %3d%%' % tuple([sname] + _make_per(sid)))
+			if len(output_str_list) == 2:
+				self._output.info(str.join('     ', output_str_list))
+				output_str_list = []
+		if output_str_list:
+			self._output.info(output_str_list)
+		self._output.info('-' * 65)
 
 
 class LocationReport(Report):

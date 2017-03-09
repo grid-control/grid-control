@@ -64,6 +64,13 @@ class LSF(LocalWMS):
 			cancel_executor=LSFCancelJobs(config),
 			check_executor=CheckJobsMissingState(config, LSFCheckJobs(config)))
 
+	def parse_submit_output(self, data):
+		# Job <34020017> is submitted to queue <1nh>.
+		return data.split()[1].strip('<>').strip()
+
+	def _get_job_arguments(self, jobnum, sandbox):
+		return repr(sandbox)
+
 	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
 		params = ' -J %s' % job_name
@@ -77,10 +84,3 @@ class LSF(LocalWMS):
 		# IO paths
 		params += ' -o "%s" -e "%s"' % (stdout, stderr)
 		return params
-
-	def parse_submit_output(self, data):
-		# Job <34020017> is submitted to queue <1nh>.
-		return data.split()[1].strip('<>').strip()
-
-	def _get_job_arguments(self, jobnum, sandbox):
-		return repr(sandbox)

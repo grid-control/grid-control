@@ -27,11 +27,12 @@ from python_compat import identity, ifilter, izip, lmap
 class PBSDiscoverNodes(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
+		self._timeout = config.get_int('discovery timeout', 30, on_change=None)
 		self._exec = utils.resolve_install_path('pbsnodes')
 
 	def discover(self):
 		proc = LocalProcess(self._exec)
-		for line in proc.stdout.iter(timeout=10):
+		for line in proc.stdout.iter(timeout=self._timeout):
 			if not line.startswith(' ') and len(line) > 1:
 				node = line.strip()
 			if ('state = ' in line) and ('down' not in line) and ('offline' not in line):
@@ -103,6 +104,15 @@ class PBS(PBSGECommon):  # pylint:disable=too-many-ancestors
 			nodes_finder=PBSDiscoverNodes(config), queues_finder=PBSDiscoverQueues(config))
 		self._server = config.get('server', '', on_change=None)
 
+	def parse_submit_output(self, data):
+		# 1667161.ekpplusctl.ekpplus.cluster
+		return data.split('.')[0].strip()
+
+	def _fqid(self, wms_id):
+		if not self._server:
+			return wms_id
+		return '%s.%s' % (wms_id, self._server)
+
 	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		req_map = {WMS.MEMORY: ('pvmem', lambda m: '%dmb' % m)}
 		params = PBSGECommon._get_common_submit_arguments(self, jobnum, job_name,
@@ -113,12 +123,3 @@ class PBS(PBSGECommon):  # pylint:disable=too-many-ancestors
 		if reqs.get(WMS.SITES):
 			params += ' -l host=%s' % str.join('+', reqs[WMS.SITES])
 		return params
-
-	def parse_submit_output(self, data):
-		# 1667161.ekpplusctl.ekpplus.cluster
-		return data.split('.')[0].strip()
-
-	def _fqid(self, wms_id):
-		if not self._server:
-			return wms_id
-		return '%s.%s' % (wms_id, self._server)

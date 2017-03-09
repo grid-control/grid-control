@@ -13,22 +13,22 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-try:
-	from xmlrpclib import ServerProxy
-except ImportError:
-	from xmlrpc.client import ServerProxy
 import sys
-from gc_scripts import utils
-from grid_control_cms.lumi_tools import format_lumi, merge_lumi_list, parse_lumi_from_json
+from gc_scripts import ScriptOptions
+from python_compat import json, resolve_fun
 
 
 def _main():
-	server = ServerProxy('http://pccmsdqm04.cern.ch/runregistry/xmlrpc')
-	data = server.DataExporter.export('RUNLUMISECTION', 'GLOBAL', 'json',
-		{'groupName': 'Collisions10'})
-	runs = parse_lumi_from_json(data)
-	lumi_filter_str = utils.wrap_list(format_lumi(merge_lumi_list(runs)), 60, ',\n\t')
-	sys.stdout.write('lumi filter = %s\n' % lumi_filter_str)
+	parser = ScriptOptions()
+	parser.add_text(None, None, 'url', default='http://pccmsdqm04.cern.ch/runregistry/xmlrpc',
+		help='URL to runregistry [Default:%s]')
+	parser.add_text(None, None, 'run', default='Collisions10',
+		help='Specify run era that will be queried for the lumi json file [Default:%s]')
+	options = parser.script_parse()
+	server_proxy_cls = resolve_fun('xmlrpc.client:ServerProxy', 'xmlrpclib:ServerProxy')
+	server = server_proxy_cls(options.opts.url).DataExporter
+	data = server.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupName': options.opts.run})
+	sys.stdout.write(json.dumps(data))
 
 
 if __name__ == '__main__':

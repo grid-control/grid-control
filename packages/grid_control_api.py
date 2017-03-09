@@ -12,15 +12,18 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, signal, logging
+import os, sys, time, signal, logging
 from grid_control import utils
 from grid_control.config import create_config
 from grid_control.gc_exceptions import gc_excepthook
-from grid_control.logging_setup import logging_setup, parse_logging_args
+from grid_control.gui import SimpleActivityStream
+from grid_control.logging_setup import StderrStreamHandler, StdoutStreamHandler, logging_setup, parse_logging_args  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
 from grid_control.utils.file_objects import SafeFile
-from hpfwk import Plugin, handle_debug_interrupt, init_hpf_plugins
+from grid_control.utils.thread_tools import start_daemon
+from hpfwk import DebugInterface, Plugin, init_hpf_plugins
+from python_compat import StringBuffer
 
 
 # grid-control command line parser
@@ -122,11 +125,27 @@ def get_actions(config):
 	return (action_delete, action_reset)
 
 
-def handle_abort_interrupt(signum, frame):
+def handle_abort_interrupt(signum, frame, stream=sys.stdout):
 	utils.abort(True)
+	stream.write('\b\b\r')
+	stream.flush()
 	handle_abort_interrupt.log = Activity('Quitting grid-control! (This can take a few seconds...)',
 		parent='root')
 	signal.signal(signum, signal.SIG_DFL)
+
+
+def handle_debug_interrupt(sig=None, frame=None):
+	def _interrupt_debug_console(duration):
+		def _signal_debug_console():
+			time.sleep(duration)
+			os.kill(os.getpid(), signal.SIGURG)
+		start_daemon('debug console trigger', _signal_debug_console)
+
+	old_stream_state = (StdoutStreamHandler.stream, StderrStreamHandler.stream)
+	StdoutStreamHandler.stream = StderrStreamHandler.stream = buffer = StringBuffer()
+	DebugInterface(frame, interrupt_fun=_interrupt_debug_console).start_console(silent=sig is None,
+		env_dict={'gcd_output': buffer.getvalue})
+	(StdoutStreamHandler.stream, StderrStreamHandler.stream) = old_stream_state
 
 
 # create workflow from config and do initial processing steps
@@ -134,6 +153,10 @@ def gc_create_workflow(config, do_freeze=True, **kwargs):
 	# set up signal handler for interrupts and debug session requests
 	signal.signal(signal.SIGURG, handle_debug_interrupt)
 	signal.signal(signal.SIGINT, handle_abort_interrupt)
+
+	# Setup activity display
+	StdoutStreamHandler.stream = SimpleActivityStream(sys.stdout, register_callback=True)
+	StderrStreamHandler.stream = SimpleActivityStream(sys.stderr)
 
 	# Configure logging settings
 	logging_setup(config.change_view(set_sections=['logging']))
@@ -195,11 +218,14 @@ def gc_run(args=None, intro=True):
 		config = gc_create_config(args or sys.argv[1:], use_default_files=True)
 		workflow = gc_create_workflow(config)
 		try:
-			sys.exit(workflow.run())
+			if not utils.abort():
+				sys.exit(workflow.run())
 		finally:
 			sys.stdout.write('\n')
 	except SystemExit:  # avoid getting caught for Python < 2.5
+		utils.abort(True)
 		raise
 	except Exception:  # coverage overrides sys.excepthook
+		utils.abort(True)
 		gc_excepthook(*sys.exc_info())
 		sys.exit(os.EX_SOFTWARE)

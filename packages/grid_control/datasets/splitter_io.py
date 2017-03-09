@@ -18,7 +18,7 @@ from grid_control.utils import DictFormat
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.parsing import parse_bool, parse_json, parse_list
-from hpfwk import AbstractError, NestedException, clear_current_exception
+from hpfwk import AbstractError, NestedException, clear_current_exception, ignore_exception
 from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lmap, tarfile
 
 
@@ -101,10 +101,8 @@ class AutoPartitionReader(FilePartitionReader):
 	alias_list = ['auto']
 
 	def __new__(cls, path):
-		try:
-			version = int(tarfile.open(path, 'r:').extractfile('Version').read())
-		except Exception:
-			version = 1
+		version = ignore_exception(Exception, 1,
+			lambda: int(tarfile.open(path, 'r:').extractfile('Version').read()))
 		return FilePartitionReader.create_instance('version_%s' % version, path)
 
 
@@ -222,8 +220,8 @@ class TarPartitionWriterV2(TarPartitionWriter):
 class TarPartitionReaderV1(TarPartitionReader):
 	alias_list = ['version_1']
 
-	# Save as outer_tar file to allow random access to mapping data with little memory overhead
 	def get_partition_unchecked(self, partition_num):
+		# Save as outer_tar file to allow random access to mapping data with little memory overhead
 		nested_tar = self._get_nested_tar('%03dXX.tgz' % (partition_num / 100))
 		partition = self._fmt.parse(nested_tar.extractfile('%05d/info' % partition_num).readlines(),
 			key_parser={None: DataSplitter.intstr2enum}, value_parser=self._map_enum2parser)

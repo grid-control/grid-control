@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.job_db import Job, JobDB, JobError
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
+from hpfwk import clear_current_exception
 from python_compat import irange, sorted
 
 
@@ -79,13 +80,6 @@ class TextFileJobDB(JobDB):
 			raise JobError('Unable to parse data in %s:\n%r' % (name, data))
 		return job
 
-	def _load_job(self, name):
-		try:
-			data = self._fmt.parse(open(name))
-		except Exception:
-			raise JobError('Invalid format in %s' % name)
-		return self._create_job_obj(name, data)
-
 	def _read_jobs(self, job_limit):
 		utils.ensure_dir_exists(self._path_db, 'job database directory', JobError)
 
@@ -94,6 +88,7 @@ class TextFileJobDB(JobDB):
 			try:  # 2xsplit is faster than regex
 				jobnum = int(job_fn.split(".")[0].split("_")[1])
 			except Exception:
+				clear_current_exception()
 				continue
 			candidates.append((jobnum, job_fn))
 
@@ -106,10 +101,18 @@ class TextFileJobDB(JobDB):
 				self._log.info('Stopped reading job infos at job #%d out of %d available job files, ' +
 					'since the limit of %d jobs is reached', jobnum, len(candidates), job_limit)
 				break
-			job_obj = self._load_job(os.path.join(self._path_db, job_fn))
+			try:
+				job_fn_full = os.path.join(self._path_db, job_fn)
+				fp = open(job_fn_full)
+				try:
+					data = self._fmt.parse(fp)
+				finally:
+					fp.close()
+				job_obj = self._create_job_obj(job_fn_full, data)
+			except Exception:
+				raise JobError('Unable to process job file %r' % job_fn_full)
 			job_map[jobnum] = job_obj
-			if idx % 100 == 0:
-				activity.update('Reading job infos %d [%d%%]' % (idx, (100.0 * idx) / max_job_len))
+			activity.update('Reading job infos %d [%d%%]' % (idx, (100.0 * idx) / max_job_len))
 		activity.finish()
 		return job_map
 

@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import GridJSONRestClient
 from grid_control_cms.provider_cms import CMSBaseProvider
+from hpfwk import clear_current_exception
 from python_compat import lmap
 
 
@@ -81,6 +82,7 @@ class DASProvider(CMSBaseProvider):
 			try:
 				return self._gjrc.get(params={'input': query})['data']
 			except DASRetry:
+				clear_current_exception()
 				time.sleep(sleep)
 				sleep += 0.4
 

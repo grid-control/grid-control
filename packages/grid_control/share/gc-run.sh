@@ -1,5 +1,5 @@
 #!/bin/bash
-# | Copyright 2008-2016 Karlsruhe Institute of Technology
+# | Copyright 2008-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -15,12 +15,12 @@
 
 # grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
 
+export GC_JOB_ID="$1"
 export GC_DOCLEANUP="true"
 source gc-run.lib || exit 101
 
 set +f
 gc_trap
-export GC_JOB_ID="$1"
 export MY_JOBID="$GC_JOB_ID" # legacy script support
 export GC_LANDINGZONE="$(pwd)"
 export GC_MARKER="$GC_LANDINGZONE/RUNNING.$$"

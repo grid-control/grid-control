@@ -12,19 +12,18 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
 from grid_control import utils
 from grid_control.job_db import Job, JobClass
-from grid_control.report import Report
+from grid_control.report import ConsoleReport
 from grid_control.utils.parsing import parse_str
 from grid_control_gui.ansi import Console
 from grid_control_gui.report_colorbar import JobProgressBar
 from python_compat import ifilter, imap, irange, lfilter, lmap, set, sorted
 
 
-class CategoryBaseReport(Report):
+class CategoryBaseReport(ConsoleReport):
 	def __init__(self, job_db, task, jobs=None, config_str=''):
-		Report.__init__(self, job_db, task, jobs, config_str)
+		ConsoleReport.__init__(self, job_db, task, jobs, config_str)
 		map_cat2jobs = {}
 		map_cat2desc = {}
 		# Assignment of jobs to categories (depending on variables and using datasetnick if available)
@@ -240,7 +239,7 @@ class GUIReport(AdaptiveBaseReport):
 	alias_list = ['modern']
 
 	def __init__(self, job_db, task, jobs=None, config_str=''):
-		(self._max_y, self._max_x) = Console(sys.stdout).getmaxyx()
+		(self._max_y, self._max_x) = Console.getmaxyx()
 		self._max_x -= 10  # Padding
 		AdaptiveBaseReport.__init__(self, job_db, task, jobs, config_str or str(int(self._max_y / 5)))
 
@@ -264,13 +263,13 @@ class GUIReport(AdaptiveBaseReport):
 			progressbar = JobProgressBar(sum(cat_state_dict[cat_key].values()),
 				width=max(0, self._max_x - 24))
 			progressbar.update(completed,
-				_sum_cat(cat_key, JobClass.ATWMS.states),
+				_sum_cat(cat_key, JobClass.ATWMS.state_list),
 				_sum_cat(cat_key, [Job.RUNNING, Job.DONE]),
 				_sum_cat(cat_key, [Job.ABORTED, Job.CANCELLED, Job.FAILED]))
 			self._print_truncated(progressbar, self._max_x)
 		for dummy in irange(self._cat_max - len(cat_state_dict)):
-			sys.stdout.write(' ' * self._max_x + '\n')
-			sys.stdout.write(' ' * self._max_x + '\n')
+			self._output.info(' ' * self._max_x)
+			self._output.info(' ' * self._max_x)
 
 	def _print_gui_header(self, message):
 		self._print_truncated('-' * (self._max_x - 24), self._max_x)
@@ -281,4 +280,4 @@ class GUIReport(AdaptiveBaseReport):
 	def _print_truncated(self, value, width, rvalue=''):
 		if len(value) + len(rvalue) > width:
 			value = str(value)[:width - 3 - len(rvalue)] + '...'
-		sys.stdout.write(str(value) + ' ' * (width - (len(value) + len(rvalue))) + str(rvalue) + '\n')
+		self._output.info(str(value) + ' ' * (width - (len(value) + len(rvalue))) + str(rvalue) + '\n')

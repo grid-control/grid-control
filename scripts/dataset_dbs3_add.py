@@ -20,6 +20,7 @@ from grid_control_cms.dbs3_input_validation import validate_dbs3_json
 from grid_control_cms.dbs3_lite_client import DBS3LiteClient
 from grid_control_cms.dbs3_migration_queue import AlreadyQueued, DBS3MigrationQueue, MigrationTask, do_migration  # pylint:disable=line-too-long
 from grid_control_cms.sitedb import SiteDB
+from hpfwk import clear_current_exception
 from python_compat import imap, izip, json, lmap, md5_hex, set
 
 
@@ -47,6 +48,7 @@ def create_dbs3_json_blocks(opts, dataset_blocks):
 		try:
 			origin_site_name = site_db.se_to_cms_name(block[DataProvider.Locations][0])[0]
 		except IndexError:
+			clear_current_exception()
 			origin_site_name = 'UNKNOWN'
 
 		block_dump['block'] = {'block_name': DataProvider.get_block_id(block), 'block_size': block_size,
@@ -220,6 +222,7 @@ def process_dbs3_json_blocks(opts, block_dump_iter):
 					dbs3_migration_queue.add_migration_task(migration_task)
 				except AlreadyQueued:
 					log.exception('Already queued')
+					clear_current_exception()
 			dbs3_migration_queue.save_to_disk(dbs3_migration_file)
 		else:
 			try:

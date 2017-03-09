@@ -18,16 +18,19 @@ from gc_scripts import FileInfo, FileInfoProcessor, Job, Plugin, ScriptOptions, 
 from grid_control.backends.storage import se_copy, se_exists, se_mkdir, se_rm
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.thread_tools import GCEvent, start_daemon
-from python_compat import all, any, get_thread_state, imap, lfilter, md5, sorted
+from hpfwk import clear_current_exception, get_thread_state
+from python_compat import all, any, imap, lfilter, md5, sorted
 
 
 try:
 	from grid_control_gui.ansi import Console
 except Exception:
+	clear_current_exception()
 	Console = None  # pylint:disable=invalid-name
 try:
 	from grid_control_gui.report_textbar import BasicProgressBar
 except Exception:
+	clear_current_exception()
 	BasicProgressBar = None  # pylint:disable=invalid-name
 
 
@@ -55,6 +58,7 @@ def check_hash(opts, local_se_path, fi_idx, fi, job_download_display):
 		except KeyboardInterrupt:
 			raise
 		except Exception:
+			clear_current_exception()
 			local_hash = None
 		job_download_display.check_hash(fi_idx, local_hash)
 		if fi[FileInfo.Hash] != local_hash:
@@ -112,8 +116,7 @@ def download_multithreaded(opts, work_dn, _inc_download_result, job_db, token, j
 	(thread_display_list, error_msg_list, jobnum_list_todo) = ([], [], list(jobnum_list))
 	jobnum_list_todo.reverse()
 
-	screen = Console(sys.stdout)
-	screen.setscrreg(3 * opts.threads)
+	Console.setscrreg(3 * opts.threads)
 	while True:
 		# remove finished transfers
 		thread_display_list = lfilter(lambda thread_display: get_thread_state(thread_display[0]),
@@ -126,11 +129,11 @@ def download_multithreaded(opts, work_dn, _inc_download_result, job_db, token, j
 				opts, work_dn, _inc_download_result, job_db, token, jobnum, job_download_display)
 			thread_display_list.append((download_thread, job_download_display))
 		# display transfers
-		screen.erase()
-		screen.move(0, 0)
+		Console.erase()
+		Console.move(0)
 		for (_, job_download_display) in thread_display_list:
 			sys.stdout.write(job_download_display.get_display_str() + '\n')
-		screen.move(3 * opts.threads + 1, 0)
+		Console.move(3 * opts.threads + 1)
 		sys.stdout.flush()
 		if len(thread_display_list) == 0:
 			break
@@ -153,6 +156,7 @@ def download_single_file(opts, job_download_display, jobnum, fi_idx, fi):
 		if se_exists(os.path.dirname(target_se_path)).status(timeout=10) != 0:
 			se_mkdir(os.path.dirname(target_se_path)).status(timeout=10)
 	except Exception:
+		clear_current_exception()
 		job_download_display.error_file(fi_idx, 'error while creating target directory!')
 		return FileDownloadStatus.FILE_MKDIR_FAILED
 

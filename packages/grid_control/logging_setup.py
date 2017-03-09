@@ -21,7 +21,8 @@ from hpfwk import AbstractError, clear_current_exception, format_exception
 from python_compat import imap, irange, lmap, set, sorted, tarfile
 
 
-LogLevelEnum = make_enum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)), use_hash=False)  # pylint:disable=invalid-name,line-too-long
+LogLevelEnum = make_enum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)),  # pylint:disable=invalid-name
+	use_hash=False, register=False)
 
 
 def clean_logger(logger_name=None):
@@ -213,7 +214,7 @@ def parse_logging_args(arg_list):
 		yield (tmp[0], tmp[1])
 
 
-def register_handler(logger, handler, formatter):
+def register_handler(logger, handler, formatter=None):
 	handler.setFormatter(formatter)
 	logger.addHandler(handler)
 	return handler
@@ -234,11 +235,11 @@ class LogEveryNsec(logging.Filter):
 
 class GCFormatter(logging.Formatter):
 	def __init__(self, details_lt=logging.DEBUG, details_gt=logging.ERROR,
-			ex_context=0, ex_vars=0, ex_fstack=0, ex_tree=2):
+			ex_context=0, ex_vars=0, ex_fstack=0, ex_tree=2, ex_threads=1):
 		logging.Formatter.__init__(self)
 		self._force_details_range = (details_lt, details_gt)
 		(self._ex_context, self._ex_vars) = (ex_context, ex_vars)
-		(self._ex_fstack, self._ex_tree) = (ex_fstack, ex_tree)
+		(self._ex_fstack, self._ex_tree, self._ex_threads) = (ex_fstack, ex_tree, ex_threads)
 
 	def __repr__(self):
 		return '%s(quiet = %r, code = %r, var = %r, file = %r, tree = %r)' % (self.__class__.__name__,
@@ -251,6 +252,7 @@ class GCFormatter(logging.Formatter):
 			force_time = record.print_time
 		except Exception:
 			force_time = False
+			clear_current_exception()
 		force_details = (record.levelno <= self._force_details_range[0])
 		force_details = force_details or (record.levelno >= self._force_details_range[1])
 		if force_time or force_details:
@@ -265,7 +267,7 @@ class GCFormatter(logging.Formatter):
 			if not msg.endswith('\n'):
 				msg += ': '
 			msg += format_exception(record.exc_info,
-				self._ex_context, self._ex_vars, self._ex_fstack, self._ex_tree)
+				self._ex_context, self._ex_vars, self._ex_fstack, self._ex_tree, self._ex_threads)
 		return msg
 
 
@@ -273,19 +275,42 @@ class GCStreamHandler(logging.Handler):
 	# In contrast to StreamHandler, this logging handler doesn't keep a stream copy
 	def __init__(self):
 		logging.Handler.__init__(self)
-		self._lock = GCLock(threading.RLock())
+		self.lock = GCLock(threading.RLock())  # default-allocated lock is sometimes non-reentrant
+		self.global_lock = None
+		GCStreamHandler.global_instances.append(self)
 
-	def emit(self, record):
-		self._lock.acquire()
-		try:
-			stream = self.get_stream()
-			stream.write(self.format(record) + '\n')
-			stream.flush()
-		finally:
-			self._lock.release()
+	def __del__(self):
+		GCStreamHandler.global_instances.remove(self)
+
+	def emit(self, record):  # locking done by handle
+		stream = self.get_stream()
+		stream.write(self.format(record) + '\n')
+		stream.flush()
 
 	def get_stream(self):
 		raise AbstractError
+
+	def handle(self, record):
+		filter_result = self.filter(record)
+		if filter_result:
+			lock = self.global_lock or self.lock
+			lock.acquire()
+			try:
+				self.emit(record)
+			finally:
+				lock.release()
+		return filter_result
+
+	def set_global_lock(cls, lock=None):
+		GCStreamHandler.global_lock.acquire()
+		for instance in GCStreamHandler.global_instances:
+			instance.acquire()
+			instance.global_lock = lock
+			instance.release()
+		GCStreamHandler.global_lock.release()
+	set_global_lock = classmethod(set_global_lock)
+GCStreamHandler.global_instances = []  # <global-state>
+GCStreamHandler.global_lock = GCLock()  # <global-state>
 
 
 class ProcessArchiveHandler(logging.Handler):
@@ -328,14 +353,16 @@ class ProcessArchiveHandler(logging.Handler):
 		except Exception:
 			raise GCError('Unable to log results of external call "%s" to "%s"' % (
 				record.proc.get_call(), self._fn))
-ProcessArchiveHandler.tar_locks = {}
+ProcessArchiveHandler.tar_locks = {}  # <global-state>
 
 
 class StderrStreamHandler(GCStreamHandler):
 	def get_stream(self):
-		return sys.stderr
+		return StderrStreamHandler.stream
+StderrStreamHandler.stream = sys.stderr  # <global-state>
 
 
 class StdoutStreamHandler(GCStreamHandler):
 	def get_stream(self):
-		return sys.stdout
+		return StdoutStreamHandler.stream
+StdoutStreamHandler.stream = sys.stdout  # <global-state>

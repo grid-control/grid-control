@@ -21,8 +21,11 @@ from grid_control.utils import resolve_path, resolve_paths
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.parsing import parse_bool, parse_dict, parse_list, parse_time, str_dict_cfg, str_time_short  # pylint:disable=line-too-long
 from grid_control.utils.thread_tools import GCEvent
-from hpfwk import APIError, ExceptionCollector, Plugin
+from hpfwk import APIError, ExceptionCollector, Plugin, clear_current_exception
 from python_compat import any, get_user_input, identity, ifilter, imap, lmap, sorted, unspecified
+
+
+CommandType = make_enum(['executable', 'command'])  # pylint: disable=invalid-name
 
 
 class TypedConfigInterface(ConfigInterface):
@@ -160,9 +163,6 @@ class TypedConfigInterface(ConfigInterface):
 			str2obj=_bind_plugins, def2obj=_bind_plugins, option=option, default_obj=default, **kwargs)
 
 
-CommandType = make_enum(['executable', 'command'])  # pylint: disable=invalid-name
-
-
 class SimpleConfigInterface(TypedConfigInterface):
 	def __init__(self, config_view, default_on_change=unspecified, default_on_valid=unspecified):
 		TypedConfigInterface.__init__(self, config_view, default_on_change, default_on_valid)
@@ -296,7 +296,8 @@ class SimpleConfigInterface(TypedConfigInterface):
 					try:
 						default_obj = str2obj(user_input)
 					except Exception:
-						sys.stdout.write('Unable to parse %s: %s\n' % (desc, user_input))
+						clear_current_exception()
+						self._log.warning('Unable to parse %s: %s\n', desc, user_input)
 						continue
 				break
 		return TypedConfigInterface._get_internal(self, desc, obj2str, str2obj, def2obj,

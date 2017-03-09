@@ -36,6 +36,7 @@ except ImportError:
 from grid_control.output_processor import JobInfoProcessor, JobResult
 from grid_control.report import Report
 from grid_control.utils.data_structures import make_enum
+from hpfwk import clear_current_exception
 from python_compat import irange, izip
 
 
@@ -87,6 +88,7 @@ class PlotReport(Report):
 			try:
 				job_info = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % jobnum))
 			except Exception:
+				clear_current_exception()
 				self._log.info('Ignoring job')
 				continue
 

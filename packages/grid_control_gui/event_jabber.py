@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ class JabberAlarm(Monitoring):
 			import xmpp
 			self._xmpp = xmpp
 		except Exception:
+			clear_current_exception()
 			try:
 				import grid_control_gui.xmpp
 				self._xmpp = grid_control_gui.xmpp

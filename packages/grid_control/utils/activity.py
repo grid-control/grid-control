@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,15 +14,15 @@
 
 import logging, threading
 from grid_control.utils.thread_tools import GCLock
-from hpfwk import APIError
-from python_compat import get_current_thread, get_thread_name, imap, rsplit, set
+from hpfwk import APIError, get_thread_name
+from python_compat import imap, rsplit, set
 
 
 class Activity(object):
 	def __init__(self, message=None, level=logging.INFO, name=None, parent=None):
 		self.name = name
 		(self._level, self._message, self._parent, self._children) = (level, None, None, [])
-		self._current_thread_name = get_thread_name(get_current_thread())
+		self._current_thread_name = get_thread_name()
 
 		Activity.lock.acquire()
 		try:
@@ -42,10 +42,10 @@ class Activity(object):
 			Activity.lock.release()
 		self.depth = len(list(self.get_parents()))
 
-		if message is not None:
-			self.update(message)
 		if self._parent:
 			self._parent.add_child(self)
+		if message is not None:
+			self.update(message)
 
 	def __del__(self):
 		self.finish()
@@ -118,13 +118,12 @@ class Activity(object):
 		self._message = message
 		for callback in Activity.callbacks:
 			callback()
-		return self
 
-Activity.lock = GCLock()
-Activity.counter = 0
-Activity.running_by_thread_name = {}
-Activity.callbacks = []
-Activity.root = Activity('Running grid-control', name='root')
+Activity.lock = GCLock()  # <global-state>
+Activity.counter = 0  # <global-state>
+Activity.running_by_thread_name = {}  # <global-state>
+Activity.callbacks = []  # <global-state>
+Activity.root = Activity('Running grid-control', name='root')  # <global-state>
 
 
 class ProgressActivity(Activity):

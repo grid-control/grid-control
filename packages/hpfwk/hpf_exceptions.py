@@ -1,4 +1,4 @@
-# | Copyright 2007-2016 Karlsruhe Institute of Technology
+# | Copyright 2007-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,6 +13,7 @@
 # | limitations under the License.
 
 import os, sys
+from hpfwk.hpf_compat import clear_current_exception, impl_detail
 
 
 HPF_STARTUP_DIRECTORY = os.getcwd()
@@ -43,35 +44,26 @@ class AbstractError(APIError):
 		APIError.__init__(self, '%s is an abstract function!' % fun_name)
 
 
-def clear_current_exception():
-	return impl_detail(sys, 'exc_clear', args=(), default=None)
-
-
 def get_current_exception():
 	return sys.exc_info()[1]
 
 
-def impl_detail(module, name, args, default, fun=lambda x: x):
-	# access some python implementation detail with default
+def ignore_exception(exception_cls, exception_default, fun, *args, **kwargs):
 	try:
-		return fun(getattr(module, name)(*args))
-	except Exception:
-		return default
+		return fun(*args, **kwargs)
+	except exception_cls:
+		clear_current_exception()
+		return exception_default
 
 
 def parse_frame(frame):
-	# Parse stack frame
-	def _parse_frame(result, frame):
-		while frame:
-			result.insert(0, {
-				'file': os.path.abspath(frame.f_code.co_filename),
-				'line': frame.f_lineno,
-				'fun': frame.f_code.co_name,
-				'locals': dict(frame.f_locals)})
-			frame = frame.f_back
-		for idx, entry in enumerate(result):
-			entry['idx'] = idx
-	return _parse_helper(_parse_frame, frame)
+	def _get_frame_dict(cur_frame):  # Parse single stack frame
+		return {'idx': 0,
+			'file': os.path.abspath(cur_frame.f_code.co_filename),
+			'line': cur_frame.f_lineno,
+			'fun': cur_frame.f_code.co_name,
+			'locals': dict(cur_frame.f_locals)}
+	return _parse_helper(_get_frame_dict, frame)  # use _parse_helper for correct path resolution
 
 
 class ExceptionCollector(object):
@@ -106,22 +98,22 @@ def _get_current_traceback():
 
 
 def _parse_helper(fun, *args):
-	result = []
 	cwd = os.getcwd()
 	os.chdir(HPF_STARTUP_DIRECTORY)
-	fun(result, *args)
+	result = fun(*args)
 	os.chdir(cwd)
 	return result
 
 
 def _parse_traceback(traceback):
-	# Parse traceback information
-	def _parse_traceback_impl(result, traceback):
-		while traceback:
-			result.append({'idx': len(result) + 1,
-				'file': os.path.abspath(traceback.tb_frame.f_code.co_filename),
-				'line': traceback.tb_lineno,  # tb_lineno shows the location of the exception cause
-				'fun': traceback.tb_frame.f_code.co_name,
-				'locals': dict(traceback.tb_frame.f_locals)})
-			traceback = traceback.tb_next
-	return _parse_helper(_parse_traceback_impl, traceback)
+	def _get_traceback_dict(traceback):  # Parse traceback information
+		return {'idx': len(result) + 1,
+			'file': os.path.abspath(traceback.tb_frame.f_code.co_filename),
+			'line': traceback.tb_lineno,  # tb_lineno shows the location of the exception cause
+			'fun': traceback.tb_frame.f_code.co_name,
+			'locals': dict(traceback.tb_frame.f_locals)}
+	result = []
+	while traceback:
+		result.append(_parse_helper(_get_traceback_dict, traceback))
+		traceback = traceback.tb_next
+	return result

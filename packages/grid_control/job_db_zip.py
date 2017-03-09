@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -42,6 +42,7 @@ class ZippedJobDB(TextFileJobDB):
 			try:
 				tar = zipfile.ZipFile(self._db_fn, 'r', zipfile.ZIP_DEFLATED)
 			except Exception:  # Try to recover job archive
+				clear_current_exception()
 				self._log.warning('=' * 40 + '\nStarting recovery of broken job database' +
 					' => Answer "y" if asked "Is this a single-disk archive?"!\n' + '=' * 40)
 				os.system('zip -FF %s --out %s.tmp 2> /dev/null' % (self._db_fn, self._db_fn))
@@ -73,6 +74,7 @@ class ZippedJobDB(TextFileJobDB):
 				try:
 					data = self._fmt.parse(tar.open(tar_info_fn).read())
 				except Exception:
+					clear_current_exception()
 					continue
 				job_map[jobnum] = self._create_job_obj(tar_info_fn, data)
 				map_jobnum2tarfn[jobnum] = tid

@@ -45,9 +45,9 @@ def _main():
 	parser.add_text(None, 's', 'se', default=None,
 		help='Resolve LFN on CMS SE into PFN')
 	parser.add_text(None, ' ', 'se-prot', default='srmv2',
-		help='Name of default SE protocol')
-	parser.add_text(None, ' ', 'lfn', default='/store/user/<hypernews name>',
-		help='Name of default LFN')
+		help='Name of default SE protocol [Default:%s]')
+	parser.add_text(None, ' ', 'lfn', default='/store/user/<hypernews_name>',
+		help='Name of default LFN [Default:%s]')
 	options = parser.script_parse()
 
 	if options.opts.se:

@@ -61,13 +61,13 @@ class JobClassHolder(object):
 	def __init__(self, *state_list):
 		self.state_list = state_list
 
-	def get_name(self, state_list):
-		for prop_name in dir(self):
-			prop = getattr(self, prop_name)
+	def lookup_job_class_name(cls, state_list):
+		for prop_name in dir(cls):
+			prop = getattr(cls, prop_name)
 			if isinstance(prop, JobClassHolder):
 				if sorted(getattr(prop, 'state_list')) == sorted(state_list):
 					return prop_name
-	get_name = classmethod(get_name)
+	lookup_job_class_name = classmethod(lookup_job_class_name)
 
 
 class JobDB(ConfigurablePlugin):

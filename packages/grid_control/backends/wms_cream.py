@@ -22,6 +22,7 @@ from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
+from hpfwk import clear_current_exception
 from python_compat import imap, irange, md5, tarfile
 
 
@@ -57,6 +58,7 @@ class CREAMCheckJobs(CheckJobsWithProcess):
 			try:
 				(key, value) = imap(str.strip, line.split('=', 1))
 			except Exception:
+				clear_current_exception()
 				continue
 			key = key.lower()
 			value = value[1:-1]
@@ -136,6 +138,7 @@ class CreamWMS(GridWMS):
 								os.unlink(wildcard_tar)
 							except Exception:
 								self._log.error('Can\'t unpack output files contained in %s', wildcard_tar)
+								clear_current_exception()
 					yield (current_jobnum, output_dn)
 					current_jobnum = None
 			exit_code = proc.status(timeout=10, terminate=True)

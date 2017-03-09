@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,11 +14,13 @@
 
 # pylint:disable=line-too-long
 
-from hpfwk.hpf_debug import format_exception, handle_debug_interrupt
-from hpfwk.hpf_exceptions import APIError, AbstractError, ExceptionCollector, NestedException, clear_current_exception, get_current_exception
+from hpfwk.hpf_compat import clear_current_exception, get_thread_name, get_thread_state
+from hpfwk.hpf_debug import DebugInterface, format_exception, get_trace_fun, ignore_exception
+from hpfwk.hpf_exceptions import APIError, AbstractError, ExceptionCollector, NestedException, get_current_exception
 from hpfwk.hpf_plugin import InstanceFactory, Plugin, PluginError, init_hpf_plugins
 
 
-__all__ = ['AbstractError', 'APIError', 'clear_current_exception', 'ExceptionCollector',
-	'format_exception', 'get_current_exception', 'handle_debug_interrupt', 'init_hpf_plugins',
-	'InstanceFactory', 'NestedException', 'Plugin', 'PluginError']
+__all__ = ['AbstractError', 'APIError', 'clear_current_exception', 'DebugInterface',
+	'ExceptionCollector', 'format_exception', 'get_current_exception', 'get_thread_name',
+	'get_thread_state', 'get_trace_fun', 'ignore_exception', 'init_hpf_plugins', 'InstanceFactory',
+	'NestedException', 'Plugin', 'PluginError']

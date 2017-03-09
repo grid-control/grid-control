@@ -72,6 +72,7 @@ def get_plugin_list(module_iterator):
 			cls_list = module.__all__
 		except Exception:
 			cls_list = dir(module)
+			clear_current_exception()
 		for cls_name in cls_list:
 			cls = getattr(module, cls_name)
 			try:

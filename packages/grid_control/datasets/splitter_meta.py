@@ -19,8 +19,8 @@ from hpfwk import AbstractError
 from python_compat import imap, lmap, sort_inplace
 
 
-# Split dataset along block and class boundaries - using equivalence classes of file properties
 class FileClassSplitter(FileLevelSplitter):
+	# Split dataset along block and class boundaries - using equivalence classes of file properties
 	def divide_blocks(self, block_iter):
 		for block in block_iter:
 			fi_list = block[DataProvider.FileList]

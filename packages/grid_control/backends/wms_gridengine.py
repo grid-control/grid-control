@@ -30,15 +30,16 @@ from python_compat import any, imap, izip, lmap, set, sorted
 class GridEngineDiscoverNodes(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
+		self._config_timeout = config.get_int('discovery timeout', 30, on_change=None)
 		self._config_exec = utils.resolve_install_path('qconf')
 
 	def discover(self):
 		nodes = set()
 		proc = LocalProcess(self._config_exec, '-shgrpl')
-		for group in proc.stdout.iter(timeout=10):
+		for group in proc.stdout.iter(timeout=self._config_timeout):
 			yield {'name': group.strip()}
 			proc_g = LocalProcess(self._config_exec, '-shgrp_resolved', group)
-			for host_list in proc_g.stdout.iter(timeout=10):
+			for host_list in proc_g.stdout.iter(timeout=self._config_timeout):
 				nodes.update(host_list.split())
 			proc_g.status_raise(timeout=0)
 		for host in sorted(nodes):
@@ -49,6 +50,7 @@ class GridEngineDiscoverNodes(BackendDiscovery):
 class GridEngineDiscoverQueues(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
+		self._config_timeout = config.get_int('discovery timeout', 30, on_change=None)
 		self._config_exec = utils.resolve_install_path('qconf')
 
 	def discover(self):
@@ -57,10 +59,10 @@ class GridEngineDiscoverQueues(BackendDiscovery):
 		parser = dict(izip(tags, [int, parse_time, parse_time]))
 
 		proc = LocalProcess(self._config_exec, '-sql')
-		for queue in imap(str.strip, proc.stdout.iter(timeout=10)):
+		for queue in imap(str.strip, proc.stdout.iter(timeout=self._config_timeout)):
 			proc_q = LocalProcess(self._config_exec, '-sq', queue)
 			queue_dict = {'name': queue}
-			for line in proc_q.stdout.iter(timeout=10):
+			for line in proc_q.stdout.iter(timeout=self._config_timeout):
 				attr, value = lmap(str.strip, line.split(' ', 1))
 				if (attr in tags) and (value != 'INFINITY'):
 					queue_dict[reqs[attr]] = parser[attr](value)
@@ -126,6 +128,10 @@ class GridEngine(PBSGECommon):  # pylint:disable=too-many-ancestors
 		self._project = config.get('project name', '', on_change=None)
 		self._config_exec = utils.resolve_install_path('qconf')
 
+	def parse_submit_output(self, data):
+		# Your job 424992 ("test.sh") has been submitted
+		return data.split()[2].strip()
+
 	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		def _time_str(secs):
 			return '%02d:%02d:%02d' % (secs / 3600, (secs / 60) % 60, secs % 60)
@@ -146,10 +152,6 @@ class GridEngine(PBSGECommon):  # pylint:disable=too-many-ancestors
 			raise ConfigError('Please also specify queue when selecting nodes!')
 		return params + PBSGECommon._get_common_submit_arguments(self, jobnum, job_name,
 			reqs, sandbox, stdout, stderr, req_map)
-
-	def parse_submit_output(self, data):
-		# Your job 424992 ("test.sh") has been submitted
-		return data.split()[2].strip()
 
 
 class GridEngineCheckJobsProcessCreator(ProcessCreatorViaArguments):

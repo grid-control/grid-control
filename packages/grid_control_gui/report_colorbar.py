@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,10 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
 from grid_control.job_db import JobClass
 from grid_control.job_selector import ClassSelector
-from grid_control.report import Report
+from grid_control.report import ConsoleReport
 from grid_control_gui.ansi import Console
 
 
@@ -41,12 +40,12 @@ class JobProgressBar(object):
 		blocks_run = int(round(running / float(self._total) * complete))
 		blocks_fail = min(complete - blocks_ok - blocks_proc - blocks_run,
 			int(round(failed / float(self._total) * complete)))
-		self._bar = str(Console.fmt('=' * blocks_ok, [Console.COLOR_GREEN]))
-		self._bar += str(Console.fmt('=' * blocks_run, [Console.COLOR_BLUE]))
-		self._bar += str(Console.fmt('=' * blocks_proc, [Console.COLOR_WHITE]))
+		self._bar = Console.COLOR_GREEN + '=' * blocks_ok
+		self._bar += Console.COLOR_BLUE + '=' * blocks_run
+		self._bar += Console.COLOR_WHITE + '=' * blocks_proc
 		self._bar += ' ' * (complete - blocks_ok - blocks_proc - blocks_run - blocks_fail)
-		self._bar += str(Console.fmt('=' * blocks_fail, [Console.COLOR_RED]))
-		self._bar = '[%s]' % self._bar
+		self._bar += Console.COLOR_RED + '=' * blocks_fail
+		self._bar = '[' + Console.RESET + self._bar + Console.RESET + ']'
 		if self._display_text:
 			if success == self._total and self._jobs_on_finish:
 				self._bar += ' (%s |%s)' % (Console.fmt('%5d' % self._total, [Console.COLOR_GREEN]),
@@ -63,11 +62,11 @@ class JobProgressBar(object):
 					Console.fmt(_fmt(failed), [Console.COLOR_RED]))
 
 
-class ColorBarReport(Report):
+class ColorBarReport(ConsoleReport):
 	alias_list = ['cbar']
 
 	def __init__(self, job_db, task, jobs=None, config_str=''):
-		Report.__init__(self, job_db, task, jobs, config_str)
+		ConsoleReport.__init__(self, job_db, task, jobs, config_str)
 		self._bar = JobProgressBar(len(job_db), 65, jobs_on_finish=True)
 
 	def get_height(self):
@@ -79,4 +78,4 @@ class ColorBarReport(Report):
 			len(job_db.get_job_list(ClassSelector(JobClass.ATWMS))),
 			len(job_db.get_job_list(ClassSelector(JobClass.RUNNING_DONE))),
 			len(job_db.get_job_list(ClassSelector(JobClass.FAILING))))
-		sys.stdout.write(str(self._bar) + '\n')
+		self._output(str(self._bar))

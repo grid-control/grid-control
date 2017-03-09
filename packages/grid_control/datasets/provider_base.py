@@ -222,8 +222,10 @@ class DataProvider(ConfigurablePlugin):
 		try:
 			for block in DataProvider.save_to_stream(fp, block_iter, strip_metadata):
 				yield block
-		finally:
+		except Exception:
 			fp.close()
+			raise
+		fp.close()
 	save_to_file_iter = staticmethod(save_to_file_iter)
 
 	def save_to_stream(stream, block_iter, strip_metadata=False):
@@ -309,9 +311,9 @@ class DataProvider(ConfigurablePlugin):
 		if abort():
 			raise DatasetError('Received abort request during retrieval of %r' % self.get_dataset_expr())
 
-# To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise
-make_enum(['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
-	'Nickname', 'Metadata', 'Provider', 'ResyncInfo'], DataProvider)
+make_enum(  # To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise
+	['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
+	'Nickname', 'Metadata', 'Provider'], DataProvider)
 
 
 def _split_metadata_idx_list(block):

@@ -59,6 +59,13 @@ class JMS(LocalWMS):
 			check_executor=CheckJobsMissingState(config, JMSCheckJobs(config)),
 			cancel_executor=CancelJobsWithProcessBlind(config, 'job_cancel', unknown_id='not in queue !'))
 
+	def parse_submit_output(self, data):
+		# job_submit: Job 121195 has been submitted.
+		return data.split()[2].strip()
+
+	def _get_job_arguments(self, jobnum, sandbox):
+		return repr(sandbox)
+
 	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		# Job name
 		params = ' -J "%s"' % job_name
@@ -74,10 +81,3 @@ class JMS(LocalWMS):
 		# processes and IO paths
 		params += ' -p 1 -o "%s" -e "%s"' % (stdout, stderr)
 		return params
-
-	def parse_submit_output(self, data):
-		# job_submit: Job 121195 has been submitted.
-		return data.split()[2].strip()
-
-	def _get_job_arguments(self, jobnum, sandbox):
-		return repr(sandbox)

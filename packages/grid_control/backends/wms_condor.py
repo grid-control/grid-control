@@ -16,6 +16,7 @@ from grid_control.backends.aspect_cancel import CancelJobsWithProcess
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess, CheckStatus
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.job_db import Job
+from hpfwk import clear_current_exception
 from python_compat import imap
 
 
@@ -55,6 +56,7 @@ class CondorCheckJobs(CheckJobsWithProcess):
 			try:
 				(key, value) = imap(str.strip, line.split(' = ', 1))
 			except Exception:
+				clear_current_exception()
 				continue
 			if key == 'JobStatus':
 				job_info[CheckInfo.RAW_STATUS] = int(value)

@@ -123,6 +123,7 @@ def process_jobs(opts, work_dn, jobnum_list, splitter):
 		except KeyboardInterrupt:
 			sys.exit(os.EX_OK)
 		except Exception:
+			clear_current_exception()
 			sys.stderr.write('Error while parsing framework output of job %s!\n' % jobnum)
 			continue
 	return (map_sample2run_info_dict, map_sample2input_events, map_sample2output_events)

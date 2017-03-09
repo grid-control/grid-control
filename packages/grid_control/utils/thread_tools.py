@@ -1,4 +1,4 @@
-# | Copyright 2015-2016 Karlsruhe Institute of Technology
+# | Copyright 2015-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,9 +12,8 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import time, logging, threading
-from hpfwk import ExceptionCollector, NestedException, get_current_exception
-from python_compat import get_current_thread, get_thread_name
+import sys, time, logging, threading
+from hpfwk import ExceptionCollector, NestedException, clear_current_exception, get_current_exception, get_thread_name, get_trace_fun, ignore_exception  # pylint:disable=line-too-long
 
 
 BLOCKING_EQUIVALENT = 60 * 60 * 24 * 7  # instead of blocking, we wait for a week ;)
@@ -29,10 +28,7 @@ def hang_protection(fun, timeout=5):
 	result = {}
 
 	def _hang_protection_wrapper():
-		try:
-			result[None] = fun()
-		except Exception:
-			result[None] = None
+		result[None] = ignore_exception(Exception, None, fun)
 	thread = start_thread('hang protection for %s' % fun, _hang_protection_wrapper)
 	thread.join(timeout)
 	if None not in result:
@@ -41,11 +37,13 @@ def hang_protection(fun, timeout=5):
 
 
 def start_daemon(desc, fun, *args, **kwargs):
-	return _start_thread(desc, True, fun, *args, **kwargs)
+	return _start_thread(desc=desc, daemon=True,
+		fun=_default_thread_wrapper(fun), args=args, kwargs=kwargs)
 
 
 def start_thread(desc, fun, *args, **kwargs):
-	return _start_thread(desc, False, fun, *args, **kwargs)
+	return _start_thread(desc=desc, daemon=False,
+		fun=_default_thread_wrapper(fun), args=args, kwargs=kwargs)
 
 
 def tchain(iterable_list, timeout=None,
@@ -74,6 +72,7 @@ def tchain(iterable_list, timeout=None,
 		try:
 			tmp = result.get(timeout)
 		except IndexError:  # Empty queue after waiting for timeout
+			clear_current_exception()
 			break
 		if tmp == GCQueue:
 			threads.pop()  # which thread is irrelevant - only used as counter
@@ -89,6 +88,7 @@ class GCEvent(object):
 		try:
 			self._cond_notify_all = self._cond.notify_all
 		except Exception:
+			clear_current_exception()
 			self._cond_notify_all = self._cond.notifyAll
 		self._flag = False
 
@@ -228,7 +228,8 @@ class GCThreadPool(object):
 			self._token_desc[self._token] = desc
 		finally:
 			self._lock.release()
-		start_daemon(desc, self._run_thread, self._token, fun, args, kwargs)
+		_start_thread(desc=desc, daemon=True, fun=self._run_thread,
+			args=(self._token, fun, args, kwargs), kwargs={})
 
 	def wait_and_drop(self, timeout=None):
 		while True:
@@ -255,6 +256,9 @@ class GCThreadPool(object):
 				timeout -= time.time() - t_current
 
 	def _run_thread(self, token, fun, args, kwargs):
+		trace_fun = get_trace_fun()
+		if trace_fun:
+			sys.settrace(trace_fun)
 		try:
 			fun(*args, **kwargs)
 		except Exception:
@@ -273,20 +277,34 @@ class GCThreadPool(object):
 		self._notify.set()
 
 
-def _start_thread(desc, daemon, fun, *args, **kwargs):
+def _default_thread_wrapper(fun):
+	def _run(*args, **kwargs):
+		trace_fun = get_trace_fun()
+		if trace_fun:
+			sys.settrace(trace_fun)
+		try:
+			fun(*args, **kwargs)
+		except (KeyboardInterrupt, SystemExit):
+			raise
+		except Exception:
+			sys.excepthook(*sys.exc_info())
+	return _run
+
+
+def _start_thread(desc, daemon, fun, args, kwargs):
 	# determine thread name (name contains parentage)
 	_start_thread.lock.acquire()
 	try:
 		_start_thread.counter += 1
 	finally:
 		_start_thread.lock.release()
-	thread_name_parent = get_thread_name(get_current_thread()).replace('Mainthread', 'T')
-	thread_name_new = '%s-%d' % (thread_name_parent, _start_thread.counter)
+	thread_name_parent = str(get_thread_name()).replace('Mainthread', 'T')
+	thread_name = '%s-%d' % (thread_name_parent, _start_thread.counter)
 	# create new thread
-	thread = threading.Thread(name=thread_name_new, target=fun, args=args, kwargs=kwargs)
+	thread = threading.Thread(name=thread_name, target=fun, args=args, kwargs=kwargs)
 	thread.desc = desc
 	thread.setDaemon(daemon)
 	thread.start()
 	return thread
-_start_thread.counter = 0
-_start_thread.lock = GCLock()
+_start_thread.counter = 0  # <global-state>
+_start_thread.lock = GCLock()  # <global-state>

@@ -14,8 +14,16 @@
 
 import os, time, errno, fcntl, select, signal, logging, termios
 from grid_control.utils.thread_tools import GCEvent, GCLock, GCQueue, start_daemon, start_thread
-from hpfwk import AbstractError, get_current_exception
+from hpfwk import AbstractError, clear_current_exception, get_current_exception, ignore_exception
 from python_compat import bytes2str, imap, set, str2bytes
+
+
+class ProcessError(Exception):
+	pass
+
+
+class ProcessTimeout(ProcessError):
+	pass
 
 
 def wait_fd(fd_read_list=None, fd_write_list=None, timeout=0.2):
@@ -134,6 +142,28 @@ class Process(object):
 		raise AbstractError
 
 
+class ProcessStream(object):
+	def __init__(self, buffer, log):
+		(self._buffer, self._log) = (buffer, log)
+
+	def __repr__(self):
+		return '%s(buffer = %r)' % (self.__class__.__name__, self.read_log())
+
+	def clear_log(self):
+		result = self._log
+		if self._log is not None:
+			self._log = ''
+		return result
+
+	def read_log(self):
+		if self._log is not None:
+			return self._log
+		return ''
+
+	def reset_buffer(self):
+		self._buffer.reset()
+
+
 class LocalProcess(Process):
 	def __init__(self, cmd, *args, **kwargs):
 		self._signal_dict = {}
@@ -153,6 +183,7 @@ class LocalProcess(Process):
 			except OSError:
 				if get_current_exception().errno != errno.ESRCH:  # errno.ESRCH: no such process (already dead)
 					raise
+				clear_current_exception()
 
 	def status(self, timeout, terminate=False):
 		self._event_finished.wait(timeout, 'process to finish')
@@ -187,10 +218,7 @@ class LocalProcess(Process):
 			if local_buffer:
 				wait_fd(fd_write_list=[fd_write])
 				if not event_shutdown.is_set():
-					try:
-						written = os.write(fd_write, str2bytes(local_buffer))
-					except OSError:
-						written = 0
+					written = ignore_exception(OSError, 0, os.write, fd_write, str2bytes(local_buffer))
 					local_buffer = local_buffer[written:]
 	_handle_input = classmethod(_handle_input)
 
@@ -200,7 +228,7 @@ class LocalProcess(Process):
 				try:
 					tmp = bytes2str(os.read(fd_read, 32 * 1024))
 				except OSError:
-					tmp = ''
+					break
 				if not tmp:
 					break
 				buffer.put(tmp)
@@ -218,10 +246,8 @@ class LocalProcess(Process):
 		thread_err = self._start_watcher('stderr', False, pid,
 			self._handle_output, fd_parent_stderr, self._buffer_stderr, self._event_shutdown)
 		while self._status is None:
-			try:
-				(result_pid, status) = os.waitpid(pid, 0)  # blocking (with spurious wakeups!)
-			except OSError:  # unable to wait for child
-				(result_pid, status) = (pid, False)  # False == 'OS_ABORT'
+			# blocking (with spurious wakeups!) - OSError=unable to wait for child - status=False => OS_ABORT
+			(result_pid, status) = ignore_exception(OSError, (pid, False), os.waitpid, pid, 0)
 			if result_pid == pid:
 				self._status = status
 		self._time_finished = time.time()
@@ -248,7 +274,7 @@ class LocalProcess(Process):
 	def _start(self):
 		(self._status, self._runtime, self._pid) = (None, None, None)
 		# Setup of file descriptors - stdin / stdout via pty, stderr via pipe
-		LocalProcess.fdCreationLock.acquire()
+		LocalProcess.fd_creation_lock.acquire()
 		try:
 			# terminal is used for stdin / stdout
 			fd_parent_terminal, fd_child_terminal = os.openpty()
@@ -256,7 +282,7 @@ class LocalProcess(Process):
 			fd_parent_stdout, fd_child_stdout = (fd_parent_terminal, fd_child_terminal)
 			fd_parent_stderr, fd_child_stderr = os.pipe()  # Returns (r, w) FDs
 		finally:
-			LocalProcess.fdCreationLock.release()
+			LocalProcess.fd_creation_lock.release()
 
 		self._setup_terminal(fd_parent_terminal)
 		for fd_setup in [fd_parent_stdout, fd_parent_stderr]:  # non-blocking operation on stdout/stderr
@@ -282,37 +308,7 @@ class LocalProcess(Process):
 		if daemon:
 			return start_daemon(desc, *args)
 		return start_thread(desc, *args)
-LocalProcess.fdCreationLock = GCLock()
-
-
-class ProcessError(Exception):
-	pass
-
-
-class ProcessTimeout(ProcessError):
-	pass
-
-
-class ProcessStream(object):
-	def __init__(self, buffer, log):
-		(self._buffer, self._log) = (buffer, log)
-
-	def __repr__(self):
-		return '%s(buffer = %r)' % (self.__class__.__name__, self.read_log())
-
-	def clear_log(self):
-		result = self._log
-		if self._log is not None:
-			self._log = ''
-		return result
-
-	def read_log(self):
-		if self._log is not None:
-			return self._log
-		return ''
-
-	def reset_buffer(self):
-		self._buffer.reset()
+LocalProcess.fd_creation_lock = GCLock()  # <global-state>
 
 
 class ProcessReadStream(ProcessStream):
@@ -350,7 +346,7 @@ class ProcessReadStream(ProcessStream):
 			yield self._iter_buffer
 
 	def read(self, timeout, full=True):
-		# read (full/partial) content from buffer after waiting for up timeout seconds, 
+		# read (full/partial) content from buffer after waiting for up timeout seconds
 		result = self._buffer.get(timeout, default='')
 		while full:
 			try:

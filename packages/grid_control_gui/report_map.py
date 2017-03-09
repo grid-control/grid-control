@@ -16,18 +16,17 @@ import os, math, random
 
 
 try:
-	import matplotlib
-	import matplotlib.pyplot
+	from matplotlib.pyplot import subplots_adjust, figure, subplot
 	from mpl_toolkits.basemap import Basemap
 except ImportError:
-	matplotlib = None
-	BaseMap = None  # pylint:disable=invalid-name
-try:
-	import numpy
-except ImportError:
-	numpy = None
+	pass
 from grid_control_gui.geodb import get_geo_match
+from hpfwk import clear_current_exception, ignore_exception
 from python_compat import ifilter, imap, irange, lfilter, lmap, lzip, sorted
+
+
+clear_current_exception()
+numpy = ignore_exception(ImportError, None, __import__, 'numpy')  # pylint:disable=invalid-name
 
 
 def draw_map(report):
@@ -40,9 +39,9 @@ def draw_map(report):
 	test_bounds = [(30, -10), (60, 40)]
 	bounds = _get_bounds(pos_list, margin=10) or test_bounds
 
-	matplotlib.pyplot.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
-	fig = matplotlib.pyplot.figure(figsize=(12, 6))
-	axis = matplotlib.pyplot.subplot(111)
+	subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
+	fig = figure(figsize=(12, 6))
+	axis = subplot(111)
 	base_map = Basemap(projection='cyl', lat_0=0, lon_0=0,
 		llcrnrlon=bounds[0][0], llcrnrlat=bounds[0][1],
 		urcrnrlon=bounds[1][0], urcrnrlat=bounds[1][1])

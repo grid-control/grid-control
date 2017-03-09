@@ -64,7 +64,7 @@ class ClassSelector(JobSelector):
 		return job_obj.state in self._state_list
 
 	def __repr__(self):
-		return self._repr_base(JobClass.get_name(self._state_list))
+		return self._repr_base(JobClass.lookup_job_class_name(self._state_list))
 
 
 class IDSelector(JobSelector):

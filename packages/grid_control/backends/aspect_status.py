@@ -27,6 +27,13 @@ CheckStatus = make_enum(['OK', 'ERROR'])  # pylint:disable=invalid-name
 # TODO: Error Handler Plugins - logging, exception, errorcode - with abort / continue
 
 
+def expand_status_map(map_job_status2status_str_list):
+	result = {}
+	for job_status, status_str_list in map_job_status2status_str_list.items():
+		result.update(dict.fromkeys(status_str_list, job_status))
+	return result
+
+
 class CheckJobs(BackendExecutor):
 	def execute(self, wms_id_list):  # yields list of (wms_id, job_status, job_info)
 		raise AbstractError
@@ -61,9 +68,7 @@ class CheckJobsWithProcess(CheckJobs):
 		self._timeout = config.get_time('check timeout', 60, on_change=None)
 		self._log_everything = config.get_bool('check promiscuous', False, on_change=None)
 		self._errormsg = 'Job status command returned with exit code %(proc_status)s'
-		self._status_map = {}
-		for job_status, status_str_list in (status_map or {}).items():
-			self._status_map.update(dict.fromkeys(status_str_list, job_status))
+		self._status_map = expand_status_map(status_map or {})
 		(self._status, self._proc_factory) = (CheckStatus.OK, proc_factory)
 
 	def execute(self, wms_id_list):  # yields list of (wms_id, job_status, job_info)

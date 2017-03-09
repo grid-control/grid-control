@@ -15,50 +15,56 @@
 import sys
 from grid_control.utils.webservice import RestSession
 from hpfwk import clear_current_exception
-from python_compat import bytes2str, str2bytes
+from python_compat import bytes2str, resolve_fun, str2bytes
 
 
-try:
-	import ssl  # fix ca verification error in Python 2.7.9
-	if hasattr(ssl, '_create_unverified_context'):
-		setattr(ssl, '_create_default_https_context', getattr(ssl, '_create_unverified_context'))
-except Exception:
-	clear_current_exception()
+def disable_ca_cert_check():  # fix ca verification error in Python 2.7.9
+	try:
+		import ssl
+		if hasattr(ssl, '_create_unverified_context'):
+			setattr(ssl, '_create_default_https_context', getattr(ssl, '_create_unverified_context'))
+	except Exception:
+		clear_current_exception()
 
-try:
-	from http.client import HTTPSConnection
-	from urllib.parse import urlencode
-	from urllib.request import HTTPSHandler, Request, build_opener
-except Exception:
-	from httplib import HTTPSConnection
-	from urllib import urlencode
+
+def resolve_sfun(*args):
+	return staticmethod(resolve_fun(*args))
+
+
+def urllib2_path(package):
 	if sys.version_info[0:2] < (2, 7):
-		from python_compat_urllib2 import HTTPSHandler, Request, build_opener
-	else:
-		from urllib2 import HTTPSHandler, Request, build_opener
+		return 'python_compat_' + package  # use bundled urllib in old python versions
+	return package
 
 
 class Urllib2Session(RestSession):
 	alias_list = ['urllib2']
+	disable_ca_cert_check()
+	build_opener = resolve_sfun('urllib.request:build_opener', urllib2_path('urllib2:build_opener'))
+	HTTPSConnection = resolve_sfun('http.client:HTTPSConnection', 'httplib:HTTPSConnection')
+	HTTPSHandler = resolve_sfun('urllib.request:HTTPSHandler', urllib2_path('urllib2:HTTPSHandler'))
+	Request = resolve_sfun('urllib.request:Request', urllib2_path('urllib2:Request'))
+	urlencode = resolve_sfun('urllib.parse:urlencode', 'urllib:urlencode')
 
 	def request(self, mode, url, headers, params=None, data=None, cert=None):
 		request_fun = {RestSession.GET: lambda: 'GET', RestSession.PUT: lambda: 'PUT',
 			RestSession.POST: lambda: 'POST', RestSession.DELETE: lambda: 'DELETE'}[mode]
 		if params:
-			url += '?%s' % urlencode(params)
+			url += '?%s' % Urllib2Session.urlencode(params)
 		if data:
 			data = str2bytes(data)
-		request = Request(url=url, data=data, headers=headers)
+		request = Urllib2Session.Request(url=url, data=data, headers=headers)
 		request.get_method = request_fun
+		return bytes2str(self._get_opener(cert).open(request).read())
+
+	def _get_opener(self, cert):
 		if cert:
-			class HTTPSClientAuthHandler(HTTPSHandler):
+			class HTTPSClientAuthHandler(Urllib2Session.HTTPSHandler):
 				def https_open(self, req):
-					return self.do_open(self.getConnection, req)
+					return self.do_open(self._get_connection, req)
 
 			def _get_connection(self, host, timeout=None):
-				return HTTPSConnection(host, key_file=cert, cert_file=cert)
+				return Urllib2Session.HTTPSConnection(host, key_file=cert, cert_file=cert)
 			setattr(HTTPSClientAuthHandler, 'getConnection', _get_connection)
-			opener = build_opener(HTTPSClientAuthHandler())
-		else:
-			opener = build_opener()
-		return bytes2str(opener.open(request).read())
+			return Urllib2Session.build_opener(HTTPSClientAuthHandler())
+		return Urllib2Session.build_opener()

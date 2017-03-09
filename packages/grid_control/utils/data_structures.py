@@ -12,43 +12,36 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from hpfwk import APIError
-from python_compat import imap, izip, lsmap, md5_hex, set, unspecified
+from hpfwk import APIError, ignore_exception
+from python_compat import imap, md5_hex, set, unspecified
 
 
-def make_enum(members=None, cls=None, use_hash=True):
-	members = members or []
+def make_enum(enum_name_list=None, cls=None, use_hash=True, register=True):
+	enum_name_list = enum_name_list or []
 	if cls:
-		enum_id = md5_hex(str(members) + '!' + cls.__name__)[:4]
+		enum_id = md5_hex(str(enum_name_list) + '!' + cls.__name__)[:4]
 	else:
-		enum_id = md5_hex(str(members))[:4]
-		cls = type('Enum_%s_%s' % (enum_id, str.join('_', members)), (), {})
-
-	def _get_value(idx, name):
-		if use_hash:
-			return idx + int(enum_id, 16)
-		else:
-			return idx
-	values = lsmap(_get_value, enumerate(members))
-
-	cls.enum_name_list = members
-	cls.enum_value_list = values
-	_map_name2value = dict(izip(imap(str.lower, cls.enum_name_list), cls.enum_value_list))
-	_map_value2name = dict(izip(cls.enum_value_list, cls.enum_name_list))
-	if len(_map_name2value) != len(_map_value2name):
-		raise APIError('Invalid enum definition!')
+		enum_id = md5_hex(str(enum_name_list))[:4]
+		cls = type('Enum_%s_%s' % (enum_id, str.join('_', enum_name_list)), (), {})
 
 	def _intstr2enum(cls, value, default=unspecified):
-		try:
-			enum = int(value)
-		except Exception:
-			if unspecified(default):
-				raise
-			enum = default  # pylint:disable=redefined-variable-type
+		enum = ignore_exception(Exception, default, int, value)
 		if enum not in cls.enum_value_list:
 			allowed_str = str.join(', ', imap(lambda nv: '%s=%s', _map_name2value.items()))
 			raise Exception('Invalid enum value %s (allowed are %r)' % (repr(value), allowed_str))
 		return enum
+
+	def _register_name(cls, name):
+		value = len(cls.enum_name_list)
+		if use_hash:
+			value += int(enum_id, 16)
+		cls.enum_name_list.append(name)
+		cls.enum_value_list.append(value)
+		setattr(cls, name, value)
+		_map_name2value[name.lower()] = value
+		_map_value2name[value] = name
+		if len(_map_name2value) != len(_map_value2name):
+			raise APIError('Invalid enum definition! (%s:%s)' % (_map_name2value, _map_value2name))
 
 	def _str2enum(cls, value, *args):
 		try:
@@ -56,12 +49,22 @@ def make_enum(members=None, cls=None, use_hash=True):
 		except Exception:
 			allowed_str = str.join(', ', cls.enum_name_list)
 			raise Exception('Invalid enum string %s (allowed are %r)' % (repr(value), allowed_str))
+
+	_map_value2name = {}
+	_map_name2value = {}
+	cls.enum_name_list = []
+	cls.enum_value_list = []
 	cls.enum2str = _map_value2name.get
 	cls.str2enum = classmethod(_str2enum)
 	cls.intstr2enum = classmethod(_intstr2enum)
-	for name, value in izip(cls.enum_name_list, cls.enum_value_list):
-		setattr(cls, name, value)
+	cls.register_name = classmethod(_register_name)
+
+	for enum_name in enum_name_list:
+		cls.register_name(enum_name)
+	if register:
+		make_enum.enum_list.append(cls)
 	return cls
+make_enum.enum_list = []  # <global-state>
 
 
 class UniqueList(object):

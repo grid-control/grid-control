@@ -15,7 +15,7 @@
 import os, gzip, logging
 from grid_control.utils import DictFormat
 from grid_control.utils.data_structures import make_enum
-from hpfwk import AbstractError, NestedException, Plugin, get_current_exception
+from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception, get_current_exception
 from python_compat import bytes2str, ifilter, izip
 
 
@@ -92,6 +92,7 @@ class DebugJobInfoProcessor(JobInfoProcessor):
 						fp.close()
 					except Exception:
 						self._log.exception('Unable to display %s', fn)
+						clear_current_exception()
 				else:
 					self._log.error('Log file does not exist: %s', fn)
 			for fn in self._display_files:
@@ -107,6 +108,7 @@ class FileInfoProcessor(JobInfoProcessor):
 		except JobResultError:
 			logger = logging.getLogger('jobs.results')
 			logger.warning('Unable to process job information', exc_info=get_current_exception())
+			clear_current_exception()
 		if job_info_dict:
 			job_data_dict = job_info_dict[JobResult.RAW]
 			result = {}

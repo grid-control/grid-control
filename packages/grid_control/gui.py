@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys, logging
+import logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.report import Report
 from grid_control.utils.activity import Activity
@@ -23,21 +23,18 @@ from hpfwk import AbstractError
 class SimpleActivityStream(object):
 	def __init__(self, stream, register_callback=False):
 		(self._stream, self._old_message, self._register_cb) = (stream, None, register_callback)
-		if hasattr(self._stream, 'encoding'):
-			self.encoding = self._stream.encoding
+		self.enable_activity_callback()
+
+	def disable_activity_callback(self):
+		if self._register_cb:
+			Activity.callbacks.remove(self.write)
+
+	def enable_activity_callback(self):
 		if self._register_cb:
 			Activity.callbacks.append(self.write)
 
-	def finish(self):
-		if self._register_cb:
-			Activity.callbacks.remove(self.write)
-		return self._stream
-
 	def flush(self):
 		return self._stream.flush()
-
-	def isatty(self):
-		return self._stream.isatty()
 
 	def write(self, value=''):
 		activity_message = None
@@ -57,18 +54,19 @@ class SimpleActivityStream(object):
 class GUI(ConfigurablePlugin):
 	def __init__(self, config, workflow):
 		ConfigurablePlugin.__init__(self, config)
+		self._workflow = workflow
 		self._report_config_str = config.get('report options', '', on_change=None)
 		self._report = config.get_composited_plugin('report', 'BasicReport', 'MultiReport',
 			cls=Report, on_change=None, pargs=(workflow.job_manager.job_db,
 			workflow.task), pkwargs={'config_str': self._report_config_str})
 
-	def display_workflow(self, workflow):
+	def start_display(self):
 		raise AbstractError
 
 
 class NullGUI(GUI):
-	def display_workflow(self, workflow):
-		return workflow.process()
+	def start_display(self):
+		return self._workflow.process()
 
 
 class SimpleConsole(GUI):
@@ -76,21 +74,14 @@ class SimpleConsole(GUI):
 		GUI.__init__(self, config, workflow)
 		self._log = logging.getLogger('workflow')
 
-	def display_workflow(self, workflow):
+	def start_display(self):
 		if self._report.get_height():
 			self._log.info('')
-		self._report.show_report(workflow.job_manager.job_db)
+		self._report.show_report(self._workflow.job_manager.job_db)
 		if self._report.get_height():
 			self._log.info('')
-		if workflow.duration < 0:
+		if self._workflow.duration < 0:
 			self._log.info('Running in continuous mode. Press ^C to exit.')
-		elif workflow.duration > 0:
-			self._log.info('Running for %s', str_time_short(workflow.duration))
-		if sys.stdout.isatty():
-			sys.stdout = SimpleActivityStream(sys.stdout, register_callback=True)
-			sys.stderr = SimpleActivityStream(sys.stderr)
-		try:
-			return workflow.process()
-		finally:
-			if sys.stdout.isatty():
-				(sys.stdout, sys.stderr) = (sys.stdout.finish(), sys.stderr.finish())
+		elif self._workflow.duration > 0:
+			self._log.info('Running for %s', str_time_short(self._workflow.duration))
+		return self._workflow.process()

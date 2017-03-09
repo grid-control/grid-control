@@ -17,6 +17,7 @@ from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import BasicWMS
 from grid_control.job_db import Job
+from hpfwk import clear_current_exception
 from python_compat import imap
 
 
@@ -49,6 +50,7 @@ class ARCCheckJobs(CheckJobsWithProcess):
 			try:
 				(key, value) = imap(str.strip, line.split(':', 1))
 			except Exception:
+				clear_current_exception()
 				continue
 			key = key.lower()
 			if key == 'job':

@@ -12,6 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+from hpfwk import clear_current_exception, ignore_exception
 from python_compat import identity, imap, json, lfilter, lmap, next, reduce, set, sorted, unicode
 
 
@@ -48,6 +49,7 @@ def parse_json(data):
 	try:
 		return remove_unicode(json.loads(data))
 	except Exception:
+		clear_current_exception()
 		return remove_unicode(json.loads(data.replace("'", '"')))
 
 
@@ -58,10 +60,7 @@ def parse_list(value, delimeter, filter_fun=lambda x: x not in ['', '\n']):
 
 
 def parse_str(value, cls, default=None):
-	try:
-		return cls(value)
-	except Exception:
-		return default
+	return ignore_exception(Exception, default, cls, value)
 
 
 def parse_time(usertime):
@@ -76,12 +75,11 @@ def parse_time(usertime):
 
 
 def parse_type(value):
-	try:
+	def _parse_number(value):
 		if '.' in value:
 			return float(value)
 		return int(value)
-	except ValueError:
-		return value
+	return ignore_exception(ValueError, value, _parse_number, value)
 
 
 def remove_unicode(obj):

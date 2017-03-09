@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,41 +13,51 @@
 # | limitations under the License.
 
 import re, sys, fcntl, struct, termios
+from hpfwk import ignore_exception
+
+
+def console_ctrl(fmt_str, fmt_args=None):
+	if fmt_args is None:
+		def _fmt_args():
+			return tuple()
+		fmt_args = _fmt_args
+
+	def _fmt_fun(cls, *args):
+		sys.stdout.write('\033' + fmt_str % fmt_args(*args))
+		sys.stdout.flush()
+	if sys.stdout.isatty():
+		return classmethod(_fmt_fun)
+	return fmt_args
 
 
 class Console(object):
-	attr = {'COLOR_BLACK': '30', 'COLOR_RED': '31', 'COLOR_GREEN': '32',
+	attr = {
+		'COLOR_BLACK': '30', 'COLOR_RED': '31', 'COLOR_GREEN': '32',
 		'COLOR_YELLOW': '33', 'COLOR_BLUE': '34', 'COLOR_MAGENTA': '35',
-		'COLOR_CYAN': '36', 'COLOR_WHITE': '37', 'BOLD': '1', 'RESET': '0'}
-	cmd = {'save_pos': '7', 'load_pos': '8', 'erase_down': '[J', 'erase_line': '[K', 'erase': '[2J',
-		'hide_cursor': '[?25l', 'show_cursor': '[?25h'}
+		'COLOR_CYAN': '36', 'COLOR_WHITE': '37', 'BOLD': '1', 'RESET': '0',
+	}
 	for (name, esc) in attr.items():
-		locals()[name] = esc
+		locals()[name] = '\033[%sm' % esc
 
-	def __init__(self, stream):
-		def _call_factory(value):
-			return lambda: self._esc(value)
-
-		self._stream = stream
-		for (proc, esc) in Console.cmd.items():
-			setattr(self, proc, _call_factory(esc))
-
-	def addstr(self, data, attr=None):
-		self._stream.write(str(Console.fmt(data, attr)))
-		self._stream.flush()
+	reset = console_ctrl('[0m')
+	inverse = console_ctrl('[7m')
+	erase = console_ctrl('[2J')
+	erase_down = console_ctrl('[J')
+	erase_line = console_ctrl('[K')
+	show_cursor = console_ctrl('[?25h')
+	hide_cursor = console_ctrl('[?25l')
+	load_pos = console_ctrl('8')
+	save_pos = console_ctrl('7')
+	wrap_on = console_ctrl('[?7h')
+	wrap_off = console_ctrl('[?7l')
+	move = console_ctrl('[%d;%dH', lambda row, col=0: (row + 1, col + 1))
+	# default: disable regional scrolling - (it would move to 0,0)
+	# outside of selected region, last line will scroll with height 1
+	setscrreg = console_ctrl('[%d;%dr', lambda top=-1, bottom=-1: (top + 1, bottom + 1))
 
 	def fmt(cls, data, attr=None, force_ansi=False):
-		class ColorString(object):
-			def __init__(self, data, attr):
-				(self._data, self._attr) = (data, attr)
-
-			def __len__(self):
-				return len(self._data)
-
-			def __str__(self):
-				return '\033[%sm%s\033[0m' % (str.join(';', [Console.RESET] + self._attr), self._data)
 		if force_ansi or sys.stdout.isatty():
-			return ColorString(data, attr or [])
+			return Console.RESET + str.join('', attr or []) + data + Console.RESET
 		return data
 	fmt = classmethod(fmt)
 
@@ -55,21 +65,10 @@ class Console(object):
 		return re.sub(r'\x1b(>|=|\[[^A-Za-z]*[A-Za-z])', '', value)
 	fmt_strip = classmethod(fmt_strip)
 
-	def getmaxyx(self):
-		try:
+	def getmaxyx(cls):
+		def _getmaxyx():
 			winsize_ptr = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
 			winsize = struct.unpack('HHHH', winsize_ptr)
 			return (winsize[0], winsize[1])
-		except Exception:
-			return (24, 80)  # vt100 default
-
-	def move(self, row, col):
-		self._esc('[%d;%dH' % (row, col))
-
-	def setscrreg(self, top=0, bottom=0):
-		self._esc('[%d;%dr' % (top, bottom))
-
-	def _esc(self, data):
-		if self._stream.isatty():
-			self._stream.write('\033' + data)
-			self._stream.flush()
+		return ignore_exception(Exception, (24, 80), _getmaxyx)  # 24x80 is vt100 default
+	getmaxyx = classmethod(getmaxyx)

@@ -1,4 +1,4 @@
-# | Copyright 2012-2016 Karlsruhe Institute of Technology
+# | Copyright 2012-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,17 +12,16 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
-from grid_control.report import Report
+from grid_control.report import ConsoleReport
 from grid_control.utils.parsing import str_time_long
 from python_compat import ifilter, imap
 
 
-class TimeReport(Report):
+class TimeReport(ConsoleReport):
 	alias_list = ['time']
 
 	def __init__(self, job_db, task, jobs=None, config_str=''):
-		Report.__init__(self, job_db, task, jobs, config_str)
+		ConsoleReport.__init__(self, job_db, task, jobs, config_str)
 		self._dollar_per_hour = float(config_str or 0.013)
 
 	def get_height(self):
@@ -32,6 +31,5 @@ class TimeReport(Report):
 		job_runtimes = imap(lambda jobnum: job_db.get_job_transient(jobnum).get('runtime', 0), self._jobs)
 		cpu_time = sum(ifilter(lambda rt: rt > 0, job_runtimes))
 		msg = 'Consumed wall time: %-20s' % str_time_long(cpu_time)
-		msg += 'Estimated cost: $%.2f\n' % ((cpu_time / 60. / 60.) * self._dollar_per_hour)
-		sys.stdout.write(msg)
-		sys.stdout.flush()
+		msg += 'Estimated cost: $%.2f' % ((cpu_time / 60. / 60.) * self._dollar_per_hour)
+		self._output.info(msg)

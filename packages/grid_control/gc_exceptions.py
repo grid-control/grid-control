@@ -1,4 +1,4 @@
-# | Copyright 2015-2016 Karlsruhe Institute of Technology
+# | Copyright 2015-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,10 +13,12 @@
 # | limitations under the License.
 
 import os, sys, logging
-from hpfwk import NestedException, clear_current_exception
+from grid_control.utils.data_structures import make_enum
+from hpfwk import NestedException, clear_current_exception, ignore_exception
+from python_compat import imap, izip
 
 
-(INITIAL_STDOUT, INITIAL_STDERR, INITIAL_EXCEPTHOOK) = (sys.stdout, sys.stderr, sys.excepthook)
+INITIAL_EXCEPTHOOK = sys.excepthook
 
 
 class GCError(NestedException):
@@ -34,17 +36,15 @@ class UserError(GCError):
 def gc_excepthook(*exc_info):
 	# Exception handler for interactive mode:
 	if hasattr(gc_excepthook, 'restore') and getattr(gc_excepthook, 'restore'):
-		(sys.stdout, sys.stderr, sys.excepthook) = (INITIAL_STDOUT, INITIAL_STDERR, INITIAL_EXCEPTHOOK)
-	try:
-		version = __import__('grid_control').__version__
-	except Exception:
-		version = 'unknown version'
+		sys.excepthook = INITIAL_EXCEPTHOOK
+	version = ignore_exception(Exception, 'unknown version',
+		lambda: sys.modules['grid_control'].__version__)
 	log = logging.getLogger('abort')
 	if not log.handlers and not (log.propagate and logging.getLogger().handlers):
 		log.addHandler(logging.StreamHandler(sys.stderr))
 	log.handle(log.makeRecord('exception', logging.CRITICAL, __file__, None,
 		'Exception occured in grid-control [%s]\n\n' % version, tuple(), exc_info))
-sys.excepthook = gc_excepthook
+sys.excepthook = gc_excepthook  # <alias>
 
 
 class GCLogHandler(logging.FileHandler):
@@ -67,17 +67,23 @@ class GCLogHandler(logging.FileHandler):
 		try:
 			try:
 				for idx, instance in enumerate(GCLogHandler.config_instances):
-					fp.write('-' * 70 + '\n' + ('Config instance %d\n' % idx) + '=' * 70 + '\n')
+					fp.write('-' * 70 + '\nConfig instance %d\n' % idx + '=' * 70 + '\n')
 					instance.write(fp)
 			except Exception:
 				fp.write('-> unable to display configuration!\n')
 				clear_current_exception()
 		finally:
 			if GCLogHandler.config_instances:
-				fp.write('\n' + '*' * 70 + '\n\n')
-			fp.close()
+				fp.write('\n' + '*' * 70 + '\n')
+		if make_enum.enum_list:
+			fp.write('\nList of enums\n')
+			for enum in make_enum.enum_list:
+				fp.write('\t%s\n' % str.join('|', imap(lambda name_value: '%s:%s' % name_value,
+					izip(enum.enum_name_list, enum.enum_value_list))))
+			fp.write('\n' + '*' * 70 + '\n')
+		fp.write('\n')
+		fp.close()
 		logging.FileHandler.emit(self, record)
-		msg = ('\nIn case this is caused by a bug, please send the log file:\n\t%r\n' % self._fn +
-			'to grid-control-dev@googlegroups.com\n')
-		sys.stderr.write(msg)
-GCLogHandler.config_instances = []
+		sys.stderr.write('\nIn case this is caused by a bug, please send the log file:\n' +
+			'\t%r\n' % self._fn + 'to grid-control-dev@googlegroups.com\n')
+GCLogHandler.config_instances = []  # <global-state>

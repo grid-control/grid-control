@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ from grid_control import utils
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCThreadPool
+from hpfwk import clear_current_exception
 from python_compat import imap, lchain, lmap
 
 
@@ -151,6 +152,7 @@ class ScriptMonitoring(Monitoring):
 				os.system(script)
 		except Exception:
 			self._log.exception('Error while running user script')
+			clear_current_exception()
 
 
 # The multimonitor inherits the multiplexing features from MultiEventHandler and the monitoring API

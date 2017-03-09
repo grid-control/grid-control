@@ -16,7 +16,7 @@ import os, time, errno, signal, logging, python_compat_popen2
 from grid_control.gc_exceptions import GCError
 from grid_control.utils import DictFormat, abort
 from grid_control.utils.file_objects import VirtualFile
-from hpfwk import get_current_exception
+from hpfwk import clear_current_exception, get_current_exception
 from python_compat import tarfile
 
 
@@ -66,6 +66,7 @@ class LoggedProcess(object):
 			try:
 				line = self.proc.fromchild.readline()
 			except Exception:
+				clear_current_exception()
 				abort(True)
 				break
 			if not line:
@@ -79,6 +80,7 @@ class LoggedProcess(object):
 		except OSError:
 			if get_current_exception().errno != errno.ESRCH:  # errno.ESRCH: no such process (already dead)
 				raise
+			clear_current_exception()
 
 	def log_error(self, target, brief=False, **kwargs):
 		# Can also log content of additional files via kwargs
@@ -98,6 +100,7 @@ class LoggedProcess(object):
 				try:
 					content = open(value, 'r').readlines()
 				except Exception:
+					clear_current_exception()
 					content = [value]
 				files.append(VirtualFile(os.path.join(entry, key), content))
 			for file_obj in files:

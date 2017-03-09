@@ -86,7 +86,8 @@ def create_tarball(tar_path, match_info_list):
 
 
 def deprecated(text):
-	sys.stderr.write('%s\n[DEPRECATED] %s\n' % (open(get_path_share('fail.txt'), 'r').read(), text))
+	log = logging.getLogger('console')
+	log.critical('\n%s\n[DEPRECATED] %s', open(get_path_share('fail.txt'), 'r').read(), text)
 	if not get_user_bool('Do you want to continue?', False):
 		sys.exit(os.EX_TEMPFAIL)
 
@@ -108,7 +109,7 @@ def disk_usage(dn, timeout=5):
 	try:
 		return hang_protection(_disk_usage, timeout)
 	except TimeoutException:
-		sys.stderr.write(
+		logging.getLogger('console').critical(
 			'Unable to get free disk space for directory %s after waiting for %d sec!\n' % (dn, timeout) +
 			'The file system is probably hanging or corrupted' +
 			' - try to check the free disk space manually. ' +
@@ -274,7 +275,7 @@ def get_version():
 				return '%s - testing' % version
 		except Exception:
 			clear_current_exception()
-		return __import__('grid_control').__version__ + ' or later'
+		return sys.modules['grid_control'].__version__ + ' or later'
 	return get_default_property(get_version, 'version_cache', _get_version, default_delayed=True)
 
 

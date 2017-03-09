@@ -24,22 +24,21 @@ from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.process_base import LocalProcess
+from hpfwk import clear_current_exception
 from python_compat import identity, ifilter, imap, lfilter, lmap, md5, parsedate, tarfile
-
-
-GridStatusMap = {  # FIXME: mismatch between CheckJobs API and GliteWMSDirect usage!
-	Job.ABORTED: ['aborted', 'cancelled', 'cleared', 'failed'],
-	Job.DONE: ['done'],
-	Job.QUEUED: ['scheduled', 'queued'],
-	Job.READY: ['ready'],
-	Job.RUNNING: ['running'],
-	Job.SUBMITTED: ['submitted'],
-	Job.WAITING: ['waiting'],
-}
 
 
 class GridWMS(BasicWMS):
 	config_section_list = BasicWMS.config_section_list + ['grid']
+	grid_status_map = {  # FIXME: mismatch between CheckJobs API and GliteWMSDirect usage!
+		Job.ABORTED: ['aborted', 'cancelled', 'cleared', 'failed'],
+		Job.DONE: ['done'],
+		Job.QUEUED: ['scheduled', 'queued'],
+		Job.READY: ['ready'],
+		Job.RUNNING: ['running'],
+		Job.SUBMITTED: ['submitted'],
+		Job.WAITING: ['waiting'],
+	}
 
 	def __init__(self, config, name, submit_exec, output_exec,
 			check_executor, cancel_executor, jdl_writer=None):
@@ -103,6 +102,7 @@ class GridWMS(BasicWMS):
 							os.unlink(wildcard_tar)
 						except Exception:
 							self._log.error('Can\'t unpack output files contained in %s', wildcard_tar)
+							clear_current_exception()
 				yield (current_jobnum, line.strip())
 				current_jobnum = None
 			else:
@@ -231,7 +231,7 @@ class GridCheckJobs(CheckJobsWithProcess):
 	def __init__(self, config, check_exec):
 		proc_factory = GridProcessCreator(config, check_exec,
 			['--verbosity', 1, '--noint', '--logfile', '/dev/stderr', '-i', '/dev/stdin'])
-		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map=GridStatusMap)
+		CheckJobsWithProcess.__init__(self, config, proc_factory, status_map=GridWMS.grid_status_map)
 
 	def _fill(self, job_info, key, value):
 		if key.startswith('current status'):
@@ -244,14 +244,14 @@ class GridCheckJobs(CheckJobsWithProcess):
 				job_info[CheckInfo.SITE] = dest_info[0].strip()
 				job_info[CheckInfo.QUEUE] = dest_info[1].strip()
 			except Exception:
-				return
+				return clear_current_exception()
 		elif key.startswith('status reason'):
 			job_info['reason'] = value
 		elif key.startswith('reached') or key.startswith('submitted'):
 			try:
 				job_info['timestamp'] = int(calendar.timegm(parsedate(value)))
 			except Exception:
-				return
+				return clear_current_exception()
 		elif key.startswith('bookkeeping information'):
 			return
 		elif value:
@@ -270,6 +270,7 @@ class GridCheckJobs(CheckJobsWithProcess):
 			try:
 				(key, value) = imap(str.strip, line.split(':', 1))
 			except Exception:
+				clear_current_exception()
 				continue
 
 			key = key.lower()

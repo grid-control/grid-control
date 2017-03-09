@@ -13,14 +13,8 @@
 # | limitations under the License.
 
 import time, pickle, logging
-
-
-try:
-	from collections import deque
-except ImportError:
-	deque = list  # pylint:disable=invalid-name
-from hpfwk import NestedException
-from python_compat import set
+from hpfwk import NestedException, clear_current_exception
+from python_compat import resolve_fun, set
 
 
 class AlreadyQueued(NestedException):
@@ -36,6 +30,7 @@ def do_migration(queue):
 		try:
 			task = queue.popleft()
 		except IndexError:
+			clear_current_exception()
 			# quit worker, means all tasks are done
 			break
 		try:
@@ -78,7 +73,7 @@ class MigrationRequestedState(object):
 			self.migration_task.migration_request = self.migration_task.dbs_client.migration_request_submit(
 				self.migration_task.payload())
 		except AttributeError:
-			# simulation
+			clear_current_exception()  # simulation
 			self.migration_task.logger.info("%s has been queued for migration!" % self.migration_task)
 		else:
 			self.migration_task.logger.info("%s has been queued for migration!" % self.migration_task)
@@ -104,7 +99,7 @@ class MigrationSubmittedState(object):
 					self.migration_task, request_status[0]['migration_status']))
 				self.last_poll_time = time.time()
 			except AttributeError:
-				# simulation
+				clear_current_exception()  # simulation
 				logging.warning("Simulation")
 				request_status = [{'migration_status': 2}]
 				self.migration_task.logger.debug("%s has migration_status=%s" % (
@@ -175,7 +170,7 @@ class MigrationTask(object):
 		self.state.run()
 
 
-class DBS3MigrationQueue(deque):
+class DBS3MigrationQueue(resolve_fun('collections:deque', '<builtin>:list')):
 	_unique_queued_tasks = set()
 
 	def __init__(self, tasks=None, maxlen=None):
@@ -210,6 +205,7 @@ def _run_test():
 				migration_url='http://a.b.c', dbs_client=None))
 		except AlreadyQueued:
 			logger.exception('Already queued')
+			clear_current_exception()
 
 	migration_queue.save_to_disk('test.pkl')
 	del migration_queue

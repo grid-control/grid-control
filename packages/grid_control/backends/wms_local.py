@@ -21,7 +21,7 @@ from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCLock
-from hpfwk import AbstractError, ExceptionCollector
+from hpfwk import AbstractError, ExceptionCollector, ignore_exception
 from python_compat import ifilter, imap, ismap, lchain, lfilter, lmap
 
 
@@ -47,32 +47,6 @@ class SandboxHelper(object):
 		self._cache = lfilter(lambda x: os.path.isdir(os.path.join(self._path, x)),
 			os.listdir(self._path))
 		return _search_sandbox(ifilter(lambda x: x not in old_cache, self._cache))
-
-
-class LocalPurgeJobs(CancelJobs):
-	def __init__(self, config, sandbox_helper):
-		CancelJobs.__init__(self, config)
-		self._sandbox_helper = sandbox_helper
-
-	def execute(self, wms_id_list, wms_name):  # yields list of purged (wms_id,)
-		activity = Activity('waiting for jobs to finish')
-		time.sleep(5)
-		for wms_id in wms_id_list:
-			path = self._sandbox_helper.get_sandbox('WMSID.%s.%s' % (wms_name, wms_id))
-			if path is None:
-				self._log.warning('Sandbox for job %r could not be found', wms_id)
-				continue
-			LocalPurgeJobs.lock.acquire()
-			try:
-				shutil.rmtree(path)
-			except Exception:
-				self._log.critical('Unable to delete directory %r: %r', path, os.listdir(path))
-				LocalPurgeJobs.lock.release()
-				raise BackendError('Sandbox for job %r could not be deleted', wms_id)
-			LocalPurgeJobs.lock.release()
-			yield (wms_id,)
-		activity.finish()
-LocalPurgeJobs.lock = GCLock()
 
 
 class LocalWMS(BasicWMS):
@@ -109,9 +83,6 @@ class LocalWMS(BasicWMS):
 		self._scratch_path = config.get_list('scratch path', ['TMPDIR', '/tmp'], on_change=True)
 		self._submit_opt_str = config.get('submit options', '', on_change=None)
 		self._memory = config.get_int('memory', -1, on_change=None)
-
-	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
-		raise AbstractError
 
 	def parse_submit_output(self, data):
 		raise AbstractError
@@ -150,6 +121,9 @@ class LocalWMS(BasicWMS):
 			files.append(VirtualFile(('_proxy.dat.%d' % idx).replace('.0', ''), open(auth_fn, 'r').read()))
 		return files
 
+	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
+		raise AbstractError
+
 	def _submit_job(self, jobnum, task):
 		# Submit job and yield (jobnum, WMS ID, other data)
 		activity = Activity('submitting job %d' % jobnum)
@@ -182,11 +156,7 @@ class LocalWMS(BasicWMS):
 		proc = LocalProcess(self._submit_exec, *submit_args)
 		exit_code = proc.status(timeout=20, terminate=True)
 		wms_id_str = proc.stdout.read(timeout=0).strip().strip('\n')
-		try:
-			wms_id = self.parse_submit_output(wms_id_str)
-		except Exception:
-			wms_id = None
-
+		wms_id = ignore_exception(Exception, None, self.parse_submit_output, wms_id_str)
 		activity.finish()
 
 		if exit_code != 0:
@@ -199,6 +169,32 @@ class LocalWMS(BasicWMS):
 		else:
 			self._log.log_process(proc)
 		return (jobnum, gc_id, {'sandbox': sandbox})
+
+
+class LocalPurgeJobs(CancelJobs):
+	def __init__(self, config, sandbox_helper):
+		CancelJobs.__init__(self, config)
+		self._sandbox_helper = sandbox_helper
+
+	def execute(self, wms_id_list, wms_name):  # yields list of purged (wms_id,)
+		activity = Activity('waiting for jobs to finish')
+		time.sleep(5)
+		for wms_id in wms_id_list:
+			path = self._sandbox_helper.get_sandbox('WMSID.%s.%s' % (wms_name, wms_id))
+			if path is None:
+				self._log.warning('Sandbox for job %r could not be found', wms_id)
+				continue
+			LocalPurgeJobs.lock.acquire()
+			try:
+				shutil.rmtree(path)
+			except Exception:
+				self._log.critical('Unable to delete directory %r: %r', path, os.listdir(path))
+				LocalPurgeJobs.lock.release()
+				raise BackendError('Sandbox for job %r could not be deleted', wms_id)
+			LocalPurgeJobs.lock.release()
+			yield (wms_id,)
+		activity.finish()
+LocalPurgeJobs.lock = GCLock()  # <global-state>
 
 
 class Local(WMS):

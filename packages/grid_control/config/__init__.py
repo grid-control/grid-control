@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ from grid_control.config.config_factory import create_config
 from grid_control.config.matcher_base import ListFilter, ListOrder, Matcher
 
 
-__all__ = ['join_config_locations', 'TriggerAbort', 'TriggerInit', 'ConfigError', 'create_config',
-	'ListFilter', 'ListOrder', 'Matcher', 'TriggerResync', 'NoVarCheck']
+__all__ = ['ConfigError', 'create_config', 'join_config_locations', 'ListFilter', 'ListOrder',
+	'Matcher', 'NoVarCheck', 'TriggerAbort', 'TriggerInit', 'TriggerResync']
 
 # At the lowest level, all config option values are represented by strings
 # which are encapsulated in the ConfigEntry class, which holds access and source

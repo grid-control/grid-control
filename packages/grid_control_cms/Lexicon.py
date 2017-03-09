@@ -10,11 +10,12 @@ taken from https://raw.githubusercontent.com/dmwm/WMCore/master/src/python/WMCor
 and modified
 """
 
-import re
-import string
+import re, string
+from hpfwk import clear_current_exception
 try:
     from urlparse import urlparse, urlunparse
 except ImportError:
+    clear_current_exception()
     from urllib.parse import urlparse, urlunparse
 from hpfwk import NestedException
 

@@ -22,6 +22,7 @@ from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.parsing import str_time_long
+from hpfwk import clear_current_exception
 from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
 
 
@@ -513,6 +514,7 @@ class SimpleJobManager(JobManager):
 			else:
 				return min(job_len_submit, self._verify_chunk_list[verify_idx + 1] - job_len_total)
 		except IndexError:
+			clear_current_exception()
 			self._log.log_time(logging.DEBUG, 'All verification chunks passed')
 			self._log.log_time(logging.DEBUG, 'Verification submission throttle disabled')
 			self._verify = False

@@ -100,6 +100,8 @@ class Options(object):
 		short = short or ''
 		if short.strip():
 			short = '-' + short
+		if r'%s' in help_msg:
+			help_msg = help_msg % default
 		return group.add_option(short.strip(), '--' + option, dest=dest,
 			default=default, action=action, help=help_msg)
 
