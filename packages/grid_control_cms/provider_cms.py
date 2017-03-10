@@ -27,24 +27,27 @@ CMSLocationFormat = makeEnum(['hostname', 'siteDB', 'both'])
 
 # required format: <dataset path>[@<instance>][#<block>]
 class CMSBaseProvider(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick = None):
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
 		self._changeTrigger = triggerResync(['datasets', 'parameters'])
-		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = self._changeTrigger)
+		self._lumi_filter = config.getLookup(['lumi filter', '%s lumi filter' % datasource_name],
+			default = {}, parser = parseLumiFilter, strfun = strLumi, onChange = self._changeTrigger)
 		if not self._lumi_filter.empty():
-			config.set('dataset processor', 'LumiDataProcessor', '+=')
-		DataProvider.__init__(self, config, datasetExpr, datasetNick)
+			config.set('%s processor' % datasource_name, 'LumiDataProcessor', '+=')
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
 		# LumiDataProcessor instantiated in DataProcessor.__ini__ will set lumi metadata as well
-		self._lumi_query = config.getBool('lumi metadata', not self._lumi_filter.empty(), onChange = self._changeTrigger)
+		self._lumi_query = config.getBool(['lumi metadata', '%s lumi metadata' % datasource_name],
+			default = not self._lumi_filter.empty(), onChange = self._changeTrigger)
 		config.set('phedex sites matcher mode', 'shell', '?=')
 		# PhEDex blacklist: 'T1_*_Disk nodes allow user jobs - other T1's dont!
-		self._phedexFilter = config.getFilter('phedex sites', '-* T1_*_Disk T2_* T3_*',
+		self._phedex_filter = config.getFilter('phedex sites', '-* T1_*_Disk T2_* T3_*',
 			defaultMatcher = 'blackwhite', defaultFilter = 'strict', onChange = self._changeTrigger)
-		self._onlyComplete = config.getBool('only complete sites', True, onChange = self._changeTrigger)
-		self._locationFormat = config.getEnum('location format', CMSLocationFormat, CMSLocationFormat.hostname, onChange = self._changeTrigger)
+		self._only_complete = config.getBool('only complete sites', True, onChange = self._changeTrigger)
+		self._only_valid = config.getBool('only valid', True, onChange = self._changeTrigger)
+		self._location_format = config.getEnum('location format', CMSLocationFormat, CMSLocationFormat.hostname, onChange = self._changeTrigger)
 		self._pjrc = JSONRestClient(url = 'https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
 		self._sitedb = SiteDB()
 
-		(self._datasetPath, self._datasetInstance, self._datasetBlock) = optSplit(datasetExpr, '@#')
+		(self._datasetPath, self._datasetInstance, self._datasetBlock) = optSplit(dataset_expr, '@#')
 		instance_default = config.get('dbs instance', '', onChange = self._changeTrigger)
 		self._datasetInstance = self._datasetInstance or instance_default
 		if not self._datasetInstance:
@@ -52,7 +55,6 @@ class CMSBaseProvider(DataProvider):
 		elif '/' not in self._datasetInstance:
 			self._datasetInstance = 'prod/%s' % self._datasetInstance
 		self._datasetBlock = self._datasetBlock or 'all'
-		self.onlyValid = config.getBool('only valid', True, onChange = self._changeTrigger)
 
 
 	# Define how often the dataprovider can be queried automatically
@@ -62,7 +64,7 @@ class CMSBaseProvider(DataProvider):
 
 	# Check if splitterClass is valid
 	def checkSplitter(self, splitterClass):
-		if (DataSplitter.Skipped in splitterClass.neededEnums()) and not self._lumi_filter.empty():
+		if (DataSplitter.Skipped in splitterClass.get_needed_enums()) and not self._lumi_filter.empty():
 			self._log.debug('Selected splitter %s is not compatible with active lumi filter!', splitterClass.__name__)
 			self._log.warning('Active lumi section filter forced selection of HybridSplitter')
 			return HybridSplitter
@@ -71,7 +73,7 @@ class CMSBaseProvider(DataProvider):
 
 	def _replicaLocation(self, replica_info):
 		(name_node, name_hostname, _) = replica_info
-		if self._locationFormat == CMSLocationFormat.siteDB:
+		if self._location_format == CMSLocationFormat.siteDB:
 			yield name_node
 		else:
 			if name_hostname is not None:
@@ -79,7 +81,7 @@ class CMSBaseProvider(DataProvider):
 			else:
 				name_hostnames = self._sitedb.cms_name_to_se(name_node)
 			for name_hostname in name_hostnames:
-				if self._locationFormat == CMSLocationFormat.hostname:
+				if self._location_format == CMSLocationFormat.hostname:
 					yield name_hostname
 				else:
 					yield '%s/%s' % (name_node, name_hostname)
@@ -107,11 +109,11 @@ class CMSBaseProvider(DataProvider):
 
 		if not replica_infos:
 			return empty_with_warning('Dataset block %r has no replica information!', blockPath)
-		replica_infos_selected = self._phedexFilter.filterList(replica_infos, key = itemgetter(0))
+		replica_infos_selected = self._phedex_filter.filterList(replica_infos, key = itemgetter(0))
 		if not replica_infos_selected:
 			return empty_with_warning('Dataset block %r is not available at the selected locations!\nAvailable locations: %s', blockPath,
 				str.join(', ', self._fmtLocations(replica_infos)))
-		if not self._onlyComplete:
+		if not self._only_complete:
 			return list(expanded_replica_locations(replica_infos_selected))
 		replica_infos_complete = lfilter(lambda nn_nh_c: nn_nh_c[2], replica_infos_selected)
 		if not replica_infos_complete:
@@ -158,7 +160,8 @@ class CMSBaseProvider(DataProvider):
 		if self._lumi_query: # central lumi query
 			lumiDict = self._getCMSLumisImpl(blockPath)
 		fileList = []
-		for (fileInfo, listLumi) in self._getCMSFilesImpl(blockPath, self.onlyValid, self._lumi_query):
+		for (fileInfo, listLumi) in self._getCMSFilesImpl(blockPath, self._only_valid, self._lumi_query):
+			self._raise_on_abort()
 			if lumiDict and not listLumi:
 				listLumi = lumiDict.get(fileInfo[DataProvider.URL], [])
 			if listLumi:
@@ -205,7 +208,7 @@ class CMSBaseProvider(DataProvider):
 
 
 class DBS2Provider(CMSBaseProvider):
-	alias = ['dbs2']
+	alias_list = ['dbs2']
 
-	def __init__(self, config, datasetExpr, datasetNick = None):
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
 		raise DatasetError('CMS deprecated all DBS2 Services in April 2014! Please use DBS3Provider instead.')

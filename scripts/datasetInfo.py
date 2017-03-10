@@ -68,7 +68,6 @@ def list_datasets(blocks):
 	DataProvider.NFiles = -1
 	DataProvider.NBlocks = -2
 
-	print('')
 	infos = {}
 	order = []
 	infosum = {DataProvider.Dataset : 'Sum'}
@@ -88,7 +87,6 @@ def list_datasets(blocks):
 	utils.printTabular(head, lmap(lambda x: infos[x], order) + ['=', infosum])
 
 def list_blocks(blocks, headerbase):
-	print('')
 	utils.printTabular(headerbase + [(DataProvider.BlockName, 'Block'), (DataProvider.NEntries, 'Events')], blocks)
 
 def list_files(datasets, blocks):
@@ -125,6 +123,9 @@ def list_block_metadata(datasets, blocks):
 		if len(datasets) > 1:
 			print('Dataset: %s' % block[DataProvider.Dataset])
 		print('Blockname: %s' % block[DataProvider.BlockName])
+		if DataProvider.Metadata not in block:
+			print('<no metadata>\n')
+			continue
 		mkdict = lambda x: dict(izip(block[DataProvider.Metadata], x[DataProvider.Metadata]))
 		metadata = utils.QM(block[DataProvider.FileList], mkdict(block[DataProvider.FileList][0]), {})
 		for fileInfo in block[DataProvider.FileList]:
@@ -176,10 +177,10 @@ def list_config_entries(opts, blocks, provider):
 				infos[dsName][DataProvider.URL] = block[DataProvider.FileList][0][DataProvider.URL]
 	for dsID, dsName in enumerate(order):
 		info = infos[dsName]
-		providerName = sorted(provider.getClassNames(), key = len)[0]
+		providerName = sorted(provider.get_class_name_list(), key = len)[0]
 		nickname = info.get(DataProvider.Nickname, 'nick%d' % dsID).rjust(maxnick)
 		filterExpr = utils.QM(providerName == 'list', ' %% %s' % info[DataProvider.Dataset], '')
-		print('\t%s : %s : %s%s' % (nickname, providerName, provider.getDatasetExpr(), filterExpr))
+		print('\t%s : %s : %s%s' % (nickname, providerName, provider.get_dataset_expr(), filterExpr))
 
 def list_infos(blocks):
 	evSum = 0
@@ -201,7 +202,7 @@ def save_dataset(opts, provider):
 	DataProvider.saveToFile(opts.save, blocks)
 	print('Dataset information saved to ./%s' % opts.save)
 
-def main(opts, args):
+def get_dataset_info(opts, args):
 	config = get_dataset_config(opts, args)
 
 	provider = config.getPlugin('dataset', cls = DataProvider)
@@ -215,6 +216,10 @@ def main(opts, args):
 	else:
 		print('Dataset: %s' % blocks[0][DataProvider.Dataset])
 		headerbase = []
+	return (provider, datasets, blocks, headerbase)
+
+def main(opts, args):
+	(provider, datasets, blocks, headerbase) = get_dataset_info(opts, args)
 
 	if opts.list_datasets:
 		list_datasets(blocks)

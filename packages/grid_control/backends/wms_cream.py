@@ -17,11 +17,11 @@ from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments
-from grid_control.backends.logged_process import LoggedProcess
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
 from grid_control.utils.activity import Activity
+from grid_control.utils.process_base import LocalProcess
 from python_compat import imap, irange, md5, tarfile
 
 class CREAM_CheckJobs(CheckJobsWithProcess):
@@ -75,7 +75,7 @@ class CREAM_CancelJobs(CancelJobsWithProcessBlind):
 
 
 class CreamWMS(GridWMS):
-	alias = ['cream']
+	alias_list = ['cream']
 
 	def __init__(self, config, name):
 		cancelExecutor = CancelAndPurgeJobs(config, CREAM_CancelJobs(config), CREAM_PurgeJobs(config))
@@ -117,14 +117,13 @@ class CreamWMS(GridWMS):
 			jobs = ' '.join(self._getRawIDs(ids))
 			log = tempfile.mktemp('.log')
 
-			proc = LoggedProcess(self._outputExec,
-				'--noint --logfile "%s" --dir "%s" %s' % (log, basePath, jobs))
+			proc = LocalProcess(self._outputExec, '--noint', '--logfile', log, '--dir', basePath, jobs)
 
 			# yield output dirs
 			todo = jobNumMap.values()
 			done = []
 			currentJobNum = None
-			for line in imap(str.strip, proc.iter()):
+			for line in imap(str.strip, proc.stdout.iter(timeout = 20)):
 				match = re.match(self._outputRegex, line)
 				if match:
 					currentJobNum = jobNumMap.get(self._createId(match.groupdict()['rawId']))
@@ -141,14 +140,14 @@ class CreamWMS(GridWMS):
 								self._log.error('Can\'t unpack output files contained in %s', wildcardTar)
 					yield (currentJobNum, outputDir)
 					currentJobNum = None
-			retCode = proc.wait()
+			retCode = proc.status(timeout = 10, terminate = True)
 
 			if retCode != 0:
-				if 'Keyboard interrupt raised by user' in proc.getError():
+				if 'Keyboard interrupt raised by user' in proc.stdout.read_log():
 					utils.removeFiles([log, basePath])
 					raise StopIteration
 				else:
-					proc.logError(self.errorLog, log = log)
+					self._log.log_process(proc)
 				self._log.error('Trying to recover from error ...')
 				for dirName in os.listdir(basePath):
 					yield (None, os.path.join(basePath, dirName))
@@ -159,12 +158,12 @@ class CreamWMS(GridWMS):
 			yield (jobNum, None)
 
 		purgeLog = tempfile.mktemp('.log')
-		purgeProc = LoggedProcess(utils.resolveInstallPath('glite-ce-job-purge'),
-			'--noint --logfile "%s" %s' % (purgeLog, str.join(' ', done)))
-		retCode = purgeProc.wait()
+		purgeProc = LocalProcess(utils.resolveInstallPath('glite-ce-job-purge'),
+			'--noint', '--logfile', purgeLog, str.join(' ', done))
+		retCode = purgeProc.status(timeout = 60)
 		if retCode != 0:
 			if self.explainError(purgeProc, retCode):
 				pass
 			else:
-				proc.logError(self.errorLog, log = purgeLog, jobs = done)
+				self._log.log_process(proc)
 		utils.removeFiles([log, purgeLog, basePath])

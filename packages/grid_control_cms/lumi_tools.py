@@ -190,8 +190,3 @@ def formatLumi(lumifilter):
 
 def strLumi(lumifilter):
 	return str.join(',', formatLumi(lumifilter))
-
-
-if __name__ == '__main__':
-	import doctest
-	doctest.testmod()

@@ -48,12 +48,12 @@ def addDatasetListOptions(parser):
 
 
 def discoverDataset(providerName, config_dict):
-	config = getConfig(configDict = {'dataset': config_dict})
+	config = getConfig(configDict = {'dataset': config_dict}).changeView(setSections = ['dataset'])
+	DataProvider = Plugin.get_class('DataProvider')
+	provider = DataProvider.create_instance(providerName, config, 'dataset', config_dict['dataset'], None)
 	if config_dict['dump config'] == 'True':
-		config.write(sys.stdout, printDefault = False, printMinimal = True)
+		config.write(sys.stdout, printDefault = True, printMinimal = True)
 		return
-	DataProvider = Plugin.getClass('DataProvider')
-	provider = DataProvider.createInstance(providerName, config, config_dict['dataset'], None)
 	stripMetadata = config_dict['strip'] == 'True'
 	if config_dict['output']:
 		return DataProvider.saveToFile(config_dict['output'], provider.getBlocks(show_stats = False), stripMetadata)

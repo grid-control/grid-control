@@ -20,7 +20,7 @@ from grid_control.utils.thread_tools import GCThreadPool
 from grid_control_cms.DashboardAPI.DashboardAPI import DashboardAPI
 
 class DashBoard(Monitoring):
-	configSections = Monitoring.configSections + ['dashboard']
+	config_section_list = Monitoring.config_section_list + ['dashboard']
 
 	def __init__(self, config, name, task):
 		Monitoring.__init__(self, config, name, task)

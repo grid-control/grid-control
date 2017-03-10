@@ -19,7 +19,7 @@ from grid_control.utils.process_base import LocalProcess
 from python_compat import imap, lmap, rsplit
 
 class AFSAccessToken(RefreshableAccessToken):
-	alias = ['afs', 'AFSProxy']
+	alias_list = ['afs', 'AFSProxy']
 
 	def __init__(self, config, name):
 		RefreshableAccessToken.__init__(self, config, name)

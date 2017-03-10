@@ -90,8 +90,9 @@ class ANSIGUI(GUI):
 		self._lock = GCLock(threading.RLock()) # drawing lock
 		self._last_report = 0
 		self._old_size = None
+		self._current_job_db = None
 
-	def _draw(self, fun):
+	def _draw(self, fun, *args):
 		new_size = self._console.getmaxyx()
 		if self._old_size != new_size:
 			self._old_size = new_size
@@ -100,7 +101,7 @@ class ANSIGUI(GUI):
 		self._console.hideCursor()
 		self._console.savePos()
 		try:
-			fun()
+			fun(*args)
 		finally:
 			self._console.loadPos()
 			self._console.showCursor()
@@ -131,15 +132,13 @@ class ANSIGUI(GUI):
 		self._last_report = time.time()
 		self._console.move(0, 0)
 		self._new_stdout.logged = False
-		self._report.display()
+		self._report.show_report(self._current_job_db)
 		self._new_stdout.logged = True
 
 	def _update_status(self):
 		activity_message = None
 		for activity in Activity.root.get_children():
-			activity_message = activity.getMessage() + '...'
-			if len(activity_message) > 75:
-				activity_message = activity_message[:37] + '...' + activity_message[-35:]
+			activity_message = activity.getMessage(truncate = 75)
 
 		self._console.move(self._reportHeight + 1, 0)
 		self._new_stdout.logged = False
@@ -167,9 +166,10 @@ class ANSIGUI(GUI):
 		self._draw(self._update_report)
 		self._draw(self._update_status)
 
-	def displayWorkflow(self):
+	def displayWorkflow(self, workflow):
+		self._current_job_db = workflow.jobManager.jobDB
 		if not sys.stdout.isatty():
-			return self._workflow.process(self._wait)
+			return workflow.process(self._wait)
 
 		self._console = Console(sys.stdout)
 		self._new_stdout = GUIStream(sys.stdout, self._console, self._lock)
@@ -180,7 +180,7 @@ class ANSIGUI(GUI):
 			(sys.stdout, sys.stderr) = (self._new_stdout, self._new_stderr)
 			self._console.erase()
 			self._schedule_update_layout()
-			self._workflow.process(self._wait)
+			workflow.process(self._wait)
 		finally:
 			(sys.stdout, sys.stderr) = (self._stored_stdout, self._stored_stderr)
 			self._console.setscrreg()

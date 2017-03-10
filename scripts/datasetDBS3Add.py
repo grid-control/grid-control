@@ -217,10 +217,10 @@ def discover_blocks(options):
 
 	# get provider with dataset information
 	if options.opts.input_file:
-		provider = DataProvider.createInstance('ListProvider', getConfig(), options.opts.input_file, None)
+		provider = DataProvider.create_instance('ListProvider', getConfig(), options.opts.input_file, None)
 	else:
 		config = getConfig(configDict = {'dataset': options.config_dict})
-		provider = DataProvider.createInstance('DBSInfoProvider', config, options.args[0], None)
+		provider = DataProvider.create_instance('DBSInfoProvider', config, options.args[0], None)
 
 	blocks = provider.getBlocks(show_stats = False)
 	DataProvider.saveToFile(os.path.join(options.opts.tempdir, 'dbs.dat'), blocks)

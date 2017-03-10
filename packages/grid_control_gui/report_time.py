@@ -18,7 +18,7 @@ from grid_control.utils.parsing import strTime
 from python_compat import ifilter, imap
 
 class TimeReport(Report):
-	alias = ['time']
+	alias_list = ['time']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
@@ -27,8 +27,8 @@ class TimeReport(Report):
 	def getHeight(self):
 		return 1
 
-	def display(self):
-		job_runtimes = imap(lambda jobNum: self._jobDB.getJobTransient(jobNum).get('runtime', 0), self._jobs)
+	def show_report(self, job_db):
+		job_runtimes = imap(lambda jobNum: job_db.getJobTransient(jobNum).get('runtime', 0), self._jobs)
 		cpuTime = sum(ifilter(lambda rt: rt > 0, job_runtimes))
 		msg = 'Consumed wall time: %-20s' % strTime(cpuTime)
 		msg += 'Estimated cost: $%.2f\n' % ((cpuTime / 60. / 60.) * self._dollar_per_hour)

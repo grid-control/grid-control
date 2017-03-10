@@ -69,7 +69,8 @@ def lumi_expr(opts, args):
 		result = {}
 		for rlrange in lumis:
 			start, end = rlrange
-			assert(start[0] == end[0])
+			if start[0] != end[0]:
+				raise Exception('Lumi filter term contains different runs: %r' % rlrange)
 			result.setdefault(start[0], []).extend(irange(start[1], end[1] + 1))
 		print(result)
 
@@ -85,7 +86,7 @@ def iter_jobs(opts, workDir, jobList, splitter):
 			outputName = outputName.replace(opts.replace % jobNum, '_').replace('/', '_').replace('__', '_').strip('_')
 		else:
 			if splitter:
-				splitInfo = splitter.getSplitInfo(jobNum)
+				splitInfo = splitter.get_partition(jobNum)
 			outputName = splitInfo.get(DataSplitter.Nickname, splitInfo.get(DataSplitter.Dataset, '').replace('/', '_'))
 		yield (jobNum, outputName)
 	activity.finish()
@@ -165,7 +166,7 @@ def main(opts, args):
 		workDir = config.getWorkPath()
 		splitter = None
 		try:
-			splitter = DataSplitter.loadPartitionsForScript(os.path.join(workDir, 'datamap.tar'))
+			splitter = DataSplitter.load_partitions_for_script(os.path.join(workDir, 'datamap.tar'))
 		except Exception:
 			clear_current_exception()
 		return lumi_calc(opts, workDir, sorted(jobDB.getJobs(ClassSelector(JobClass.SUCCESS))), splitter)

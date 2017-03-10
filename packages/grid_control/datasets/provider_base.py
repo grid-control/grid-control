@@ -27,28 +27,30 @@ class DatasetError(NestedException):
 
 
 class DataProvider(ConfigurablePlugin):
-	def __init__(self, config, datasetExpr, datasetNick = None):
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('dataset.provider')
-		(self._datasetExpr, self._datasetNick) = (datasetExpr, datasetNick)
+		self._log = logging.getLogger('%s.provider' % datasource_name)
+		(self._datasource_name, self._dataset_expr, self._dataset_nick) = (datasource_name, dataset_expr, dataset_nick)
 		(self._cache_block, self._cache_dataset) = (None, None)
-		self._dataset_query_interval = config.getTime('dataset default query interval', 60, onChange = None)
+		self._dataset_query_interval = config.getTime('%s default query interval' % datasource_name, 60, onChange = None)
 
 		triggerDataResync = triggerResync(['datasets', 'parameters'])
-		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, triggerDataResync, self._log,
-			' * Dataset %s:\n\tcontains ' % repr(datasetNick or datasetExpr))
-		self._nickProducer = config.getPlugin('nickname source', 'SimpleNickNameProducer',
-			cls = DataProcessor, pargs = (triggerDataResync,), onChange = triggerDataResync)
-		self._datasetProcessor = config.getCompositePlugin('dataset processor',
+		self._stats = dataset_proc or DataProcessor.create_instance('SimpleStatsDataProcessor', config, datasource_name,
+			triggerDataResync, self._log, ' * Dataset %s:\n\tcontains ' % repr(dataset_nick or dataset_expr))
+		self._nick_producer = config.getPlugin(['nickname source', '%s nickname source' % datasource_name], 'SimpleNickNameProducer',
+			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), onChange = triggerDataResync)
+		self._dataset_processor = dataset_proc or config.getCompositePlugin('%s processor' % datasource_name,
 			'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' +
 			'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor', 'MultiDataProcessor',
-			cls = DataProcessor, pargs = (triggerDataResync,), onChange = triggerDataResync)
+			cls = DataProcessor, pargs = (datasource_name, triggerDataResync), onChange = triggerDataResync)
 
 
 	def bind(cls, value, **kwargs):
 		config = kwargs.pop('config')
-		defaultProvider = config.get('dataset provider', 'ListProvider')
+		datasource_name = kwargs.pop('datasource_name', 'dataset')
+		defaultProvider = config.get('%s provider' % datasource_name, 'ListProvider')
 
+		instance_args = []
 		for entry in ifilter(str.strip, value.splitlines()):
 			(nickname, provider, dataset) = ('', defaultProvider, None)
 			temp = lmap(str.strip, entry.split(':', 2))
@@ -61,16 +63,20 @@ class DataProvider(ConfigurablePlugin):
 			elif len(temp) == 1:
 				dataset = temp[0]
 
-			clsNew = cls.getClass(provider)
+			clsNew = cls.get_class(provider)
 			bindValue = str.join(':', [nickname, provider, dataset])
-			yield InstanceFactory(bindValue, clsNew, config, dataset, nickname)
+			instance_args.append([bindValue, clsNew, config, datasource_name, dataset, nickname])
+		for instance_arg in instance_args:
+			if len(instance_args) > 1:
+				instance_arg.append(NullDataProcessor()) # setting dataset_proc
+			yield InstanceFactory(*instance_arg)
 	bind = classmethod(bind)
 
 
-	def getBlocksFromExpr(cls, config, datasetExpr):
-		for dp_factory in DataProvider.bind(datasetExpr, config = config):
-			dproc = dp_factory.getBoundInstance()
-			for block in dproc.getBlocksNormed():
+	def getBlocksFromExpr(cls, config, dataset_expr):
+		for dp_factory in DataProvider.bind(dataset_expr, config = config):
+			dproc = dp_factory.create_instance_bound()
+			for block in dproc.get_blocks_raw():
 				yield block
 	getBlocksFromExpr = classmethod(getBlocksFromExpr)
 
@@ -82,8 +88,13 @@ class DataProvider(ConfigurablePlugin):
 	bName = classmethod(bName)
 
 
-	def getDatasetExpr(self):
-		return self._datasetExpr
+	def get_dataset_expr(self):
+		return self._dataset_expr
+
+
+	def _raise_on_abort(self):
+		if utils.abort():
+			raise DatasetError('Received abort request during retrieval of %r' % self.get_dataset_expr())
 
 
 	# Define how often the dataprovider can be queried automatically
@@ -102,19 +113,21 @@ class DataProvider(ConfigurablePlugin):
 			self._cache_dataset = set()
 			for block in self.getBlocks(show_stats = True):
 				self._cache_dataset.add(block[DataProvider.Dataset])
+				if utils.abort():
+					raise DatasetError('Received abort request during dataset name retrieval!')
 		return list(self._cache_dataset)
 
 
 	# Cached access to list of block dicts, does also the validation checks
 	def getBlocks(self, show_stats):
-		statsProcessor = NullDataProcessor(config = None, onChange = None)
+		statsProcessor = NullDataProcessor()
 		if show_stats:
 			statsProcessor = self._stats
 		if self._cache_block is None:
 			try:
-				self._cache_block = list(statsProcessor.process(self._datasetProcessor.process(self.getBlocksNormed())))
+				self._cache_block = list(statsProcessor.process(self._dataset_processor.process(self.get_blocks_raw())))
 			except Exception:
-				raise DatasetError('Unable to run dataset %s through processing pipeline!' % repr(self._datasetExpr))
+				raise DatasetError('Unable to run dataset %s through processing pipeline!' % repr(self._dataset_expr))
 		return self._cache_block
 
 
@@ -125,8 +138,8 @@ class DataProvider(ConfigurablePlugin):
 		raise AbstractError
 
 
-	def getBlocksNormed(self):
-		activity = Activity('Retrieving %s' % self._datasetExpr)
+	def get_blocks_raw(self):
+		activity = Activity('Retrieving %s' % self._dataset_expr)
 		try:
 			# Validation, Naming:
 			for block in self._getBlocksInternal():
@@ -136,15 +149,15 @@ class DataProvider(ConfigurablePlugin):
 				block.setdefault(DataProvider.Locations, None)
 				events = sum(imap(lambda x: x[DataProvider.NEntries], block[DataProvider.FileList]))
 				block.setdefault(DataProvider.NEntries, events)
-				if self._datasetNick:
-					block[DataProvider.Nickname] = self._datasetNick
-				elif self._nickProducer:
-					block = self._nickProducer.processBlock(block)
+				if self._dataset_nick:
+					block[DataProvider.Nickname] = self._dataset_nick
+				elif self._nick_producer:
+					block = self._nick_producer.process_block(block)
 					if not block:
 						raise DatasetError('Nickname producer failed!')
 				yield block
 		except Exception:
-			raise DatasetError('Unable to retrieve dataset %s' % repr(self._datasetExpr))
+			raise DatasetError('Unable to retrieve dataset %s' % repr(self._dataset_expr))
 		activity.finish()
 
 
@@ -153,7 +166,7 @@ class DataProvider(ConfigurablePlugin):
 		self._cache_dataset = None
 
 
-	def classifyMetadataKeys(block):
+	def _classify_metadata_name_list(block):
 		def metadataHash(fi, idx):
 			if idx < len(fi[DataProvider.Metadata]):
 				return md5_hex(repr(fi[DataProvider.Metadata][idx]))
@@ -167,12 +180,12 @@ class DataProvider(ConfigurablePlugin):
 			idxList = ifilter(lambda idx: (idx in cMetadataIdx) == common, irange(len(block[DataProvider.Metadata])))
 			return sorted(idxList, key = lambda idx: block[DataProvider.Metadata][idx])
 		return (filterC(True), filterC(False))
-	classifyMetadataKeys = staticmethod(classifyMetadataKeys)
+	_classify_metadata_name_list = staticmethod(_classify_metadata_name_list)
 
 
-	def getHash(self):
+	def get_hash(self):
 		buffer = StringBuffer()
-		for _ in DataProvider.saveToStream(buffer, self._datasetProcessor.process(self.getBlocksNormed())):
+		for _ in DataProvider.saveToStream(buffer, self._dataset_processor.process(self.get_blocks_raw())):
 			pass
 		return md5_hex(buffer.getvalue())
 
@@ -201,7 +214,7 @@ class DataProvider(ConfigurablePlugin):
 
 			writeMetadata = (DataProvider.Metadata in block) and not stripMetadata
 			if writeMetadata:
-				(idxListBlock, idxListFile) = DataProvider.classifyMetadataKeys(block)
+				(idxListBlock, idxListFile) = DataProvider._classify_metadata_name_list(block)
 				def getMetadata(fi, idxList):
 					idxList = ifilter(lambda idx: idx < len(fi[DataProvider.Metadata]), idxList)
 					return json.dumps(lmap(lambda idx: fi[DataProvider.Metadata][idx], idxList))
@@ -235,8 +248,8 @@ class DataProvider(ConfigurablePlugin):
 
 	# Load dataset information using ListProvider
 	def loadFromFile(path):
-		return DataProvider.createInstance('ListProvider', create_config(
-			configDict = {'dataset': {'dataset processor': 'NullDataProcessor'}}), path)
+		return DataProvider.create_instance('ListProvider', create_config(
+			configDict = {'dataset': {'dataset processor': 'NullDataProcessor'}}), 'dataset', path)
 	loadFromFile = staticmethod(loadFromFile)
 
 

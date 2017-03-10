@@ -15,140 +15,47 @@
 import sys, logging, threading
 from hpfwk.hpf_exceptions import NestedException, NestedExceptionHelper, clear_current_exception, impl_detail, parse_frame
 
-# Collect full traceback and exception context
-def collect_exception_infos(exType, exValue, exTraceback):
-	topLevel = NestedExceptionHelper(exValue, exTraceback)
+def create_debug_console(variables):
+	import code
+	console = code.InteractiveConsole(variables)
+	console.push('import rlcompleter, readline')
+	console.push('readline.parse_and_bind("tab: complete")')
+	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
+	return console
 
-	exInfo = []
-	def collectRecursive(ex, cur_depth = -1, trackingID = 'T'):
-		if not isinstance(ex, NestedExceptionHelper):
-			cur_depth += 1
-			exInfo.append((ex, cur_depth, trackingID))
-		if hasattr(ex, 'traceback') and hasattr(ex, 'nested'): # decent
-			for frame in ex.traceback[:-1]: # yield all frames except for the final raise statement
-				frame['trackingID'] = trackingID
-				yield frame
-			for idx, exNested in enumerate(ex.nested):
-				for frame in collectRecursive(exNested, cur_depth, trackingID + '|%d' % idx):
-					yield frame
-			for frame in ex.traceback[-1:]:
-				frame['trackingID'] = trackingID
-				yield frame
 
-	traceback = list(collectRecursive(topLevel))
-	return (traceback, exInfo) # skipping top-level exception helper
-
-def repr_safe(obj, verbose):
-	try:
-		value = repr(obj)
-	except Exception:
-		return 'unable to display!'
-	if (len(value) < 200) or verbose:
-		return value
-	return value[:200] + ' ... [length:%d]' % len(value)
-
-# Function to log local and class variables
-def format_variables(variables, showLongVariables = False):
-	maxlen = 0
-	for var in variables:
-		maxlen = max(maxlen, len(var))
-	def display(keys, varDict, varPrefix = ''):
-		keys.sort()
-		for var in keys:
-			value = repr_safe(varDict[var], showLongVariables)
-			if 'password' in var:
-				value = '<redacted>'
-			yield '\t\t%s%s = %s' % (varPrefix, var.ljust(maxlen), value)
-
-	classVariable = variables.pop('self', None)
-	if variables:
-		yield '\tLocal variables:'
-		for line in display(list(variables.keys()), variables):
-			yield line
-	if classVariable is not None:
-		yield '\tClass variables (%s):' % repr_safe(classVariable, showLongVariables)
-		if hasattr(classVariable, '__dict__'):
-			classVariables = classVariable.__dict__
-		elif hasattr(classVariable, '__slots__'):
-			classVariables = {}
-			for attr in classVariable.__slots__:
-				classVariables[attr] = getattr(classVariable, attr)
-		try:
-			for line in display(list(classVariables.keys()), classVariables, 'self.'):
-				yield line
-		except Exception:
-			yield '\t\t<unable to access class>'
-	if variables or (classVariable is not None):
-		yield ''
-
-# Function to log source code and variables from frames
-def format_stack(frames, codeContext = 0, showVariables = True, showLongVariables = True):
-	import linecache
-	linecache.checkcache()
-	for frame in frames:
-		# Output relevant code fragment
-		trackingDisplay = ''
-		if frame.get('trackingID') is not None:
-			trackingDisplay = '%s-' % frame['trackingID']
-		yield 'Stack #%s%02d [%s:%d] %s' % (trackingDisplay, frame['idx'], frame['file'], frame['line'], frame['fun'])
-		fmtLine = lambda line: linecache.getline(frame['file'], line).rstrip().replace('\t', '  ')
-		for delta_line in range(-codeContext, codeContext + 1):
-			if delta_line == 0:
-				yield '\t=>| %s' % fmtLine(frame['line'] + delta_line)
-			else:
-				yield '\t  | %s' % fmtLine(frame['line'] + delta_line)
-		yield ''
-		if showVariables:
-			for line in format_variables(frame['locals'], showLongVariables = showLongVariables):
-				yield line
-
-def format_ex_tree(ex_info_list, showExStack = 2):
-	ex_msg_list = []
-	if showExStack == 1:
-		ex_info_list = ex_info_list[-2:]
-	for info in ex_info_list:
-		(exValue, exDepth, _) = info
-		if showExStack == 1:
-			exDepth = 0
-		result = '%s%s: %s' % ('  ' * exDepth, exValue.__class__.__name__, exValue)
-		if (showExStack > 1) and hasattr(exValue, 'args') and not isinstance(exValue, NestedException):
-			if ((len(exValue.args) == 1) and (str(exValue.args[0]) not in str(exValue))) or (len(exValue.args) > 1):
-				try:
-					result += '\n%s%s  %s' % ('  ' * exDepth, len(exValue.__class__.__name__) * ' ', exValue.args)
-				except Exception:
-					clear_current_exception()
-		ex_msg_list.append(result)
-	if showExStack > 1:
-		return str.join('\n', ex_msg_list)
-	return str.join(' - ', ex_msg_list)
-
-def format_exception(exc_info, showCodeContext = 0, showVariables = 0, showFileStack = 0, showExStack = 1):
+def format_exception(exc_info, showcode_context = 0, show_variables = 0, showFileStack = 0, exception_stack_mode = 1):
 	msg_parts = []
 
 	if exc_info not in [None, (None, None, None)]:
-		traceback, ex_info_list = collect_exception_infos(*exc_info)
+		traceback, ex_info_list = _collect_exception_infos(*exc_info)
 
 		# Code and variable listing
-		if showCodeContext > 0:
-			stackInfo = format_stack(traceback, codeContext = showCodeContext - 1,
-				showVariables = showVariables > 0, showLongVariables = showVariables > 1)
+		if showcode_context > 0:
+			stackInfo = _format_stack(traceback, code_context = showcode_context - 1, truncate_var_repr = show_variables)
 			msg_parts.append(str.join('\n', stackInfo))
 
 		# File stack with line information
 		if showFileStack > 0:
 			msg_fstack = 'File stack:\n'
 			for tb in traceback:
-				msg_fstack += '%s %s %s (%s)\n' % (tb.get('trackingID', '') + '|%d' % tb.get('idx', 0), tb['file'], tb['line'], tb['fun'])
+				msg_fstack += '%s %s %s (%s)\n' % (tb.get('exception_id', '') + '|%02d' % tb.get('idx', 0), tb['file'], tb['line'], tb['fun'])
 			msg_parts.append(msg_fstack)
 
 		# Exception message tree
-		if showExStack > 0:
-			msg_parts.append(format_ex_tree(ex_info_list, showExStack))
+		if exception_stack_mode > 0:
+			msg_parts.append(_format_ex_tree(ex_info_list, exception_stack_mode))
 
 	return str.join('\n', msg_parts)
 
-# Signal handler for state dump requests
+
+def handle_debug_interrupt(sig = None, frame = None):
+	# Signal handler for debug session requests
+	create_debug_console(handle_dump_interrupt(sig, frame)).interact('debug mode enabled!')
+
+
 def handle_dump_interrupt(sig, frame):
+	# Signal handler for state dump requests
 	variables = {'_frame': frame}
 	if frame:
 		variables.update(frame.f_globals)
@@ -167,17 +74,119 @@ def handle_dump_interrupt(sig, frame):
 		log.info('Stack of threads is not available!')
 	for (threadID, frame) in frames_by_threadID.items():
 		log.info('Stack of thread #%d:\n' % threadID + str.join('\n',
-			format_stack(parse_frame(frame), codeContext = 0, showVariables = False)))
+			_format_stack(parse_frame(frame), code_context = 0, truncate_var_repr = -1)))
 	return variables
 
-def create_debug_console(variables):
-	import code
-	console = code.InteractiveConsole(variables)
-	console.push('import rlcompleter, readline')
-	console.push('readline.parse_and_bind("tab: complete")')
-	console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
-	return console
 
-# Signal handler for debug session requests
-def handle_debug_interrupt(sig = None, frame = None):
-	create_debug_console(handle_dump_interrupt(sig, frame)).interact('debug mode enabled!')
+def _collect_exception_infos(exception_type, exception_value, exception_traceback):
+	# Collect full traceback and exception context
+	exception_start = NestedExceptionHelper(exception_value, exception_traceback)
+
+	exception_info_list = []
+	def _collect_exception_infos_recursive(exception, cur_depth = -1, exception_id = 'T'):
+		if not isinstance(exception, NestedExceptionHelper):
+			cur_depth += 1
+			exception_info_list.append((exception, cur_depth, exception_id))
+		if hasattr(exception, 'traceback') and hasattr(exception, 'nested'): # decent
+			for frame in exception.traceback[:-1]: # yield all frames except for the final raise statement
+				frame['exception_id'] = exception_id
+				yield frame
+			for idx, exception_nested in enumerate(exception.nested):
+				for frame in _collect_exception_infos_recursive(exception_nested, cur_depth, exception_id + '|%02d' % idx):
+					yield frame
+			for frame in exception.traceback[-1:]:
+				frame['exception_id'] = exception_id
+				yield frame
+
+	traceback = list(_collect_exception_infos_recursive(exception_start))
+	return (traceback, exception_info_list) # skipping top-level exception helper
+
+
+def _format_ex_tree(ex_info_list, exception_stack_mode = 2):
+	ex_msg_list = []
+	if exception_stack_mode == 1:
+		ex_info_list = ex_info_list[-2:]
+	for info in ex_info_list:
+		(exception_value, exDepth, _) = info
+		if exception_stack_mode == 1:
+			exDepth = 0
+		result = '%s%s: %s' % ('  ' * exDepth, exception_value.__class__.__name__, exception_value)
+		if (exception_stack_mode > 1) and hasattr(exception_value, 'args') and not isinstance(exception_value, NestedException):
+			if ((len(exception_value.args) == 1) and (str(exception_value.args[0]) not in str(exception_value))) or (len(exception_value.args) > 1):
+				try:
+					result += '\n%s%s  %s' % ('  ' * exDepth, len(exception_value.__class__.__name__) * ' ', exception_value.args)
+				except Exception:
+					clear_current_exception()
+		ex_msg_list.append(result)
+	if exception_stack_mode > 1:
+		return str.join('\n', ex_msg_list)
+	return str.join(' - ', ex_msg_list)
+
+
+def _format_stack(frame_list, code_context, truncate_var_repr):
+	# Function to log source code and variables from frames
+	import linecache
+	linecache.checkcache()
+	for frame in frame_list:
+		# Output relevant code fragment
+		exception_id = ''
+		if frame.get('exception_id') is not None:
+			exception_id = '%s-' % frame['exception_id']
+		yield 'Stack #%s%02d [%s:%d] %s' % (exception_id, frame['idx'], frame['file'], frame['line'], frame['fun'])
+		def get_source_code(line_num):
+			return linecache.getline(frame['file'], line_num).rstrip().replace('\t', '  ')
+		for delta_line_num in range(-code_context, code_context + 1):
+			if delta_line_num == 0:
+				yield '\t=>| %s' % get_source_code(frame['line'] + delta_line_num)
+			else:
+				yield '\t  | %s' % get_source_code(frame['line'] + delta_line_num)
+		yield ''
+		if truncate_var_repr != -1:
+			for line in _format_variables(frame['locals'], truncate_var_repr):
+				yield line
+
+
+def _format_variables(variable_dict, truncate_var_repr):
+	# Function to log local and class variables
+	max_vn_len = 0
+	for vn in variable_dict:
+		max_vn_len = max(max_vn_len, len(vn))
+
+	def display(vn_list, var_dict, vn_prefix = ''):
+		vn_list.sort()
+		for vn in vn_list:
+			repr_str = _safe_repr(var_dict[vn], truncate_var_repr)
+			if 'password' in vn:
+				repr_str = '<redacted>'
+			yield '\t\t%s%s = %s' % (vn_prefix, vn.ljust(max_vn_len), repr_str)
+
+	class_instance = variable_dict.pop('self', None)
+	if variable_dict:
+		yield '\tLocal variables:'
+		for line in display(list(variable_dict.keys()), variable_dict):
+			yield line
+	if class_instance is not None:
+		yield '\tClass variables (%s):' % _safe_repr(class_instance, truncate_var_repr)
+		if hasattr(class_instance, '__dict__'):
+			class_variable_dict = class_instance.__dict__
+		elif hasattr(class_instance, '__slots__'):
+			class_variable_dict = {}
+			for attr in class_instance.__slots__:
+				class_variable_dict[attr] = getattr(class_instance, attr)
+		try:
+			for line in display(list(class_variable_dict.keys()), class_variable_dict, 'self.'):
+				yield line
+		except Exception:
+			yield '\t\t<unable to access class>'
+	if variable_dict or (class_instance is not None):
+		yield ''
+
+
+def _safe_repr(obj, truncate_var_repr):
+	try:
+		repr_str = repr(obj)
+	except Exception:
+		return 'unable to display!'
+	if (truncate_var_repr is None) or (len(repr_str) < truncate_var_repr):
+		return repr_str
+	return repr_str[:truncate_var_repr] + ' ... [length:%d]' % len(repr_str)

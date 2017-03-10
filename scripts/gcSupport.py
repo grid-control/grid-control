@@ -22,6 +22,7 @@ from grid_control import utils
 from grid_control.config import create_config
 from grid_control.job_db import Job, JobClass
 from grid_control.job_selector import ClassSelector, JobSelector
+from grid_control.logging_setup import LogLevelEnum, parse_logging_args
 from grid_control.output_processor import FileInfoProcessor, JobInfoProcessor, JobResult
 from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
@@ -33,8 +34,11 @@ def scriptOptions(parser, args = None, arg_keys = None):
 	parser.addBool(None, ' ', 'pivot',     default = False, help = 'Output pivoted tabular data')
 	parser.addText(None, ' ', 'textwidth', default = 100,   help = 'Output tabular data with selected width')
 	parser.addAccu(None, 'v', 'verbose',   default = 0,     help = 'Increase verbosity')
+	parser.addList(None, ' ', 'logging',                    help = 'Increase verbosity')
 	(opts, args, config_dict) = parser.parse(args, arg_keys)
 	logging.getLogger().setLevel(logging.DEFAULT - opts.verbose)
+	for (logger_name, logger_level) in parse_logging_args(opts.logging):
+		logging.getLogger(logger_name).setLevel(LogLevelEnum.str2enum(logger_level))
 	if opts.parseable:
 		utils.printTabular.mode = 'parseable'
 	elif opts.pivot:
@@ -84,7 +88,7 @@ def initGC(args):
 		userSelector = None
 		if len(args) != 1:
 			userSelector = JobSelector.create(args[1])
-		return (config, Plugin.createInstance('TextFileJobDB', config, jobSelector = userSelector))
+		return (config, Plugin.create_instance('TextFileJobDB', config, jobSelector = userSelector))
 	sys.stderr.write('Syntax: %s <config file> [<job id>, ...]\n\n' % sys.argv[0])
 	sys.exit(os.EX_USAGE)
 
@@ -112,7 +116,8 @@ def prettySize(size):
 
 def getPluginList(pluginName):
 	aliasDict = {}
-	for entry in Plugin.getClass(pluginName).getClassList():
+	cls = Plugin.get_class(pluginName)
+	for entry in cls.get_class_info_list():
 		depth = entry.pop('depth', 0)
 		(alias, name) = entry.popitem()
 		aliasDict.setdefault(name, []).append((depth, alias))

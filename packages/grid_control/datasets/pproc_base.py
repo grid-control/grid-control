@@ -20,35 +20,36 @@ from python_compat import imap, lchain
 
 # Class used by DataParameterSource to convert dataset splittings into parameter data
 class PartitionProcessor(ConfigurablePlugin):
-	def __init__(self, config):
+	def __init__(self, config, datasource_name):
 		ConfigurablePlugin.__init__(self, config)
-		self._log = logging.getLogger('dataset.partition.processor')
+		self._datasource_name = datasource_name
+		self._log = logging.getLogger('%s.partition.processor' % datasource_name)
 
 	def enabled(self):
 		return True
 
-	def getKeys(self):
+	def get_needed_vn_list(self, splitter):
 		return []
 
-	def getNeededKeys(self, splitter):
+	def get_partition_metadata(self):
 		return []
 
-	def process(self, pNum, splitInfo, result):
+	def process(self, pnum, partition_info, result):
 		raise AbstractError
 
 
 class MultiPartitionProcessor(PartitionProcessor):
-	def __init__(self, config, processorList):
-		PartitionProcessor.__init__(self, config)
-		do_prune = config.getBool('partition processor prune', True, onChange = None)
-		self._processorList = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive partition processors!')
+	def __init__(self, config, processorList, datasource_name):
+		PartitionProcessor.__init__(self, config, datasource_name)
+		do_prune = config.getBool(['partition processor prune', '%s partition processor prune' % datasource_name], True, onChange = None)
+		self._processor_list = prune_processors(do_prune, processorList, self._log, 'Removed %d inactive partition processors!')
 
-	def getKeys(self):
-		return lchain(imap(lambda p: p.getKeys() or [], self._processorList))
+	def get_needed_vn_list(self, splitter):
+		return lchain(imap(lambda p: p.get_needed_vn_list(splitter) or [], self._processor_list))
 
-	def getNeededKeys(self, splitter):
-		return lchain(imap(lambda p: p.getNeededKeys(splitter) or [], self._processorList))
+	def get_partition_metadata(self):
+		return lchain(imap(lambda p: p.get_partition_metadata() or [], self._processor_list))
 
-	def process(self, pNum, splitInfo, result):
-		for processor in self._processorList:
-			processor.process(pNum, splitInfo, result)
+	def process(self, pnum, partition_info, result):
+		for processor in self._processor_list:
+			processor.process(pnum, partition_info, result)

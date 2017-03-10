@@ -37,6 +37,12 @@ def QM(cond, a, b):
 def swap(a, b):
 	return (b, a)
 
+def safe_index(indexable, idx, default = None):
+	try:
+		return indexable.index(idx)
+	except Exception:
+		return default
+
 ################################################################
 # Path helper functions
 
@@ -288,10 +294,10 @@ def wrapList(value, length, delimLines = ',\n', delimEntries = ', '):
 	return str.join(delimLines, imap(lambda x: str.join(delimEntries, x), wrapped))
 
 
-def DiffLists(oldList, newList, keyFun, changedFkt, isSorted = False):
+def DiffLists(oldList, newList, keyFun, changedFkt, isSorted = False, key_fun_sort = None):
 	(listAdded, listMissing, listChanged) = ([], [], [])
 	if not isSorted:
-		(newList, oldList) = (sorted(newList, key = keyFun), sorted(oldList, key = keyFun))
+		(newList, oldList) = (sorted(newList, key = key_fun_sort or keyFun), sorted(oldList, key = key_fun_sort or keyFun))
 	(newIter, oldIter) = (iter(newList), iter(oldList))
 	(new, old) = (next(newIter, None), next(oldIter, None))
 	while True:

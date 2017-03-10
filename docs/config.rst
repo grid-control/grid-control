@@ -6,14 +6,10 @@ global options
 
   * ``config id`` = <text> (default: <config file name w/o extension> or 'unnamed')
     Identifier for the current configuration
-  * ``delete`` = <job selector> (default: '')
-    The unfinished jobs selected by this expression are cancelled.
   * ``package paths`` = <list of paths> (default: '')
     Specify paths to additional grid-control packages with user defined plugins that are outside of the base package directory
   * ``plugin paths`` = <list of paths> (default: '<current directory>')
     Specifies paths that are used to search for plugins
-  * ``reset`` = <job selector> (default: '')
-    The jobs selected by this expression are reset to the INIT state
   * ``variable markers`` = <list of values> (default: '@ __')
     Specifies how variables are marked
   * ``workdir`` = <path> (default: <workdir base>/work.<config file name>)
@@ -115,11 +111,81 @@ backend options
   * ``se output manager`` = <plugin[:name]> (default: 'SEStorageManager')
     Specify transfer manager plugin to transfer SE output files
 
+UserTask options
+----------------
+
+  * ``wall time`` = <duration hh[:mm[:ss]]>
+    Requested wall time also used for checking the proxy lifetime
+  * ``<datasource>`` = <list of [<nickname> : [<protocol> :]] <dataset specifier> > (default: '')
+    List of datasets to process (including optional nickname and dataset provider information)
+  * <datasource> manager = <plugin> (Default: ':MultiDatasetProvider:')
+    Specifiy compositor class to merge the different plugins given in ``<datasource>``
+  * ``<datasource> partition processor / partition processor`` = <list of plugins> (default: 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor')
+    Specify list of plugins that process partitions
+  * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
+    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
+  * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
+    Specify the interval to check for changes in the used datasets
+  * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
+    Specify the dataset splitter plugin to partition the dataset
+  * ``cpu time`` = <duration hh[:mm[:ss]]> (default: <wall time>)
+    Requested cpu time
+  * ``cpus`` = <integer> (default: 1)
+    Requested number of cpus per node
+  * ``datasource names`` = <list of values> (default: 'dataset')
+    Specify list of data sources that will be created for use in the parameter space definition
+  * ``depends`` = <list of values> (default: '')
+    List of environment setup scripts that the jobs depend on
+  * ``gzip output`` = <boolean> (default: True)
+    Toggle the compression of the job log files for stdout and stderr
+  * ``input files`` = <list of paths> (default: '')
+    List of files that should be transferred to the landing zone of the job on the worker node. Only for small files - send large files via SE!
+  * ``internal parameter factory`` = <plugin> (default: 'BasicParameterFactory')
+    Specify the parameter factory plugin that is used to generate the basic grid-control parameters
+  * ``job name generator`` = <plugin> (default: 'DefaultJobName')
+    Specify the job name plugin that generates the job name that is given to the backend
+  * ``landing zone space left`` = <integer> (default: 1)
+    Minimum amount of disk space (in MB) that the job has to leave in the landing zone directory while running
+  * ``landing zone space used`` = <integer> (default: 100)
+    Maximum amount of disk space (in MB) that the job is allowed to use in the landing zone directory while running
+  * ``memory`` = <integer> (default: unspecified (-1))
+    Requested memory in MB. Some batch farms have very low default memory limits in which case it is necessary to specify this option!
+  * ``node timeout`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
+    Cancel job after some time on worker node
+  * ``output files`` = <list of values> (default: '')
+    List of files that should be transferred to the job output directory on the submission machine. Only for small files - send large files via SE!
+  * ``parameter adapter`` = <plugin> (default: 'TrackedParameterAdapter')
+    Specify the parameter adapter plugin that translates parameter point to job number
+  * ``scratch space left`` = <integer> (default: 1)
+    Minimum amount of disk space (in MB) that the job has to leave in the scratch directory while running. If the landing zone itself is the scratch space, the scratch thresholds apply
+  * ``scratch space used`` = <integer> (default: 5000)
+    Maximum amount of disk space (in MB) that the job is allowed to use in the scratch directory while running. If the landing zone itself is the scratch space, the scratch thresholds apply
+  * ``se min size`` = <integer> (default: disabled (-1))
+    SE output files below this file size (in MB) trigger a job failure
+  * ``subst files`` = <list of values> (default: '')
+    List of files that will be subjected to variable substituion
+  * ``task date`` = <text> (default: current date: YYYY-MM-DD)
+    Persistent date when the task was started.
+  * ``task id`` = <text> (default: GCxxxxxxxxxxxx)
+    Persistent task identifier that is generated at the start of the task
+
 CMSSW options
 -------------
 
   * ``wall time`` = <duration hh[:mm[:ss]]>
     Requested wall time also used for checking the proxy lifetime
+  * ``<datasource>`` = <list of [<nickname> : [<protocol> :]] <dataset specifier> > (default: '')
+    List of datasets to process (including optional nickname and dataset provider information)
+  * <datasource> manager = <plugin> (Default: ':MultiDatasetProvider:')
+    Specifiy compositor class to merge the different plugins given in ``<datasource>``
+  * ``<datasource> partition processor / partition processor`` = <list of plugins> (default: 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor')
+    Specify list of plugins that process partitions
+  * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
+    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
+  * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
+    Specify the interval to check for changes in the used datasets
+  * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
+    Specify the dataset splitter plugin to partition the dataset
   * ``area files`` = <list of values> (default: '-.* -config bin lib python module */data *.xml *.sql *.db *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*')
     List of files that should be taken from the CMSSW project area for running the job
   * ``arguments`` = <text> (default: '')
@@ -130,6 +196,8 @@ CMSSW options
     Requested cpu time
   * ``cpus`` = <integer> (default: 1)
     Requested number of cpus per node
+  * ``datasource names`` = <list of values> (default: 'dataset')
+    Specify list of data sources that will be created for use in the parameter space definition
   * ``depends`` = <list of values> (default: '')
     List of environment setup scripts that the jobs depend on
   * ``events per job`` = <text> (default: '0')
@@ -194,6 +262,18 @@ CMSSW_Advanced options
 
   * ``wall time`` = <duration hh[:mm[:ss]]>
     Requested wall time also used for checking the proxy lifetime
+  * ``<datasource>`` = <list of [<nickname> : [<protocol> :]] <dataset specifier> > (default: '')
+    List of datasets to process (including optional nickname and dataset provider information)
+  * <datasource> manager = <plugin> (Default: ':MultiDatasetProvider:')
+    Specifiy compositor class to merge the different plugins given in ``<datasource>``
+  * ``<datasource> partition processor / partition processor`` = <list of plugins> (default: 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor')
+    Specify list of plugins that process partitions
+  * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
+    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
+  * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
+    Specify the interval to check for changes in the used datasets
+  * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
+    Specify the dataset splitter plugin to partition the dataset
   * ``area files`` = <list of values> (default: '-.* -config bin lib python module */data *.xml *.sql *.db *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*')
     List of files that should be taken from the CMSSW project area for running the job
   * ``arguments`` = <text> (default: '')
@@ -204,6 +284,8 @@ CMSSW_Advanced options
     Requested cpu time
   * ``cpus`` = <integer> (default: 1)
     Requested number of cpus per node
+  * ``datasource names`` = <list of values> (default: 'dataset')
+    Specify list of data sources that will be created for use in the parameter space definition
   * ``depends`` = <list of values> (default: '')
     List of environment setup scripts that the jobs depend on
   * ``events per job`` = <text> (default: '0')
@@ -274,28 +356,16 @@ CMSSW_Advanced options
 dataset options
 ---------------
 
-  * ``dataset`` = <list of [<nickname> : [<protocol> :]] <dataset specifier> > (default: '')
-    List of datasets to process (including optional nickname and dataset provider information)
-  * dataset manager = <plugin> (Default: ':MultiDatasetProvider:')
-    Specifiy compositor class to merge the different plugins given in ``dataset``
-  * ``dataset default query interval`` = <duration hh[:mm[:ss]]> (default: 00:01:00)
+  * ``<datasource> default query interval`` = <duration hh[:mm[:ss]]> (default: 00:01:00)
     Specify the default limit for the dataset query interval
-  * ``dataset processor`` = <list of plugins> (default: 'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' 'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor')
-    Specify list of plugins that process datasets before the partitioning
-  * dataset processor manager = <plugin> (Default: 'MultiDataProcessor')
-    Specifiy compositor class to merge the different plugins given in ``dataset processor``
-  * ``dataset provider`` = <text> (default: 'ListProvider')
-    Specify the name of the default dataset provider
-  * ``dataset refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
-    Specify the interval to check for changes in the used datasets
-  * ``dataset splitter`` = <plugin> (default: 'FileBoundarySplitter')
-    Specify the dataset splitter plugin to partition the dataset
-  * ``nickname source`` = <plugin> (default: 'SimpleNickNameProducer')
+  * ``<datasource> nickname source / nickname source`` = <plugin> (default: 'SimpleNickNameProducer')
     Specify nickname plugin that determines the nickname for datasets
-  * ``partition processor`` = <list of plugins> (default: 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor')
-    Specify list of plugins that process partitions
-  * partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
-    Specifiy compositor class to merge the different plugins given in ``partition processor``
+  * ``<datasource> processor`` = <list of plugins> (default: 'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor URLCountDataProcessor ' 'EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor LocationDataProcessor')
+    Specify list of plugins that process datasets before the partitioning
+  * <datasource> processor manager = <plugin> (Default: 'MultiDataProcessor')
+    Specifiy compositor class to merge the different plugins given in ``<datasource> processor``
+  * ``<datasource> provider`` = <text> (default: 'ListProvider')
+    Specify the name of the default dataset provider
   * ``resync jobs`` = <enum: append|preserve|fillgap|reorder> (default: append)
     Specify how resynced jobs should be handled
   * ``resync metadata`` = <list of values> (default: '')
@@ -321,15 +391,23 @@ TaskExecutableWrapper options
   * ``[<prefix>] send executable`` = <boolean> (default: True)
     Toggle to control if the specified executable should be send together with the job
 
+action options
+--------------
+
+  * ``delete`` = <job selector> (default: '')
+    The unfinished jobs selected by this expression are cancelled.
+  * ``reset`` = <job selector> (default: '')
+    The jobs selected by this expression are reset to the INIT state
+
 interactive options
 -------------------
 
   * ``<option name>`` = <boolean>
     Toggle to switch interactive questions on and off
+  * ``<datasource> partition resync / partition resync`` = <boolean> (default: False)
+    Toggle interactivity of dataset resyncs
   * ``delete jobs`` = <boolean> (default: True)
     Toggle interactivity of job deletion requests
-  * ``partition resync`` = <boolean> (default: False)
-    Toggle interactivity of dataset resyncs
   * ``reset jobs`` = <boolean> (default: True)
     Toggle interactivity of job reset requests
 
@@ -396,132 +474,132 @@ CheckJobsWithProcess options
 EmptyDataProcessor options
 --------------------------
 
-  * ``dataset remove empty blocks`` = <boolean> (default: True)
+  * ``<datasource> remove empty blocks`` = <boolean> (default: True)
     Toggle removal of empty blocks (without files) from the dataset
-  * ``dataset remove empty files`` = <boolean> (default: True)
+  * ``<datasource> remove empty files`` = <boolean> (default: True)
     Toggle removal of empty files (without entries) from the dataset
 
 EntriesCountDataProcessor options
 ---------------------------------
 
-  * ``dataset limit entries / dataset limit events`` = <integer> (default: -1)
+  * ``<datasource> limit entries / <datasource> limit events`` = <integer> (default: -1)
     Specify the number of events after which addition files in the dataset are discarded
 
 LocationDataProcessor options
 -----------------------------
 
-  * ``dataset location filter`` = <filter option> (default: '')
+  * ``<datasource> location filter`` = <filter option> (default: '')
     Specify dataset location filter. Dataset without locations have the filter whitelist applied
-  * ``dataset location filter matcher`` = <plugin> (Default: 'blackwhite')
+  * ``<datasource> location filter matcher`` = <plugin> (Default: 'blackwhite')
     Specifiy matcher plugin that is used to match filter expressions
-  * ``dataset location filter plugin`` = <plugin> (Default: 'strict')
+  * ``<datasource> location filter plugin`` = <plugin> (Default: 'strict')
     Specifiy matcher plugin that is used to match filter expressions
-  * ``dataset location filter order`` = <enum: source|matcher> (Default: source)
+  * ``<datasource> location filter order`` = <enum: source|matcher> (Default: source)
     Specifiy the order of the filtered list
 
 LumiDataProcessor options
 -------------------------
 
-  * ``lumi filter`` = <lookup specifier> (default: {})
+  * ``<datasource> lumi filter / lumi filter`` = <lookup specifier>
     Specify lumi filter for the dataset (as nickname dependent dictionary)
-  * ``lumi filter matcher`` = <plugin> (Default: start)
+  * ``<datasource> lumi filter matcher`` = <plugin> (Default: start)
     Specifiy matcher plugin that is used to match the lookup expressions
-  * ``lumi filter strictness`` = <enum: strict|weak> (default: strict)
+  * ``<datasource> lumi filter strictness / lumi filter strictness`` = <enum: strict|weak> (default: strict)
     Specify if the lumi filter requires the run and lumi information (strict) or just the run information (weak)
-  * ``lumi keep`` = <enum: RunLumi|Run|none> (default: <Run/none depending on active/inactive lumi filter>)
+  * ``<datasource> lumi keep / lumi keep`` = <enum: RunLumi|Run|none> (default: <Run/none depending on active/inactive lumi filter>)
     Specify which lumi metadata to retain
 
 MultiDataProcessor options
 --------------------------
 
-  * ``dataset processor prune`` = <boolean> (default: True)
+  * ``<datasource> processor prune`` = <boolean> (default: True)
     Toggle the removal of unused dataset processors from the dataset processing pipeline
 
 PartitionEstimator options
 --------------------------
 
-  * ``target partitions`` = <integer> (default: -1)
+  * ``<datasource> target partitions / target partitions`` = <integer> (default: -1)
     Specify the number of partitions the splitter should aim for
-  * ``target partitions per nickname`` = <integer> (default: -1)
+  * ``<datasource> target partitions per nickname / target partitions per nickname`` = <integer> (default: -1)
     Specify the number of partitions per nickname the splitter should aim for
 
 SortingDataProcessor options
 ----------------------------
 
-  * ``dataset block sort`` = <boolean> (default: False)
+  * ``<datasource> block sort`` = <boolean> (default: False)
     Toggle sorting of dataset blocks
-  * ``dataset files sort`` = <boolean> (default: False)
+  * ``<datasource> files sort`` = <boolean> (default: False)
     Toggle sorting of dataset files
-  * ``dataset location sort`` = <boolean> (default: False)
+  * ``<datasource> location sort`` = <boolean> (default: False)
     Toggle sorting of dataset locations
-  * ``dataset sort`` = <boolean> (default: False)
+  * ``<datasource> sort`` = <boolean> (default: False)
     Toggle sorting of datasets
 
 URLCountDataProcessor options
 -----------------------------
 
-  * ``dataset limit urls / dataset limit files`` = <integer> (default: -1)
+  * ``<datasource> limit urls / <datasource> limit files`` = <integer> (default: -1)
     Specify the number of files after which addition files in the dataset are discarded
 
 URLDataProcessor options
 ------------------------
 
-  * ``dataset ignore urls / dataset ignore files`` = <filter option> (default: '')
+  * ``<datasource> ignore urls / <datasource> ignore files`` = <filter option> (default: '')
     Specify list of url / data sources to remove from the dataset
-  * ``dataset ignore urls matcher`` = <plugin> (Default: 'blackwhite')
+  * ``<datasource> ignore urls matcher`` = <plugin> (Default: 'blackwhite')
     Specifiy matcher plugin that is used to match filter expressions
-  * ``dataset ignore urls plugin`` = <plugin> (Default: 'weak')
+  * ``<datasource> ignore urls plugin`` = <plugin> (Default: 'weak')
     Specifiy matcher plugin that is used to match filter expressions
-  * ``dataset ignore urls order`` = <enum: source|matcher> (Default: source)
+  * ``<datasource> ignore urls order`` = <enum: source|matcher> (Default: source)
     Specifiy the order of the filtered list
 
 EntriesConsistencyDataProcessor options
 ---------------------------------------
 
-  * ``dataset check entry consistency`` = <enum: warn|abort|ignore> (default: abort)
+  * ``<datasource> check entry consistency`` = <enum: warn|abort|ignore> (default: abort)
     Toggle check for consistency between the number of events given in the block and and the files
 
 NickNameConsistencyProcessor options
 ------------------------------------
 
-  * ``dataset check nickname collision`` = <enum: warn|abort|ignore> (default: abort)
+  * ``<datasource> check nickname collision`` = <enum: warn|abort|ignore> (default: abort)
     Toggle nickname collision checks between datasets
-  * ``dataset check nickname consistency`` = <enum: warn|abort|ignore> (default: abort)
+  * ``<datasource> check nickname consistency`` = <enum: warn|abort|ignore> (default: abort)
     Toggle check for consistency of nicknames between blocks in the same dataset
 
 UniqueDataProcessor options
 ---------------------------
 
-  * ``dataset check unique block`` = <enum: warn|abort|skip|ignore|record> (default: abort)
+  * ``<datasource> check unique block`` = <enum: warn|abort|skip|ignore|record> (default: abort)
     Specify how to react to duplicated dataset and blockname combinations
-  * ``dataset check unique url`` = <enum: warn|abort|skip|ignore|record> (default: abort)
+  * ``<datasource> check unique url`` = <enum: warn|abort|skip|ignore|record> (default: abort)
     Specify how to react to duplicated urls in the dataset
 
 InlineNickNameProducer options
 ------------------------------
 
-  * ``nickname expr`` = <text> (default: 'oldnick')
+  * ``<datasource> nickname expr / nickname expr`` = <text> (default: 'current_nickname')
     Specify a python expression (using the variables dataset, block and oldnick) to generate the dataset nickname for the block
 
 SimpleNickNameProducer options
 ------------------------------
 
-  * ``nickname full name`` = <boolean> (default: True)
+  * ``<datasource> nickname full name / nickname full name`` = <boolean> (default: True)
     Toggle if the nickname should be constructed from the complete dataset name or from the first part
 
 CMSBaseProvider options
 -----------------------
 
+  * ``<datasource> lumi filter / lumi filter`` = <lookup specifier>
+    Specify lumi filter for the dataset (as nickname dependent dictionary)
+  * ``<datasource> lumi filter matcher`` = <plugin> (Default: start)
+    Specifiy matcher plugin that is used to match the lookup expressions
+  * ``<datasource> lumi metadata / lumi metadata`` = <boolean>
+    Toggle the retrieval of lumi metadata
   * ``dbs instance`` = <text> (default: 'prod/global')
     Specify the default dbs instance (by url or instance identifier) to use for dataset queries
   * ``location format`` = <enum: hostname|siteDB|both> (default: hostname)
     Specify the format of the DBS location information
-  * ``lumi filter`` = <lookup specifier> (default: {})
-    Specify lumi filter for the dataset (as nickname dependent dictionary)
-  * ``lumi filter matcher`` = <plugin> (Default: start)
-    Specifiy matcher plugin that is used to match the lookup expressions
-  * ``lumi metadata`` = <boolean> (default: <True/False for active/inactive lumi filter>)
-    Toggle the retrieval of lumi metadata
   * ``only complete sites`` = <boolean> (default: True)
     Toggle the inclusion of incomplete sites in the dataset location information
   * ``only valid`` = <boolean> (default: True)
@@ -556,18 +634,18 @@ ConfigDataProvider options
 DASProvider options
 -------------------
 
+  * ``<datasource> lumi filter / lumi filter`` = <lookup specifier>
+    Specify lumi filter for the dataset (as nickname dependent dictionary)
+  * ``<datasource> lumi filter matcher`` = <plugin> (Default: start)
+    Specifiy matcher plugin that is used to match the lookup expressions
+  * ``<datasource> lumi metadata / lumi metadata`` = <boolean>
+    Toggle the retrieval of lumi metadata
   * ``das instance`` = <text> (default: 'https://cmsweb.cern.ch/das/cache')
     Specify url to the DAS instance that is used to query the datasets
   * ``dbs instance`` = <text> (default: 'prod/global')
     Specify the default dbs instance (by url or instance identifier) to use for dataset queries
   * ``location format`` = <enum: hostname|siteDB|both> (default: hostname)
     Specify the format of the DBS location information
-  * ``lumi filter`` = <lookup specifier> (default: {})
-    Specify lumi filter for the dataset (as nickname dependent dictionary)
-  * ``lumi filter matcher`` = <plugin> (Default: start)
-    Specifiy matcher plugin that is used to match the lookup expressions
-  * ``lumi metadata`` = <boolean> (default: <True/False for active/inactive lumi filter>)
-    Toggle the retrieval of lumi metadata
   * ``only complete sites`` = <boolean> (default: True)
     Toggle the inclusion of incomplete sites in the dataset location information
   * ``only valid`` = <boolean> (default: True)
@@ -765,40 +843,6 @@ BlackWhiteMatcher options
   * ``<prefix> mode`` = <plugin> (default: 'start')
     Specify the matcher plugin that is used to match the subexpressions of the filter
 
-JobManager options
-------------------
-
-  * ``abort report`` = <text> (default: 'LocationReport')
-    Specify report plugin to display in case of job cancellations
-  * ``chunks check`` = <integer> (default: 100)
-    Specify maximal number of jobs to check in each job cycle
-  * ``chunks enabled`` = <boolean> (default: True)
-    Toggle to control if only a chunk of jobs are processed each job cycle
-  * ``chunks retrieve`` = <integer> (default: 100)
-    Specify maximal number of jobs to retrieve in each job cycle
-  * ``chunks submit`` = <integer> (default: 100)
-    Specify maximal number of jobs to submit in each job cycle
-  * ``in flight`` = <integer> (default: no limit (-1))
-    Maximum number of concurrently submitted jobs
-  * ``in queue`` = <integer> (default: no limit (-1))
-    Maximum number of queued jobs
-  * ``job database`` = <plugin> (default: 'TextFileJobDB')
-    Specify job database plugin that is used to store job information
-  * ``jobs`` = <integer> (default: no limit (-1))
-    Maximum number of jobs (truncated to task maximum)
-  * ``max retry`` = <integer> (default: no limit (-1))
-    Number of resubmission attempts for failed jobs
-  * ``output processor`` = <plugin> (default: 'SandboxProcessor')
-    Specify plugin that processes the output sandbox of successful jobs
-  * ``queue timeout`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
-    Resubmit jobs after staying some time in initial state
-  * ``selected`` = <text> (default: '')
-    Apply general job selector
-  * ``shuffle`` = <boolean> (default: False)
-    Submit jobs in random order
-  * ``unknown timeout`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
-    Cancel jobs without status information after staying in this state for the specified time
-
 GridAccessToken options
 -----------------------
 
@@ -934,84 +978,22 @@ ScriptMonitoring options
 LocalSBStorageManager options
 -----------------------------
 
-  * ``<storage channel class> path`` = <path> (default: <workdir>/sandbox)
+  * ``<storage type> path`` = <path> (default: <workdir>/sandbox)
     Specify the default transport URL that is used to transfer files over this type of storage channel
 
 SEStorageManager options
 ------------------------
 
-  * ``<storage channel class> path`` = <list of values> (default: '')
+  * ``<storage channel> path / <storage type> path`` = <list of values>
     Specify the default transport URL(s) that are used to transfer files over this type of storage channel
   * ``<storage channel> files`` = <list of values> (default: '')
     Specify the files that are transferred over this storage channel
   * ``<storage channel> force`` = <boolean> (default: True)
     Specify the files that are transferred over this storage channel
-  * ``<storage channel> path`` = <list of values> (default: given by '<storage channel class> path')
-    Specify the transport URLs that are used to transfer files over this storage channel
   * ``<storage channel> pattern`` = <text> (default: '@X@')
     Specify the pattern that is used to translate local to remote file names
   * ``<storage channel> timeout`` = <duration hh[:mm[:ss]]> (default: 02:00:00)
     Specify the transfer timeout for files over this storage channel
-
-SCRAMTask options
------------------
-
-  * ``wall time`` = <duration hh[:mm[:ss]]>
-    Requested wall time also used for checking the proxy lifetime
-  * ``area files`` = <list of values> (default: '-.* -config bin lib python module */data *.xml *.sql *.db *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*')
-    List of files that should be taken from the CMSSW project area for running the job
-  * ``cpu time`` = <duration hh[:mm[:ss]]> (default: <wall time>)
-    Requested cpu time
-  * ``cpus`` = <integer> (default: 1)
-    Requested number of cpus per node
-  * ``depends`` = <list of values> (default: '')
-    List of environment setup scripts that the jobs depend on
-  * ``gzip output`` = <boolean> (default: True)
-    Toggle the compression of the job log files for stdout and stderr
-  * ``input files`` = <list of paths> (default: '')
-    List of files that should be transferred to the landing zone of the job on the worker node. Only for small files - send large files via SE!
-  * ``internal parameter factory`` = <plugin> (default: 'BasicParameterFactory')
-    Specify the parameter factory plugin that is used to generate the basic grid-control parameters
-  * ``job name generator`` = <plugin> (default: 'DefaultJobName')
-    Specify the job name plugin that generates the job name that is given to the backend
-  * ``landing zone space left`` = <integer> (default: 1)
-    Minimum amount of disk space (in MB) that the job has to leave in the landing zone directory while running
-  * ``landing zone space used`` = <integer> (default: 100)
-    Maximum amount of disk space (in MB) that the job is allowed to use in the landing zone directory while running
-  * ``memory`` = <integer> (default: unspecified (-1))
-    Requested memory in MB. Some batch farms have very low default memory limits in which case it is necessary to specify this option!
-  * ``node timeout`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
-    Cancel job after some time on worker node
-  * ``output files`` = <list of values> (default: '')
-    List of files that should be transferred to the job output directory on the submission machine. Only for small files - send large files via SE!
-  * ``parameter adapter`` = <plugin> (default: 'TrackedParameterAdapter')
-    Specify the parameter adapter plugin that translates parameter point to job number
-  * ``project area`` = <path> (default: <depends on ``scram arch`` and ``scram project``>)
-    Specify location of the CMSSW project area that should be send with the job. Instead of the CMSSW project area, it is possible to specify ``scram arch`` and ``scram project`` to use a fresh CMSSW project.
-  * ``scram arch`` = <text> (default: <depends on ``project area``>)
-    Specify scram architecture that should be used by the job (eg. 'slc7_amd64_gcc777'). When using an existing CMSSW project area with ``project area``, this option uses the default value taken from the project area.
-  * ``scram arch requirements`` = <boolean> (default: True)
-    Toggle the inclusion of the scram architecture in the job requirements
-  * ``scram project`` = <list of values> (default: '')
-    Specify scram project that should be used by the job (eg. 'CMSSW CMSSW_9_9_9')
-  * ``scram project requirements`` = <boolean> (default: False)
-    Toggle the inclusion of the scram project name in the job requirements
-  * ``scram project version requirements`` = <boolean> (default: False)
-    Toggle the inclusion of the scram project version in the job requirements
-  * ``scram version`` = <text> (default: 'scramv1')
-    Specify scram version that should be used by the job.
-  * ``scratch space left`` = <integer> (default: 1)
-    Minimum amount of disk space (in MB) that the job has to leave in the scratch directory while running. If the landing zone itself is the scratch space, the scratch thresholds apply
-  * ``scratch space used`` = <integer> (default: 5000)
-    Maximum amount of disk space (in MB) that the job is allowed to use in the scratch directory while running. If the landing zone itself is the scratch space, the scratch thresholds apply
-  * ``se min size`` = <integer> (default: disabled (-1))
-    SE output files below this file size (in MB) trigger a job failure
-  * ``subst files`` = <list of values> (default: '')
-    List of files that will be subjected to variable substituion
-  * ``task date`` = <text> (default: current date: YYYY-MM-DD)
-    Persistent date when the task was started.
-  * ``task id`` = <text> (default: GCxxxxxxxxxxxx)
-    Persistent task identifier that is generated at the start of the task
 
 ROOTTask options
 ----------------
@@ -1020,10 +1002,24 @@ ROOTTask options
     Path to the executable
   * ``wall time`` = <duration hh[:mm[:ss]]>
     Requested wall time also used for checking the proxy lifetime
+  * ``<datasource>`` = <list of [<nickname> : [<protocol> :]] <dataset specifier> > (default: '')
+    List of datasets to process (including optional nickname and dataset provider information)
+  * <datasource> manager = <plugin> (Default: ':MultiDatasetProvider:')
+    Specifiy compositor class to merge the different plugins given in ``<datasource>``
+  * ``<datasource> partition processor / partition processor`` = <list of plugins> (default: 'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor BasicPartitionProcessor')
+    Specify list of plugins that process partitions
+  * <datasource> partition processor manager = <plugin> (Default: 'MultiPartitionProcessor')
+    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
+  * ``<datasource> refresh`` = <duration hh[:mm[:ss]]> (default: disabled (-1))
+    Specify the interval to check for changes in the used datasets
+  * ``<datasource> splitter`` = <plugin> (default: 'FileBoundarySplitter')
+    Specify the dataset splitter plugin to partition the dataset
   * ``cpu time`` = <duration hh[:mm[:ss]]> (default: <wall time>)
     Requested cpu time
   * ``cpus`` = <integer> (default: 1)
     Requested number of cpus per node
+  * ``datasource names`` = <list of values> (default: 'dataset')
+    Specify list of data sources that will be created for use in the parameter space definition
   * ``depends`` = <list of values> (default: '')
     List of environment setup scripts that the jobs depend on
   * ``gzip output`` = <boolean> (default: True)
@@ -1262,6 +1258,8 @@ GridEngine options
     Specifiy matcher plugin that is used to match the lookup expressions
   * ``submit options`` = <text> (default: '')
     Specify additional job submission options
+  * ``user`` = <text> (default: ${LOGNAME})
+    Specify batch system user name
   * ``wait idle`` = <integer> (default: 60)
     Wait for the specified duration if the job cycle was idle
   * ``wait work`` = <integer> (default: 10)
@@ -1319,79 +1317,85 @@ BasicParameterFactory options
   * ``translate requirements`` = <boolean> (default: True)
     Toggle the translation of the parameters WALLTIME, CPUTIME and MEMORY into job requirements
 
+BasicPartitionProcessor options
+-------------------------------
+
+  * ``<datasource> partition variable file names / partition variable file names`` = <text> (default: 'FILE_NAMES')
+    Specify variable name containing the list of file names
+  * ``<datasource> partition variable max events / partition variable max events`` = <text> (default: 'MAX_EVENTS')
+    Specify variable name containing the number of events to process
+  * ``<datasource> partition variable prefix / partition variable prefix`` = <text> (default: 'DATASET')
+    Specify prefix for variables containing dataset information
+  * ``<datasource> partition variable skip events / partition variable skip events`` = <text> (default: 'SKIP_EVENTS')
+    Specify variable name containing the number of events to skip
+
 LFNPartitionProcessor options
 -----------------------------
 
-  * ``partition lfn modifier`` = <text> (default: '')
+  * ``<datasource> partition lfn modifier / partition lfn modifier`` = <text> (default: '')
     Specify a LFN prefix or prefix shortcut ('/': reduce to LFN)
-  * ``partition lfn modifier dict`` = <dictionary> (default: {'<xrootd>': 'root://cms-xrd-global.cern.ch/', '<xrootd:eu>': 'root://xrootd-cms.infn.it/', '<xrootd:us>': 'root://cmsxrootd.fnal.gov/'})
+  * ``<datasource> partition lfn modifier dict / partition lfn modifier dict`` = <dictionary> (default: {'<xrootd>': 'root://cms-xrd-global.cern.ch/', '<xrootd:eu>': 'root://xrootd-cms.infn.it/', '<xrootd:us>': 'root://cmsxrootd.fnal.gov/'})
     Specify a dictionary with lfn modifier shortcuts
 
 LocationPartitionProcessor options
 ----------------------------------
 
-  * ``partition location check`` = <boolean> (default: True)
-    Toggle the deactivation of partitions without storage locations
-  * ``partition location filter`` = <filter option> (default: '')
+  * ``<datasource> partition location filter / partition location filter`` = <filter option>
     Specify filter for dataset locations
-  * ``partition location filter matcher`` = <plugin> (Default: 'blackwhite')
+  * ``<datasource> partition location filter matcher`` = <plugin> (Default: 'blackwhite')
     Specifiy matcher plugin that is used to match filter expressions
-  * ``partition location filter plugin`` = <plugin> (Default: 'weak')
+  * ``<datasource> partition location filter plugin`` = <plugin> (Default: 'weak')
     Specifiy matcher plugin that is used to match filter expressions
-  * ``partition location filter order`` = <enum: source|matcher> (Default: source)
+  * ``<datasource> partition location filter order`` = <enum: source|matcher> (Default: source)
     Specifiy the order of the filtered list
-  * ``partition location preference`` = <list of values> (default: '')
+  * ``<datasource> partition location check / partition location check`` = <boolean> (default: True)
+    Toggle the deactivation of partitions without storage locations
+  * ``<datasource> partition location preference / partition location preference`` = <list of values> (default: '')
     Specify dataset location preferences
-  * ``partition location requirement`` = <boolean> (default: True)
+  * ``<datasource> partition location requirement / partition location requirement`` = <boolean> (default: True)
     Add dataset location to job requirements
 
 LumiPartitionProcessor options
 ------------------------------
 
-  * ``lumi filter`` = <lookup specifier> (default: {})
+  * ``<datasource> lumi filter / lumi filter`` = <lookup specifier>
     Specify lumi filter for the dataset (as nickname dependent dictionary)
-  * ``lumi filter matcher`` = <plugin> (Default: start)
+  * ``<datasource> lumi filter matcher`` = <plugin> (Default: start)
     Specifiy matcher plugin that is used to match the lookup expressions
 
 MetaPartitionProcessor options
 ------------------------------
 
-  * ``partition metadata`` = <list of values> (default: '')
+  * ``<datasource> partition metadata / partition metadata`` = <list of values> (default: '')
     Specify list of dataset metadata to forward to the job environment
 
 MultiPartitionProcessor options
 -------------------------------
 
-  * ``partition processor prune`` = <boolean> (default: True)
+  * ``<datasource> partition processor prune / partition processor prune`` = <boolean> (default: True)
     Toggle the removal of unused partition processors from the partition processing pipeline
 
 RequirementsPartitionProcessor options
 --------------------------------------
 
-  * ``partition cputime factor`` = <float> (default: -1.0)
+  * ``<datasource> partition cputime factor / partition cputime factor`` = <float> (default: 0.0)
     Specify how the requested cpu time scales with the number of entries in the partition
-  * ``partition cputime offset`` = <float> (default: 0.0)
+  * ``<datasource> partition cputime offset / partition cputime offset`` = <float> (default: 0.0)
     Specify the offset of the requested cpu time
-  * ``partition memory factor`` = <float> (default: -1.0)
+  * ``<datasource> partition memory factor / partition memory factor`` = <float> (default: 0.0)
     Specify how the requested memory scales with the number of entries in the partition
-  * ``partition memory offset`` = <float> (default: 0.0)
+  * ``<datasource> partition memory offset / partition memory offset`` = <float> (default: 0.0)
     Specify the offset of the requested memory
-  * ``partition walltime factor`` = <float> (default: -1.0)
+  * ``<datasource> partition walltime factor / partition walltime factor`` = <float> (default: 0.0)
     Specify how the requested wall time scales with the number of entries in the partition
-  * ``partition walltime offset`` = <float> (default: 0.0)
+  * ``<datasource> partition walltime offset / partition walltime offset`` = <float> (default: 0.0)
     Specify the offset of the requested wall time
 
 TFCPartitionProcessor options
 -----------------------------
 
-  * ``partition tfc`` = <lookup specifier> (default: {})
+  * ``<datasource> partition tfc / partition tfc`` = <lookup specifier> (default: {})
     Specify a dataset location dependent trivial file catalogue with file name prefixes
-  * ``partition tfc matcher`` = <plugin> (Default: start)
+  * ``<datasource> partition tfc matcher`` = <plugin> (Default: start)
     Specifiy matcher plugin that is used to match the lookup expressions
-
-GridEngine_CheckJobsProcessCreator options
-------------------------------------------
-
-  * ``user`` = <text> (default: ${LOGNAME})
-    Specify batch system user name
 

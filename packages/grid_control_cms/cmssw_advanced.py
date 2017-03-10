@@ -12,14 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, logging
+import os
 from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider
 from grid_control.utils.parsing import strDictLong
 from grid_control_cms.cmssw import CMSSW
 from grid_control_cms.lumi_tools import formatLumi, parseLumiFilter, strLumi
-from python_compat import ichain, imap, lmap, set, sorted
+from python_compat import ichain, imap, lfilter, lmap, set, sorted
 
 def formatLumiNice(lumis):
 	lumi_filter_str = formatLumi(lumis)
@@ -29,7 +29,7 @@ def formatLumiNice(lumis):
 
 
 class CMSSW_Advanced(CMSSW):
-	configSections = CMSSW.configSections + ['CMSSW_Advanced']
+	config_section_list = CMSSW.config_section_list + ['CMSSW_Advanced']
 
 	def __init__(self, config, name):
 		self._name = name # needed for changeView calls before the constructor
@@ -71,16 +71,13 @@ class CMSSW_Advanced(CMSSW):
 			nickNames = set()
 			for block in DataProvider.loadFromFile(dsPath).getBlocks(show_stats = False):
 				nickNames.add(block[DataProvider.Nickname])
-			log = logging.getLogger('user')
-			log.info('Mapping between nickname and other settings:')
+			self._log.info('Mapping between nickname and other settings:')
 			report = []
-			(ps_basic, ps_nested) = self._pfactory.getLookupSources()
-			if ps_nested:
-				log.info('This list doesn\'t show "nickname constants" with multiple values!')
+			ps_lookup = lfilter(lambda ps: 'DATASETNICK' in ps.get_parameter_deps(), self.source.get_used_psrc_list())
 			for nick in sorted(nickNames):
 				tmp = {'DATASETNICK': nick}
-				for src in ps_basic:
-					src.fillParameterInfo(None, tmp)
+				for src in ps_lookup:
+					src.fill_parameter_content(None, tmp)
 				tmp[1] = str.join(', ', imap(os.path.basename, self._nmCfg.lookup(nick, '', is_selector = False)))
 				tmp[2] = formatLumiNice(self._nmLumi.lookup(nick, '', is_selector = False))
 				report.append(tmp)

@@ -35,7 +35,7 @@ class Options(object):
 
 		config_dict = {}
 		for option in self._dest:
-			if getattr(opts, option) is not None:
+			if (getattr(opts, option) is not None) and not option.startswith('_flag_set'):
 				config_dict[self._get_normed(option, ' ')] = str(getattr(opts, option))
 		# store positional arguments in config dict (using supplied arg_keys)
 		for arg_idx, arg_key in enumerate(arg_keys or []):

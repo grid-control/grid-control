@@ -31,42 +31,41 @@ triggerDataResync = triggerResync(['datasets', 'parameters'])
 
 # Get output directories from external config file
 class OutputDirsFromConfig(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
 		ext_config_fn = config.getPath('source config', onChange = triggerDataResync)
 		ext_config = create_config(ext_config_fn, useDefaultFiles = True).changeView(setSections = ['global'])
-		self._extWorkDir = ext_config.getWorkPath()
+		self._ext_work_dir = ext_config.getWorkPath()
 		logging.getLogger().disabled = True
-		self._extWorkflow = ext_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow',
-			pargs = ('task',))
+		self._ext_workflow = ext_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow', pargs = ('task',))
 		logging.getLogger().disabled = False
-		self._extTask = self._extWorkflow.task
+		self._ext_task = self._ext_workflow.task
 		selector = config.get('source job selector', '', onChange = triggerDataResync)
 		ext_job_db = ext_config.getPlugin('job database', 'TextFileJobDB', cls = 'JobDB',
 			pkwargs = {'jobSelector': lambda jobNum, jobObj: jobObj.state == Job.SUCCESS}, onChange = None)
-		self._selected = sorted(ext_job_db.getJobs(JobSelector.create(selector, task = self._extTask)))
+		self._selected = sorted(ext_job_db.getJobs(JobSelector.create(selector, task = self._ext_task)))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		activity = Activity('Reading job logs')
 		for jobNum in self._selected:
 			activity.update('Reading job logs - [%d / %d]' % (jobNum, self._selected[-1]))
 			metadata['GC_JOBNUM'] = jobNum
-			objStore.update({'GC_TASK': self._extTask, 'GC_WORKDIR': self._extWorkDir})
-			yield (os.path.join(self._extWorkDir, 'output', 'job_%d' % jobNum), metadata, events, seList, objStore)
+			objStore.update({'GC_TASK': self._ext_task, 'GC_WORKDIR': self._ext_work_dir})
+			yield (os.path.join(self._ext_work_dir, 'output', 'job_%d' % jobNum), metadata, events, seList, objStore)
 		activity.finish()
 
 
 class OutputDirsFromWork(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
-		self._extWorkDir = config.getPath('source directory', onChange = triggerDataResync)
-		self._extOutputDir = os.path.join(self._extWorkDir, 'output')
-		if not os.path.isdir(self._extOutputDir):
-			raise DatasetError('Unable to find task output directory %s' % repr(self._extOutputDir))
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
+		self._ext_work_dir = config.getPath('source directory', onChange = triggerDataResync)
+		self._ext_output_dir = os.path.join(self._ext_work_dir, 'output')
+		if not os.path.isdir(self._ext_output_dir):
+			raise DatasetError('Unable to find task output directory %s' % repr(self._ext_output_dir))
 		self._selector = JobSelector.create(config.get('source job selector', '', onChange = triggerDataResync))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		allDirs = lfilter(lambda fn: fn.startswith('job_'), os.listdir(self._extOutputDir))
+		allDirs = lfilter(lambda fn: fn.startswith('job_'), os.listdir(self._ext_output_dir))
 		activity = Activity('Reading job logs')
 		for idx, dirName in enumerate(allDirs):
 			activity.update('Reading job logs - [%d / %d]' % (idx, len(allDirs)))
@@ -74,23 +73,23 @@ class OutputDirsFromWork(InfoScanner):
 				metadata['GC_JOBNUM'] = int(dirName.split('_')[1])
 			except Exception:
 				continue
-			objStore['GC_WORKDIR'] = self._extWorkDir
+			objStore['GC_WORKDIR'] = self._ext_work_dir
 			if self._selector and not self._selector(metadata['GC_JOBNUM'], None):
 				continue
-			yield (os.path.join(self._extOutputDir, dirName), metadata, events, seList, objStore)
+			yield (os.path.join(self._ext_output_dir, dirName), metadata, events, seList, objStore)
 		activity.finish()
 
 
 class MetadataFromTask(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
 		ignoreDef = lmap(lambda x: 'SEED_%d' % x, irange(10)) + ['DOBREAK', 'FILE_NAMES',
 			'GC_DEPFILES', 'GC_JOBID', 'GC_JOBNUM', 'GC_JOB_ID', 'GC_PARAM', 'GC_RUNTIME', 'GC_VERSION',
 			'JOB_RANDOM', 'JOBID', 'LANDINGZONE_LL', 'LANDINGZONE_UL', 'MY_JOB', 'MY_JOBID', 'MY_RUNTIME',
 			'SB_INPUT_FILES', 'SB_OUTPUT_FILES', 'SCRATCH_LL', 'SCRATCH_UL', 'SEEDS',
 			'SE_INPUT_FILES', 'SE_INPUT_PATH', 'SE_INPUT_PATTERN', 'SE_MINFILESIZE',
 			'SE_OUTPUT_FILES', 'SE_OUTPUT_PATH', 'SE_OUTPUT_PATTERN', 'SUBST_FILES']
-		self._ignoreVars = config.getList('ignore task vars', ignoreDef, onChange = triggerDataResync)
+		self._ignore_vars = config.getList('ignore task vars', ignoreDef, onChange = triggerDataResync)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if 'GC_TASK' in objStore:
@@ -99,13 +98,13 @@ class MetadataFromTask(InfoScanner):
 				tmp.update(objStore['GC_TASK'].getJobConfig(metadata['GC_JOBNUM']))
 			for (newKey, oldKey) in objStore['GC_TASK'].getVarMapping().items():
 				tmp[newKey] = tmp.get(oldKey)
-			metadata.update(utils.filterDict(tmp, kF = lambda k: k not in self._ignoreVars))
+			metadata.update(utils.filterDict(tmp, kF = lambda k: k not in self._ignore_vars))
 		yield (path, metadata, events, seList, objStore)
 
 
 class FilesFromLS(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
 		self._path = config.get('source directory', '.', onChange = triggerDataResync)
 		self._recurse = config.getBool('source recurse', False, onChange = triggerDataResync)
 		if ('://' in self._path) and self._recurse:
@@ -169,10 +168,10 @@ class FilesFromJobInfo(InfoScanner):
 
 
 class FilesFromDataProvider(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
 		dsPath = config.get('source dataset path', onChange = triggerDataResync)
-		self._source = DataProvider.createInstance('ListProvider', config, dsPath)
+		self._source = DataProvider.create_instance('ListProvider', config, 'source dataset', dsPath)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		for block in self._source.getBlocks(show_stats = False):
@@ -183,8 +182,8 @@ class FilesFromDataProvider(InfoScanner):
 
 
 class MatchOnFilename(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
 		self._match = config.getMatcher('filename filter', '*.root', defaultMatcher = 'shell', onChange = triggerDataResync)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -193,8 +192,8 @@ class MatchOnFilename(InfoScanner):
 
 
 class AddFilePrefix(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
 		self._prefix = config.get('filename prefix', '', onChange = triggerDataResync)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
@@ -202,10 +201,10 @@ class AddFilePrefix(InfoScanner):
 
 
 class MatchDelimeter(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
 		matchDelim = config.get('delimeter match', '', onChange = triggerDataResync)
-		self._matchDelim = matchDelim.split(':')
+		self._match_delim = matchDelim.split(':')
 
 		ds_key = config.get('delimeter dataset key', '', onChange = triggerDataResync)
 		ds_mod = config.get('delimeter dataset modifier', '', onChange = triggerDataResync)
@@ -238,74 +237,74 @@ class MatchDelimeter(InfoScanner):
 				raise DatasetError('Unable to modifiy %s: %r' % (key, value))
 
 	def getEntries(self, path, metadata, events, seList, objStore):
-		if (len(self._matchDelim) != 2) or os.path.basename(path).count(self._matchDelim[0]) == int(self._matchDelim[1]):
+		if (len(self._match_delim) != 2) or os.path.basename(path).count(self._match_delim[0]) == int(self._match_delim[1]):
 			self._process('DELIMETER_DS', self._ds, path, metadata)
 			self._process('DELIMETER_B', self._b, path, metadata)
 			yield (path, metadata, events, seList, objStore)
 
 
 class ParentLookup(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
-		self._source = config.get('parent source', '', onChange = triggerDataResync)
-		self._parentKeys = config.getList('parent keys', [], onChange = triggerDataResync)
-		self._looseMatch = config.getInt('parent match level', 1, onChange = triggerDataResync)
-		self._merge = config.getBool('merge parents', False, onChange = triggerDataResync)
-		self._lfnMapCache = {}
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
+		self._parent_source = config.get('parent source', '', onChange = triggerDataResync)
+		self._parent_keys = config.getList('parent keys', [], onChange = triggerDataResync)
+		self._parent_match_level = config.getInt('parent match level', 1, onChange = triggerDataResync)
+		self._parent_merge = config.getBool('merge parents', False, onChange = triggerDataResync)
+		self._parent_lfn_map_cache = {}
 		self._empty_config = create_config()
-		self._readParents(config, self._source)
+		self._read_parents(config, self._parent_source)
 
 	def getGuards(self):
-		return ([], utils.QM(self._merge, [], ['PARENT_PATH']))
+		return ([], utils.QM(self._parent_merge, [], ['PARENT_PATH']))
 
-	def _lfnTrans(self, lfn):
-		if lfn and self._looseMatch: # return looseMatch path elements in reverse order
+	def _translate_lfn(self, lfn):
+		if lfn and self._parent_match_level: # return looseMatch path elements in reverse order
 			tmp = lfn.split('/') # /store/local/data/file.root -> file.root (~ML1) | file.root/data/local (~ML3)
 			tmp.reverse()
-			return str.join('/', tmp[:self._looseMatch])
+			return str.join('/', tmp[:self._parent_match_level])
 		return lfn
 
-	def _readParents(self, config, source):
+	def _read_parents(self, config, source):
 		# read parent source and fill lfnMap with parent_lfn_refs -> parent dataset name mapping
-		if source and (source not in self._lfnMapCache):
+		if source and (source not in self._parent_lfn_map_cache):
 			block_iter = DataProvider.getBlocksFromExpr(config, source)
 			for (dsName, fl) in imap(lambda b: (b[DataProvider.Dataset], b[DataProvider.FileList]), block_iter):
-				self._lfnMapCache.setdefault(source, {}).update(dict(imap(lambda fi: (self._lfnTrans(fi[DataProvider.URL]), dsName), fl)))
-		return self._lfnMapCache.get(source, {})
+				self._parent_lfn_map_cache.setdefault(source, {}).update(dict(imap(lambda fi: (self._translate_lfn(fi[DataProvider.URL]), dsName), fl)))
+		return self._parent_lfn_map_cache.get(source, {})
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		# if parent source is not defined, try to get datacache from GC_WORKDIR
-		lfnMap = dict(self._lfnMapCache.get(self._source, {}))
+		lfnMap = dict(self._parent_lfn_map_cache.get(self._parent_source, {}))
 		datacachePath = os.path.join(objStore.get('GC_WORKDIR', ''), 'datacache.dat')
 		if os.path.exists(datacachePath):
-			lfnMap.update(self._readParents(self._empty_config, datacachePath))
+			lfnMap.update(self._read_parents(self._empty_config, datacachePath))
 		parent_datasets = set()
-		for key in ifilter(lambda k: k in metadata, self._parentKeys):
+		for key in ifilter(lambda k: k in metadata, self._parent_keys):
 			parent_refs = metadata[key]
 			if not isinstance(parent_refs, list):
 				parent_refs = [metadata[key]]
 			for parent_ref in parent_refs:
-				parent_datasets.add(lfnMap.get(self._lfnTrans(parent_ref)))
+				parent_datasets.add(lfnMap.get(self._translate_lfn(parent_ref)))
 		metadata['PARENT_PATH'] = lfilter(identity, parent_datasets)
 		yield (path, metadata, events, seList, objStore)
 
 
 class DetermineEvents(InfoScanner):
-	def __init__(self, config):
-		InfoScanner.__init__(self, config)
-		self._eventsCmd = config.get('events command', '', onChange = triggerDataResync)
-		self._eventsKey = config.get('events key', '', onChange = triggerDataResync)
-		self._eventsKeyScale = config.getFloat('events per key value', 1., onChange = triggerDataResync)
-		self._eventsDefault = config.getInt('events default', -1, onChange = triggerDataResync)
+	def __init__(self, config, datasource_name):
+		InfoScanner.__init__(self, config, datasource_name)
+		self._events_cmd = config.get('events command', '', onChange = triggerDataResync)
+		self._events_key = config.get('events key', '', onChange = triggerDataResync)
+		self._events_key_scale = config.getFloat('events per key value', 1., onChange = triggerDataResync)
+		self._events_default = config.getInt('events default', -1, onChange = triggerDataResync)
 
 	def getEntries(self, path, metadata, events, seList, objStore):
 		if (events is None) or (events < 0):
-			events = self._eventsDefault
-		if self._eventsKey:
-			events = max(1, int(int(metadata.get(self._eventsKey, events)) * self._eventsKeyScale))
-		if self._eventsCmd:
+			events = self._events_default
+		if self._events_key:
+			events = max(1, int(int(metadata.get(self._events_key, events)) * self._events_key_scale))
+		if self._events_cmd:
 			try:
-				events = int(os.popen('%s %s' % (self._eventsCmd, path)).readlines()[-1])
+				events = int(os.popen('%s %s' % (self._events_cmd, path)).readlines()[-1])
 			except Exception:
-				self._log.log(logging.INFO2, 'Unable to determine events with %r %r', self._eventsCmd, path)
+				self._log.log(logging.INFO2, 'Unable to determine events with %r %r', self._events_cmd, path)
 		yield (path, metadata, events, seList, objStore)

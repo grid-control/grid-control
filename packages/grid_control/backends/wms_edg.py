@@ -25,7 +25,7 @@ class EDGJDL(JDLWriter):
 
 
 class EuropeanDataGrid(GridWMS):
-	alias = ['EDG', 'LCG']
+	alias_list = ['EDG', 'LCG']
 
 	def __init__(self, config, name):
 		GridWMS.__init__(self, config, name,

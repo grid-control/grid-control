@@ -143,7 +143,7 @@ class DiscoverWMS_Lazy(object): # TODO: Move to broker infrastructure
 
 
 class GliteWMS(GridWMS):
-	configSections = GridWMS.configSections + ['glite-wms', 'glitewms'] # backwards compatibility
+	config_section_list = GridWMS.config_section_list + ['glite-wms', 'glitewms'] # backwards compatibility
 
 	def __init__(self, config, name, checkExecutor = None):
 		GridWMS.__init__(self, config, name,

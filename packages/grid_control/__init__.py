@@ -14,15 +14,19 @@
 
 def initGC():
 	import os, sys
-	basePath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-	sys.path.insert(1, basePath) # packages bundled with grid-control have priority
-	os.environ['GC_PACKAGES_PATH'] = basePath # Store grid-control base path in enviroment variable
+	packages_base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+	sys.path.insert(1, packages_base_path) # packages bundled with grid-control have priority
+	os.environ['GC_PACKAGES_PATH'] = packages_base_path # Store grid-control base path in enviroment variable
+
 	from hpfwk import init_hpf_plugins
-	for pkgName in os.listdir(basePath):
-		init_hpf_plugins(os.path.join(basePath, pkgName))
+	package_name_list = os.listdir(packages_base_path)
+	package_name_list.sort()
+	for package_name in package_name_list:
+		init_hpf_plugins(os.path.join(packages_base_path, package_name))
+
 	from grid_control.logging_setup import logging_defaults
 	logging_defaults()
 
 initGC()
 
-__version__ = '$Revision: 1913$'[11:-1]
+__version__ = '$Revision: 1941$'[11:-1]

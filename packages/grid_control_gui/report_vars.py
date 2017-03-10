@@ -18,19 +18,20 @@ from grid_control.utils import printTabular
 from python_compat import imap, lzip, set, sorted
 
 class VariablesReport(Report):
-	alias = ['variables', 'vars']
+	alias_list = ['variables', 'vars']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
+		self._task = task
 		self._selector = JobSelector.create(configString, task = task)
 
-	def display(self):
+	def show_report(self, job_db):
 		taskConfig = self._task.getTaskConfig()
 		header = lzip(taskConfig, taskConfig)
 		header.extend(imap(lambda key: (key, '<%s>' % key), self._task.getTransientVars()))
 		variables = set()
 		entries = []
-		for jobNum in self._jobDB.getJobs(self._selector):
+		for jobNum in job_db.getJobs(self._selector):
 			jobConfig = self._task.getJobConfig(jobNum)
 			variables.update(jobConfig)
 			entry = dict(taskConfig)

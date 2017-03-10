@@ -15,82 +15,82 @@
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.splitter_base import DataSplitter
 from hpfwk import AbstractError
-from python_compat import imap, reduce
+from python_compat import imap, itemgetter, reduce
 
-# Base class for (stackable) splitters with file level granularity
 class FileLevelSplitter(DataSplitter):
-	def splitBlocks(self, blocks):
+	# Base class for (stackable) splitters with file level granularity
+	def divide_blocks(self, block_iter):
 		raise AbstractError
 
-	def newBlock(self, old, filelist):
-		new = dict(old)
-		new[DataProvider.FileList] = filelist
-		new[DataProvider.NEntries] = sum(imap(lambda x: x[DataProvider.NEntries], filelist))
-		return new
+	def partition_blocks_raw(self, block_iter, event_first = 0):
+		for sub_block in self.divide_blocks(block_iter):
+			yield self._finish_partition(sub_block, dict(), sub_block[DataProvider.FileList])
 
-	def splitDatasetInternal(self, blocks, firstEvent = 0):
-		for block in self.splitBlocks(blocks):
-			yield self.finaliseJobSplitting(block, dict(), block[DataProvider.FileList])
+	def _create_sub_block(self, block_template, fi_list):
+		partition = dict(block_template)
+		partition[DataProvider.FileList] = fi_list
+		partition[DataProvider.NEntries] = sum(imap(itemgetter(DataProvider.NEntries), fi_list))
+		return partition
+
+
+class BlockBoundarySplitter(FileLevelSplitter):
+	# Split only along block boundaries
+	alias_list = ['blocks']
+
+	def divide_blocks(self, block_iter):
+		return block_iter
 
 
 class FLSplitStacker(FileLevelSplitter):
-	alias = ['pipeline']
+	alias_list = ['pipeline']
 
-	def _initConfig(self, config):
+	def partition_blocks_raw(self, block_iter, event_first = 0):
+		for block in block_iter:
+			splitter_name_list = self._setup(self._splitter_name_list, block)
+			splitter_iter = imap(lambda x: FileLevelSplitter.create_instance(x, self._config, self._datasource_name), splitter_name_list[:-1])
+			splitter_final = DataSplitter.create_instance(splitter_name_list[-1], self._config, self._datasource_name)
+			for sub_block in reduce(lambda x, y: y.divide_blocks(x), splitter_iter, [block]):
+				for partition in splitter_final.partition_blocks_raw([sub_block]):
+					yield partition
+
+	def _configure_splitter(self, config):
 		self._config = config
-		self._splitstack = self._configQuery(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
-
-	def splitDatasetInternal(self, blocks, firstEvent = 0):
-		for block in blocks:
-			splitterList = self._setup(self._splitstack, block)
-			subSplitter = imap(lambda x: FileLevelSplitter.createInstance(x, self._config), splitterList[:-1])
-			endSplitter = DataSplitter.createInstance(splitterList[-1], self._config)
-			for subBlock in reduce(lambda x, y: y.splitBlocks(x), subSplitter, [block]):
-				for splitting in endSplitter.splitDatasetInternal([subBlock]):
-					yield splitting
+		self._splitter_name_list = self._query_config(config.getList, 'splitter stack', ['BlockBoundarySplitter'])
 
 
-# Split only along block boundaries
-class BlockBoundarySplitter(FileLevelSplitter):
-	alias = ['blocks']
-
-	def splitBlocks(self, blocks):
-		return blocks
-
-
-# Split dataset along block boundaries into jobs with 'files per job' files
 class FileBoundarySplitter(FileLevelSplitter):
-	alias = ['files']
+	# Split dataset along block boundaries into jobs with 'files per job' files
+	alias_list = ['files']
 
-	def _initConfig(self, config):
-		self._files_per_job = self._configQuery(config.getInt, 'files per job')
+	def divide_blocks(self, block_iter):
+		for block in block_iter:
+			fi_idx_start = 0
+			files_per_job = self._setup(self._files_per_job, block)
+			while fi_idx_start < len(block[DataProvider.FileList]):
+				fi_list = block[DataProvider.FileList][fi_idx_start : fi_idx_start + files_per_job]
+				fi_idx_start += files_per_job
+				yield self._create_sub_block(block, fi_list)
 
-	def splitBlocks(self, blocks):
-		for block in blocks:
-			start = 0
-			filesPerJob = self._setup(self._files_per_job, block)
-			while start < len(block[DataProvider.FileList]):
-				files = block[DataProvider.FileList][start : start + filesPerJob]
-				start += filesPerJob
-				yield self.newBlock(block, files)
+	def _configure_splitter(self, config):
+		self._files_per_job = self._query_config(config.getInt, 'files per job')
 
 
-# Split dataset along block and file boundaries into jobs with (mostly <=) 'events per job' events
-# In case of file with #events > 'events per job', use just the single file (=> job has more events!)
 class HybridSplitter(FileLevelSplitter):
-	alias = ['hybrid']
+	# Split dataset along block and file boundaries into jobs with (mostly <=) 'events per job' events
+	# In case of file with #events > 'events per job', use just the single file (=> job has more events!)
+	alias_list = ['hybrid']
 
-	def _initConfig(self, config):
-		self._events_per_job = self._configQuery(config.getInt, 'events per job')
-
-	def splitBlocks(self, blocks):
-		for block in blocks:
-			(events, fileStack) = (0, [])
-			eventsPerJob = self._setup(self._events_per_job, block)
+	def divide_blocks(self, block_iter):
+		for block in block_iter:
+			(events, fi_list) = (0, [])
+			events_per_job = self._setup(self._events_per_job, block)
 			for fileInfo in block[DataProvider.FileList]:
-				if (len(fileStack) > 0) and (events + fileInfo[DataProvider.NEntries] > eventsPerJob):
-					yield self.newBlock(block, fileStack)
-					(events, fileStack) = (0, [])
-				fileStack.append(fileInfo)
+				if (len(fi_list) > 0) and (events + fileInfo[DataProvider.NEntries] > events_per_job):
+					yield self._create_sub_block(block, fi_list)
+					(events, fi_list) = (0, [])
+				fi_list.append(fileInfo)
 				events += fileInfo[DataProvider.NEntries]
-			yield self.newBlock(block, fileStack)
+			yield self._create_sub_block(block, fi_list)
+
+	def _configure_splitter(self, config):
+		self._events_per_job = self._query_config(config.getInt, 'events per job')

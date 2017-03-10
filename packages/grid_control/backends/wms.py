@@ -41,7 +41,7 @@ BackendJobState = makeEnum([
 ])
 
 class WMS(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['wms', 'backend']
+	config_section_list = NamedPlugin.config_section_list + ['wms', 'backend']
 	tagName = 'wms'
 
 	def __init__(self, config, name):
@@ -55,7 +55,7 @@ class WMS(NamedPlugin):
 	def getTimings(self): # Return (waitIdle, wait)
 		return utils.Result(waitOnIdle = self._wait_idle, waitBetweenSteps = self._wait_work)
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, neededTime, canCurrentlySubmit):
 		raise AbstractError
 
 	def getAccessToken(self, gcID):
@@ -137,8 +137,8 @@ class BasicWMS(WMS):
 			'MultiAccessToken', cls = AccessToken, inherit = True, tags = [self])
 
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
-		return self._token.canSubmit(neededTime, canCurrentlySubmit)
+	def can_submit(self, neededTime, canCurrentlySubmit):
+		return self._token.can_submit(neededTime, canCurrentlySubmit)
 
 
 	def getAccessToken(self, gcID):
@@ -332,9 +332,9 @@ class BasicWMS(WMS):
 
 
 class Grid(WMS): # redirector - used to avoid loading the whole grid module just for the default
-	configSections = WMS.configSections + ['grid']
+	config_section_list = WMS.config_section_list + ['grid']
 
 	def __new__(cls, config, name):
 		gridWMS = 'GliteWMS'
-		grid_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [WMS.getClass(gridWMS)])
-		return WMS.createInstance(gridWMS, grid_config, name)
+		grid_config = config.changeView(viewClass = 'TaggedConfigView', setClasses = [WMS.get_class(gridWMS)])
+		return WMS.create_instance(gridWMS, grid_config, name)

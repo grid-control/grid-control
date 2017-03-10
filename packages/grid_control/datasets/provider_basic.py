@@ -21,12 +21,12 @@ from python_compat import lmap, rsplit
 # Provides information about a single file
 # required format: <path to data file>|<number of events>[@SE1,SE2]
 class FileProvider(DataProvider):
-	alias = ['file']
+	alias_list = ['file']
 
-	def __init__(self, config, datasetExpr, datasetNick = None):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick)
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
 
-		(self._path, self._events, selist) = utils.optSplit(datasetExpr, '|@')
+		(self._path, self._events, selist) = utils.optSplit(dataset_expr, '|@')
 		self._selist = parseList(selist, ',') or None
 		if not (self._path and self._events):
 			raise ConfigError('Invalid dataset expression!\nCorrect: /local/path/to/file|events[@SE1,SE2]')
@@ -52,32 +52,32 @@ def try_apply(value, fun, desc):
 # Takes dataset information from an configuration file
 # required format: <path to list of data files>[@<forced prefix>][%[/]<selected dataset>[#<selected block>][#]]
 class ListProvider(DataProvider):
-	alias = ['list']
+	alias_list = ['list']
 
-	def __init__(self, config, datasetExpr, datasetNick = None):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick)
-		self._CommonPrefix = max(self.enumValues) + 1
-		self._CommonMetadata = max(self.enumValues) + 2
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None, dataset_proc = None):
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick, dataset_proc)
+		self._common_prefix = max(self.enumValues) + 1
+		self._common_metadata = max(self.enumValues) + 2
 
 		self._handleEntry = {
 			'events': (DataProvider.NEntries, int, 'block entry counter'),
 			'id': (None, None, 'dataset ID'), # legacy key - skip
 			'metadata': (DataProvider.Metadata, parseJSON, 'metadata description'),
-			'metadata common': (self._CommonMetadata, parseJSON, 'common metadata'),
+			'metadata common': (self._common_metadata, parseJSON, 'common metadata'),
 			'nickname': (DataProvider.Nickname, str, 'dataset nickname'),
-			'prefix': (self._CommonPrefix, str, 'common prefix'),
+			'prefix': (self._common_prefix, str, 'common prefix'),
 			'se list': (DataProvider.Locations, lambda value: parseList(value, ','), 'block location'),
 		}
 
-		(path, self._forcePrefix, self._filter) = utils.optSplit(datasetExpr, '@%')
+		(path, self._forced_prefix, self._filter) = utils.optSplit(dataset_expr, '@%')
 		self._filename = config.resolvePath(path, True, 'Error resolving dataset file: %s' % path)
 
 	def _createBlock(self, name):
 		result = {
 			DataProvider.Locations: None,
 			DataProvider.FileList: [],
-			self._CommonPrefix: None,
-			self._CommonMetadata: [],
+			self._common_prefix: None,
+			self._common_metadata: [],
 		}
 		blockName = name.lstrip('[').rstrip(']').split('#')
 		if len(blockName) > 0:
@@ -87,15 +87,15 @@ class ListProvider(DataProvider):
 		return result
 
 	def _finishBlock(self, block):
-		block.pop(self._CommonPrefix)
-		block.pop(self._CommonMetadata)
+		block.pop(self._common_prefix)
+		block.pop(self._common_metadata)
 		return block
 
 	def _parseEntry(self, block, url, value):
-		if self._forcePrefix:
-			url = '%s/%s' % (self._forcePrefix, url)
-		elif block[self._CommonPrefix]:
-			url = '%s/%s' % (block[self._CommonPrefix], url)
+		if self._forced_prefix:
+			url = '%s/%s' % (self._forced_prefix, url)
+		elif block[self._common_prefix]:
+			url = '%s/%s' % (block[self._common_prefix], url)
 		value = value.split(' ', 1)
 		result = {
 			DataProvider.URL: url,
@@ -105,8 +105,8 @@ class ListProvider(DataProvider):
 			fileMetadata = try_apply(value[1], parseJSON, 'metadata of file %s' % repr(url))
 		else:
 			fileMetadata = []
-		if block[self._CommonMetadata] or fileMetadata:
-			result[DataProvider.Metadata] = block[self._CommonMetadata] + fileMetadata
+		if block[self._common_metadata] or fileMetadata:
+			result[DataProvider.Metadata] = block[self._common_metadata] + fileMetadata
 		return result
 
 	def _parseFile(self, iterator):
@@ -151,6 +151,7 @@ class ListProvider(DataProvider):
 		try:
 			for block in self._parseFile(fp):
 				if _filterBlock(block):
+					self._raise_on_abort()
 					yield block
 			fp.close()
 		except Exception:

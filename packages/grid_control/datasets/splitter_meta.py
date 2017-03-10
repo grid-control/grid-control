@@ -14,46 +14,44 @@
 
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.splitter_basic import FileLevelSplitter
+from grid_control.utils import safe_index
 from hpfwk import AbstractError
-from python_compat import imap, sort_inplace
+from python_compat import imap, lmap, sort_inplace
 
-# Split dataset along block and metadata boundaries - using equivalence classes of metadata
-class MetadataSplitter(FileLevelSplitter):
-	def metaKey(self, metadataNames, block, fi):
+# Split dataset along block and class boundaries - using equivalence classes of file properties
+class FileClassSplitter(FileLevelSplitter):
+	def divide_blocks(self, block_iter):
+		for block in block_iter:
+			fi_list = block[DataProvider.FileList]
+			sort_inplace(fi_list, key = lambda fi: self._get_fi_class(fi, block))
+			partition_fi_list = []
+			if fi_list:
+				fi_class_active = self._get_fi_class(fi_list[0], block)
+			for fi in fi_list:
+				fi_class_current = self._get_fi_class(fi, block)
+				if fi_class_current != fi_class_active:
+					yield self._create_sub_block(block, partition_fi_list)
+					(partition_fi_list, fi_class_active) = ([], fi_class_current)
+				partition_fi_list.append(fi)
+			yield self._create_sub_block(block, partition_fi_list)
+
+	def _get_fi_class(self, fi, block):
 		raise AbstractError
 
-	def splitBlocks(self, blocks):
-		for block in blocks:
-			files = block[DataProvider.FileList]
-			sort_inplace(files, key = lambda fi: self.metaKey(block[DataProvider.Metadata], block, fi))
-			(fileStack, reprKey) = ([], None)
-			for fi in files:
-				if reprKey is None:
-					reprKey = self.metaKey(block[DataProvider.Metadata], block, fi)
-				curKey = self.metaKey(block[DataProvider.Metadata], block, fi)
-				if curKey != reprKey:
-					yield self.newBlock(block, fileStack)
-					(fileStack, reprKey) = ([], curKey)
-				fileStack.append(fi)
-			yield self.newBlock(block, fileStack)
 
+class UserMetadataSplitter(FileClassSplitter):
+	alias_list = ['metadata']
 
-class UserMetadataSplitter(MetadataSplitter):
-	alias = ['metadata']
+	def _configure_splitter(self, config):
+		self._metadata_user_list = self._query_config(config.getList, 'split metadata', [])
 
-	def _initConfig(self, config):
-		self._metadata = self._configQuery(config.getList, 'split metadata', [])
+	def _get_fi_class(self, fi, block):
+		metadata_name_list = block.get(DataProvider.Metadata, [])
+		metadata_name_list_selected = self._setup(self._metadata_user_list, block)
+		metadata_idx_list = lmap(lambda metadata_name: safe_index(metadata_name_list, metadata_name), metadata_name_list_selected)
 
-	def metaKey(self, metadataNames, block, fi):
-		selMetadataNames = self._setup(self._metadata, block)
-		selMetadataIdx = []
-		for selMetadataName in selMetadataNames:
-			if selMetadataName in metadataNames:
-				selMetadataIdx.append(metadataNames.index(selMetadataName))
-			else:
-				selMetadataIdx.append(-1)
 		def query_metadata(idx):
-			if (idx >= 0) and (idx < len(fi[DataProvider.Metadata])):
+			if (idx is not None) and (idx < len(fi[DataProvider.Metadata])):
 				return fi[DataProvider.Metadata][idx]
 			return ''
-		return tuple(imap(query_metadata, selMetadataIdx))
+		return tuple(imap(query_metadata, metadata_idx_list))

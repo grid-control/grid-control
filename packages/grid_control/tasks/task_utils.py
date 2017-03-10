@@ -1,4 +1,4 @@
-# | Copyright 2013-2015 Karlsruhe Institute of Technology
+# | Copyright 2013-2016 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,10 +14,11 @@
 
 import os
 from grid_control import utils
-from grid_control.config import changeInitNeeded, noDefault
+from grid_control.config import changeInitNeeded
+from python_compat import unspecified
 
 class TaskExecutableWrapper:
-	def __init__(self, config, prefix = '', exeDefault = noDefault):
+	def __init__(self, config, prefix = '', exeDefault = unspecified):
 		initSandbox = changeInitNeeded('sandbox')
 		self._executableSend = config.getBool('%s send executable' % prefix, True, onChange = initSandbox)
 		if self._executableSend:

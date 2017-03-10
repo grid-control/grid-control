@@ -25,58 +25,58 @@ from python_compat import lfilter
 
 # Main config interface
 class ConfigFactory(object):
-	def __init__(self, filler = None, configFilePath = None):
-		def getName(prefix = ''):
-			if configFilePath:
-				return ('%s.%s' % (prefix, getRootName(configFilePath))).strip('.')
+	def __init__(self, filler = None, config_file_path = None):
+		def get_name(prefix = ''):
+			if config_file_path:
+				return ('%s.%s' % (prefix, getRootName(config_file_path))).strip('.')
 			elif prefix:
 				return prefix
 			return 'unnamed'
 
 		try:
-			pathMain = os.getcwd()
+			path_main = os.getcwd()
 		except Exception:
 			raise ConfigError('The current directory does not exist!')
-		if configFilePath:
-			pathMain = os.path.dirname(resolvePath(configFilePath,
+		if config_file_path:
+			path_main = os.path.dirname(resolvePath(config_file_path,
 				searchPaths = [os.getcwd()], ErrorClass = ConfigError))
 
 		# Init config containers
-		self._curContainer = ConfigContainer('current')
+		self._container_cur = ConfigContainer('current')
 		if filler: # Read in the current configuration ...
-			filler.fill(self._curContainer)
-		self._curContainer.resolve() # resolve interpolations
+			filler.fill(self._container_cur)
+		self._container_cur.resolve() # resolve interpolations
 
 		logging.getLogger('config.stored').propagate = False
-		oldContainer = ConfigContainer('stored')
-		oldContainer.enabled = False
+		container_old = ConfigContainer('stored')
+		container_old.enabled = False
 
 		# Create config view and temporary config interface
-		self._view = SimpleConfigView(getName(), oldContainer, self._curContainer)
-		self._view.pathDict['search_paths'] = UniqueList([os.getcwd(), pathMain])
+		self._view = SimpleConfigView(get_name(), container_old, self._container_cur)
+		self._view.config_vault['path:search'] = UniqueList([os.getcwd(), path_main])
 
 		# Determine work directory using config interface with "global" scope
 		tmp_config = SimpleConfigInterface(self._view.getView(setSections = ['global']))
-		wdBase = tmp_config.getPath('workdir base', pathMain, mustExist = False)
-		pathWork = tmp_config.getPath('workdir', os.path.join(wdBase, getName('work')), mustExist = False)
-		self._view.pathDict['<WORKDIR>'] = pathWork # tmp_config still has undefinied
+		work_dir_base = tmp_config.getPath('workdir base', path_main, mustExist = False)
+		path_work = tmp_config.getPath('workdir', os.path.join(work_dir_base, get_name('work')), mustExist = False)
+		self._view.config_vault['path:workdir'] = path_work # tmp_config still has undefinied
 		# Set dynamic plugin search path
 		sys.path.extend(tmp_config.getPaths('plugin paths', [os.getcwd()]))
 
 		# Determine and load stored config settings
-		self._flatCfgPath = os.path.join(pathWork, 'current.conf') # Minimal config file
-		self._oldCfgPath = os.path.join(pathWork, 'work.conf') # Config file with saved settings
-		if os.path.exists(self._oldCfgPath):
-			GeneralFileConfigFiller([self._oldCfgPath]).fill(oldContainer)
-			CompatConfigFiller(os.path.join(pathWork, 'task.dat')).fill(oldContainer)
-			oldContainer.enabled = True
-			oldContainer.setReadOnly()
+		self._config_path_flat = os.path.join(path_work, 'current.conf') # Minimal config file
+		self._config_path_old = os.path.join(path_work, 'work.conf') # Config file with saved settings
+		if os.path.exists(self._config_path_old):
+			GeneralFileConfigFiller([self._config_path_old]).fill(container_old)
+			CompatConfigFiller(os.path.join(path_work, 'task.dat')).fill(container_old)
+			container_old.enabled = True
+			container_old.setReadOnly()
 
-		# Get persistent variables - only possible after oldContainer was enabled
-		self._view.setConfigName(tmp_config.get('config id', getName(), persistent = True))
+		# Get persistent variables - only possible after container_old was enabled
+		self._view.setConfigName(tmp_config.get('config id', get_name(), persistent = True))
 
 
-	def getConfig(self):
+	def get_config(self):
 		result = SimpleConfigInterface(self._view)
 		result.factory = self
 		return result
@@ -90,8 +90,8 @@ class ConfigFactory(object):
 		fp.close()
 
 
-	def freezeConfig(self, writeConfig = True):
-		self._curContainer.setReadOnly()
+	def freeze(self, write_config = True):
+		self._container_cur.setReadOnly()
 		# Inform the user about unused options
 		unused = lfilter(lambda entry: ('!' not in entry.section) and not entry.accessed, self._view.iterContent())
 		log = logging.getLogger('config.freeze')
@@ -99,12 +99,12 @@ class ConfigFactory(object):
 			log.log(logging.INFO1, 'There are %s unused config options!', len(unused))
 		for entry in unused:
 			log.log(logging.INFO1, '\t%s', entry.format(printSection = True))
-		if writeConfig or not os.path.exists(self._oldCfgPath):
-			ensureDirExists(os.path.dirname(self._oldCfgPath), 'config storage directory', ConfigError)
+		if write_config or not os.path.exists(self._config_path_old):
+			ensureDirExists(os.path.dirname(self._config_path_old), 'config storage directory', ConfigError)
 			# Write user friendly, flat config file and config file with saved settings
-			self._write_file(self._flatCfgPath, printDefault = False, printUnused = False, printMinimal = True,
+			self._write_file(self._config_path_flat, printDefault = False, printUnused = False, printMinimal = True,
 				printWorkdir = True)
-			self._write_file(self._oldCfgPath,  printDefault = True,  printUnused = True,  printMinimal = True, printSource = True,
+			self._write_file(self._config_path_old,  printDefault = True,  printUnused = True,  printMinimal = True, printSource = True,
 				message = '; ==> DO NOT EDIT THIS FILE! <==\n; This file is used to find config changes!\n')
 
 
@@ -117,7 +117,7 @@ def create_config(configFile = None, configDict = None, useDefaultFiles = False,
 	if configDict:
 		fillerList.append(DictConfigFiller(configDict))
 	fillerList.extend(additional or [])
-	config = ConfigFactory(MultiConfigFiller(fillerList), configFile).getConfig()
+	config = ConfigFactory(MultiConfigFiller(fillerList), configFile).get_config()
 	if register:
 		GCLogHandler.config_instances.append(config)
 	return config

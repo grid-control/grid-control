@@ -283,7 +283,11 @@ def getCumQuantityAtTimeSpan(jobInfo, timeStart, timeEnd, timingExtract, quantit
 
 
 class PlotReport(Report):
-	alias = ['plot']
+	alias_list = ['plot']
+
+	def __init__(self, jobDB, task, jobs = None, configString = ''):
+		Report.__init__(self, jobDB, task, jobs, configString)
+		self._task = task
 
 	def initHistogram(self, name, xlabel, ylabel):
 		fig = matplotlib.pyplot.figure()
@@ -425,7 +429,7 @@ class PlotReport(Report):
 		self.plotOverall(histogram, self.jobResult, timespan, lambdaExtractor, fit, unit, cumulate)
 		self.finalizeHistogram(histogram)
 
-	def display(self):
+	def show_report(self, job_db):
 		if not numpy:
 			raise Exception('Unable to find numpy!')
 		if not matplotlib:
@@ -449,7 +453,7 @@ class PlotReport(Report):
 		minCmsswTime = None
 		maxCmsswTime = None
 
-		workdir = self._jobDB.getWorkPath()
+		workdir = job_db.getWorkPath()
 		for j in self._jobs:
 			try:
 				jInfo = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % j))

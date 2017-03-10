@@ -19,23 +19,23 @@ from grid_control.utils.parsing import parseList
 from python_compat import imap, lfilter, lmap, sorted
 
 class RandomBroker(Broker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
 		self._itemsStart = self._discover(discoverFun)
 
 
 class UserBroker(Broker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		self._itemsStart = config.getList(userOpt, [], onChange = None)
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
+		self._itemsStart = config.getList(broker_prefix, [], onChange = None)
 		if not self._itemsStart:
 			self._itemsStart = None
 
 
 class FilterBroker(Broker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		userFilter = config.getFilter(userOpt, '',
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
+		userFilter = config.getFilter(broker_prefix, '',
 			defaultMatcher = 'blackwhite', defaultFilter = 'try_strict',
 			defaultOrder = ListOrder.matcher)
 		self._itemsStart = userFilter.getSelector()
@@ -46,9 +46,9 @@ class FilterBroker(Broker):
 
 
 class CoverageBroker(Broker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		userFilter = config.getFilter(userOpt, '',
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
+		userFilter = config.getFilter(broker_prefix, '',
 			defaultMatcher = 'blackwhite', defaultFilter = 'try_strict',
 			defaultOrder = ListOrder.matcher)
 		self._itemsStart = userFilter.filterList(None)
@@ -66,8 +66,8 @@ class CoverageBroker(Broker):
 
 
 class SimpleBroker(FilterBroker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		FilterBroker.__init__(self, config, name, userOpt, itemName, discoverFun)
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		FilterBroker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
 		self._discover(discoverFun)
 
 		if self._itemsDiscovered: # Sort discovered items according to requirements
@@ -113,9 +113,9 @@ class SimpleBroker(FilterBroker):
 
 
 class StorageBroker(Broker):
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
-		Broker.__init__(self, config, name, userOpt, itemName, discoverFun)
-		self._storageDict = config.getLookup('%s storage access' % userOpt, {}, onChange = None,
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
+		Broker.__init__(self, config, name, broker_prefix, itemName, discoverFun)
+		self._storageDict = config.getLookup('%s storage access' % broker_prefix, {}, onChange = None,
 			parser = lambda x: parseList(x, ' '), strfun = lambda x: str.join(' ', x))
 
 	def _broker(self, reqs, items):

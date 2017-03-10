@@ -12,16 +12,12 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.utils.data_structures import makeEnum
 from grid_control.utils.parsing import strDict
 from hpfwk import APIError, NestedException, clear_current_exception
-from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted
+from python_compat import ichain, ifilter, imap, lfilter, lmap, set, sorted, unspecified
 
 class ConfigError(NestedException):
 	pass
-
-# Placeholder to specify a non-existing default
-noDefault = makeEnum(['noDefault'])
 
 # return canonized section or option string
 def standardConfigForm(value):
@@ -54,8 +50,8 @@ class ConfigEntry(object):
 			return '<%s> %s' % (self.section.replace('!', ''), self.option)
 		return '[%s] %s' % (self.section, self.option)
 
-	def format(self, printSection = False, printDefault = False, default = noDefault, source = '', wraplen = 33):
-		if (self.value == noDefault) or (not printDefault and (self.value == default)):
+	def format(self, printSection = False, printDefault = False, default = unspecified, source = '', wraplen = 33):
+		if unspecified(self.value) or (not printDefault and (self.value == default)):
 			return ''
 		if printSection:
 			prefix = '[%s] %s' % (self.section, self.option)
@@ -260,5 +256,5 @@ class ConfigContainer(object):
 		entryChain = ichain([self._content.get(option, []), self._content_default.get(option, {}).values()])
 		return ifilter(filterExpr, entryChain)
 
-	def getKeys(self):
+	def get_options(self):
 		return sorted(set(ichain([self._content.keys(), self._content_default.keys()])))

@@ -22,19 +22,18 @@ from hpfwk import AbstractError
 class GUI(ConfigurablePlugin):
 	def __init__(self, config, workflow):
 		ConfigurablePlugin.__init__(self, config)
-		self._workflow = workflow
 		self._reportOpts = config.get('report options', '', onChange = None)
 		self._report = config.getCompositePlugin('report', 'BasicReport', 'MultiReport',
 			cls = Report, onChange = None, pargs = (workflow.jobManager.jobDB,
 			workflow.task), pkwargs = {'configString': self._reportOpts})
 
-	def displayWorkflow(self):
+	def displayWorkflow(self, workflow):
 		raise AbstractError
 
 
 class NullGUI(GUI):
-	def displayWorkflow(self):
-		return self._workflow.process()
+	def displayWorkflow(self, workflow):
+		return workflow.process()
 
 
 class SimpleActivityStream(object):
@@ -60,9 +59,7 @@ class SimpleActivityStream(object):
 		activity_message = None
 		if Activity.root:
 			for activity in Activity.root.get_children():
-				activity_message = activity.getMessage() + '...'
-				if len(activity_message) > 75:
-					activity_message = activity_message[:37] + '...' + activity_message[-35:]
+				activity_message = activity.getMessage(truncate = 75)
 		if self._old_message is not None:
 			self._stream.write('\r%s\r' % (' ' * len(self._old_message)))
 		self._old_message = activity_message
@@ -78,21 +75,21 @@ class SimpleConsole(GUI):
 		GUI.__init__(self, config, workflow)
 		self._log = logging.getLogger('workflow')
 
-	def displayWorkflow(self):
+	def displayWorkflow(self, workflow):
 		if self._report.getHeight():
 			self._log.info('')
-		self._report.display()
+		self._report.show_report(workflow.jobManager.jobDB)
 		if self._report.getHeight():
 			self._log.info('')
-		if self._workflow.duration < 0:
+		if workflow.duration < 0:
 			self._log.info('Running in continuous mode. Press ^C to exit.')
-		elif self._workflow.duration > 0:
-			self._log.info('Running for %s', strTimeShort(self._workflow.duration))
-		if not sys.stdout.isatty():
-			return self._workflow.process()
-		sys.stdout = SimpleActivityStream(sys.stdout, register_callback = True)
-		sys.stderr = SimpleActivityStream(sys.stderr)
+		elif workflow.duration > 0:
+			self._log.info('Running for %s', strTimeShort(workflow.duration))
+		if sys.stdout.isatty():
+			sys.stdout = SimpleActivityStream(sys.stdout, register_callback = True)
+			sys.stderr = SimpleActivityStream(sys.stderr)
 		try:
-			return self._workflow.process()
+			return workflow.process()
 		finally:
-			(sys.stdout, sys.stderr) = (sys.stdout.finish(), sys.stderr.finish())
+			if sys.stdout.isatty():
+				(sys.stdout, sys.stderr) = (sys.stdout.finish(), sys.stderr.finish())

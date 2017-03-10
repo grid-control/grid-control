@@ -235,7 +235,7 @@ def download_job_output(opts, incInfo, workDir, jobDB, token, jobNum, output):
 	retry = int(jobObj.get('download attempt', 0))
 	failJob = False
 
-	if not token.canSubmit(20*60, True):
+	if not token.can_submit(20*60, True):
 		sys.stderr.write('Please renew access token!')
 		sys.exit(os.EX_UNAVAILABLE)
 
@@ -390,7 +390,7 @@ def download_sequential(opts, workDir, jobList, incInfo, jobDB, token):
 def loop_download(opts, args):
 	# Init everything in each loop to pick up changes
 	(config, jobDB) = gcSupport.initGC(args)
-	token = Plugin.getClass('AccessToken').createInstance(opts.token, config, 'access')#, OSLayer.create(config))
+	token = Plugin.get_class('AccessToken').create_instance(opts.token, config, 'access')#, OSLayer.create(config))
 	workDir = config.getWorkPath()
 	jobList = jobDB.getJobs(ClassSelector(JobClass.SUCCESS))
 

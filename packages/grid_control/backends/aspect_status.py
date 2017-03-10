@@ -23,6 +23,8 @@ from python_compat import set
 CheckInfo = makeEnum(['WMSID', 'RAW_STATUS', 'QUEUE', 'WN', 'SITE'])
 CheckStatus = makeEnum(['OK', 'ERROR'])
 
+# TODO: Error Handler Plugins - logging, exception, errorcode - with abort / continue
+
 class CheckJobs(BackendExecutor):
 	def execute(self, wmsIDs): # yields list of (wmsID, job_status, job_info)
 		raise AbstractError
@@ -66,7 +68,7 @@ class CheckJobsWithProcess(CheckJobs):
 			if job_info and not utils.abort():
 				yield self._parse_job_info(job_info)
 		if proc.status(timeout = 0, terminate = True) != 0:
-			self._handleError(proc)
+			self._handle_error(proc)
 		if self._log_everything:
 			self._log.log_process(proc, level = logging.DEBUG, msg = 'Finished checking jobs')
 
@@ -86,5 +88,5 @@ class CheckJobsWithProcess(CheckJobs):
 		except Exception:
 			raise BackendError('Unable to parse job info %s' % repr(job_info))
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg)

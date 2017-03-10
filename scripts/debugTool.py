@@ -17,7 +17,7 @@ import os, sys, logging
 from gcSupport import Job, JobSelector, Options, Plugin, getConfig, scriptOptions
 from grid_control import utils
 from grid_control.datasets import DataProvider, DataSplitter
-from python_compat import BytesBuffer, imap, irange, lmap, lzip
+from python_compat import BytesBuffer, imap, lmap, lzip
 
 parser = Options()
 parser.section('back', 'Backend debugging', '%s [<backend specifier>] ...')
@@ -49,7 +49,7 @@ options = scriptOptions(parser)
 if opts.backend_list_nodes or opts.backend_list_queues:
 	config = getConfig()
 	backend = str.join(' ', args) or 'local'
-	wms = Plugin.getClass('WMS').createInstance(backend, config, backend)
+	wms = Plugin.get_class('WMS').create_instance(backend, config, backend)
 	if opts.backend_list_nodes:
 		logging.info(repr(wms.getNodes()))
 	if opts.backend_list_queues:
@@ -59,47 +59,44 @@ if opts.backend_list_nodes or opts.backend_list_queues:
 # DATASET PARTITION
 
 def partition_invalid(splitter):
-	for jobNum in irange(splitter.getMaxJobs()):
-		splitInfo = splitter.getSplitInfo(jobNum)
+	for (partition_num, splitInfo) in enumerate(splitter.iter_partitions()):
 		if splitInfo.get(DataSplitter.Invalid, False):
-			yield {0: jobNum}
+			yield {0: partition_num}
 
 def partition_list(splitter, keyList):
-	for jobNum in irange(splitter.getMaxJobs()):
-		splitInfo = splitter.getSplitInfo(jobNum)
+	for (partition_num, splitInfo) in enumerate(splitter.iter_partitions()):
 		tmp = lmap(lambda k: (k, splitInfo.get(k, '')), keyList)
-		yield dict([('jobNum', jobNum)] + tmp)
+		yield dict([('partition_num', partition_num)] + tmp)
 
 def partition_check(splitter):
-		fail = utils.set()
-		for jobNum in irange(splitter.getMaxJobs()):
-			splitInfo = splitter.getSplitInfo(jobNum)
-			try:
-				(events, skip, files) = (0, 0, [])
-				for line in open(os.path.join(opts.checkSplitting, 'jobs', 'job_%d.var' % jobNum)).readlines():
-					if 'MAX_EVENTS' in line:
-						events = int(line.split('MAX_EVENTS', 1)[1].replace('=', ''))
-					if 'SKIP_EVENTS' in line:
-						skip = int(line.split('SKIP_EVENTS', 1)[1].replace('=', ''))
-					if 'FILE_NAMES' in line:
-						files = line.split('FILE_NAMES', 1)[1].replace('=', '').replace('\"', '').replace('\\', '')
-						files = lmap(lambda x: x.strip().strip(','), files.split())
-				def printError(curJ, curS, msg):
-					if curJ != curS:
-						logging.warning('%s in job %d (j:%s != s:%s)', msg, jobNum, curJ, curS)
-						fail.add(jobNum)
-				printError(events, splitInfo[DataSplitter.NEntries], 'Inconsistent number of events')
-				printError(skip, splitInfo[DataSplitter.Skipped], 'Inconsistent number of skipped events')
-				printError(files, splitInfo[DataSplitter.FileList], 'Inconsistent list of files')
-			except Exception:
-				logging.warning('Job %d was never initialized!', jobNum)
-		if fail:
-			logging.warning('Failed: ' + str.join('\n', imap(str, fail)))
+	fail = utils.set()
+	for (partition_num, splitInfo) in enumerate(splitter.iter_partitions()):
+		try:
+			(events, skip, files) = (0, 0, [])
+			for line in open(os.path.join(opts.checkSplitting, 'jobs', 'job_%d.var' % partition_num)).readlines():
+				if 'MAX_EVENTS' in line:
+					events = int(line.split('MAX_EVENTS', 1)[1].replace('=', ''))
+				if 'SKIP_EVENTS' in line:
+					skip = int(line.split('SKIP_EVENTS', 1)[1].replace('=', ''))
+				if 'FILE_NAMES' in line:
+					files = line.split('FILE_NAMES', 1)[1].replace('=', '').replace('\"', '').replace('\\', '')
+					files = lmap(lambda x: x.strip().strip(','), files.split())
+			def printError(curJ, curS, msg):
+				if curJ != curS:
+					logging.warning('%s in job %d (j:%s != s:%s)', msg, partition_num, curJ, curS)
+					fail.add(partition_num)
+			printError(events, splitInfo[DataSplitter.NEntries], 'Inconsistent number of events')
+			printError(skip, splitInfo[DataSplitter.Skipped], 'Inconsistent number of skipped events')
+			printError(files, splitInfo[DataSplitter.FileList], 'Inconsistent list of files')
+		except Exception:
+			logging.warning('Job %d was never initialized!', partition_num)
+	if fail:
+		logging.warning('Failed: ' + str.join('\n', imap(str, fail)))
 
 if (opts.partition_list is not None) or opts.partition_list_invalid or opts.partition_check:
 	if len(args) != 1:
 		utils.exitWithUsage(parser.usage('part'))
-	splitter = DataSplitter.loadPartitionsForScript(args[0])
+	splitter = DataSplitter.load_partitions_for_script(args[0])
 
 	if opts.partition_list_invalid:
 		utils.printTabular([(0, 'Job')], partition_invalid(splitter))
@@ -112,10 +109,10 @@ if (opts.partition_list is not None) or opts.partition_list_invalid or opts.part
 		keyList = lmap(DataSplitter.str2enum, keyStrings)
 		if None in keyList:
 			logging.warning('Available keys: %r', DataSplitter.enumNames)
-		utils.printTabular([('jobNum', 'Job')] + lzip(keyList, keyStrings), partition_list(splitter, keyList))
+		utils.printTabular([('partition_num', 'Job')] + lzip(keyList, keyStrings), partition_list(splitter, keyList))
 
 	if opts.partition_check:
-		logging.info('Checking %d jobs...', splitter.getMaxJobs())
+		logging.info('Checking %d jobs...', splitter.get_partition_len())
 		partition_check(splitter)
 
 ########################################################
@@ -160,8 +157,8 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 	config = getConfig(args[0])
 	# Initialise task module
 	taskName = config.get(['task', 'module'])
-	task = Plugin.createInstance(taskName, config, taskName)
-	jobDB = Plugin.createInstance('TextFileJobDB', config)
+	task = Plugin.create_instance(taskName, config, taskName)
+	jobDB = Plugin.create_instance('TextFileJobDB', config)
 	selected = JobSelector.create(opts.job_selector, task = task)
 	logging.info('Matching jobs: ' + str.join(' ', imap(str, jobDB.getJobsIter(selected))))
 	if opts.job_reset_attempts:
@@ -177,8 +174,8 @@ if opts.job_selector or opts.job_reset_attempts or opts.job_force_state or opts.
 if opts.dataset_show_diff:
 	if len(args) != 2:
 		utils.exitWithUsage('%s <dataset source 1> <dataset source 2>' % sys.argv[0])
-	a = DataProvider.createInstance('ListProvider', config, args[0], None)
-	b = DataProvider.createInstance('ListProvider', config, args[1], None)
+	a = DataProvider.create_instance('ListProvider', config, args[0], None)
+	b = DataProvider.create_instance('ListProvider', config, args[1], None)
 	(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(a.getBlocks(show_stats = False), b.getBlocks(show_stats = False))
 	utils.printTabular([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block')], blocksMissing)
 
@@ -186,9 +183,9 @@ if opts.dataset_show_removed:
 	if len(args) < 2:
 		utils.exitWithUsage('%s <dataset source 1> <dataset source 2> ... <dataset source N> ' % sys.argv[0])
 	removed = []
-	oldDP = DataProvider.createInstance('ListProvider', config, args[0], None)
+	oldDP = DataProvider.create_instance('ListProvider', config, args[0], None)
 	for new in args[1:]:
-		newDP = DataProvider.createInstance('ListProvider', config, new, None)
+		newDP = DataProvider.create_instance('ListProvider', config, new, None)
 		(blocksAdded, blocksMissing, blocksChanged) = DataProvider.resyncSources(oldDP.getBlocks(show_stats = False), newDP.getBlocks(show_stats = False))
 		for block in blocksMissing:
 			tmp = dict(block)

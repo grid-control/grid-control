@@ -24,8 +24,6 @@ parser.addText(None, 'J', 'job-selector', default = None)
 parser.addText(None, ' ', 'string',       default = '')
 options = scriptOptions(parser)
 
-Report = Plugin.getClass('Report')
-
 if options.opts.report_list:
 	sys.stderr.write('Available report classes:\n')
 	displayPluginList(getPluginList('Report'))
@@ -48,8 +46,9 @@ def main(opts, args):
 	selected = jobDB.getJobs(JobSelector.create(opts.job_selector, task = task))
 	activity.finish()
 
-	report = Report.createInstance(opts.report, jobDB, task, selected, opts.string)
-	report.display()
+	report = config.getCompositePlugin('transient report', opts.report, 'MultiReport', cls = 'Report',
+		pargs = (jobDB, task, selected, opts.string))
+	report.show_report(jobDB)
 
 if __name__ == '__main__':
 	sys.exit(main(options.opts, options.args))

@@ -15,6 +15,7 @@
 from grid_control.config import triggerResync
 from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor
 from grid_control.parameters import ParameterMetadata
+from grid_control.utils import safe_index
 from grid_control.utils.data_structures import makeEnum
 from grid_control_cms.lumi_tools import filterLumiFilter, formatLumi, parseLumiFilter, selectLumi, selectRun, strLumi
 from python_compat import any, ichain, imap, izip, set
@@ -33,19 +34,22 @@ def removeRunLumi(value, idxRuns, idxLumi):
 
 
 class LumiDataProcessor(DataProcessor):
-	alias = ['lumi']
+	alias_list = ['lumi']
 
-	def __init__(self, config, onChange):
-		DataProcessor.__init__(self, config, onChange)
-		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = onChange)
+	def __init__(self, config, datasource_name, onChange):
+		DataProcessor.__init__(self, config, datasource_name, onChange)
+		self._lumi_filter = config.getLookup(['lumi filter', '%s lumi filter' % datasource_name],
+			default = {}, parser = parseLumiFilter, strfun = strLumi, onChange = onChange)
 		if self._lumi_filter.empty():
 			lumi_keep_default = LumiKeep.none
 		else:
 			lumi_keep_default = LumiKeep.Run
-			config.setBool('lumi metadata', True)
+			config.setBool('%s lumi metadata' % datasource_name, True)
 			self._log.info('Runs/lumi section filter enabled!')
-		self._lumi_keep = config.getEnum('lumi keep', LumiKeep, lumi_keep_default, onChange = onChange)
-		self._lumi_strict = config.getEnum('lumi filter strictness', LumiMode, LumiMode.strict, onChange = onChange)
+		self._lumi_keep = config.getEnum(['lumi keep', '%s lumi keep' % datasource_name],
+			LumiKeep, lumi_keep_default, onChange = onChange)
+		self._lumi_strict = config.getEnum(['lumi filter strictness', '%s lumi filter strictness' % datasource_name],
+			LumiMode, LumiMode.strict, onChange = onChange)
 
 	def _acceptRun(self, block, fi, idxRuns, lumi_filter):
 		if idxRuns is None:
@@ -75,14 +79,11 @@ class LumiDataProcessor(DataProcessor):
 				removeRunLumi(fi[DataProvider.Metadata], idxRuns, idxLumi)
 			yield fi
 
-	def processBlock(self, block):
+	def process_block(self, block):
 		if self._lumi_filter.empty() and ((self._lumi_keep == LumiKeep.RunLumi) or (DataProvider.Metadata not in block)):
 			return block
-		def getMetadataIdx(key):
-			if key in block.get(DataProvider.Metadata, []):
-				return block[DataProvider.Metadata].index(key)
-		idxRuns = getMetadataIdx('Runs')
-		idxLumi = getMetadataIdx('Lumi')
+		idxRuns = safe_index(block.get(DataProvider.Metadata, []), 'Runs')
+		idxLumi = safe_index(block.get(DataProvider.Metadata, []), 'Lumi')
 		if not self._lumi_filter.empty():
 			lumi_filter = self._lumi_filter.lookup(block[DataProvider.Nickname], is_selector = False)
 			if lumi_filter and (self._lumi_strict == LumiMode.strict) and ((idxRuns is None) or (idxLumi is None)):
@@ -104,19 +105,20 @@ class LumiDataProcessor(DataProcessor):
 
 
 class LumiPartitionProcessor(PartitionProcessor):
-	def __init__(self, config):
-		PartitionProcessor.__init__(self, config)
+	def __init__(self, config, datasource_name):
+		PartitionProcessor.__init__(self, config, datasource_name)
 		changeTrigger = triggerResync(['datasets', 'parameters'])
-		self._lumi_filter = config.getLookup('lumi filter', {}, parser = parseLumiFilter, strfun = strLumi, onChange = changeTrigger)
+		self._lumi_filter = config.getLookup(['lumi filter', '%s lumi filter' % datasource_name],
+			default = {}, parser = parseLumiFilter, strfun = strLumi, onChange = changeTrigger)
 
-	def getKeys(self):
+	def get_partition_metadata(self):
 		if self.enabled():
 			return [ParameterMetadata('LUMI_RANGE', untracked = True)]
 
 	def enabled(self):
 		return not self._lumi_filter.empty()
 
-	def getNeededKeys(self, splitter):
+	def get_needed_vn_list(self, splitter):
 		if self.enabled():
 			return ['LUMI_RANGE']
 
@@ -124,7 +126,7 @@ class LumiPartitionProcessor(PartitionProcessor):
 		if self.enabled():
 			lumi_filter = self._lumi_filter.lookup(splitInfo[DataSplitter.Nickname], is_selector = False)
 			if lumi_filter:
-				idxRuns = splitInfo[DataSplitter.MetadataHeader].index("Runs")
+				idxRuns = splitInfo[DataSplitter.MetadataHeader].index('Runs')
 				iterRuns = ichain(imap(lambda m: m[idxRuns], splitInfo[DataSplitter.Metadata]))
 				short_lumi_filter = filterLumiFilter(list(iterRuns), lumi_filter)
 				result['LUMI_RANGE'] = str.join(',', imap(lambda lr: '"%s"' % lr, formatLumi(short_lumi_filter)))

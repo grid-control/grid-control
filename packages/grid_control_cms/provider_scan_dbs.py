@@ -20,11 +20,11 @@ from grid_control.utils.parsing import strGuid
 from hpfwk import clear_current_exception
 
 class DBSInfoProvider(GCProvider):
-	alias = ['dbsinfo']
+	alias_list = ['dbsinfo']
 
-	def __init__(self, config, datasetExpr, datasetNick = None):
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick = None):
 		tmp = ['OutputDirsFromConfig', 'MetadataFromTask']
-		if os.path.isdir(datasetExpr):
+		if os.path.isdir(dataset_expr):
 			tmp = ['OutputDirsFromWork']
 		tmp.extend(['JobInfoFromOutputDir', 'ObjectsFromCMSSW', 'FilesFromJobInfo', 'MetadataFromCMSSW',
 			'ParentLookup', 'SEListFromPath', 'LFNFromPath', 'DetermineEvents', 'FilterEDMFiles'])
@@ -32,7 +32,7 @@ class DBSInfoProvider(GCProvider):
 		config.set('include config infos', 'True')
 		config.set('parent keys', 'CMSSW_PARENT_LFN CMSSW_PARENT_PFN')
 		config.set('events key', 'CMSSW_EVENTS_WRITE')
-		GCProvider.__init__(self, config, datasetExpr, datasetNick)
+		GCProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
 		self._discovery = config.getBool('discovery', False)
 
 	def _generateDatasetName(self, key, data):

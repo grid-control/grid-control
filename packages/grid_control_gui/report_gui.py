@@ -71,20 +71,20 @@ class CategoryBaseReport(Report):
 			result += ' (%d subtasks)' % others
 		return result
 
-	def _getCategoryStateSummary(self):
+	def _getCategoryStateSummary(self, job_db):
 		catStateDict = {}
 		for jobNum in self._jobs:
-			jobState = self._jobDB.getJobTransient(jobNum).state
+			jobState = job_db.getJobTransient(jobNum).state
 			catKey = self._job2cat[jobNum]
 			catStateDict[catKey][jobState] = catStateDict.setdefault(catKey, dict()).get(jobState, 0) + 1
 		return (catStateDict, dict(self._catDescDict), {}) # (<state overview>, <descriptions>, <#subcategories>)
 
 
 class ModuleReport(CategoryBaseReport):
-	alias = ['module']
+	alias_list = ['module']
 
-	def display(self):
-		(catStateDict, catDescDict, _) = CategoryBaseReport._getCategoryStateSummary(self)
+	def show_report(self, job_db):
+		(catStateDict, catDescDict, _) = CategoryBaseReport._getCategoryStateSummary(self, job_db)
 		infos = []
 		head = set()
 		stateCat = {Job.SUCCESS: 'SUCCESS', Job.FAILED: 'FAILED', Job.RUNNING: 'RUNNING', Job.DONE: 'RUNNING'}
@@ -194,8 +194,8 @@ class AdaptiveBaseReport(CategoryBaseReport):
 							catDescDict[catKey].pop(varKey)
 
 
-	def _getCategoryStateSummary(self):
-		(catStateDict, catDescDict, catSubcatDict) = CategoryBaseReport._getCategoryStateSummary(self)
+	def _getCategoryStateSummary(self, job_db):
+		(catStateDict, catDescDict, catSubcatDict) = CategoryBaseReport._getCategoryStateSummary(self, job_db)
 		# Used for quick calculations
 		catLenDict = {}
 		for catKey in catStateDict:
@@ -226,7 +226,7 @@ class AdaptiveBaseReport(CategoryBaseReport):
 
 
 class GUIReport(AdaptiveBaseReport):
-	alias = ['modern']
+	alias_list = ['modern']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		(self.maxY, self.maxX) = Console(sys.stdout).getmaxyx()
@@ -243,11 +243,11 @@ class GUIReport(AdaptiveBaseReport):
 
 	def printGUIHeader(self, message):
 		self.printLimited('-' * (self.maxX - 24), self.maxX)
-		self.printLimited('%s %s' % (message, self._getHeader(self.maxX - len(message) - 1)), self.maxX)
+		self.printLimited('%s %s' % (message, self._get_header(self.maxX - len(message) - 1)), self.maxX)
 		self.printLimited('-' * (self.maxX - 24), self.maxX)
 
-	def display(self):
-		(catStateDict, catDescDict, catSubcatDict) = self._getCategoryStateSummary()
+	def show_report(self, job_db):
+		(catStateDict, catDescDict, catSubcatDict) = self._getCategoryStateSummary(job_db)
 		self._catCur = len(catStateDict)
 		def sumCat(catKey, states):
 			return sum(imap(lambda z: catStateDict[catKey].get(z, 0), states))

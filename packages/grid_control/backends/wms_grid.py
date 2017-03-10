@@ -108,7 +108,7 @@ class Grid_CheckJobs(CheckJobsWithProcess):
 				self._fill(job_info, key, value)
 		yield job_info
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, discardlist = ['Keyboard interrupt raised by user'])
 
 
@@ -124,7 +124,7 @@ class Grid_CancelJobs(CancelJobsWithProcess):
 
 
 class GridWMS(BasicWMS):
-	configSections = BasicWMS.configSections + ['grid']
+	config_section_list = BasicWMS.config_section_list + ['grid']
 	def __init__(self, config, name, checkExecutor, cancelExecutor, jdlWriter = None):
 		config.set('access token', 'VomsProxy')
 		BasicWMS.__init__(self, config, name, checkExecutor = checkExecutor, cancelExecutor = cancelExecutor)
@@ -189,7 +189,7 @@ class GridWMS(BasicWMS):
 
 
 	def explainError(self, proc, code):
-		if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout = 0):
+		if 'Keyboard interrupt raised by user' in proc.stderr.read_log():
 			return True
 		return False
 

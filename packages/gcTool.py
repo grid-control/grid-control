@@ -17,7 +17,7 @@ import os, sys, signal, logging
 from grid_control import utils
 from grid_control.config import create_config
 from grid_control.gc_exceptions import gc_excepthook
-from grid_control.logging_setup import logging_setup
+from grid_control.logging_setup import logging_setup, parse_logging_args
 from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
 from grid_control.utils.file_objects import SafeFile
@@ -68,20 +68,21 @@ def parse_cmd_line(cmd_line_args):
 	logging.getLogger().setLevel(max(1, logging.DEFAULT - opts.verbose))
 	return (opts, args)
 
+
 # Config filler which collects data from command line arguments
-class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
+class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 	def __init__(self, cmd_line_args):
 		self._cmd_line_args = cmd_line_args
 
 	def fill(self, container):
-		combinedEntry = container.getEntry('cmdargs', lambda entry: entry.section == 'global')
-		newCmdLine = self._cmd_line_args
-		if combinedEntry:
-			newCmdLine = combinedEntry.value.split() + self._cmd_line_args
-		(opts, _) = parse_cmd_line(newCmdLine)
-		def setConfigFromOpt(section, option, value):
+		combined_entry = container.getEntry('cmdargs', lambda entry: entry.section == 'global')
+		new_cmd_line = self._cmd_line_args
+		if combined_entry:
+			new_cmd_line = combined_entry.value.split() + self._cmd_line_args
+		(opts, _) = parse_cmd_line(new_cmd_line)
+		def set_config_from_opt(section, option, value):
 			if value is not None:
-				self._addEntry(container, section, option, str(value), '<cmdline>')
+				self._add_entry(container, section, option, str(value), '<cmdline>')
 		cmd_line_config_map = {
 			'state!': { '#init': opts.init, '#resync': opts.resync,
 				'#display config': opts.help_conf, '#display minimal config': opts.help_confmin },
@@ -92,17 +93,16 @@ class OptsConfigFiller(Plugin.getClass('ConfigFiller')):
 		}
 		for section in cmd_line_config_map:
 			for (option, value) in cmd_line_config_map[section].items():
-				setConfigFromOpt(section, option, value)
-		for entry in opts.logging:
-			tmp = entry.replace(':', '=').split('=')
-			if len(tmp) == 1:
-				tmp.append('DEBUG')
-			setConfigFromOpt('logging', tmp[0] + ' level', tmp[1])
+				set_config_from_opt(section, option, value)
+		for (logger_name, logger_level) in parse_logging_args(opts.logging):
+			set_config_from_opt('logging', logger_name + ' level', logger_level)
 		if opts.action is not None:
-			setConfigFromOpt('workflow', 'action', opts.action.replace(',', ' '))
+			set_config_from_opt('workflow', 'action', opts.action.replace(',', ' '))
 		if opts.continuous:
-			setConfigFromOpt('workflow', 'duration', -1)
-		Plugin.createInstance('StringConfigFiller', opts.override).fill(container)
+			set_config_from_opt('workflow', 'duration', -1)
+		if opts.override:
+			Plugin.create_instance('StringConfigFiller', opts.override).fill(container)
+
 
 # create config instance
 def gc_create_config(cmd_line_args = None, **kwargs):
@@ -112,11 +112,19 @@ def gc_create_config(cmd_line_args = None, **kwargs):
 		kwargs.setdefault('additional', []).append(OptsConfigFiller(cmd_line_args))
 	return create_config(register = True, **kwargs)
 
+
 # set up signal handler for interrupts
 def handle_abort_interrupt(signum, frame):
 	utils.abort(True)
 	handle_abort_interrupt.log = Activity('Quitting grid-control! (This can take a few seconds...)', parent = 'root')
 	signal.signal(signum, signal.SIG_DFL)
+
+
+def get_actions(config):
+	action_delete = config.get('delete', '', onChange = None)
+	action_reset = config.get('reset', '', onChange = None)
+	return (action_delete, action_reset)
+
 
 # create workflow from config and do initial processing steps
 def gc_create_workflow(config):
@@ -131,7 +139,7 @@ def gc_create_workflow(config):
 	# Check work dir validity (default work directory is the config file name)
 	if not os.path.exists(global_config.getWorkPath()):
 		if not global_config.getState('init'):
-			logging.getLogger('user').warning('Starting initialization of %s!', global_config.getWorkPath())
+			logging.getLogger('workflow').warning('Starting initialization of %s!', global_config.getWorkPath())
 			global_config.setState(True, 'init')
 		if global_config.getChoiceYesNo('workdir create', True,
 				interactive_msg = 'Do you want to create the working directory %s?' % global_config.getWorkPath()):
@@ -143,13 +151,11 @@ def gc_create_workflow(config):
 	help_cfg = global_config.getState('display', detail = 'config')
 	help_scfg = global_config.getState('display', detail = 'minimal config')
 
-	action_config = config.changeView(setSections = ['action'])
-	action_delete = action_config.get('delete', '', onChange = None)
-	action_reset = action_config.get('reset', '', onChange = None)
+	(action_delete, action_reset) = get_actions(config.changeView(setSections = ['action']))
 
 	# Create workflow and freeze config settings
 	workflow = global_config.getPlugin('workflow', 'Workflow:global', cls = 'Workflow')
-	config.factory.freezeConfig(writeConfig = config.getState('init', detail = 'config'))
+	config.factory.freeze(write_config = config.getState('init', detail = 'config'))
 
 	# Give config help
 	if help_cfg or help_scfg:
@@ -159,13 +165,14 @@ def gc_create_workflow(config):
 
 	# Check if user requested deletion / reset of jobs
 	if action_delete:
-		workflow.jobManager.delete(workflow.wms, action_delete)
+		workflow.jobManager.delete(workflow.task, workflow.wms, action_delete)
 		sys.exit(os.EX_OK)
 	if action_reset:
-		workflow.jobManager.reset(workflow.wms, action_reset)
+		workflow.jobManager.reset(workflow.task, workflow.wms, action_reset)
 		sys.exit(os.EX_OK)
 
 	return workflow
+
 
 def run(args = None, intro = True):
 	# display the 'grid-control' logo and version
@@ -185,7 +192,7 @@ def run(args = None, intro = True):
 			sys.exit(workflow.run())
 		finally:
 			sys.stdout.write('\n')
-	except SystemExit: # avoid getting caught for Python < 2.5 
+	except SystemExit: # avoid getting caught for Python < 2.5
 		raise
 	except Exception: # coverage overrides sys.excepthook
 		gc_excepthook(*sys.exc_info())

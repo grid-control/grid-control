@@ -47,7 +47,7 @@ class BasicProgressBar(object):
 
 
 class BarReport(Report):
-	alias = ['bar']
+	alias_list = ['bar']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
@@ -56,6 +56,6 @@ class BarReport(Report):
 	def getHeight(self):
 		return 1
 
-	def display(self):
-		self._bar.update(len(self._jobDB.getJobs(ClassSelector(JobClass.SUCCESS))))
+	def show_report(self, job_db):
+		self._bar.update(len(job_db.getJobs(ClassSelector(JobClass.SUCCESS))))
 		sys.stdout.write(str(self._bar) + '\n')

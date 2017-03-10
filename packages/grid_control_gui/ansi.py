@@ -53,9 +53,12 @@ class Console(object):
 			self._stream.flush()
 
 	def getmaxyx(self):
-		winsize_ptr = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
-		winsize = struct.unpack('HHHH', winsize_ptr)
-		return (winsize[0], winsize[1])
+		try:
+			winsize_ptr = fcntl.ioctl(0, termios.TIOCGWINSZ, struct.pack("HHHH", 0, 0, 0, 0))
+			winsize = struct.unpack('HHHH', winsize_ptr)
+			return (winsize[0], winsize[1])
+		except Exception:
+			return (24, 80) # vt100 default
 
 	def move(self, row, col):
 		self._esc('[%d;%dH' % (row, col))

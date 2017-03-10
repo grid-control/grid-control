@@ -16,14 +16,14 @@ import random
 from grid_control.gc_plugin import NamedPlugin
 
 class Broker(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['broker']
+	config_section_list = NamedPlugin.config_section_list + ['broker']
 	tagName = 'broker'
 
-	def __init__(self, config, name, userOpt, itemName, discoverFun):
+	def __init__(self, config, name, broker_prefix, itemName, discoverFun):
 		NamedPlugin.__init__(self, config, name)
 		(self._itemsStart, self._itemsDiscovered, self._itemName) = (None, False, itemName)
-		self._nEntries = config.getInt('%s entries' % userOpt, 0, onChange = None)
-		self._nRandom = config.getBool('%s randomize' % userOpt, False, onChange = None)
+		self._nEntries = config.getInt('%s entries' % broker_prefix, 0, onChange = None)
+		self._nRandom = config.getBool('%s randomize' % broker_prefix, False, onChange = None)
 
 	def _discover(self, discoverFun, cached = True):
 		if not cached or (self._itemsDiscovered is False):

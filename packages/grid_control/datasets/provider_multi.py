@@ -12,64 +12,64 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from hpfwk import ExceptionCollector
 from python_compat import imap, reduce, set
 
 class MultiDatasetProvider(DataProvider):
-	def __init__(self, config, datasetExpr, datasetNick, providerList):
-		DataProvider.__init__(self, config, datasetExpr, datasetNick)
-		self._stats = DataProcessor.createInstance('SimpleStatsDataProcessor', config, None, self._log, 'Summary: Running over ')
-		self._providerList = providerList
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick, providerList):
+		DataProvider.__init__(self, config, datasource_name, dataset_expr, dataset_nick)
+		self._stats = DataProcessor.create_instance('SimpleStatsDataProcessor', config, 'dataset', None, self._log, 'Summary: Running over ')
+		self._provider_list = providerList
 
 
 	def queryLimit(self):
-		return max(imap(lambda x: x.queryLimit(), self._providerList))
+		return max(imap(lambda x: x.queryLimit(), self._provider_list))
 
 
 	def checkSplitter(self, splitter):
 		def getProposal(x):
-			return reduce(lambda prop, prov: prov.checkSplitter(prop), self._providerList, x)
+			return reduce(lambda prop, prov: prov.checkSplitter(prop), self._provider_list, x)
 		if getProposal(splitter) != getProposal(getProposal(splitter)):
 			raise DatasetError('Dataset providers could not agree on valid dataset splitter!')
 		return getProposal(splitter)
+
+
+	def get_dataset_expr(self):
+		return str.join(' ', imap(lambda p: p.get_dataset_expr(), self._provider_list))
 
 
 	def getDatasets(self):
 		if self._cache_dataset is None:
 			self._cache_dataset = set()
 			ec = ExceptionCollector()
-			for provider in self._providerList:
+			for provider in self._provider_list:
 				try:
 					self._cache_dataset.update(provider.getDatasets())
 				except Exception:
 					ec.collect()
-				if utils.abort():
-					raise DatasetError('Could not retrieve all datasets!')
 			ec.raise_any(DatasetError('Could not retrieve all datasets!'))
 		return list(self._cache_dataset)
 
 
 	def getBlocks(self, show_stats):
-		statsProcessor = NullDataProcessor(config = None, onChange = None)
+		statsProcessor = NullDataProcessor()
 		if show_stats:
 			statsProcessor = self._stats
 		if self._cache_block is None:
 			ec = ExceptionCollector()
 			def getAllBlocks():
-				for provider in self._providerList:
+				for provider in self._provider_list:
 					try:
-						for block in provider.getBlocksNormed():
+						for block in provider.get_blocks_raw():
 							yield block
 					except Exception:
 						ec.collect()
-					if utils.abort():
-						raise DatasetError('Could not retrieve all datasets!')
 			try:
-				self._cache_block = list(statsProcessor.process(self._datasetProcessor.process(getAllBlocks())))
+				self._cache_block = list(statsProcessor.process(self._dataset_processor.process(getAllBlocks())))
 			except Exception:
 				raise DatasetError('Unable to run datasets through processing pipeline!')
 			ec.raise_any(DatasetError('Could not retrieve all datasets!'))
+			self._raise_on_abort()
 		return self._cache_block

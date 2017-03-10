@@ -40,7 +40,7 @@ class Host_CheckJobs(CheckJobsWithProcess):
 			job_info.update({CheckInfo.QUEUE: 'localqueue', CheckInfo.WN: 'localhost'})
 			yield job_info
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = ['Unknown Job Id'], log_empty = False)
 
 
@@ -48,13 +48,13 @@ class Host_CancelJobs(CancelJobsWithProcessBlind):
 	def __init__(self, config):
 		CancelJobsWithProcessBlind.__init__(self, config, 'kill', ['-9'], unknownID = 'No such process')
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = self._blacklist, log_empty = False)
 
 
 class Host(LocalWMS):
-	alias = ['Localhost']
-	configSections = LocalWMS.configSections + ['Localhost', 'Host']
+	alias_list = ['Localhost']
+	config_section_list = LocalWMS.config_section_list + ['Localhost', 'Host']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,

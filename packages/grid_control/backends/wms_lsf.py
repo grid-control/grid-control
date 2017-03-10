@@ -45,7 +45,7 @@ class LSF_CheckJobs(CheckJobsWithProcess):
 			except Exception:
 				raise BackendError('Error reading job info:\n%s' % line)
 
-	def _handleError(self, proc):
+	def _handle_error(self, proc):
 		self._filter_proc_log(proc, self._errormsg, blacklist = ['is not found'])
 
 
@@ -55,7 +55,7 @@ class LSF_CancelJobs(CancelJobsWithProcessBlind):
 
 
 class LSF(LocalWMS):
-	configSections = LocalWMS.configSections + ['LSF']
+	config_section_list = LocalWMS.config_section_list + ['LSF']
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,

@@ -22,33 +22,34 @@ class Report(Plugin):
 	def __init__(self, jobDB = None, task = None, jobs = None, configString = ''):
 		if jobs is None:
 			jobs = jobDB.getJobs()
-		(self._jobDB, self._task, self._jobs) = (jobDB, task, jobs)
+		(self._jobs, self._task_id, self._task_name) = (jobs, '', '')
+		if task is not None:
+			(self._task_id, self._task_name) = (task.taskID, task.taskConfigName)
 		# FIXME: really store task for later access? maybe just use task during init run?
-		self._header = self._getHeader(45)
+		self._header = self._get_header(45)
 		self._log = logging.getLogger('report')
 
-	def _getHeader(self, maxLen = 45):
-		if not self._task or not self._task.taskConfigName:
-			return ''
-		tmp = self._task.taskConfigName + ' / ' + self._task.taskID
-		if len(tmp) < maxLen:
+	def _get_header(self, maxLen = 45):
+		tmp = self._task_name + ' / ' + self._task_id
+		if self._task_id and self._task_name and (len(tmp) < maxLen):
 			return tmp
-		tmp = self._task.taskConfigName
-		if len(tmp) < maxLen:
-			return tmp
-		return self._task.taskID
+		elif self._task_name and (len(self._task_name) < maxLen):
+			return self._task_name
+		elif self._task_id:
+			return self._task_id
+		return ''
 
 	def getHeight(self):
 		return 0
 
-	def display(self):
+	def show_report(self, job_db):
 		raise AbstractError
 
 
 class NullReport(Report):
-	alias = ['null']
+	alias_list = ['null']
 
-	def display(self):
+	def show_report(self, job_db):
 		pass
 
 
@@ -59,13 +60,13 @@ class MultiReport(Report):
 	def getHeight(self):
 		return sum(imap(lambda r: r.getHeight(), self._reportList))
 
-	def display(self):
+	def show_report(self, job_db):
 		for report in self._reportList:
-			report.display()
+			report.show_report(job_db)
 
 
 class BasicReport(Report):
-	alias = ['basic']
+	alias_list = ['basic']
 
 	def _write_line(self, content, width = 65, newline = True):
 		content = content.ljust(width)
@@ -82,11 +83,11 @@ class BasicReport(Report):
 	def getHeight(self):
 		return 8 + int((len(Job.enumNames) + 1) / 2)
 
-	def display(self):
-		njobs_total = len(self._jobDB)
+	def show_report(self, job_db):
+		njobs_total = len(job_db)
 		summary = dict(imap(lambda x: (x, 0.0), Job.enumValues))
 		for jobNum in self._jobs:
-			summary[self._jobDB.getJobTransient(jobNum).state] += 1
+			summary[job_db.getJobTransient(jobNum).state] += 1
 		makeSum = lambda *states: sum(imap(lambda z: summary[z], states))
 		makePer = lambda *states: [makeSum(*states), round(makeSum(*states) / max(1, njobs_total) * 100.0)]
 
@@ -115,16 +116,16 @@ class BasicReport(Report):
 
 
 class LocationReport(Report):
-	alias = ['location']
+	alias_list = ['location']
 
 	def _add_details(self, reports, jobObj):
 		if jobObj.get('dest', 'N/A') != 'N/A':
 			reports.append({2: ' -> ' + jobObj.get('dest')})
 
-	def display(self):
+	def show_report(self, job_db):
 		reports = []
 		for jobNum in self._jobs:
-			jobObj = self._jobDB.getJob(jobNum)
+			jobObj = job_db.getJob(jobNum)
 			if not jobObj or (jobObj.state == Job.INIT):
 				continue
 			reports.append({0: jobNum, 1: Job.enum2str(jobObj.state), 2: jobObj.gcID})

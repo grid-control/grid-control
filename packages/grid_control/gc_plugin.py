@@ -23,7 +23,7 @@ class ConfigurablePlugin(Plugin):
 	def bind(cls, value, **kwargs):
 		config = kwargs.pop('config')
 		for entry in value.split():
-			yield InstanceFactory(entry, cls.getClass(entry), config)
+			yield InstanceFactory(entry, cls.get_class(entry), config)
 	bind = classmethod(bind)
 
 
@@ -46,13 +46,13 @@ class NamedPlugin(ConfigurablePlugin):
 		tags = kwargs.pop('tags', None)
 		inheritSections = kwargs.pop('inherit', False)
 		for entry in value.split():
-			(clsName, instanceName) = (None, None)
+			(cls_name, instanceName) = (None, None)
 			tmp = entry.split(':', 1)
 			if len(tmp) == 2:
-				(clsName, instanceName) = tmp
+				(cls_name, instanceName) = tmp
 			elif len(tmp) == 1:
-				clsName = tmp[0]
-			clsNew = cls.getClass(clsName)
+				cls_name = tmp[0]
+			clsNew = cls.get_class(cls_name)
 			if not instanceName:
 				instanceName = clsNew.__name__.split('.')[-1]
 			cls_config = config.changeView(viewClass = 'TaggedConfigView',

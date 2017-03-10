@@ -13,68 +13,63 @@
 # | limitations under the License.
 
 import csv
-from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
+from grid_control.parameters.psource_base import ParameterError, ParameterInfo, ParameterMetadata, ParameterSource
 from grid_control.parameters.psource_basic import InternalParameterSource
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import ZipFile
-from grid_control.utils.parsing import parseJSON
-from python_compat import ifilter, imap, irange, izip, json, lfilter, lmap, sorted
+from grid_control.utils.parsing import parseJSON, strDict
+from python_compat import ifilter, imap, izip, json, lfilter, lmap, sorted
 
-# Reader for grid-control dump files - getHash is not implemented to keep it from being used by users
-class GCDumpParameterSource(ParameterSource):
+class GCDumpParameterSource(ParameterSource): # Reader for grid-control dump files - get_psrc_hash is not implemented to keep it from being used by users
 	def __init__(self, fn):
 		ParameterSource.__init__(self)
 		fp = ZipFile(fn, 'r')
 		try:
-			keyline = fp.readline().lstrip('#').strip()
+			header = fp.readline().lstrip('#').strip()
 			self._keys = []
-			if keyline:
-				self._keys = parseJSON(keyline)
-			def parseLine(line):
+			if header:
+				self._keys = parseJSON(header)
+			def parse_line(line):
 				if not line.startswith('#'):
 					pNumStr, stored = lmap(str.strip, line.split('\t', 1))
 					return ('!' in pNumStr, int(pNumStr.rstrip('!')), lmap(parseJSON, stored.split('\t')))
-			self._values = lmap(parseLine, fp.readlines())
+			self._values = lmap(parse_line, fp.readlines())
 		finally:
 			fp.close()
 
-	def getMaxParameters(self):
-		return len(self._values)
-
-	def fillParameterKeys(self, result):
-		result.extend(imap(ParameterMetadata, self._keys))
-
-	def fillParameterInfo(self, pNum, result):
+	def fill_parameter_content(self, pNum, result):
 		result[ParameterInfo.ACTIVE] = not self._values[pNum][0]
 		for (key, value) in izip(self._keys, self._values[pNum][2]):
 			if value is not None:
 				result[key] = value
 
-	def write(cls, fn, pa):
+	def fill_parameter_metadata(self, result):
+		result.extend(imap(ParameterMetadata, self._keys))
+
+	def get_parameter_len(self):
+		return len(self._values)
+
+	def write(cls, fn, ps_len, ps_metadata, psp_iter): # write parameter part of parameter adapter
 		fp = ZipFile(fn, 'w')
 		try:
-			keys = sorted(ifilter(lambda p: not p.untracked, pa.getJobKeys()))
-			fp.write('# %s\n' % json.dumps(keys))
-			maxN = pa.getMaxJobs()
-			if maxN:
-				activity = Activity('Writing parameter dump')
-				for jobNum in irange(maxN):
-					activity.update('Writing parameter dump [%d/%d]' % (jobNum + 1, maxN))
-					meta = pa.getJobInfo(jobNum)
-					meta_str = str.join('\t', imap(lambda k: json.dumps(meta.get(k, '')), keys))
-					if meta.get(ParameterInfo.ACTIVE, True):
-						fp.write('%d\t%s\n' % (jobNum, meta_str))
-					else:
-						fp.write('%d!\t%s\n' % (jobNum, meta_str))
-				activity.finish()
+			vn_list = sorted(lmap(lambda p: p.value, ifilter(lambda p: not p.untracked, ps_metadata)))
+			fp.write('# %s\n' % json.dumps(vn_list))
+			activity = Activity('Writing parameter dump')
+			for job_num, psp in enumerate(psp_iter):
+				activity.update('Writing parameter dump [%d/%d]' % (job_num + 1, ps_len))
+				psp_str = str.join('\t', imap(lambda k: json.dumps(psp.get(k, '')), vn_list))
+				if psp.get(ParameterInfo.ACTIVE, True):
+					fp.write('%d\t%s\n' % (job_num, psp_str))
+				else:
+					fp.write('%d!\t%s\n' % (job_num, psp_str))
+			activity.finish()
 		finally:
 			fp.close()
 	write = classmethod(write)
 
 
-# Reader for CSV files
-class CSVParameterSource(InternalParameterSource):
-	alias = ['csv']
+class CSVParameterSource(InternalParameterSource): # Reader for CSV files
+	alias_list = ['csv']
 
 	def __init__(self, fn, format = 'sniffed'):
 		(self._fn, self._format) = (fn, format)
@@ -89,23 +84,25 @@ class CSVParameterSource(InternalParameterSource):
 		for entry in tmp:
 			entry.pop(None, None)
 			if None in entry.values():
-				raise Exception('Malformed entry in csv file %r: %r' % (fn, entry))
+				raise ParameterError('Malformed entry in csv file %r: {%s}' % (fn, strDict(entry)))
 
-		def cleanupDict(d):
+		def cleanup_dict(d):
 			# strip all key value entries
 			tmp = tuple(imap(lambda item: lmap(str.strip, item), d.items()))
 			# filter empty parameters
 			return lfilter(lambda k_v: k_v[0] != '', tmp)
 		keys = []
 		if len(tmp):
-			keys = lmap(ParameterMetadata, tmp[0].keys())
-		values = lmap(lambda d: dict(cleanupDict(d)), tmp)
+			keys = sorted(imap(ParameterMetadata, tmp[0].keys()), key = lambda k: k.value)
+		values = lmap(lambda d: dict(cleanup_dict(d)), tmp)
 		InternalParameterSource.__init__(self, values, keys)
 
 	def __repr__(self):
+		if self._format == 'sniffed':
+			return 'csv(%r)' % self._fn
 		return 'csv(%r, %r)' % (self._fn, self._format)
 
-	def create(cls, pconfig, repository, src = 'CSV'): # pylint:disable=arguments-differ
+	def create_psrc(cls, pconfig, repository, src = 'CSV'): # pylint:disable=arguments-differ
 		fn = pconfig.get(src, 'source')
 		return CSVParameterSource(fn, pconfig.get(src, 'format', 'sniffed'))
-	create = classmethod(create)
+	create_psrc = classmethod(create_psrc)

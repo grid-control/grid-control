@@ -45,12 +45,12 @@ def se_copy(src, dst, force = True, tmp = ''):
 
 
 class StorageManager(NamedPlugin):
-	configSections = NamedPlugin.configSections + ['storage']
+	config_section_list = NamedPlugin.config_section_list + ['storage']
 	tagName = 'storage'
 
-	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
+	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
 		NamedPlugin.__init__(self, config, name)
-		(self.smOptPrefix, self.varPrefix) = (optPrefix, varPrefix)
+		(self._storage_channel, self._storage_var_prefix) = (storage_channel, storage_var_prefix)
 
 	def addFiles(self, files):
 		pass
@@ -66,13 +66,13 @@ class StorageManager(NamedPlugin):
 
 
 class LocalSBStorageManager(StorageManager):
-	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
-		StorageManager.__init__(self, config, name, optDefault, optPrefix, varPrefix)
-		self.sbPath = config.getPath('%s path' % optDefault, config.getWorkPath('sandbox'), mustExist = False)
+	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
+		StorageManager.__init__(self, config, name, storage_type, storage_channel, storage_var_prefix)
+		self._sandbox_path = config.getPath('%s path' % storage_type, config.getWorkPath('sandbox'), mustExist = False)
 
 	def doTransfer(self, listDescSourceTarget):
 		for (desc, source, target) in listDescSourceTarget:
-			target = os.path.join(self.sbPath, target)
+			target = os.path.join(self._sandbox_path, target)
 			try:
 				shutil.copy(source, target)
 			except Exception:
@@ -80,39 +80,39 @@ class LocalSBStorageManager(StorageManager):
 
 
 class SEStorageManager(StorageManager):
-	def __init__(self, config, name, optDefault, optPrefix, varPrefix):
-		StorageManager.__init__(self, config, name, optDefault, optPrefix, varPrefix)
+	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
+		StorageManager.__init__(self, config, name, storage_type, storage_channel, storage_var_prefix)
 		normSEPath = lambda x: utils.QM(x[0] == '/', 'dir:///%s' % x.lstrip('/'), x)
-		self.defPaths = config.getList('%s path' % optDefault, [], onValid = validNoVar(config), parseItem = normSEPath)
-		self.smPaths = config.getList('%s path' % optPrefix, self.defPaths, onValid = validNoVar(config), parseItem = normSEPath)
-		self.smFiles = config.getList('%s files' % optPrefix, [])
-		self.smPattern = config.get('%s pattern' % optPrefix, '@X@')
-		self.smTimeout = config.getTime('%s timeout' % optPrefix, 2*60*60)
-		self.smForce = config.getBool('%s force' % optPrefix, True)
+		self._storage_paths = config.getList(['%s path' % storage_type, '%s path' % storage_channel],
+			default = [], onValid = validNoVar(config), parseItem = normSEPath)
+		self._storage_files = config.getList('%s files' % storage_channel, [])
+		self._storage_pattern = config.get('%s pattern' % storage_channel, '@X@')
+		self._storage_timeout = config.getTime('%s timeout' % storage_channel, 2*60*60)
+		self._storage_force = config.getBool('%s force' % storage_channel, True)
 
 	def addFiles(self, files):
-		self.smFiles.extend(files)
+		self._storage_files.extend(files)
 
 	def getTaskConfig(self):
 		return {
-			'%s_PATH' % self.varPrefix: str.join(' ', self.smPaths),
-			'%s_FILES' % self.varPrefix: str.join(' ', self.smFiles),
-			'%s_PATTERN' % self.varPrefix: self.smPattern,
-			'%s_TIMEOUT' % self.varPrefix: self.smTimeout,
+			'%s_PATH' % self._storage_var_prefix: str.join(' ', self._storage_paths),
+			'%s_FILES' % self._storage_var_prefix: str.join(' ', self._storage_files),
+			'%s_PATTERN' % self._storage_var_prefix: self._storage_pattern,
+			'%s_TIMEOUT' % self._storage_var_prefix: self._storage_timeout,
 		}
 
 	def getDependencies(self):
-		if True in imap(lambda x: not x.startswith('dir'), self.smPaths):
+		if True in imap(lambda x: not x.startswith('dir'), self._storage_paths):
 			return ['glite']
 		return []
 
 	def doTransfer(self, listDescSourceTarget):
 		for (desc, source, target) in listDescSourceTarget:
-			if not self.smPaths:
-				raise ConfigError("%s can't be transferred because '%s path wasn't set" % (desc, self.smOptPrefix))
-			for idx, sePath in enumerate(set(self.smPaths)):
+			if not self._storage_paths:
+				raise ConfigError("%s can't be transferred because '%s path wasn't set" % (desc, self._storage_channel))
+			for idx, sePath in enumerate(set(self._storage_paths)):
 				activity = Activity('Copy %s to SE %d ' % (desc, idx + 1))
-				proc = se_copy(source, os.path.join(sePath, target), self.smForce)
+				proc = se_copy(source, os.path.join(sePath, target), self._storage_force)
 				proc.status(timeout = 5*60, terminate = True)
 				activity.finish()
 				if proc.status(timeout = 0) == 0:

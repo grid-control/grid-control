@@ -62,7 +62,7 @@ class JobProgressBar(object):
 
 
 class ColorBarReport(Report):
-	alias = ['cbar']
+	alias_list = ['cbar']
 
 	def __init__(self, jobDB, task, jobs = None, configString = ''):
 		Report.__init__(self, jobDB, task, jobs, configString)
@@ -71,10 +71,10 @@ class ColorBarReport(Report):
 	def getHeight(self):
 		return 1
 
-	def display(self):
+	def show_report(self, job_db):
 		self._bar.update(
-			len(self._jobDB.getJobs(ClassSelector(JobClass.SUCCESS))),
-			len(self._jobDB.getJobs(ClassSelector(JobClass.ATWMS))),
-			len(self._jobDB.getJobs(ClassSelector(JobClass.RUNNING_DONE))),
-			len(self._jobDB.getJobs(ClassSelector(JobClass.FAILING))))
+			len(job_db.getJobs(ClassSelector(JobClass.SUCCESS))),
+			len(job_db.getJobs(ClassSelector(JobClass.ATWMS))),
+			len(job_db.getJobs(ClassSelector(JobClass.RUNNING_DONE))),
+			len(job_db.getJobs(ClassSelector(JobClass.FAILING))))
 		sys.stdout.write(str(self._bar) + '\n')

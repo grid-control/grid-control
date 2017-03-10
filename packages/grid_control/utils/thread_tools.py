@@ -55,10 +55,10 @@ def create_thread(fun, *args, **kwargs):
 		create_thread.counter += 1
 	finally:
 		create_thread.lock.release()
-	parent_thread_name = get_thread_name(get_current_thread())
-	new_thread_name = '%s-%d' % (parent_thread_name, create_thread.counter)
+	thread_name_parent = get_thread_name(get_current_thread()).replace('Mainthread', 'T')
+	thread_name_new = '%s-%d' % (thread_name_parent, create_thread.counter)
 	# create new thread
-	return threading.Thread(name = new_thread_name, target = fun, args = args, kwargs = kwargs)
+	return threading.Thread(name = thread_name_new, target = fun, args = args, kwargs = kwargs)
 create_thread.counter = 0
 create_thread.lock = GCLock()
 
@@ -251,7 +251,7 @@ def hang_protection(fun, timeout = 5):
 
 
 # Combines multiple, threaded generators into single generator
-def tchain(iterables, timeout = None):
+def tchain(iterables, timeout = None, ex_cls = NestedException, ex_msg = 'Caught exception during threaded chain'):
 	threads = []
 	result = GCQueue()
 	ec = ExceptionCollector()
@@ -280,4 +280,4 @@ def tchain(iterables, timeout = None):
 			threads.pop() # which thread is irrelevant - only used as counter
 		else:
 			yield tmp
-	ec.raise_any(NestedException('Caught exception during threaded chain'))
+	ec.raise_any(ex_cls(ex_msg))

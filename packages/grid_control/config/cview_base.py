@@ -13,24 +13,21 @@
 # | limitations under the License.
 
 import logging
-from grid_control.config.config_entry import ConfigEntry, ConfigError, noDefault, standardConfigForm
-from grid_control.utils.data_structures import makeEnum
+from grid_control.config.config_entry import ConfigEntry, ConfigError, standardConfigForm
 from hpfwk import AbstractError, Plugin
-from python_compat import ichain, imap, lfilter, sorted
-
-selectorUnchanged = makeEnum(['selector_unchanged'])
+from python_compat import ichain, imap, lfilter, sorted, unspecified
 
 class ConfigView(Plugin):
 	def __init__(self, name, parent = None):
-		self.pathDict = {}
-		self.pathDict.update((parent or self).pathDict) # inherit path dict from parent
+		self.config_vault = {}
+		self.config_vault = (parent or self).config_vault # used shared config vault from parent if present
 		self.setConfigName(name)
 
 	def setConfigName(self, name):
 		self.configName = name
 		self._log = logging.getLogger('config.%s' % name.lower())
 
-	def getView(self, setSections = selectorUnchanged, **kwargs):
+	def getView(self, viewClass = None, **kwargs):
 		raise AbstractError
 
 	def iterContent(self):
@@ -83,13 +80,12 @@ class HistoricalConfigView(ConfigView):
 		self._oldContainer = oldContainer
 		self._curContainer = curContainer
 
-	def getView(self, viewClass = None, setSections = selectorUnchanged, **kwargs):
+	def getView(self, viewClass = None, **kwargs):
 		if not viewClass:
 			viewClass = self.__class__
 		elif isinstance(viewClass, str):
-			viewClass = ConfigView.getClass(viewClass)
-		return viewClass(self.configName, self._oldContainer, self._curContainer, self,
-			setSections = setSections, **kwargs)
+			viewClass = ConfigView.get_class(viewClass)
+		return viewClass(self.configName, self._oldContainer, self._curContainer, self, **kwargs)
 
 	def _getSection(self, specific):
 		raise AbstractError
@@ -104,7 +100,7 @@ class HistoricalConfigView(ConfigView):
 		return ConfigEntry(section, option_list[-1], value, opttype, source)
 
 	def _matchEntries(self, container, option_list = None):
-		key_list = container.getKeys()
+		key_list = container.get_options()
 		if option_list is not None:
 			key_list = lfilter(lambda key: key in key_list, option_list)
 
@@ -130,18 +126,18 @@ class HistoricalConfigView(ConfigView):
 		return self._matchEntries(self._curContainer)
 
 	def _getEntry(self, option_list, defaultEntry, defaultEntry_fallback):
-		if defaultEntry.value != noDefault:
+		if not unspecified(defaultEntry.value):
 			self._curContainer.setDefault(defaultEntry)
 		# Assemble matching config entries and combine them
 		entries = self._matchEntries(self._curContainer, option_list)
-		if defaultEntry.value != noDefault:
+		if not unspecified(defaultEntry.value):
 			entries.append(defaultEntry_fallback)
 		self._log.log(logging.DEBUG1, 'Used config entries:')
 		for entry in entries:
 			self._log.log(logging.DEBUG1, '  %s (%s | %s)', entry.format(printSection = True), entry.source, entry.order)
 		curEntry = ConfigEntry.combineEntries(entries)
 		# Ensure that fallback default value is stored in persistent storage
-		if (defaultEntry.value != noDefault) and defaultEntry_fallback.used:
+		if defaultEntry_fallback.used and not unspecified(defaultEntry.value):
 			self._curContainer.setDefault(defaultEntry_fallback)
 		return curEntry
 
@@ -185,7 +181,7 @@ class HistoricalConfigView(ConfigView):
 # Simple ConfigView implementation
 class SimpleConfigView(HistoricalConfigView):
 	def __init__(self, name, oldContainer, curContainer, parent = None,
-			setSections = selectorUnchanged, addSections = None):
+			setSections = unspecified, addSections = None):
 		HistoricalConfigView.__init__(self, name, oldContainer, curContainer, parent or self)
 		self._initVariable(parent or self, '_cfgSections', None, setSections, addSections, standardConfigForm)
 
@@ -198,7 +194,7 @@ class SimpleConfigView(HistoricalConfigView):
 			result = getattr(parent, memberName)
 		if setValue is None:
 			result = setValue
-		elif setValue != selectorUnchanged:
+		elif not unspecified(setValue):
 			result = normValues(list(collect(setValue)))
 		# Add to settings
 		if addValue and (result is not None):

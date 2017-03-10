@@ -15,14 +15,14 @@
 from grid_control.backends import WMS
 
 class InactiveWMS(WMS):
-	alias = ['inactive']
+	alias_list = ['inactive']
 
 	def __init__(self, config, name):
 		WMS.__init__(self, config, name)
 		self._token = config.getCompositePlugin(['proxy', 'access token'], 'TrivialAccessToken',
 			'MultiAccessToken', cls = 'AccessToken', inherit = True, tags = [self])
 
-	def canSubmit(self, neededTime, canCurrentlySubmit):
+	def can_submit(self, neededTime, canCurrentlySubmit):
 		return True
 
 	def getAccessToken(self, gcID):

@@ -10,7 +10,8 @@ try:
 			version = eval(line.split('=')[1]) # pylint:disable=eval-used
 finally:
 	fp.close()
-assert(version)
+if not version:
+	raise Exception('Unable to find version information!')
 
 packages = []
 for pkg in find_packages('packages'):
