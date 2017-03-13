@@ -13,15 +13,15 @@
 # | limitations under the License.
 
 import os
-from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError
-from grid_control.datasets import DataSplitter, PartitionProcessor
 from grid_control.output_processor import DebugJobInfoProcessor
-from grid_control.parameters import ParameterMetadata
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from python_compat import ifilter, imap, lmap, set, sorted, unspecified
+from grid_control.utils import DictFormat, Result, clean_path, create_tarball, get_path_share, match_files  # pylint:disable=line-too-long
+from grid_control.utils.table import ConsoleTable
+from grid_control.utils.user_interface import UserInputInterface
+from python_compat import ifilter, imap, set, sorted, unspecified
 
 
 class SCRAMTask(DataTask):
@@ -95,7 +95,7 @@ class SCRAMTask(DataTask):
 		try:
 			fp = open(fn, 'r')
 			try:
-				return utils.DictFormat().parse(fp, key_parser={None: str})
+				return DictFormat().parse(fp, key_parser={None: str})
 			finally:
 				fp.close()
 		except Exception:
@@ -106,52 +106,6 @@ class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
 	def __init__(self):
 		DebugJobInfoProcessor.__init__(self)
 		self._display_files.append('cmssw.log.gz')
-
-
-class LFNPartitionProcessor(PartitionProcessor):
-	alias_list = ['lfnprefix']
-
-	def __init__(self, config, datasource_name):
-		PartitionProcessor.__init__(self, config, datasource_name)
-		lfn_modifier = config.get(self._get_pproc_opt('lfn modifier'), '')
-		lfn_modifier_shortcuts = config.get_dict(self._get_pproc_opt('lfn modifier dict'), {
-			'<xrootd>': 'root://cms-xrd-global.cern.ch/',
-			'<xrootd:eu>': 'root://xrootd-cms.infn.it/',
-			'<xrootd:us>': 'root://cmsxrootd.fnal.gov/',
-		})[0]
-		self._prefix = None
-		if lfn_modifier == '/':
-			self._prefix = '/store/'
-		elif lfn_modifier.lower() in lfn_modifier_shortcuts:
-			self._prefix = lfn_modifier_shortcuts[lfn_modifier.lower()] + '/store/'
-		elif lfn_modifier:
-			self._prefix = lfn_modifier + '/store/'
-
-	def enabled(self):
-		return self._prefix is not None
-
-	def get_partition_metadata(self):
-		return lmap(lambda k: ParameterMetadata(k, untracked=True), ['DATASET_SRM_FILES'])
-
-	def process(self, pnum, partition, result):
-		def _modify_filelist_for_srm(filelist):
-			return lmap(lambda f: 'file://' + f.split('/')[-1], filelist)
-
-		def _prefix_lfn(lfn):
-			return self._prefix + lfn.split('/store/', 1)[-1]
-
-		if self._prefix:
-			partition[DataSplitter.FileList] = lmap(_prefix_lfn, partition[DataSplitter.FileList])
-			if 'srm' in self._prefix:
-				result.update({'DATASET_SRM_FILES': str.join(' ', partition[DataSplitter.FileList])})
-				partition[DataSplitter.FileList] = _modify_filelist_for_srm(partition[DataSplitter.FileList])
-
-
-class CMSSWPartitionProcessor(PartitionProcessor.get_class('BasicPartitionProcessor')):  # pylint:disable=no-init
-	alias_list = ['cmsswpart']
-
-	def _format_fn_list(self, fn_list):
-		return str.join(', ', imap(lambda x: '"%s"' % x, fn_list))
 
 
 class CMSSW(SCRAMTask):
@@ -170,13 +124,14 @@ class CMSSW(SCRAMTask):
 
 		self._needed_vn_set = set()
 		SCRAMTask.__init__(self, config, name)
+		self._uii = UserInputInterface()
 
 		# Setup file path informations
 		self._cmsrun_output_files = ['cmssw.dbs.tar.gz']
 		if self._do_gzip_std_output:
 			self._cmsrun_output_files.append('cmssw.log.gz')
-		self._script_fpi = utils.Result(path_rel='gc-run.cmssw.sh',
-			path_abs=utils.get_path_share('gc-run.cmssw.sh', pkg='grid_control_cms'))
+		self._script_fpi = Result(path_rel='gc-run.cmssw.sh',
+			path_abs=get_path_share('gc-run.cmssw.sh', pkg='grid_control_cms'))
 
 		if self._scram_project != 'CMSSW':
 			raise ConfigError('Project area contains no CMSSW project')
@@ -187,7 +142,7 @@ class CMSSW(SCRAMTask):
 			self._old_release_top = self._parse_scram_file(scram_arch_env_path).get('RELEASETOP', None)
 
 		self._update_map_error_code2message(
-			utils.get_path_share('gc-run.cmssw.sh', pkg='grid_control_cms'))
+			get_path_share('gc-run.cmssw.sh', pkg='grid_control_cms'))
 
 		self._project_area_tarball_on_se = config.get_bool(['se runtime', 'se project area'], True)
 		self._project_area_tarball = config.get_work_path('cmssw-project-area.tar.gz')
@@ -206,7 +161,7 @@ class CMSSW(SCRAMTask):
 			# this can be a variable like @USER_EVENTS@!
 			self._needed_vn_set.add('MAX_EVENTS')
 		fragment = config.get_path('instrumentation fragment',
-			utils.get_path_share('fragmentForCMSSW.py', pkg='grid_control_cms'))
+			get_path_share('fragmentForCMSSW.py', pkg='grid_control_cms'))
 		self._config_fn_list = self._process_config_file_list(config,
 			list(self._iter_config_files(config)), fragment,
 			auto_prepare=config.get_bool('instrumentation', True),
@@ -218,13 +173,13 @@ class CMSSW(SCRAMTask):
 		# Information about search order for software environment
 		self._cmssw_search_dict = self._get_cmssw_path_list(config)
 		if config.get_state('init', detail='sandbox'):
-			if os.path.exists(self._project_area_tarball):
-				if not utils.get_user_bool('CMSSW tarball already exists! Do you want to regenerate it?', True):
-					return
+			msg = 'CMSSW tarball already exists! Do you want to regenerate it?'
+			if os.path.exists(self._project_area_tarball) and not self._uii.prompt_bool(msg, True):
+				return
 			# Generate CMSSW tarball
 			if self._project_area:
-				utils.create_tarball(self._project_area_tarball,
-					utils.match_files(self._project_area, self._project_area_selector_list))
+				create_tarball(self._project_area_tarball,
+					match_files(self._project_area, self._project_area_selector_list))
 			if self._project_area_tarball_on_se:
 				config.set_state(True, 'init', detail='storage')
 
@@ -252,9 +207,9 @@ class CMSSW(SCRAMTask):
 		fpi_list = (SCRAMTask.get_sb_in_fpi_list(self) + self.prolog.get_sb_in_fpi_list() +
 			self.epilog.get_sb_in_fpi_list())
 		for config_file in self._config_fn_list:
-			fpi_list.append(utils.Result(path_abs=config_file, path_rel=os.path.basename(config_file)))
+			fpi_list.append(Result(path_abs=config_file, path_rel=os.path.basename(config_file)))
 		if self._project_area and not self._project_area_tarball_on_se:
-			fpi_list.append(utils.Result(path_abs=self._project_area_tarball,
+			fpi_list.append(Result(path_abs=self._project_area_tarball,
 				path_rel=os.path.basename(self._project_area_tarball)))
 		return fpi_list + [self._script_fpi]
 
@@ -320,7 +275,7 @@ class CMSSW(SCRAMTask):
 		if config_file_status_list:
 			config_file_status_header = [(1, 'Config file'), (2, 'Work dir'),
 				(3, 'Instrumented'), (4, 'Scheduled')]
-			utils.display_table(config_file_status_header, config_file_status_list, 'lccc')
+			ConsoleTable.create(config_file_status_header, config_file_status_list, 'lccc')
 		return config_file_list_todo
 
 	def _config_is_instrumented(self, fn):
@@ -361,7 +316,7 @@ class CMSSW(SCRAMTask):
 		result = []
 		path_cmssw_user = config.get(['cmssw dir', 'vo software dir'], '')
 		if path_cmssw_user:
-			path_cmssw_local = os.path.abspath(utils.clean_path(path_cmssw_user))
+			path_cmssw_local = os.path.abspath(clean_path(path_cmssw_user))
 			if os.path.exists(path_cmssw_local):
 				path_cmssw_user = path_cmssw_local
 		if path_cmssw_user:
@@ -398,7 +353,7 @@ class CMSSW(SCRAMTask):
 			config_file_list, auto_prepare, must_prepare)
 		for (cfg, cfg_new, do_prepare) in iter_uninitialized_config_files:
 			ask_user_msg = 'Do you want to prepare %s for running over the dataset?' % cfg
-			if do_prepare and (auto_prepare or utils.get_user_bool(ask_user_msg, True)):
+			if do_prepare and (auto_prepare or self._uii.prompt_bool(ask_user_msg, True)):
 				self._config_store_backup(cfg, cfg_new, fragment_path)
 			else:
 				self._config_store_backup(cfg, cfg_new)

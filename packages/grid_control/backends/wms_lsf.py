@@ -12,13 +12,13 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
+from grid_control.utils import resolve_install_path
 from python_compat import identity, ifilter, izip, next
 
 
@@ -60,7 +60,7 @@ class LSF(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submit_exec=utils.resolve_install_path('bsub'),
+			submit_exec=resolve_install_path('bsub'),
 			cancel_executor=LSFCancelJobs(config),
 			check_executor=CheckJobsMissingState(config, LSFCheckJobs(config)))
 

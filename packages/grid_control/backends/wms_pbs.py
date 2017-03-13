@@ -12,13 +12,13 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.job_db import Job
+from grid_control.utils import DictFormat, accumulate, resolve_install_path
 from grid_control.utils.parsing import parse_time
 from grid_control.utils.process_base import LocalProcess
 from python_compat import identity, ifilter, izip, lmap
@@ -27,8 +27,8 @@ from python_compat import identity, ifilter, izip, lmap
 class PBSDiscoverNodes(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
-		self._timeout = config.get_int('discovery timeout', 30, on_change=None)
-		self._exec = utils.resolve_install_path('pbsnodes')
+		self._timeout = config.get_time('discovery timeout', 30, on_change=None)
+		self._exec = resolve_install_path('pbsnodes')
 
 	def discover(self):
 		proc = LocalProcess(self._exec)
@@ -43,7 +43,7 @@ class PBSDiscoverNodes(BackendDiscovery):
 class PBSDiscoverQueues(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
-		self._exec = utils.resolve_install_path('qstat')
+		self._exec = resolve_install_path('qstat')
 
 	def discover(self):
 		active = False
@@ -77,10 +77,10 @@ class PBSCheckJobs(CheckJobsWithProcess):
 		})
 
 	def _parse(self, proc):
-		for section in utils.accumulate(proc.stdout.iter(self._timeout), '', lambda x, buf: x == '\n'):
+		for section in accumulate(proc.stdout.iter(self._timeout), '', lambda x, buf: x == '\n'):
 			try:
 				lines = section.replace('\n\t', '').split('\n')
-				job_info = utils.DictFormat(' = ').parse(lines[1:])
+				job_info = DictFormat(' = ').parse(lines[1:])
 				job_info[CheckInfo.WMSID] = lines[0].split(':')[1].split('.')[0].strip()
 				job_info[CheckInfo.RAW_STATUS] = job_info.pop('job_state')
 				job_info[CheckInfo.QUEUE] = job_info.pop('queue', None)

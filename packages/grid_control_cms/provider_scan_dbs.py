@@ -13,9 +13,9 @@
 # | limitations under the License.
 
 import os
-from grid_control import utils
 from grid_control.datasets.provider_base import DatasetError
 from grid_control.datasets.provider_scan import GCProvider
+from grid_control.utils import replace_with_dict
 from grid_control.utils.parsing import str_guid
 from hpfwk import clear_current_exception
 
@@ -76,4 +76,4 @@ class DBSInfoProvider(GCProvider):
 		if None in (primary, processed, tier):
 			raise DatasetError('Invalid dataset name supplied: %r\nresulting in %s' % (
 				self._dataset_pattern, raw_dataset_name))
-		return utils.replace_with_dict(raw_dataset_name, metadata_dict)
+		return replace_with_dict(raw_dataset_name, metadata_dict)

@@ -13,10 +13,10 @@
 # | limitations under the License.
 
 import time
-from grid_control import utils
 from grid_control.gc_exceptions import InstallationError
 from grid_control.gui import GUI
 from grid_control.job_db import Job
+from grid_control.utils import wait
 from grid_control_gui.plugin_graph import get_graph_image, get_workflow_graph
 from hpfwk import clear_current_exception
 from python_compat import lmap, lzip, sorted
@@ -137,4 +137,4 @@ class CPWebserver(GUI):
 
 	def _process_queue(self, timeout):
 		self._counter += 1
-		utils.wait(timeout)
+		wait(timeout)

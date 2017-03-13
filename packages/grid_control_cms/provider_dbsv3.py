@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import GridJSONRestClient
+from grid_control_cms.access_cms import get_cms_cert
 from grid_control_cms.provider_cms import CMSBaseProvider
 from python_compat import lmap
 
@@ -31,7 +32,8 @@ class DBS3Provider(CMSBaseProvider):
 			self._url = 'https://cmsweb.cern.ch/dbs/%s/DBSReader' % self._dataset_instance
 		# Use DBS locality for private samples
 		self._use_phedex = (self._url == 'https://cmsweb.cern.ch/dbs/prod/global/DBSReader')
-		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query DBS3!', UserError)
+		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query DBS3!', UserError,
+			cert=get_cms_cert(config))
 
 	def _get_cms_dataset_list(self, dataset_path):
 		dataset_path_parts = (dataset_path.lstrip('/') + '/*/*/*').split('/')[:3]

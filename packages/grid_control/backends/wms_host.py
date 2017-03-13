@@ -12,12 +12,12 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
+from grid_control.utils import get_path_share
 from python_compat import ifilter, imap, izip, lmap, next
 
 
@@ -59,7 +59,7 @@ class Host(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submit_exec=utils.get_path_share('gc-host.sh'),
+			submit_exec=get_path_share('gc-host.sh'),
 			check_executor=CheckJobsMissingState(config, HostCheckJobs(config)),
 			cancel_executor=HostCancelJobs(config))
 

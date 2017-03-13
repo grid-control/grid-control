@@ -13,14 +13,14 @@
 # | limitations under the License.
 
 import os, glob, time, shlex, shutil, tempfile
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobs
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
+from grid_control.utils import ensure_dir_exists, get_path_share, remove_files, resolve_install_path
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import VirtualFile
 from grid_control.utils.process_base import LocalProcess
-from grid_control.utils.thread_tools import GCLock
+from grid_control.utils.thread_tools import GCLock, with_lock
 from hpfwk import AbstractError, ExceptionCollector, ignore_exception
 from python_compat import ifilter, imap, ismap, lchain, lfilter, lmap
 
@@ -29,7 +29,7 @@ class SandboxHelper(object):
 	def __init__(self, config):
 		self._cache = []
 		self._path = config.get_path('sandbox path', config.get_work_path('sandbox'), must_exist=False)
-		utils.ensure_dir_exists(self._path, 'sandbox base', BackendError)
+		ensure_dir_exists(self._path, 'sandbox base', BackendError)
 
 	def get_path(self):
 		return self._path
@@ -109,7 +109,7 @@ class LocalWMS(BasicWMS):
 			# Cleanup sandbox
 			output_fn_list = lchain(imap(lambda pat: glob.glob(os.path.join(path, pat)),
 				self._output_fn_list))
-			utils.remove_files(ifilter(lambda x: x not in output_fn_list,
+			remove_files(ifilter(lambda x: x not in output_fn_list,
 				imap(lambda fn: os.path.join(path, fn), os.listdir(path))))
 
 			yield (jobnum, path)
@@ -151,7 +151,7 @@ class LocalWMS(BasicWMS):
 		submit_args = shlex.split(self._submit_opt_str)
 		submit_args.extend(shlex.split(self._get_submit_arguments(jobnum, job_name,
 			reqs, sandbox, stdout, stderr)))
-		submit_args.append(utils.get_path_share('gc-local.sh'))
+		submit_args.append(get_path_share('gc-local.sh'))
 		submit_args.extend(shlex.split(self._get_job_arguments(jobnum, sandbox)))
 		proc = LocalProcess(self._submit_exec, *submit_args)
 		exit_code = proc.status(timeout=20, terminate=True)
@@ -172,6 +172,8 @@ class LocalWMS(BasicWMS):
 
 
 class LocalPurgeJobs(CancelJobs):
+	purge_lock = GCLock()
+
 	def __init__(self, config, sandbox_helper):
 		CancelJobs.__init__(self, config)
 		self._sandbox_helper = sandbox_helper
@@ -184,17 +186,9 @@ class LocalPurgeJobs(CancelJobs):
 			if path is None:
 				self._log.warning('Sandbox for job %r could not be found', wms_id)
 				continue
-			LocalPurgeJobs.lock.acquire()
-			try:
-				shutil.rmtree(path)
-			except Exception:
-				self._log.critical('Unable to delete directory %r: %r', path, os.listdir(path))
-				LocalPurgeJobs.lock.release()
-				raise BackendError('Sandbox for job %r could not be deleted', wms_id)
-			LocalPurgeJobs.lock.release()
+			with_lock(LocalPurgeJobs.purge_lock, _purge_directory, self._log, path, wms_id)
 			yield (wms_id,)
 		activity.finish()
-LocalPurgeJobs.lock = GCLock()  # <global-state>
 
 
 class Local(WMS):
@@ -215,10 +209,18 @@ class Local(WMS):
 		for cmd, wms in [('sacct', 'SLURM'), ('sgepasswd', 'OGE'), ('pbs-config', 'PBS'),
 				('qsub', 'OGE'), ('condor_q', 'Condor'), ('bsub', 'LSF'), ('job_slurm', 'JMS')]:
 			try:
-				utils.resolve_install_path(cmd)
+				resolve_install_path(cmd)
 			except Exception:
 				exc.collect()
 				continue
 			return _create_backend(wms)
 		# at this point all backends have failed!
 		exc.raise_any(BackendError('No valid local backend found!'))
+
+
+def _purge_directory(log, path, wms_id):
+	try:
+		shutil.rmtree(path)
+	except Exception:
+		log.critical('Unable to delete directory %r: %r', path, os.listdir(path))
+		raise BackendError('Sandbox for job %r could not be deleted', wms_id)

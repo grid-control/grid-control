@@ -13,7 +13,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys
+import os, sys, logging
 from gc_scripts import FileInfo, get_script_object_cmdline, iter_jobnum_output_dn, iter_output_files
 
 
@@ -26,7 +26,7 @@ def _main():
 	for (_, output_dn) in iter_jobnum_output_dn(base_output_dn, script_obj.job_db.get_job_list()):
 		for fi in iter_output_files(output_dn):
 			se_path = fi[FileInfo.Path].replace('file://', '').replace('dir://', '')
-			sys.stdout.write('%s  %s/%s\n' % (fi[FileInfo.Hash], se_path, fi[FileInfo.NameDest]))
+			logging.getLogger('script').info('%s  %s/%s', fi[FileInfo.Hash], se_path, fi[FileInfo.NameDest])
 
 
 if __name__ == '__main__':

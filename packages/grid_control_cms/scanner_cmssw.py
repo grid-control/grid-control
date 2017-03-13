@@ -13,10 +13,10 @@
 # | limitations under the License.
 
 import os, re, xml.dom.minidom
-from grid_control import utils
 from grid_control.datasets import DatasetError
 from grid_control.datasets.provider_scan import GCProviderSetup
 from grid_control.datasets.scanner_base import InfoScanner
+from grid_control.utils import exec_wrapper
 from hpfwk import clear_current_exception
 from python_compat import all, bytes2str, ifilter, imap, lfilter, tarfile
 
@@ -115,7 +115,7 @@ class ObjectsFromCMSSW(InfoScanner):
 				self._stored_globaltag[config_hash] = global_tag_lines[-1].split(':')[1].strip()
 		if config_hash not in self._stored_globaltag:
 			try:
-				config_content_env = utils.exec_wrapper(config_content)
+				config_content_env = exec_wrapper(config_content)
 				self._stored_globaltag[config_hash] = config_content_env['process'].GlobalTag.globaltag.value()
 			except Exception:
 				clear_current_exception()

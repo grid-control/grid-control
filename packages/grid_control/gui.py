@@ -15,50 +15,16 @@
 import logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.report import Report
-from grid_control.utils.activity import Activity
 from grid_control.utils.parsing import str_time_short
 from hpfwk import AbstractError
 
 
-class SimpleActivityStream(object):
-	def __init__(self, stream, register_callback=False):
-		(self._stream, self._old_message, self._register_cb) = (stream, None, register_callback)
-		self.enable_activity_callback()
-
-	def disable_activity_callback(self):
-		if self._register_cb:
-			Activity.callbacks.remove(self.write)
-
-	def enable_activity_callback(self):
-		if self._register_cb:
-			Activity.callbacks.append(self.write)
-
-	def flush(self):
-		return self._stream.flush()
-
-	def write(self, value=''):
-		activity_message = None
-		if Activity.root:
-			for activity in Activity.root.get_children():
-				activity_message = activity.get_message(truncate=75)
-		if self._old_message is not None:
-			self._stream.write('\r%s\r' % (' ' * len(self._old_message)))
-		self._old_message = activity_message
-		result = self._stream.write(value)
-		if (activity_message is not None) and (value.endswith('\n') or not value):
-			self._stream.write(activity_message + '\r')
-			self._stream.flush()
-		return result
-
-
 class GUI(ConfigurablePlugin):
+	config_section_list = ['gui']
+
 	def __init__(self, config, workflow):
 		ConfigurablePlugin.__init__(self, config)
 		self._workflow = workflow
-		self._report_config_str = config.get('report options', '', on_change=None)
-		self._report = config.get_composited_plugin('report', 'BasicReport', 'MultiReport',
-			cls=Report, on_change=None, pargs=(workflow.job_manager.job_db,
-			workflow.task), pkwargs={'config_str': self._report_config_str})
 
 	def start_display(self):
 		raise AbstractError
@@ -73,6 +39,10 @@ class SimpleConsole(GUI):
 	def __init__(self, config, workflow):
 		GUI.__init__(self, config, workflow)
 		self._log = logging.getLogger('workflow')
+		report_config_str = config.get('report options', '', on_change=None)
+		self._report = config.get_composited_plugin('report', 'BasicHeaderReport BasicReport',
+			'MultiReport', cls=Report, on_change=None, pargs=(workflow.job_manager.job_db,
+			workflow.task), pkwargs={'config_str': report_config_str})
 
 	def start_display(self):
 		if self._report.get_height():

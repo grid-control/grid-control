@@ -16,12 +16,12 @@
 
 # core modules
 import os, logging
-from grid_control import utils
 from grid_control.backends.htcondor_wms.htcondor_schedd import HTCScheddFactory
 from grid_control.backends.htcondor_wms.wmsid import HTCJobID
 from grid_control.backends.wms import BackendError, BasicWMS
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
+from grid_control.utils import ensure_dir_exists
 from grid_control.utils.activity import Activity
 from python_compat import json, lchain, lfilter
 
@@ -158,7 +158,7 @@ class HTCondor(BasicWMS):
 
 	def getSandboxPath(self, subdirToken=""):
 		sandpath = os.path.join(self._sandboxDir, str(subdirToken), '' )
-		return utils.ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
+		return ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
 
 	# Primary backend actions
 	def submit_jobs(self, jobnum_list, task):

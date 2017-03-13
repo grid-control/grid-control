@@ -16,11 +16,11 @@
 
 # core modules
 import os, re, logging
-from grid_control import utils
 from grid_control.backends.htcondor_wms.htcondor_utils import parseKWListIter, singleQueryCache
 from grid_control.backends.htcondor_wms.processadapter import ProcessAdapterFactory
 from grid_control.backends.htcondor_wms.wmsid import HTCJobID
 from grid_control.backends.wms import BackendError, WMS
+from grid_control.utils import Result, get_version, safe_write, split_blackwhite_list
 from hpfwk import AbstractError, Plugin, clear_current_exception
 from python_compat import ismap, lmap, lru_cache, md5
 
@@ -128,7 +128,7 @@ class HTCScheddBase(Plugin):
 
 	def get_interval_info(self):
 		"""Return suggested Idle/Active polling interval"""
-		return utils.Result(wait_on_idle = 60, wait_between_steps = 10)
+		return Result(wait_on_idle = 60, wait_between_steps = 10)
 
 	def getCanSubmit(self):
 		"""Return whether submission to this Schedd is possible"""
@@ -153,7 +153,7 @@ class HTCScheddBase(Plugin):
 	def _getBaseJDLData(self, task, queryArguments):
 		"""Create a sequence of default attributes for a submission JDL"""
 		jdlData = [
-			'+submitTool              = "GridControl (version %s)"' % utils.get_version(),
+			'+submitTool              = "GridControl (version %s)"' % get_version(),
 			'should_transfer_files    = YES',
 			'when_to_transfer_output  = ON_EXIT',
 			'periodic_remove          = (JobStatus == 5 && HoldReasonCode != 16)',
@@ -195,7 +195,7 @@ class HTCScheddBase(Plugin):
 		for reqType, reqValue in requirements:
 			# ('WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND', 'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE')
 			if reqType == WMS.SITES:
-				(wantSites, vetoSites) = utils.split_blackwhite_list(reqValue[1])
+				(wantSites, vetoSites) = split_blackwhite_list(reqValue[1])
 				if "+SITES" in poolRequMap:
 					jdlData.append( '%s = "%s"' % (
 						poolRequMap["+SITES"][0],
@@ -358,7 +358,7 @@ class HTCScheddLocal(HTCScheddCLIBase):
 	_adapterMaxWait   = 30
 
 	def get_interval_info(self):
-		return utils.Result(wait_on_idle = 20, wait_between_steps = 5)
+		return Result(wait_on_idle = 20, wait_between_steps = 5)
 
 	def getJobsOutput(self, htcIDs):
 		return htcIDs
@@ -368,7 +368,7 @@ class HTCScheddLocal(HTCScheddCLIBase):
 
 	def _prepareSubmit(self, task, jobnum_list, queryArguments):
 		jdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wms_name,md5(self.getURI()).hexdigest()))
-		utils.safe_write(open(jdlFilePath, 'w'),
+		safe_write(open(jdlFilePath, 'w'),
 			lmap(lambda line: line + '\n', self._getJDLData(task, jobnum_list, queryArguments)))
 		return jdlFilePath
 
@@ -428,7 +428,7 @@ class HTCScheddSpool(HTCScheddLocal):
 	_submitScale = 10
 	_adapterMaxWait   = 30
 	def get_interval_info(self):
-		return utils.Result(wait_on_idle = 30, wait_between_steps = 5)
+		return Result(wait_on_idle = 30, wait_between_steps = 5)
 
 	def getJobsOutput(self, htcIDs):
 		self._condor_transfer_data(htcIDs)
@@ -493,7 +493,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		self._stageDirCache = {}
 
 	def get_interval_info(self):
-		return utils.Result(wait_on_idle = 60, wait_between_steps = 10)
+		return Result(wait_on_idle = 60, wait_between_steps = 10)
 
 	def getJobsOutput(self, htcIDs):
 		retrievedJobs = []
@@ -524,7 +524,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 	def _prepareSubmit(self, task, jobnum_list, queryArguments):
 		localJdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wms_name,md5(self.getURI()).hexdigest()))
 		readyJobNumList  = self._stageSubmitFiles(task, jobnum_list)
-		utils.safe_write(open(localJdlFilePath, 'w'),
+		safe_write(open(localJdlFilePath, 'w'),
 			lmap(lambda line: line + '\n', self._getJDLData(task, readyJobNumList, queryArguments)))
 		raise NotImplementedError('JDL must get moved to remote')
 		return jdlFilePath

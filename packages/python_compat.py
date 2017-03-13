@@ -182,6 +182,14 @@ def _rsplit(value, sep, maxsplit=None):
 	return str_parts
 
 
+def _partial(fun, *args, **kwargs):
+	def _partial_fun(*fun_args, **fun_kwargs):
+		new_kwargs = dict(kwargs)
+		new_kwargs.update(fun_kwargs)
+		return fun(*(args + fun_args), **new_kwargs)
+	return _partial_fun
+
+
 def _sorted(unsorted_iterable, key=None, reverse=False):
 	""" Sort list by either using the function key that returns
 	the key to sort by - default is the identity function.
@@ -218,6 +226,7 @@ lsmap = _get_listified(ismap)
 md5 = resolve_fun('hashlib:md5', 'md5:md5')  # >= py-2.5
 next = resolve_fun('<builtin>:next', _next)  # >= py-2.6
 parsedate = resolve_fun('email.utils:parsedate', 'email.Utils:parsedate')  # >= py-2.5
+partial = resolve_fun('functools:partial', _partial)  # >= py-2.5
 reduce = resolve_fun('<builtin-py2>:reduce', 'functools:reduce')  # < py-3.0
 relpath = resolve_fun('os.path:relpath', _relpath)  # >= py-2.6
 rsplit = resolve_fun('<builtin>:str.rsplit', _rsplit)  # >= py-2.4
@@ -294,9 +303,9 @@ else:
 __all__ = ['all', 'any', 'bytes2str', 'BytesBuffer', 'BytesBufferBase', 'exit_without_cleanup',
 	'get_user_input', 'ichain', 'identity', 'ifilter', 'iidfilter', 'imap', 'irange', 'ismap',
 	'itemgetter', 'izip', 'json', 'lchain', 'lfilter', 'lidfilter', 'lmap', 'lrange', 'lru_cache',
-	'lsmap', 'lzip', 'md5', 'md5_hex', 'next', 'parsedate', 'reduce', 'relpath', 'resolve_fun',
-	'rsplit', 'set', 'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile', 'unicode',
-	'unspecified', 'when_unspecified']
+	'lsmap', 'lzip', 'md5', 'md5_hex', 'next', 'parsedate', 'partial', 'reduce', 'relpath',
+	'resolve_fun', 'rsplit', 'set', 'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile',
+	'unicode', 'unspecified', 'when_unspecified']
 
 
 if __name__ == '__main__':

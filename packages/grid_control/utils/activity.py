@@ -13,33 +13,24 @@
 # | limitations under the License.
 
 import logging, threading
-from grid_control.utils.thread_tools import GCLock
+from grid_control.utils.thread_tools import GCLock, with_lock
 from hpfwk import APIError, get_thread_name
 from python_compat import imap, rsplit, set
 
 
 class Activity(object):
+	lock = GCLock()
+	counter = 0
+	running_by_thread_name = {}
+	callbacks = []
+
 	def __init__(self, message=None, level=logging.INFO, name=None, parent=None):
 		self.name = name
-		(self._level, self._message, self._parent, self._children) = (level, None, None, [])
+		(self._level, self._message, self._id) = (level, None, None)
+		(self._parent, self._children) = (None, [])
 		self._current_thread_name = get_thread_name()
 
-		Activity.lock.acquire()
-		try:
-			self._id = Activity.counter
-			Activity.counter += 1
-			# search parent:
-			self._cleanup_running()  # cleanup list of running activities
-			for parent_candidate in self._iter_possible_parents(self._current_thread_name):
-				if (parent is None) or (parent == parent_candidate.name):
-					self._parent = parent_candidate
-					break
-			if (parent is not None) and (self._parent is None):
-				raise APIError('Invalid parent given!')
-			# set this activity as topmost activity in the current thread
-			Activity.running_by_thread_name.setdefault(self._current_thread_name, []).append(self)
-		finally:
-			Activity.lock.release()
+		with_lock(Activity.lock, self._add_activity, parent)
 		self.depth = len(list(self.get_parents()))
 
 		if self._parent:
@@ -94,6 +85,20 @@ class Activity(object):
 	def update(self, message):
 		return self._set_message(message)
 
+	def _add_activity(self, parent):
+		self._id = Activity.counter
+		Activity.counter += 1
+		# search parent:
+		self._cleanup_running()  # cleanup list of running activities
+		for parent_candidate in self._iter_possible_parents(self._current_thread_name):
+			if (parent is None) or (parent == parent_candidate.name):
+				self._parent = parent_candidate
+				break
+		if (parent is not None) and (self._parent is None):
+			raise APIError('Invalid parent given!')
+		# set this activity as topmost activity in the current thread
+		Activity.running_by_thread_name.setdefault(self._current_thread_name, []).append(self)
+
 	def _cleanup_running(self):
 		# clean running activity list
 		running_thread_names = set(imap(get_thread_name, threading.enumerate()))
@@ -118,11 +123,6 @@ class Activity(object):
 		self._message = message
 		for callback in Activity.callbacks:
 			callback()
-
-Activity.lock = GCLock()  # <global-state>
-Activity.counter = 0  # <global-state>
-Activity.running_by_thread_name = {}  # <global-state>
-Activity.callbacks = []  # <global-state>
 Activity.root = Activity('Running grid-control', name='root')  # <global-state>
 
 
@@ -132,19 +132,22 @@ class ProgressActivity(Activity):
 		(self._progress, self._progress_max, self._progress_message) = (progress, progress_max, message)
 		Activity.__init__(self, self._get_progress_message(), level, name, parent)
 
-	def update_progress(self, progress, progress_max=None):
+	def update_progress(self, progress, progress_max=None, message=None):
+		if message is not None:
+			self._progress_message = message
 		if progress_max is not None:
 			self._progress_max = progress_max
 		self._progress = progress
 		self.update(self._get_progress_message())
 
 	def _get_progress_message(self):
-		if self._progress is None:
-			return self._progress_message
-		if self._progress_max:
-			progress_str = '[%d / %d]' % (self._progress, self._progress_max)
+		if self._progress_max in (None, 0):
+			return self._progress_message or ''
+		progress = (self._progress or 0) + 1
+		if self._progress_max is not None:
+			progress_str = '[%d / %d]' % (progress, self._progress_max)
 		else:
-			progress_str = '[%d]' % self._progress
+			progress_str = '[%d]' % progress
 		if self._progress_message is None:
 			return progress_str
 		return str.join(' ', [self._progress_message, progress_str]).strip()

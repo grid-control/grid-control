@@ -21,6 +21,7 @@ from python_compat import lmap
 def _main():
 	parser = ScriptOptions(usage='%s [OPTIONS] <BasePlugin>')
 	parser.add_bool(None, 'p', 'parents', default=False, help='Show plugin parents')
+	parser.add_bool(None, 'c', 'children', default=False, help='Show plugin children')
 	options = parser.script_parse()
 	if len(options.args) != 1:
 		parser.exit_with_usage()
@@ -28,9 +29,13 @@ def _main():
 	if options.opts.parents:
 		cls_info = lmap(lambda cls: {'Name': cls.__name__, 'Alias': str.join(', ', cls.alias_list)},
 			Plugin.get_class(pname).iter_class_bases())
-		display_plugin_list(cls_info, sort=False, title='Parents of plugin %r' % pname)
+		display_plugin_list(cls_info, sort_key=None, title='Parents of plugin %r' % pname)
 	else:
-		display_plugin_list(get_plugin_list(pname), title='Available plugins of type %r' % pname)
+		sort_key = 'Name'
+		if options.opts.children:
+			sort_key = 'Inherit'
+		display_plugin_list(get_plugin_list(pname, inherit_prefix=options.opts.children),
+			sort_key=sort_key, title='Available plugins of type %r' % pname)
 
 
 if __name__ == '__main__':

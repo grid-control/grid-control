@@ -13,8 +13,8 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys
-from gc_scripts import ScriptOptions, gc_create_config, utils
+import os, sys, logging
+from gc_scripts import ConsoleTable, ScriptOptions, gc_create_config, utils
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.utils import thread_tools
 from python_compat import imap, itemgetter, izip, lzip, set, sort_inplace, sorted
@@ -32,8 +32,7 @@ def display_metadata(dataset_list, block, metadata_key_list, metadata_list, base
 	title = ''
 	if len(dataset_list) == 1:
 		title = 'Dataset: %s' % dataset_list[0]
-	utils.display_table(header_list,
-		metadata_list, title=title, pivot=True)
+	ConsoleTable.create(header_list, metadata_list, title=title, pivot=True)
 
 
 def get_dataset_config(opts, args):
@@ -91,7 +90,7 @@ def list_blocks(dataset_list, block_list):
 	if len(dataset_list) > 1:
 		title = ''
 		header_list = [(DataProvider.Dataset, 'Dataset')]
-	utils.display_table(header_list + [(DataProvider.BlockName, 'Block'),
+	ConsoleTable.create(header_list + [(DataProvider.BlockName, 'Block'),
 		(DataProvider.NFiles, '#Files'), (DataProvider.NEntries, '#Entries')],
 		get_total(block_list, DataProvider.BlockName), title=title)
 
@@ -108,20 +107,20 @@ def list_config_entries(dataset_list, block_list, opts, provider):
 		if provider_name == 'list':
 			dataset_config_str += ' %% %s' % ds_info[DataProvider.Dataset]
 		dataset_config_str_list.append(dataset_config_str)
-	sys.stdout.write('\ndataset =\n' + str.join('\n', dataset_config_str_list) + '\n\n')
+	logging.getLogger('script').info('\ndataset =\n' + str.join('\n', dataset_config_str_list) + '\n')
 
 
 def list_datasets(block_list):
 	header_list = [(DataProvider.Dataset, 'Dataset'), (DataProvider.NBlocks, '#Blocks'),
 		(DataProvider.NFiles, '#Files'), (DataProvider.NEntries, '#Entries')]
-	utils.display_table(header_list, get_total(merge_blocks(block_list), DataProvider.Dataset))
+	ConsoleTable.create(header_list, get_total(merge_blocks(block_list), DataProvider.Dataset))
 
 
 def list_files(block_list):
 	for block in block_list:
 		title = 'Dataset:   %s\nBlockname: %s' % (
 			block[DataProvider.Dataset], block[DataProvider.BlockName])
-		utils.display_table([(DataProvider.URL, 'Filename'), (DataProvider.NEntries, '#Entries')],
+		ConsoleTable.create([(DataProvider.URL, 'Filename'), (DataProvider.NEntries, '#Entries')],
 			get_total(block[DataProvider.FileList], DataProvider.URL), title=title)
 
 
@@ -185,7 +184,7 @@ def list_storage(dataset_list, block_list):
 	if len(dataset_list) != 1:
 		header_list = [(DataProvider.Dataset, 'Dataset')]
 		title = ''
-	utils.display_table(header_list + [(DataProvider.BlockName, 'Block'),
+	ConsoleTable.create(header_list + [(DataProvider.BlockName, 'Block'),
 		(DataProvider.Locations, 'Location')], _iter_storage(block_list), title=title)
 
 
@@ -213,7 +212,7 @@ def merge_blocks(block_list):
 
 def save_dataset(fn, block_list):
 	DataProvider.save_to_file(fn, block_list)
-	sys.stdout.write('Dataset information saved to %r\n' % fn)
+	logging.getLogger('script').info('Dataset information saved to %r', fn)
 
 
 def _main():

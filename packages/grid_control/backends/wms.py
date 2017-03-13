@@ -15,12 +15,12 @@
 # Generic base class for workload management systems
 
 import os, glob, shutil, logging
-from grid_control import utils
 from grid_control.backends.access import AccessToken
 from grid_control.backends.aspect_status import CheckInfo
 from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.output_processor import JobResult
+from grid_control.utils import DictFormat, Result, abort, create_tarball, ensure_dir_exists, get_path_pkg, get_path_share, merge_dict_list, resolve_path, safe_write  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
@@ -73,7 +73,7 @@ class WMS(NamedPlugin):
 		raise AbstractError  # Return access token instance responsible for this gc_id
 
 	def get_interval_info(self):  # Return (waitIdle, wait)
-		return utils.Result(wait_on_idle=self._wait_idle, wait_between_steps=self._wait_work)
+		return Result(wait_on_idle=self._wait_idle, wait_between_steps=self._wait_work)
 
 	def retrieve_jobs(self, gc_id_jobnum_list):
 		raise AbstractError  # Return (jobnum, exit_code, data, outputdir) for retrived jobs
@@ -121,12 +121,12 @@ class BasicWMS(WMS):
 		self._runlib = config.get_work_path('gc-run.lib')
 		if not os.path.exists(self._runlib):
 			fp = SafeFile(self._runlib, 'w')
-			content = SafeFile(utils.get_path_share('gc-run.lib')).read()
+			content = SafeFile(get_path_share('gc-run.lib')).read()
 			fp.write(content.replace('__GC_VERSION__', __import__('grid_control').__version__))
 			fp.close()
 		self._path_output = config.get_work_path('output')
 		self._path_file_cache = config.get_work_path('files')
-		utils.ensure_dir_exists(self._path_output, 'output directory')
+		ensure_dir_exists(self._path_output, 'output directory')
 		self._path_fail = config.get_work_path('fail')
 
 		# Initialise access token and storage managers
@@ -183,10 +183,10 @@ class BasicWMS(WMS):
 		# Package sandbox tar file
 		self._log.log(logging.INFO1, 'Packing sandbox')
 		sandbox = self._get_sandbox_name(task)
-		utils.ensure_dir_exists(os.path.dirname(sandbox), 'sandbox directory')
+		ensure_dir_exists(os.path.dirname(sandbox), 'sandbox directory')
 		if not os.path.exists(sandbox) or transfer_sb:
 			sandbox_file_list = self._get_sandbox_file_list(task, monitor, [self._sm_se_in, self._sm_se_out])
-			utils.create_tarball(sandbox, _convert(sandbox_file_list))
+			create_tarball(sandbox, _convert(sandbox_file_list))
 
 	def get_access_token(self, gc_id):
 		return self._token
@@ -244,20 +244,20 @@ class BasicWMS(WMS):
 
 			if os.path.exists(output_dn):
 				# Preserve failed job
-				utils.ensure_dir_exists(self._path_fail, 'failed output directory')
+				ensure_dir_exists(self._path_fail, 'failed output directory')
 				_force_move(output_dn, os.path.join(self._path_fail, os.path.basename(output_dn)))
 
 			yield (jobnum_input, -1, {}, None)
 
 	def submit_jobs(self, jobnum_list, task):
 		for jobnum in jobnum_list:
-			if utils.abort():
+			if abort():
 				break
 			yield self._submit_job(jobnum, task)
 
 	def _get_in_transfer_info_list(self, task):
 		return [
-			('GC Runtime', utils.get_path_share('gc-run.sh'), 'gc-run.sh'),
+			('GC Runtime', get_path_share('gc-run.sh'), 'gc-run.sh'),
 			('GC Runtime library', self._runlib, 'gc-run.lib'),
 			('GC Sandbox', self._get_sandbox_name(task), 'gc-sandbox.tar.gz'),
 		]
@@ -275,17 +275,17 @@ class BasicWMS(WMS):
 	def _get_sandbox_file_list(self, task, monitor, sm_list):
 		# Prepare all input files
 		dep_list = set(ichain(imap(lambda x: x.get_dependency_list(), [task] + sm_list)))
-		dep_fn_list = lmap(lambda dep: utils.resolve_path('env.%s.sh' % dep,
-			lmap(lambda pkg: utils.get_path_share('', pkg=pkg), os.listdir(utils.get_path_pkg()))), dep_list)
-		task_config_dict = utils.merge_dict_list(
+		dep_fn_list = lmap(lambda dep: resolve_path('env.%s.sh' % dep,
+			lmap(lambda pkg: get_path_share('', pkg=pkg), os.listdir(get_path_pkg()))), dep_list)
+		task_config_dict = merge_dict_list(
 			imap(lambda x: x.get_task_dict(), [monitor, task] + sm_list))
 		task_config_dict.update({'GC_DEPFILES': str.join(' ', dep_list),
 			'GC_USERNAME': self._token.get_user_name(), 'GC_WMS_NAME': self._name})
-		task_config_str_list = utils.DictFormat(escape_strings=True).format(
+		task_config_str_list = DictFormat(escape_strings=True).format(
 			task_config_dict, format='export %s%s%s\n')
 		vn_alias_dict = dict(izip(monitor.get_task_dict().keys(), monitor.get_task_dict().keys()))
 		vn_alias_dict.update(task.get_var_alias_map())
-		vn_alias_str_list = utils.DictFormat(delimeter=' ').format(vn_alias_dict, format='%s%s%s\n')
+		vn_alias_str_list = DictFormat(delimeter=' ').format(vn_alias_dict, format='%s%s%s\n')
 
 		# Resolve wildcards in task input files
 		def _get_task_fn_list():
@@ -323,10 +323,10 @@ class BasicWMS(WMS):
 
 	def _write_job_config(self, job_config_fn, jobnum, task, extras):
 		try:
-			job_env_dict = utils.merge_dict_list([task.get_job_dict(jobnum), extras])
+			job_env_dict = merge_dict_list([task.get_job_dict(jobnum), extras])
 			job_env_dict['GC_ARGS'] = task.get_job_arguments(jobnum).strip()
-			content = utils.DictFormat(escape_strings=True).format(job_env_dict, format='export %s%s%s\n')
-			utils.safe_write(open(job_config_fn, 'w'), content)
+			content = DictFormat(escape_strings=True).format(job_env_dict, format='export %s%s%s\n')
+			safe_write(open(job_config_fn, 'w'), content)
 		except Exception:
 			raise BackendError('Could not write job config data to %s.' % job_config_fn)
 

@@ -13,7 +13,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
+import sys, logging
 from gc_scripts import Plugin, ScriptOptions, gc_create_config
 from grid_control.utils.webservice import JSONRestClient
 from grid_control_cms.sitedb import SiteDB
@@ -35,9 +35,10 @@ def _lookup_pfn(options):
 
 	tmp = _lfn2pfn(node=options.opts.se, prot=options.opts.se_prot, lfn=options.opts.lfn)
 	for entry in tmp:
+		entry_str = entry['pfn']
 		if len(tmp) > 1:  # write node name if multiple mappings are returned
-			sys.stdout.write('%s ' % entry['node'])
-		sys.stdout.write('%s\n' % entry['pfn'])
+			entry_str = '%s %s' % (entry['node'], entry_str)
+		logging.getLogger('script').info(entry_str)
 
 
 def _main():

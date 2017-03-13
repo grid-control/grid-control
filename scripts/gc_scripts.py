@@ -22,30 +22,39 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'p
 from grid_control import utils
 from grid_control.job_db import Job, JobClass
 from grid_control.job_selector import ClassSelector, JobSelector, TaskNeededException
-from grid_control.logging_setup import LogLevelEnum, parse_logging_args
+from grid_control.logging_setup import GCStreamHandler, LogLevelEnum, parse_logging_args
 from grid_control.output_processor import FileInfo, FileInfoProcessor
+from grid_control.stream_base import ActivityStream
+from grid_control.utils import Result, exit_with_usage
 from grid_control.utils.activity import Activity, ProgressActivity
 from grid_control.utils.cmd_options import Options
+from grid_control.utils.table import ConsoleTable
 from grid_control_api import gc_create_config, gc_create_workflow
+from grid_control_gui.ansi import install_console_reset
 from hpfwk import Plugin, clear_current_exception
 from python_compat import ifilter, imap, lmap, sorted, tarfile
 
 
-def display_plugin_list(cls_list, sort=True, title=None):
+Activity.root = Activity('Running %s' % os.path.basename(sys.argv[0]).split('.')[0], name='root')
+GCStreamHandler.push_std_stream(ActivityStream.create_instance('default', sys.stdout, True),
+	ActivityStream.create_instance('default', sys.stderr))
+install_console_reset()
+
+
+def display_plugin_list(cls_list, sort_key='Name', title=None):
 	header = [('Name', 'Name')]
-	fmt_string = 'l'
+	fmt_string = 'll'
 	for entry in cls_list:
 		if entry['Alias']:
 			header.append(('Alias', 'Alternate names'))
-			fmt_string = 'rl'
 			break
-	if sort:
-		cls_list = sorted(cls_list, key=lambda x: x['Name'].lower())
-	utils.display_table(header, cls_list, fmt_string=fmt_string, title=title)
+	if sort_key:
+		cls_list = sorted(cls_list, key=lambda x: str(x[sort_key]).lower())
+	ConsoleTable.create(header, cls_list, fmt_string=fmt_string, title=title)
 
 
-def display_plugin_list_for(cls_name, sort=True, title=None):
-	display_plugin_list(get_plugin_list(cls_name), sort=sort, title=title)
+def display_plugin_list_for(cls_name, title=None):
+	display_plugin_list(get_plugin_list(cls_name), title=title)
 
 
 def get_cmssw_info(tar_fn):
@@ -62,13 +71,20 @@ def get_cmssw_info(tar_fn):
 			raise
 
 
-def get_plugin_list(pname):
+def get_plugin_list(pname, inherit_prefix=False):
 	alias_dict = {}
+	inherit_map = {}
 	cls = Plugin.get_class(pname)
 	for entry in cls.get_class_info_list():
 		depth = entry.pop('depth', 0)
 		(alias, name) = entry.popitem()
 		alias_dict.setdefault(name, []).append((depth, alias))
+
+	def _process_child_map(mapping, prefix=''):
+		for cls_name in mapping:
+			inherit_map[cls_name] = _process_child_map(mapping[cls_name], prefix + '-' + cls_name)
+		return prefix
+	_process_child_map(cls.get_class_children(), pname)
 	alias_dict.pop(pname, None)
 
 	table_list = []
@@ -78,9 +94,13 @@ def get_plugin_list(pname):
 		# sorted by depth and name
 		by_depth_name = sorted(alias_dict[name], key=lambda d_a: (d_a[0], d_a[1]))
 		new_name = by_len_depth.pop()[1]
+		depth = min(imap(lambda d_a: d_a[0], alias_dict[name]))
 		alias_list = lmap(lambda d_a: d_a[1], by_depth_name)
 		alias_list.remove(new_name)
-		entry = {'Name': new_name, 'Alias': str.join(', ', alias_list)}
+		if inherit_prefix:
+			new_name = ' | ' * (inherit_map[name].count('-') - 1) + new_name
+		entry = {'Name': new_name, 'Alias': str.join(', ', alias_list),
+			'Depth': '%02d' % depth, 'Inherit': inherit_map.get(name, '')}
 		if ('Multi' not in name) and ('Base' not in name):
 			table_list.append(entry)
 	return table_list
@@ -169,7 +189,7 @@ class FileMutex(object):
 
 class ScriptOptions(Options):
 	def exit_with_usage(self, usage=None, msg=None):
-		utils.exit_with_usage(usage or self.usage(), msg)
+		exit_with_usage(usage or self.usage(), msg)
 
 	def script_parse(self, arg_keys=None, verbose_short='v'):
 		self.add_bool(None, None, 'parseable', default=False,
@@ -185,11 +205,11 @@ class ScriptOptions(Options):
 		for (logger_name, logger_level) in parse_logging_args(opts.logging):
 			logging.getLogger(logger_name).setLevel(LogLevelEnum.str2enum(logger_level))
 		if opts.parseable:
-			utils.display_table.mode = 'parseable'
+			ConsoleTable.table_mode = 'ParseableTable'
 		elif opts.pivot:
-			utils.display_table.mode = 'longlist'
-		utils.display_table.wraplen = int(opts.textwidth)
-		return utils.Result(opts=opts, args=args, config_dict=config_dict, parser=self)
+			ConsoleTable.table_mode = 'Pivot'
+		ConsoleTable.wraplen = int(opts.textwidth)
+		return Result(opts=opts, args=args, config_dict=config_dict, parser=self)
 
 
 def _get_job_selector_and_task(config, job_selector_str, require_task):
@@ -198,11 +218,12 @@ def _get_job_selector_and_task(config, job_selector_str, require_task):
 			return (None, JobSelector.create(job_selector_str))
 		except TaskNeededException:
 			clear_current_exception()
-	task = gc_create_workflow(config, abort='task').task
+	task = gc_create_workflow(config, abort_on='task').task
 	return (task, JobSelector.create(job_selector_str, task=task))
 
 
-__all__ = ['Activity', 'ClassSelector', 'display_plugin_list', 'display_plugin_list_for',
-	'FileInfo', 'FileInfoProcessor', 'FileMutex', 'gc_create_config', 'get_cmssw_info',
-	'get_plugin_list', 'get_script_object', 'get_script_object_cmdline', 'iter_jobnum_output_dn',
-	'iter_output_files', 'Job', 'JobClass', 'JobSelector', 'Plugin', 'ScriptOptions', 'utils']
+__all__ = ['Activity', 'ClassSelector', 'ConsoleTable', 'display_plugin_list',
+	'display_plugin_list_for', 'FileInfo', 'FileInfoProcessor', 'FileMutex', 'gc_create_config',
+	'get_cmssw_info', 'get_plugin_list', 'get_script_object', 'get_script_object_cmdline',
+	'iter_jobnum_output_dn', 'iter_output_files', 'Job', 'JobClass', 'JobSelector', 'Plugin',
+	'ScriptOptions', 'utils']

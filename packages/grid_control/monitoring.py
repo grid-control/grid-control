@@ -13,8 +13,8 @@
 # | limitations under the License.
 
 import os, shlex
-from grid_control import utils
 from grid_control.gc_plugin import NamedPlugin
+from grid_control.utils import merge_dict_list
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCThreadPool
 from hpfwk import clear_current_exception
@@ -165,4 +165,4 @@ class MultiMonitor(MultiEventHandler, Monitoring):
 
 	def get_task_dict(self):
 		tmp = Monitoring.get_task_dict(self)
-		return utils.merge_dict_list(lmap(lambda m: m.get_task_dict(), self._handlers) + [tmp])
+		return merge_dict_list(lmap(lambda m: m.get_task_dict(), self._handlers) + [tmp])

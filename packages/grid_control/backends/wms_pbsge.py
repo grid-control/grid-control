@@ -12,15 +12,15 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.wms import WMS
 from grid_control.backends.wms_local import LocalWMS
+from grid_control.utils import resolve_install_path
 
 
 class PBSGECommon(LocalWMS):
 	def __init__(self, config, name, check_executor, cancel_executor, nodes_finder, queues_finder):
 		LocalWMS.__init__(self, config, name,
-			submit_exec=utils.resolve_install_path('qsub'),
+			submit_exec=resolve_install_path('qsub'),
 			check_executor=check_executor, cancel_executor=cancel_executor,
 			nodes_finder=nodes_finder, queues_finder=queues_finder)
 		self._shell = config.get('shell', '', on_change=None)

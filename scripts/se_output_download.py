@@ -14,7 +14,7 @@
 # | limitations under the License.
 
 import os, sys, time, random, logging
-from gc_scripts import FileInfo, FileInfoProcessor, Job, Plugin, ScriptOptions, get_script_object_cmdline, str_file_size, utils  # pylint:disable=line-too-long
+from gc_scripts import ConsoleTable, FileInfo, FileInfoProcessor, Job, Plugin, ScriptOptions, get_script_object_cmdline, str_file_size  # pylint:disable=line-too-long
 from grid_control.backends.storage import se_copy, se_exists, se_mkdir, se_rm
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.thread_tools import GCEvent, start_daemon
@@ -23,10 +23,10 @@ from python_compat import all, any, imap, lfilter, md5, sorted
 
 
 try:
-	from grid_control_gui.ansi import Console
+	from grid_control_gui.ansi import ANSI
 except Exception:
 	clear_current_exception()
-	Console = None  # pylint:disable=invalid-name
+	ANSI = None  # pylint:disable=invalid-name
 try:
 	from grid_control_gui.report_textbar import BasicProgressBar
 except Exception:
@@ -106,9 +106,9 @@ def display_download_result(download_result_dict, jobnum_list):
 		yield {0: 'Total', 1: len(jobnum_list)}
 
 	if download_result_dict:
-		utils.display_table([(0, 'Status'), (1, '')],
+		ConsoleTable.create([(0, 'Status'), (1, '')],
 			_iter_download_results(JobDownloadStatus), title='Job status overview')
-		utils.display_table([(0, 'Status'), (1, '')],
+		ConsoleTable.create([(0, 'Status'), (1, '')],
 			_iter_download_results(FileDownloadStatus), title='File status overview')
 
 
@@ -116,7 +116,7 @@ def download_multithreaded(opts, work_dn, _inc_download_result, job_db, token, j
 	(thread_display_list, error_msg_list, jobnum_list_todo) = ([], [], list(jobnum_list))
 	jobnum_list_todo.reverse()
 
-	Console.setscrreg(3 * opts.threads)
+	sys.stdout.write(ANSI.pos_save + ANSI.set_scroll(3 * opts.threads) + ANSI.pos_load)
 	while True:
 		# remove finished transfers
 		thread_display_list = lfilter(lambda thread_display: get_thread_state(thread_display[0]),
@@ -129,11 +129,10 @@ def download_multithreaded(opts, work_dn, _inc_download_result, job_db, token, j
 				opts, work_dn, _inc_download_result, job_db, token, jobnum, job_download_display)
 			thread_display_list.append((download_thread, job_download_display))
 		# display transfers
-		Console.erase()
-		Console.move(0)
+		sys.stdout.write(ANSI.erase + ANSI.move(0))
 		for (_, job_download_display) in thread_display_list:
 			sys.stdout.write(job_download_display.get_display_str() + '\n')
-		Console.move(3 * opts.threads + 1)
+		sys.stdout.write(ANSI.move(3 * opts.threads + 1))
 		sys.stdout.flush()
 		if len(thread_display_list) == 0:
 			break
@@ -344,13 +343,13 @@ def process_job_files(opts, work_dn, _inc_download_result,
 
 class Display(object):
 	def _match_result(self, result):
-		if Console is None:
+		if ANSI is None:
 			if not result:
 				return 'FAIL'
 			return 'MATCH'
 		if not result:
-			return Console.fmt('FAIL', [Console.COLOR_RED])
-		return Console.fmt('MATCH', [Console.COLOR_GREEN])
+			return ANSI.fmt('FAIL', [ANSI.color_red])
+		return ANSI.fmt('MATCH', [ANSI.color_green])
 
 	def _rate(self, cur_size, ref_size, ref_time):
 		return str_file_size(((cur_size - ref_size) / max(1., time.time() - ref_time))) + '/s'
@@ -552,7 +551,7 @@ def _parse_cmd_line():
 		help='specify the SE paths to process')
 	parser.add_text(None, 'r', 'retry',
 		help='how often should a transfer be attempted [Default: 0]')
-	if Console is not None:
+	if ANSI is not None:
 		parser.add_text(None, 't', 'threads', default=0,
 			help='how many parallel download threads should be used to download files ' +
 				'[Default: no multithreading]')

@@ -13,10 +13,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys, logging
-from gc_scripts import Job, JobSelector, Plugin, ScriptOptions, gc_create_config, get_script_object_cmdline, utils  # pylint:disable=line-too-long
+import sys, gzip, base64, logging
+from gc_scripts import ConsoleTable, Job, JobSelector, Plugin, ScriptOptions, gc_create_config, get_script_object_cmdline  # pylint:disable=line-too-long
 from grid_control.backends import WMS
 from grid_control.datasets import DataProvider, DataSplitter
+from grid_control.utils.file_objects import ZipFile
 from python_compat import BytesBuffer, imap, lmap, lzip, set, sorted
 
 
@@ -34,7 +35,7 @@ def backend_list(finder_name):
 		item_dict_list.append(nice_item_dict)
 	item_key_set.remove('name')
 	item_key_list = sorted(item_key_set)
-	utils.display_table([('name', 'Name')] + lzip(item_key_list, item_key_list), item_dict_list)
+	ConsoleTable.create([('name', 'Name')] + lzip(item_key_list, item_key_list), item_dict_list)
 
 
 def dataset_iter_blocks(block_list):
@@ -68,11 +69,11 @@ def dataset_show_diff(options):
 	header_list = [(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'),
 		(DataProvider.NFiles, '#Files'), (DataProvider.NEntries, '#Entries')]
 	if block_list_added:
-		utils.display_table(header_list, dataset_iter_blocks(block_list_added), title='Added blocks')
+		ConsoleTable.create(header_list, dataset_iter_blocks(block_list_added), title='Added blocks')
 	if block_list_missing:
-		utils.display_table(header_list, dataset_iter_blocks(block_list_missing), title='Removed blocks')
+		ConsoleTable.create(header_list, dataset_iter_blocks(block_list_missing), title='Removed blocks')
 	if block_list_matching:
-		utils.display_table(header_list, _dataset_iter_matching_blocks(), title='Matching blocks')
+		ConsoleTable.create(header_list, _dataset_iter_matching_blocks(), title='Matching blocks')
 
 
 def dataset_show_removed(options):
@@ -92,7 +93,7 @@ def dataset_show_removed(options):
 			block_list_missing.append(tmp)
 		provider_old = provider_new
 	if block_list_missing:
-		utils.display_table([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'),
+		ConsoleTable.create([(DataProvider.Dataset, 'Dataset'), (DataProvider.BlockName, 'Block'),
 			(DataProvider.NFiles, '#Files'), (DataProvider.NEntries, '#Entries'),
 			(DataProvider.RemovedIn, 'Removed in file')],
 			dataset_iter_blocks(block_list_missing), title='Removed blocks')
@@ -154,8 +155,6 @@ def jobs_show_jdl(job_db):
 
 
 def logfile_decode(fn):
-	import base64, gzip
-	from grid_control.utils.file_objects import ZipFile
 	if fn.endswith('.gz'):
 		fp = ZipFile(fn, 'r')
 	else:
@@ -165,7 +164,7 @@ def logfile_decode(fn):
 		if line.startswith('(B64) '):
 			buffer_obj = BytesBuffer(base64.b64decode(line.replace('(B64) ', '')))
 			line = gzip.GzipFile(fileobj=buffer_obj).read().decode('ascii')
-		sys.stdout.write(line.rstrip() + '\n')
+		logging.getLogger('script').info(line.rstrip())
 	fp.close()
 
 
@@ -176,7 +175,7 @@ def partition_display(opts, partition_iter):
 			yield partition
 
 	header_list = lmap(lambda key: (key, DataSplitter.enum2str(key)), opts.partition_key_list)
-	utils.display_table([('partition_num', 'Partition')] + header_list, _iter_partitions())
+	ConsoleTable.create([('partition_num', 'Partition')] + header_list, _iter_partitions())
 
 
 def partition_iter_invalid(reader):

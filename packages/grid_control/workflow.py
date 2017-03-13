@@ -13,7 +13,6 @@
 # | limitations under the License.
 
 import time, logging
-from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.gui import GUI
@@ -21,6 +20,7 @@ from grid_control.job_manager import JobManager
 from grid_control.logging_setup import LogEveryNsec
 from grid_control.monitoring import Monitoring
 from grid_control.tasks import TaskModule
+from grid_control.utils import abort, disk_space_avail, wait
 from python_compat import imap
 
 
@@ -29,17 +29,17 @@ class Workflow(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['global', 'workflow']
 	config_tag_name = 'workflow'
 
-	def __init__(self, config, name, abort=None):
+	def __init__(self, config, name, abort_on=None):
 		NamedPlugin.__init__(self, config, name)
 
 		# Work directory settings
 		self._path_work = config.get_work_path()
 		self._check_space = config.get_int('workdir space', 10, on_change=None)
-		self._check_space_timeout = config.get_int('workdir space timeout', 5, on_change=None)
+		self._check_space_timeout = config.get_time('workdir space timeout', 5, on_change=None)
 
 		# Initialise task module
 		self.task = config.get_plugin(['module', 'task'], cls=TaskModule, bind_kwargs={'tags': [self]})
-		if (abort == 'task') or utils.abort():
+		if (abort_on == 'task') or abort():
 			return
 
 		self._log.log(logging.INFO, 'Current task ID: %s', self.task.task_id)
@@ -48,32 +48,32 @@ class Workflow(NamedPlugin):
 		# Initialise workload management interface
 		self.wms = config.get_composited_plugin('backend', 'grid', 'MultiWMS',
 			cls=WMS, bind_kwargs={'tags': [self, self.task]})
-		if utils.abort():
+		if abort():
 			return
 
 		# Subsequent config calls also include section "jobs":
 		jobs_config = config.change_view(view_class='TaggedConfigView',
 			add_sections=['jobs'], add_tags=[self])
-		if utils.abort():
+		if abort():
 			return
 
 		# Initialise monitoring module
 		monitor = jobs_config.get_composited_plugin('monitor', 'scripts', 'MultiMonitor',
 			cls=Monitoring, bind_kwargs={'tags': [self, self.task]}, pargs=(self.task,))
-		if utils.abort():
+		if abort():
 			return
 
 		# Initialise job database
 		self.job_manager = jobs_config.get_plugin('job manager', 'SimpleJobManager',
 			cls=JobManager, bind_kwargs={'tags': [self, self.task, self.wms]}, pargs=(self.task, monitor))
-		if (abort == 'jobmanager') or utils.abort():
+		if (abort_on == 'jobmanager') or abort():
 			return
 
 		# Prepare work package
 		self.wms.deploy_task(self.task, monitor,
 			transfer_se=config.get_state('init', detail='storage'),
 			transfer_sb=config.get_state('init', detail='sandbox'))
-		if utils.abort():
+		if abort():
 			return
 
 		# Configure workflow settings
@@ -93,7 +93,7 @@ class Workflow(NamedPlugin):
 		self._space_logger = logging.getLogger('workflow.space')
 		self._space_logger.addFilter(LogEveryNsec(interval=5 * 60))
 
-	def process(self, wait=utils.wait):
+	def process(self, wait_fun=wait):
 		# Job submission loop
 		wms_timing_info = self.wms.get_interval_info()
 		t_start = time.time()
@@ -103,33 +103,37 @@ class Workflow(NamedPlugin):
 			if not self.wms.can_submit(self._submit_time, self._submit_flag):
 				self._submit_flag = False
 			# Check free disk space
-			if ((self._check_space) > 0 and
-			    utils.disk_usage(self._path_work, self._check_space_timeout) < self._check_space):
-				self._space_logger.warning('Not enough space left in working directory')
+			if self._has_disk_space_left():
+				did_wait = self._run_actions(wait_fun, wms_timing_info)
 			else:
-				did_wait = self._run_actions(wait, wms_timing_info)
+				self._space_logger.warning('Not enough space left in working directory')
 
 			# quit if abort flag is set or not in continuous mode
-			if utils.abort() or ((self.duration >= 0) and (time.time() - t_start > self.duration)):
+			if abort() or ((self.duration >= 0) and (time.time() - t_start > self.duration)):
 				break
 			# idle timeout
 			if not did_wait:
-				wait(wms_timing_info.wait_on_idle)
+				wait_fun(wms_timing_info.wait_on_idle)
 		self.job_manager.finish()
 
 	def run(self):
 		self._gui.start_display()
 
-	def _run_actions(self, wait, wms_timing_info):
+	def _has_disk_space_left(self):
+		if self._check_space <= 0:
+			return True
+		return disk_space_avail(self._path_work, self._check_space_timeout) > self._check_space
+
+	def _run_actions(self, wait_fun, wms_timing_info):
 		did_wait = False
 		for action in imap(str.lower, self._action_list):
-			if action.startswith('c') and not utils.abort():   # check for jobs
+			if action.startswith('c') and not abort():   # check for jobs
 				if self.job_manager.check(self.task, self.wms):
-					did_wait = wait(wms_timing_info.wait_between_steps)
-			elif action.startswith('r') and not utils.abort():  # retrieve finished jobs
+					did_wait = wait_fun(wms_timing_info.wait_between_steps)
+			elif action.startswith('r') and not abort():  # retrieve finished jobs
 				if self.job_manager.retrieve(self.task, self.wms):
-					did_wait = wait(wms_timing_info.wait_between_steps)
-			elif action.startswith('s') and not utils.abort() and self._submit_flag:
+					did_wait = wait_fun(wms_timing_info.wait_between_steps)
+			elif action.startswith('s') and not abort() and self._submit_flag:
 				if self.job_manager.submit(self.task, self.wms):
-					did_wait = wait(wms_timing_info.wait_between_steps)
+					did_wait = wait_fun(wms_timing_info.wait_between_steps)
 		return did_wait

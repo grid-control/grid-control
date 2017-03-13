@@ -17,6 +17,7 @@ from grid_control.config import TriggerResync
 from grid_control.datasets import DataProvider
 from grid_control.gc_exceptions import UserError
 from grid_control.utils.webservice import GridJSONRestClient
+from grid_control_cms.access_cms import get_cms_cert
 from grid_control_cms.provider_cms import CMSBaseProvider
 from hpfwk import clear_current_exception
 from python_compat import lmap
@@ -37,7 +38,8 @@ class DASProvider(CMSBaseProvider):
 		if self._dataset_instance.startswith('http'):
 			self._url = self._dataset_instance
 			self._dataset_instance = ''
-		self._gjrc = DASRestClient(self._url, 'VOMS proxy needed to query DAS!', UserError)
+		self._gjrc = DASRestClient(self._url, 'VOMS proxy needed to query DAS!', UserError,
+			cert=get_cms_cert(config))
 
 	def _get_cms_dataset_list(self, dataset_path):
 		for cms_dataset_info in self._query_das('dataset dataset=%s' % dataset_path):

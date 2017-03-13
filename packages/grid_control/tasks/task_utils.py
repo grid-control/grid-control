@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,8 +13,8 @@
 # | limitations under the License.
 
 import os
-from grid_control import utils
 from grid_control.config import TriggerInit
+from grid_control.utils import Result
 from python_compat import unspecified
 
 
@@ -42,7 +42,7 @@ class TaskExecutableWrapper(object):
 
 	def get_sb_in_fpi_list(self):
 		if self._executable_send and self._executable:
-			return [utils.Result(path_abs=self._executable, path_rel=os.path.basename(self._executable))]
+			return [Result(path_abs=self._executable, path_rel=os.path.basename(self._executable))]
 		return []
 
 	def is_active(self):

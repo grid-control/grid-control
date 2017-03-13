@@ -16,8 +16,9 @@ import os, sys
 from grid_control.config import TriggerResync, create_config, join_config_locations
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
-from grid_control.utils import filter_dict, get_user_bool, intersect_first_dict, replace_with_dict, split_opt  # pylint:disable=line-too-long
+from grid_control.utils import filter_dict, intersect_first_dict, replace_with_dict, split_opt
 from grid_control.utils.data_structures import UniqueList
+from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import Plugin, PluginError, clear_current_exception
 from python_compat import ifilter, imap, itemgetter, lchain, lmap, lsmap, md5_hex, sorted
 
@@ -136,7 +137,7 @@ class ScanProviderBase(DataProvider):
 							self._log.warn('\t\t%s = %s', vn, value)
 					collision = True
 		if self._interactive_assignment and collision:
-			if not get_user_bool('Do you want to continue?', False):
+			if not UserInputInterface().prompt_bool('Do you want to continue?', False):
 				sys.exit(os.EX_OK)
 
 	def _get_block_name(self, metadata_dict, hash_block):

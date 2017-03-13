@@ -14,7 +14,7 @@
 # | limitations under the License.
 
 import sys
-from gc_scripts import Plugin, ScriptOptions, display_plugin_list_for, gc_create_config, utils
+from gc_scripts import ConsoleTable, Plugin, ScriptOptions, display_plugin_list_for, gc_create_config  # pylint:disable=line-too-long
 from python_compat import lmap
 
 
@@ -40,8 +40,7 @@ def _main():
 
 	nn_prod = Plugin.get_class('NickNameProducer').create_instance(options.opts.producer,
 		gc_create_config(), 'dataset')
-	utils.display_table(
-		[(1, 'Dataset'), (0, 'Nickname')],
+	ConsoleTable.create([(1, 'Dataset'), (0, 'Nickname')],
 		lmap(lambda ds: {0: nn_prod.get_name('', ds, None), 1: ds}, dataset_path_list), 'll')
 
 

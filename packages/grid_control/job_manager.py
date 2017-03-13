@@ -13,15 +13,16 @@
 # | limitations under the License.
 
 import math, time, bisect, random, logging
-from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.job_db import Job, JobClass, JobDB, JobError
 from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
+from grid_control.utils import abort, wait
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.parsing import str_time_long
+from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import clear_current_exception
 from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
 
@@ -56,18 +57,23 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		self._output_processor = config.get_plugin('output processor', 'SandboxProcessor',
 			cls=TaskOutputProcessor)
 
+		self._uii = UserInputInterface()
 		self._interactive_delete = config.is_interactive('delete jobs', True)
 		self._interactive_reset = config.is_interactive('reset jobs', True)
 		self._do_shuffle = config.get_bool('shuffle', False, on_change=None)
 		self._report_cls = Report.get_class(config.get('abort report', 'LocationReport', on_change=None))
 		self._show_blocker = True
+		self._callback_list = []
+
+	def add_event_handler(self, callback):
+		self._callback_list.append(callback)
 
 	def cancel(self, task, wms, jobnum_list, interactive, show_jobs):
 		if len(jobnum_list) == 0:
 			return
 		if show_jobs:
 			self._report_cls(self.job_db, task, jobnum_list).show_report(self.job_db)
-		if interactive and not utils.get_user_bool('Do you really want to cancel these jobs?', True):
+		if interactive and not self._uii.prompt_bool('Do you really want to cancel these jobs?', True):
 			return
 
 		def _mark_cancelled(jobnum):
@@ -88,10 +94,10 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			jobnum_list = list(map_gc_id2jobnum.values())
 			self._log.warning('There was a problem with cancelling the following jobs:')
 			self._report_cls(self.job_db, task, jobnum_list).show_report(self.job_db)
-			if (not interactive) or utils.get_user_bool('Do you want to mark them as cancelled?', True):
+			if (not interactive) or self._uii.prompt_bool('Do you want to mark them as cancelled?', True):
 				lmap(_mark_cancelled, jobnum_list)
 		if interactive:
-			utils.wait(2)
+			wait(2)
 
 	def check(self, task, wms):
 		check_chunk_size = -1
@@ -123,7 +129,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			self._eventhandler.on_task_finish(len(self.job_db))
 			if task.can_finish():
 				self._log.log_time(logging.INFO, 'Task successfully completed. Quitting grid-control!')
-				utils.abort(True)
+				abort(True)
 
 		return change
 
@@ -138,13 +144,16 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 	def finish(self):
 		self._eventhandler.on_workflow_finish()
 
+	def remove_event_handler(self, callback):
+		self._callback_list.remove(callback)
+
 	def reset(self, task, wms, select):
 		jobs = self.job_db.get_job_list(JobSelector.create(select, task=task))
 		if jobs:
 			self._log.warning('Resetting the following jobs:')
 			self._report_cls(self.job_db, task, jobs).show_report(self.job_db)
 			ask_user_msg = 'Are you sure you want to reset the state of these jobs?'
-			if self._interactive_reset or utils.get_user_bool(ask_user_msg, False):
+			if self._interactive_reset or self._uii.prompt_bool(ask_user_msg, False):
 				self.cancel(task, wms, self.job_db.get_job_list(
 					ClassSelector(JobClass.PROCESSING), jobs), interactive=False, show_jobs=False)
 				for jobnum in jobs:
@@ -183,7 +192,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 				self._update(job_obj, jobnum, state)
 				self._eventhandler.on_job_output(wms, job_obj, jobnum, exit_code)
 
-			if utils.abort():
+			if abort():
 				return False
 
 		return change
@@ -209,7 +218,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 
 			self._update(job_obj, jobnum, Job.SUBMITTED)
 			self._eventhandler.on_job_submit(wms, job_obj, jobnum)
-			if utils.abort():
+			if abort():
 				return False
 		return len(submitted) != 0
 
@@ -234,7 +243,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 				if job_obj.state == Job.UNKNOWN:
 					if self._timeout_unknown > 0 and time.time() - job_obj.submitted > self._timeout_unknown:
 						jobnum_list_timeout.append(jobnum)
-			if utils.abort():
+			if abort():
 				return (None, jobnum_list_timeout, reported)
 		return (change, jobnum_list_timeout, reported)
 
@@ -242,7 +251,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		# ask wms and yield (jobnum, job_obj, job_status, job_info)
 		map_gc_id2jobnum = self._get_map_gc_id_jobnum(jobnum_list)
 		for (gc_id, job_state, job_info) in wms.check_jobs(map_gc_id2jobnum.keys()):
-			if not utils.abort():
+			if not abort():
 				jobnum = map_gc_id2jobnum.pop(gc_id, None)
 				if jobnum is not None:
 					yield (jobnum, self.job_db.get_job(jobnum), job_state, job_info)
@@ -428,6 +437,8 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			if len(msg_list):
 				job_status_str_list.append('(%s)' % str.join(' - ', msg_list))
 		self._log.log_time(logging.INFO, str.join(' ', job_status_str_list))
+		for callback in self._callback_list:
+			callback()
 
 
 class SimpleJobManager(JobManager):

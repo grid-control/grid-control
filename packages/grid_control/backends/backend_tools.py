@@ -12,9 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.config import join_config_locations
 from grid_control.gc_plugin import ConfigurablePlugin
+from grid_control.utils import resolve_install_path, wait
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError, NestedException
 from python_compat import any, identity, ifilter, imap, irange, lmap
@@ -109,7 +109,7 @@ class ChunkedExecutor(ForwardingExecutor):
 		do_wait = False
 		chunk_pos_iter = irange(0, len(wms_id_list), self._chunk_size)
 		for wms_id_chunk in imap(lambda x: wms_id_list[x:x + self._chunk_size], chunk_pos_iter):
-			if do_wait and not utils.wait(self._chunk_time):
+			if do_wait and not wait(self._chunk_time):
 				break
 			do_wait = True
 			for result in self._executor.execute(wms_id_chunk, *args, **kwargs):
@@ -119,7 +119,7 @@ class ChunkedExecutor(ForwardingExecutor):
 class ProcessCreatorAppendArguments(ProcessCreatorViaArguments):
 	def __init__(self, config, cmd, args=None, fmt=identity):
 		ProcessCreatorViaArguments.__init__(self, config)
-		(self._cmd, self._args, self._fmt) = (utils.resolve_install_path(cmd), args or [], fmt)
+		(self._cmd, self._args, self._fmt) = (resolve_install_path(cmd), args or [], fmt)
 
 	def create_proc(self, wms_id_list):
 		return LocalProcess(*self._arguments(wms_id_list))

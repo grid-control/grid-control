@@ -16,7 +16,7 @@ from grid_control.config import join_config_locations
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import make_enum
-from grid_control.utils.thread_tools import GCLock
+from grid_control.utils.thread_tools import GCLock, with_lock
 from hpfwk import AbstractError, NestedException, Plugin
 from python_compat import imap, irange, itemgetter, lmap
 
@@ -92,11 +92,7 @@ class PartitionReader(Plugin):
 	def get_partition_checked(self, partition_num):
 		if partition_num >= self._partition_len:
 			raise PartitionError('%s is out of range for available partitions' % repr(partition_num))
-		try:
-			self._lock.acquire()
-			return self.get_partition_unchecked(partition_num)
-		finally:
-			self._lock.release()
+		return with_lock(self._lock, self.get_partition_unchecked, partition_num)
 
 	def get_partition_len(self):
 		return self._partition_len

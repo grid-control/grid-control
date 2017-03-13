@@ -21,8 +21,9 @@ from grid_control.utils import resolve_path, resolve_paths
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.parsing import parse_bool, parse_dict, parse_list, parse_time, str_dict_cfg, str_time_short  # pylint:disable=line-too-long
 from grid_control.utils.thread_tools import GCEvent
+from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import APIError, ExceptionCollector, Plugin, clear_current_exception
-from python_compat import any, get_user_input, identity, ifilter, imap, lmap, sorted, unspecified
+from python_compat import any, identity, ifilter, imap, lmap, sorted, unspecified
 
 
 CommandType = make_enum(['executable', 'command'])  # pylint: disable=invalid-name
@@ -265,9 +266,6 @@ class SimpleConfigInterface(TypedConfigInterface):
 			self._interactive_enabled and default, on_change=None)
 		return icfg and not user_option_exists
 
-	def prompt(self, prompt):
-		return get_user_input('%s: ' % prompt)
-
 	def set_choice(self, option, value, opttype='=', source=None, obj2str=str.__str__, unique=False):
 		return self._set_internal('choice', obj2str, option, value, opttype, source, unique)
 
@@ -280,6 +278,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 	def _get_internal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
 			interactive=True, interactive_msg=None, interactive_msg_append_default=True, **kwargs):
 		# interactive mode only overrides default values from the code
+		uii = UserInputInterface()
 		if interactive_msg and self.is_interactive(option, interactive):
 			prompt = interactive_msg
 			if interactive_msg_append_default and not unspecified(default_obj):
@@ -287,9 +286,8 @@ class SimpleConfigInterface(TypedConfigInterface):
 			while True:
 				handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
 				try:
-					user_input = self.prompt(prompt).strip()
+					user_input = uii.prompt_text('%s: ' % prompt)
 				except Exception:
-					sys.stdout.write('\n')
 					sys.exit(os.EX_DATAERR)
 				signal.signal(signal.SIGINT, handler)
 				if user_input != '':

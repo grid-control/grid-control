@@ -13,7 +13,6 @@
 # | limitations under the License.
 
 import xml.dom.minidom
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess, CheckStatus  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreatorViaArguments
@@ -21,7 +20,7 @@ from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
-from grid_control.utils import get_local_username
+from grid_control.utils import get_local_username, resolve_install_path
 from grid_control.utils.parsing import parse_time
 from grid_control.utils.process_base import LocalProcess
 from python_compat import any, imap, izip, lmap, set, sorted
@@ -30,8 +29,8 @@ from python_compat import any, imap, izip, lmap, set, sorted
 class GridEngineDiscoverNodes(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
-		self._config_timeout = config.get_int('discovery timeout', 30, on_change=None)
-		self._config_exec = utils.resolve_install_path('qconf')
+		self._config_timeout = config.get_time('discovery timeout', 30, on_change=None)
+		self._config_exec = resolve_install_path('qconf')
 
 	def discover(self):
 		nodes = set()
@@ -50,8 +49,8 @@ class GridEngineDiscoverNodes(BackendDiscovery):
 class GridEngineDiscoverQueues(BackendDiscovery):
 	def __init__(self, config):
 		BackendDiscovery.__init__(self, config)
-		self._config_timeout = config.get_int('discovery timeout', 30, on_change=None)
-		self._config_exec = utils.resolve_install_path('qconf')
+		self._config_timeout = config.get_time('discovery timeout', 30, on_change=None)
+		self._config_exec = resolve_install_path('qconf')
 
 	def discover(self):
 		tags = ['h_vmem', 'h_cpu', 's_rt']
@@ -74,6 +73,8 @@ class GridEngineDiscoverQueues(BackendDiscovery):
 class GridEngineCheckJobs(CheckJobsWithProcess):
 	def __init__(self, config, user=None):
 		CheckJobsWithProcess.__init__(self, config, GridEngineCheckJobsProcessCreator(config))
+		self._job_status_key = lmap(str.lower, config.get_list('job status key',
+			['JB_jobnum', 'JB_jobnumber', 'JB_job_number'], on_change=None))
 
 	def _parse(self, proc):
 		proc.status(timeout=self._timeout)
@@ -107,9 +108,10 @@ class GridEngineCheckJobs(CheckJobsWithProcess):
 						continue
 					if node.hasChildNodes():
 						job_info[str(node.nodeName)] = str(node.childNodes[0].nodeValue)
-				for jobnum_key in ['JB_jobnum', 'JB_jobnumber']:
-					if jobnum_key in job_info:
-						job_info[CheckInfo.WMSID] = job_info.pop(jobnum_key)
+				for jobnum_key in self._job_status_key:
+					for job_info_key in job_info:
+						if jobnum_key == str(job_info_key).lower():
+							job_info[CheckInfo.WMSID] = job_info.pop(job_info_key)
 				job_info[CheckInfo.RAW_STATUS] = job_info.pop('state')
 				if 'queue_name' in job_info:
 					queue, node = job_info['queue_name'].split('@')
@@ -133,7 +135,7 @@ class GridEngine(PBSGECommon):  # pylint:disable=too-many-ancestors
 			nodes_finder=GridEngineDiscoverNodes(config),
 			queues_finder=GridEngineDiscoverQueues(config))
 		self._project = config.get('project name', '', on_change=None)
-		self._config_exec = utils.resolve_install_path('qconf')
+		self._config_exec = resolve_install_path('qconf')
 
 	def parse_submit_output(self, data):
 		# Your job 424992 ("test.sh") has been submitted
@@ -164,7 +166,7 @@ class GridEngine(PBSGECommon):  # pylint:disable=too-many-ancestors
 class GridEngineCheckJobsProcessCreator(ProcessCreatorViaArguments):
 	def __init__(self, config):
 		ProcessCreatorViaArguments.__init__(self, config)
-		self._cmd = utils.resolve_install_path('qstat')
+		self._cmd = resolve_install_path('qstat')
 		self._user = config.get('user', get_local_username(), on_change=None)
 
 	def _arguments(self, wms_id_list):

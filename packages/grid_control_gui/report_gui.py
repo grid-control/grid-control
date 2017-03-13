@@ -12,13 +12,31 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.job_db import Job, JobClass
-from grid_control.report import ConsoleReport
+from grid_control.report import BasicHeaderReport, ConsoleReport
 from grid_control.utils.parsing import parse_str
-from grid_control_gui.ansi import Console
+from grid_control.utils.table import ConsoleTable
+from grid_control_gui.ansi import ANSI, Console
 from grid_control_gui.report_colorbar import JobProgressBar
 from python_compat import ifilter, imap, irange, lfilter, lmap, set, sorted
+
+
+class HeaderReport(BasicHeaderReport):
+	alias_list = ['header']
+
+	def __init__(self, job_db=None, task=None, jobs=None, config_str=''):
+		BasicHeaderReport.__init__(self, job_db, task, jobs, config_str)
+		self._max_x = 65
+
+	def show_report(self, job_db):
+		self._print_gui_header('Status report for task:')
+
+	def _print_gui_header(self, message):
+		border = lmap(lambda x: ANSI.color_grayscale(1 - float(x) / self._max_x) + '-',
+			irange(self._max_x))
+		self._output.info(str.join('', border) + ANSI.reset)
+		self._output.info(message + self._header.rjust(self._max_x - len(message)))
+		self._output.info(str.join('', border) + ANSI.reset)
 
 
 class CategoryBaseReport(ConsoleReport):
@@ -29,13 +47,14 @@ class CategoryBaseReport(ConsoleReport):
 		# Assignment of jobs to categories (depending on variables and using datasetnick if available)
 		job_config_dict = {}
 		vn_list = []
+		vn_blacklist = ['GC_', 'SEED_', 'DATASET', 'FILE_NAMES', 'JOB_RANDOM', 'SKIP_EVENTS']
 		for jobnum in self._jobs:
 			if task:
 				job_config_dict = task.get_job_dict(jobnum)
-			vn_list = sorted(ifilter(lambda var: '!' not in repr(var), job_config_dict.keys()))
-			if 'DATASETSPLIT' in vn_list:
-				vn_list.remove('DATASETSPLIT')
-				vn_list.append('DATASETNICK')
+			def _is_ignored(vn):
+				return not any(imap(vn.startswith, vn_blacklist))
+			vn_list = lfilter(_is_ignored, sorted(job_config_dict.keys()))
+			print vn_list
 			cat_key = str.join('|', imap(lambda vn: '%s=%s' % (vn, job_config_dict[vn]), vn_list))
 			map_cat2jobs.setdefault(cat_key, []).append(jobnum)
 			if cat_key not in map_cat2desc:
@@ -231,7 +250,7 @@ class ModuleReport(CategoryBaseReport):
 			infos.append(tmp)
 
 		cat_order = ['WAITING', 'RUNNING', 'FAILED', 'SUCCESS']
-		utils.display_table(lmap(lambda x: (x, x), sorted(head) + cat_order),
+		ConsoleTable.create(lmap(lambda x: (x, x), sorted(head) + cat_order),
 			infos, 'c' * len(head), fmt=dict.fromkeys(cat_order, lambda x: '%7d' % parse_str(x, int, 0)))
 
 
@@ -239,45 +258,40 @@ class GUIReport(AdaptiveBaseReport):
 	alias_list = ['modern']
 
 	def __init__(self, job_db, task, jobs=None, config_str=''):
-		(self._max_y, self._max_x) = Console.getmaxyx()
-		self._max_x -= 10  # Padding
-		AdaptiveBaseReport.__init__(self, job_db, task, jobs, config_str or str(int(self._max_y / 5)))
+		(max_y, self._max_x) = Console.getmaxyx()
+		AdaptiveBaseReport.__init__(self, job_db, task, jobs, config_str or str(int(max_y / 5)))
 
 	def get_height(self):
-		return self._cat_cur * 2 + 3
+		return self._cat_cur * 2
 
 	def show_report(self, job_db):
+		self._max_x = Console.getmaxyx()[1]
 		(cat_state_dict, map_cat2desc, cat_subcat_dict) = self._get_category_state_summary(job_db)
 		self._cat_cur = len(cat_state_dict)
 
 		def _sum_cat(cat_key, states):
 			return sum(imap(lambda z: cat_state_dict[cat_key].get(z, 0), states))
 
-		self._print_gui_header('Status report for task:')
 		for cat_key in cat_state_dict:  # sorted(cat_state_dict, key=lambda x: -self._categories[x][0]):
 			desc = self._format_desc(map_cat2desc[cat_key], cat_subcat_dict.get(cat_key, 0))
 			completed = _sum_cat(cat_key, [Job.SUCCESS])
 			total = sum(cat_state_dict[cat_key].values())
-			self._print_truncated(Console.fmt(desc, [Console.BOLD]), self._max_x - 24,
-				'(%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total)))
+			job_info_str = ''
+			if self._max_x > 65 + 23:
+				job_info_str = ' (%5d jobs, %6.2f%%  )' % (total, 100 * completed / float(total))
+			_print_truncated(self._output, ANSI.bold + desc + ANSI.reset,
+				width=min(65 + len(job_info_str), self._max_x), rvalue=job_info_str)
 			progressbar = JobProgressBar(sum(cat_state_dict[cat_key].values()),
-				width=max(0, self._max_x - 24))
+				width=min(65 + len(job_info_str), self._max_x), display_text=(job_info_str != ''))
 			progressbar.update(completed,
 				_sum_cat(cat_key, JobClass.ATWMS.state_list),
 				_sum_cat(cat_key, [Job.RUNNING, Job.DONE]),
 				_sum_cat(cat_key, [Job.ABORTED, Job.CANCELLED, Job.FAILED]))
-			self._print_truncated(progressbar, self._max_x)
-		for dummy in irange(self._cat_max - len(cat_state_dict)):
-			self._output.info(' ' * self._max_x)
-			self._output.info(' ' * self._max_x)
+			self._output.info(str(progressbar))
 
-	def _print_gui_header(self, message):
-		self._print_truncated('-' * (self._max_x - 24), self._max_x)
-		header = self._get_header(self._max_x - len(message) - 1)
-		self._print_truncated('%s %s' % (message, header), self._max_x)
-		self._print_truncated('-' * (self._max_x - 24), self._max_x)
 
-	def _print_truncated(self, value, width, rvalue=''):
-		if len(value) + len(rvalue) > width:
-			value = str(value)[:width - 3 - len(rvalue)] + '...'
-		self._output.info(str(value) + ' ' * (width - (len(value) + len(rvalue))) + str(rvalue) + '\n')
+def _print_truncated(log, value, width, rvalue=''):
+	value_len = len(ANSI.strip_fmt(str(value)))
+	if value_len + len(rvalue) > width:
+		value = value[:width - 3 - len(rvalue)] + '...'
+	log.info(str(value) + ' ' * (width - (value_len + len(rvalue))) + str(rvalue))

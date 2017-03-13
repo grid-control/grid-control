@@ -13,16 +13,16 @@
 # | limitations under the License.
 
 import signal
-from grid_control import utils
 from grid_control.config import TriggerResync
 from grid_control.parameters import ParameterSource
 from grid_control.tasks.task_base import TaskModule
+from grid_control.utils import merge_dict_list
 
 
 class DataTask(TaskModule):
 	def get_var_alias_map(self):
 		if self._has_dataset:  # create alias NICK for DATASETNICK
-			return utils.merge_dict_list([TaskModule.get_var_alias_map(self), {'NICK': 'DATASETNICK'}])
+			return merge_dict_list([TaskModule.get_var_alias_map(self), {'NICK': 'DATASETNICK'}])
 		return TaskModule.get_var_alias_map(self)
 
 	def _create_datasource(self, config, datasource_name, psrc_repository, psrc_list):

@@ -13,11 +13,11 @@
 # | limitations under the License.
 
 import os, time, random
-from grid_control import utils
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
+from grid_control.utils import PersistentDict, get_path_share, ping_host, resolve_install_path
 from grid_control.utils.activity import Activity
-from grid_control.utils.parsing import parse_str
+from grid_control.utils.parsing import parse_bool, parse_str
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import clear_current_exception
 from python_compat import md5_hex, sort_inplace
@@ -29,8 +29,8 @@ class DiscoverGliteEndpointsLazy(object):  # TODO: Move to broker infrastructure
 		(self._wms_list_ok, self._wms_list_all, self._ping_dict, self.pos) = self._load_state()
 		self._wms_timeout_dict = {}
 		self._full = config.get_bool('wms discover full', True, on_change=None)
-		self._lcg_infosites_exec = utils.resolve_install_path('lcg-infosites')
-		self._job_list_match_exec = utils.resolve_install_path('glite-wms-job-list-match')
+		self._lcg_infosites_exec = resolve_install_path('lcg-infosites')
+		self._job_list_match_exec = resolve_install_path('glite-wms-job-list-match')
 
 	def get_endpoint(self):
 		activity = Activity('Discovering available WMS services')
@@ -41,7 +41,7 @@ class DiscoverGliteEndpointsLazy(object):  # TODO: Move to broker infrastructure
 				continue
 			ping, pingtime = self._ping_dict.get(wms, (None, 0))
 			if time.time() - pingtime > 30 * 60:  # check every ~30min
-				ping = utils.ping_host(wms.split('://')[1].split('/')[0].split(':')[0])
+				ping = ping_host(wms.split('://')[1].split('/')[0].split(':')[0])
 				self._ping_dict[wms] = (ping, time.time() + 10 * 60 * random.random())  # 10 min variation
 			if ping is not None:
 				wms_best_list.append((wms, ping))
@@ -100,11 +100,11 @@ class DiscoverGliteEndpointsLazy(object):  # TODO: Move to broker infrastructure
 	def _load_state(self):
 		try:
 			assert os.path.exists(self._state_fn)
-			tmp = utils.PersistentDict(self._state_fn, ' = ')
+			tmp = PersistentDict(self._state_fn, ' = ')
 			ping_dict = {}
 			for wms in tmp:
 				is_ok, ping, ping_time = tuple(tmp[wms].split(',', 2))
-				if utils.parse_bool(is_ok):
+				if parse_bool(is_ok):
 					ping_dict[wms] = (parse_str(ping, float), parse_str(ping_time, float, 0))
 			return (ping_dict.keys(), tmp.keys(), ping_dict, 0)
 		except Exception:
@@ -116,7 +116,7 @@ class DiscoverGliteEndpointsLazy(object):  # TODO: Move to broker infrastructure
 		check_arg_list = ['-a']
 		if endpoint:
 			check_arg_list.extend(['-e', endpoint])
-		check_arg_list.append(utils.get_path_share('null.jdl'))
+		check_arg_list.append(get_path_share('null.jdl'))
 
 		proc = LocalProcess(self._job_list_match_exec, *check_arg_list)
 		result = []
@@ -136,7 +136,7 @@ class DiscoverGliteEndpointsLazy(object):  # TODO: Move to broker infrastructure
 		for wms in self._wms_list_all:
 			pingentry = self._ping_dict.get(wms, (None, 0))
 			tmp[wms] = '%r,%s,%s' % (wms in self._wms_list_ok, pingentry[0], pingentry[1])
-		utils.PersistentDict(self._state_fn, ' = ').write(tmp)
+		PersistentDict(self._state_fn, ' = ').write(tmp)
 
 
 class GliteWMS(GridWMS):
@@ -144,12 +144,12 @@ class GliteWMS(GridWMS):
 
 	def __init__(self, config, name, check_executor=None):
 		GridWMS.__init__(self, config, name,
-			submit_exec=utils.resolve_install_path('glite-wms-job-submit'),
-			output_exec=utils.resolve_install_path('glite-wms-job-output'),
+			submit_exec=resolve_install_path('glite-wms-job-submit'),
+			output_exec=resolve_install_path('glite-wms-job-output'),
 			check_executor=check_executor or GridCheckJobs(config, 'glite-wms-job-status'),
 			cancel_executor=GridCancelJobs(config, 'glite-wms-job-cancel'))
 
-		self._delegate_exec = utils.resolve_install_path('glite-wms-job-delegate-proxy')
+		self._delegate_exec = resolve_install_path('glite-wms-job-delegate-proxy')
 		self._submit_args_dict.update({'-r': self._ce, '--config': self._config_fn})
 		self._use_delegate = config.get_bool('try delegate', True, on_change=None)
 		self._force_delegate = config.get_bool('force delegate', False, on_change=None)

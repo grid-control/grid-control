@@ -13,7 +13,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
+import sys, logging
 from gc_scripts import ScriptOptions
 from python_compat import json, resolve_fun
 
@@ -28,7 +28,7 @@ def _main():
 	server_proxy_cls = resolve_fun('xmlrpc.client:ServerProxy', 'xmlrpclib:ServerProxy')
 	server = server_proxy_cls(options.opts.url).DataExporter
 	data = server.export('RUNLUMISECTION', 'GLOBAL', 'json', {'groupName': options.opts.run})
-	sys.stdout.write(json.dumps(data))
+	logging.getLogger('script').info(json.dumps(data))
 
 
 if __name__ == '__main__':

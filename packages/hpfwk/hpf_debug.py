@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import sys, threading
-from hpfwk.hpf_compat import clear_current_exception, get_thread_name, impl_detail
+from hpfwk.hpf_compat import get_thread_name, impl_detail
 from hpfwk.hpf_exceptions import ExceptionWrapper, ignore_exception, parse_frame
 
 
@@ -57,10 +57,12 @@ def set_trace_fun(trace_fun=None):
 
 
 class DebugInterface(object):
-	def __init__(self, cur_frame, interrupt_fun=None):
-		(self._frame, self._interrupt_fun) = (cur_frame, interrupt_fun)
-		self._thread_list = list(threading.enumerate())
-		self._map_thread_id2frame = impl_detail(sys, '_current_frames', args=(), default={})
+	callback_list = []
+
+	def __init__(self, cur_frame=None, interrupt_fun=None, stream=sys.stderr):
+		(self._frame, self._interrupt_fun, self._stream) = (cur_frame, interrupt_fun, stream)
+		self._map_thread_id2frame = {}
+		self._get_thread_id2_frame_map()
 
 	def get_console(self, env_dict):
 		import code
@@ -72,26 +74,43 @@ class DebugInterface(object):
 		console.push('del readline')
 		return console
 
-	def start_console(self, silent, env_dict=None):
+	def show_stack(self, stack_depth=None, thread_id=None, show_vars=-1, show_code=0):
+		def _show_frame_list(frame):
+			if stack_depth in (None, 'all'):
+				frame_dict_list = _parse_stack(frame)
+			else:
+				frame_dict_list = [parse_frame(self._get_frame(frame, stack_depth))]
+			iter_lines = _format_stack(frame_dict_list, show_code, show_vars, tight=True)
+			self._stream.write(str.join('\n', iter_lines) + '\n')
+		if str(thread_id).lower() == 'all':
+			for (thread_id, frame) in self._get_thread_id2_frame_map().items():
+				thread_id_str = str(thread_id)
+				for thread in threading.enumerate():
+					if thread_id_str in repr(thread):
+						thread_id_str += ' (%s)' % get_thread_name(thread)
+				self._stream.write('\nStack for thread %s\n' % thread_id_str)
+				_show_frame_list(frame)
+		else:
+			_show_frame_list(self._get_thread_id2_frame_map().get(thread_id, self._frame))
+
+	def start_console(self, env_dict=None):
 		for (callback_start, _) in DebugInterface.callback_list:
 			callback_start()
-		env_dict = self._get_console_env_dict(silent=silent, env_dict=env_dict)
+		env_dict = self._get_console_env_dict(env_dict=env_dict)
 		ignore_exception(SystemExit, None, self.get_console(env_dict).interact, '')
 		for (_, callback_end) in DebugInterface.callback_list:
 			callback_end()
-		if not silent:
-			sys.stderr.write('Resuming ...\n')
+		self._stream.write('Resuming ...\n')
 
-	def _get_console_env_dict(self, silent, env_dict):
+	def _get_console_env_dict(self, env_dict):
 		env_dict = env_dict or {}
-		env_dict.update({'stack': self._show_stack, 'locals': self._get_locals,
+		env_dict.update({'stack': self.show_stack, 'locals': self._get_locals,
 			'trace': self._set_trace, 'resume': self._resume, 'threads': self._get_thread_list})
 		msg = '\nDEBUG MODE ENABLED!\n  available debug commands: %s\n' % str.join(', ', env_dict)
-		msg += '  list of active threads [%d]:\n' % len(self._thread_list)
-		msg += '  available thread ids: %s\n' % list(self._map_thread_id2frame.keys())
-		if not silent:
-			sys.stderr.write(msg)
-			self._get_thread_list()
+		msg += '  list of active threads [%d]:\n' % len(list(threading.enumerate()))
+		msg += '  available thread ids: %s\n' % list(self._get_thread_id2_frame_map().keys())
+		self._stream.write(msg)
+		self._get_thread_list()
 		return env_dict
 
 	def _get_frame(self, cur_frame, stack_depth=-1):
@@ -103,15 +122,22 @@ class DebugInterface(object):
 
 	def _get_locals(self, stack_depth=-1, thread_id=None):
 		""" return dictionary with local variables for selected frame """
-		frame = self._map_thread_id2frame.get(thread_id, self._frame)
+		frame = self._get_thread_id2_frame_map().get(thread_id, self._frame)
 		return self._get_frame(frame, stack_depth).f_locals
+
+	def _get_thread_id2_frame_map(self):
+		self._map_thread_id2frame.update(impl_detail(sys, '_current_frames', args=(), default={}))
+		return self._map_thread_id2frame
 
 	def _get_thread_list(self):
 		thread_display_list = []
-		for thread in self._thread_list:
-			thread_display_list.append('\t- %s\t%s\n' % (get_thread_name(thread), repr(thread)))
+		for thread in threading.enumerate():
+			thread_desc = repr(thread)
+			if hasattr(thread, 'desc'):
+				thread_desc += '\t%s' % getattr(thread, 'desc')
+			thread_display_list.append('\t- %s\t%s\n' % (get_thread_name(thread), thread_desc))
 		thread_display_list.sort()
-		sys.stderr.write(str.join('', thread_display_list))
+		self._stream.write(str.join('', thread_display_list))
 
 	def _resume(self, duration=None):
 		if duration is not None:
@@ -123,7 +149,7 @@ class DebugInterface(object):
 			if (filename is None) or (filename in frame.f_code.co_filename):
 				if (lineno is None) or (lineno == frame.f_lineno):
 					if (fun_name is None) or (fun_name == frame.f_code.co_name):
-						sys.stderr.write('%s %s:%s %s %s %s\n' % (get_thread_name(),
+						self._stream.write('%s %s:%s %s %s %s\n' % (get_thread_name(),
 							frame.f_code.co_filename, frame.f_lineno, frame.f_code.co_name, event, arg))
 						if stop and not _trace_fun.interrupted:
 							set_trace_fun(None)
@@ -134,26 +160,6 @@ class DebugInterface(object):
 		_trace_fun.interrupted = False
 		set_trace_fun(_trace_fun)
 		raise SystemExit()
-
-	def _show_stack(self, stack_depth=None, thread_id=None, show_vars=-1, show_code=0):
-		def _show_frame_list(frame):
-			if stack_depth in (None, 'all'):
-				frame_dict_list = _parse_stack(frame)
-			else:
-				frame_dict_list = [parse_frame(self._get_frame(frame, stack_depth))]
-			iter_lines = _format_stack(frame_dict_list, show_code, show_vars, tight=True)
-			sys.stderr.write(str.join('\n', iter_lines) + '\n')
-		if thread_id == 'all':
-			for (thread_id, frame) in self._map_thread_id2frame.items():
-				thread_id_str = str(thread_id)
-				for thread in threading.enumerate():
-					if thread_id_str in repr(thread):
-						thread_id_str += ' (%s)' % get_thread_name(thread)
-				sys.stderr.write('\nStack for thread %s\n' % thread_id_str)
-				_show_frame_list(frame)
-		else:
-			_show_frame_list(self._map_thread_id2frame.get(thread_id, self._frame))
-DebugInterface.callback_list = []  # <global-state>
 
 
 def _collect_exception_infos(exception_type, exception_value, exception_traceback):
@@ -183,8 +189,6 @@ def _collect_exception_infos(exception_type, exception_value, exception_tracebac
 
 def _format_ex_tree(ex_info_list, show_exception_stack=2):
 	ex_msg_list = []
-	if show_exception_stack == 1:
-		ex_info_list = ex_info_list[-2:]
 	for info in ex_info_list:
 		(exception_value, exception_depth, _) = info
 		prefix = ''
@@ -199,14 +203,12 @@ def _format_ex_tree(ex_info_list, show_exception_stack=2):
 		args = exception_value.args
 		already_displayed = (len(args) == 1) and str(args[0]) not in str(exception_value)
 		if already_displayed or (len(args) > 1):
-			try:
-				result = '%s%s  %s' % (prefix, len(exception_type_name) * ' ', exception_value.args)
-				ex_msg_list.append(result)
-			except Exception:
-				clear_current_exception()
+			def _fmt_ex_args():
+				return ['%s%s  %s' % (prefix, len(exception_type_name) * ' ', exception_value.args)]
+			ex_msg_list.extend(ignore_exception(Exception, [], _fmt_ex_args))
 	if show_exception_stack > 1:
 		return str.join('\n', ex_msg_list)
-	return str.join(' - ', ex_msg_list)
+	return str.join('\n' + '-' * 10 + '\n', ex_msg_list)
 
 
 def _format_file_stack(frame_dict_list, title=''):

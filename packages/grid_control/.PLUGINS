@@ -1,5 +1,13 @@
   * hpfwk.hpf_plugin Plugin
 
+   * grid_control.stream_base ActivityStream
+
+    * grid_control.stream_base DefaultActivityStream default
+
+    * grid_control.stream_base NullOutputStream
+
+    * grid_control.stream_base SingleActivityStream single
+
    * grid_control.config.cfiller_base ConfigFiller
 
     * grid_control.config.cfiller_base CompatConfigFiller
@@ -599,6 +607,8 @@
    * grid_control.report Report
 
     * grid_control.report ConsoleReport
+
+     * grid_control.report BasicHeaderReport basicheader
 
      * grid_control.report BasicReport basic
 

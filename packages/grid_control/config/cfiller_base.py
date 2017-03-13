@@ -206,20 +206,29 @@ class MultiConfigFiller(ConfigFiller):
 
 class StringConfigFiller(ConfigFiller):
 	# Config filler which collects data from a user string
-	def __init__(self, option_list):
+	def __init__(self, option_list, default_section=None):
+		self._default_section = default_section
 		self._option_list = lidfilter(imap(str.strip, option_list))
 
 	def fill(self, container):
-		for uopt in self._option_list:
-			try:
-				section, tmp = tuple(uopt.lstrip('[').split(']', 1))
-			except Exception:
-				raise ConfigError('Unable to parse section in %s' % repr(uopt))
-			try:
-				option, value = tuple(imap(str.strip, tmp.split('=', 1)))
-				self._add_entry(container, section, option, value, '<cmdline override>')
-			except Exception:
-				raise ConfigError('Unable to parse option in %s' % repr(uopt))
+		for section_option_value_str in self._option_list:
+			(section, option, value) = self.parse_config_str(section_option_value_str, self._default_section)
+			self._add_entry(container, section, option, value, '<cmdline override>')
+
+	def parse_config_str(cls, section_option_value_str, default_section):
+		try:
+			(section, option_value_str) = tuple(section_option_value_str.lstrip('[').split(']', 1))
+		except Exception:
+			if default_section is not None:
+				(section, option_value_str) = (default_section, section_option_value_str)
+			else:
+				raise ConfigError('Unable to parse section in %s' % repr(section_option_value_str))
+		try:
+			option, value = tuple(imap(str.strip, option_value_str.split('=', 1)))
+			return (section, option, value)
+		except Exception:
+			raise ConfigError('Unable to parse option in %s' % repr(section_option_value_str))
+	parse_config_str = classmethod(parse_config_str)
 
 
 class PythonConfigFiller(DictConfigFiller):

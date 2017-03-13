@@ -15,7 +15,6 @@
 # -*- coding: utf-8 -*-
 
 import os, re, time, tempfile
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs
 from grid_control.backends.aspect_status import CheckJobsMissingState
 from grid_control.backends.broker_base import Broker
@@ -23,6 +22,7 @@ from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.backends.wms_condor import CondorCancelJobs, CondorCheckJobs
 from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
+from grid_control.utils import Result, ensure_dir_exists, get_path_share, remove_files, resolve_install_path, safe_write, split_blackwhite_list  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
 from python_compat import imap, irange, lmap, lzip, md5
@@ -91,11 +91,11 @@ class Condor(BasicWMS):
 	def get_interval_info(self):
 		# overwrite for check/submit/fetch intervals
 		if self._remote_type in (PoolType.SSH, PoolType.GSISSH):
-			return utils.Result(wait_on_idle=30, wait_between_steps=5)
+			return Result(wait_on_idle=30, wait_between_steps=5)
 		elif self._remote_type == PoolType.SPOOL:
-			return utils.Result(wait_on_idle=60, wait_between_steps=10)
+			return Result(wait_on_idle=60, wait_between_steps=10)
 		else:
-			return utils.Result(wait_on_idle=20, wait_between_steps=5)
+			return Result(wait_on_idle=20, wait_between_steps=5)
 
 	def submit_jobs(self, jobnum_list, task):
 		submit_chunk_size = 25
@@ -185,7 +185,7 @@ class Condor(BasicWMS):
 		req_list = self._broker_site.broker(task.get_requirement_list(jobnum), WMS.SITES)
 		for req_type, req_value in req_list:
 			if req_type == WMS.SITES:
-				(blacklist, whitelist) = utils.split_blackwhite_list(req_value[1])
+				(blacklist, whitelist) = split_blackwhite_list(req_value[1])
 				_add_list_classad('blacklistSite', blacklist)
 				_add_list_classad('whitelistSite', whitelist)
 			elif req_type == WMS.WALLTIME:
@@ -318,7 +318,7 @@ class Condor(BasicWMS):
 	def _get_sandbox_dn(self, jobnum=''):
 		# return path to sandbox for a specific job or basepath
 		sandpath = os.path.join(self._sandbox_dn, str(jobnum), '')
-		return utils.ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
+		return ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
 
 	def _get_script_and_fn_list(self, task):
 		# resolve file paths for different pool types
@@ -338,7 +338,7 @@ class Condor(BasicWMS):
 					sb_in_fn_list.append(source)
 		if self._universe.lower() == 'docker':
 			script_cmd = './gc-run.sh'
-			sb_in_fn_list.append(utils.get_path_share('gc-run.sh'))
+			sb_in_fn_list.append(get_path_share('gc-run.sh'))
 		return (script_cmd, sb_in_fn_list)
 
 	def _init_pool_interface(self, config):
@@ -360,8 +360,8 @@ class Condor(BasicWMS):
 
 	def _init_pool_interface_local(self, config, sched, collector):
 		# submission might spool to another schedd and need to fetch output
-		self._submit_exec = utils.resolve_install_path('condor_submit')
-		self._transfer_exec = utils.resolve_install_path('condor_transfer_data')
+		self._submit_exec = resolve_install_path('condor_submit')
+		self._transfer_exec = resolve_install_path('condor_transfer_data')
 		if self._remote_type == PoolType.SPOOL:
 			if sched:
 				self._submit_exec += ' -remote %s' % sched
@@ -430,7 +430,7 @@ class Condor(BasicWMS):
 						len(jobnum_gc_id_list), len(jobnum_list))
 					proc.log_error(self._error_log_fn, jdl=jdl_fn)
 		finally:
-			utils.remove_files([jdl_fn])
+			remove_files([jdl_fn])
 
 		for (jobnum, gc_id) in jobnum_gc_id_list:
 			yield (jobnum, gc_id, {})
@@ -477,8 +477,8 @@ class Condor(BasicWMS):
 		jdl_fd, jdl_fn = tempfile.mkstemp(suffix='.jdl')
 		try:
 			data = self._get_jdl_str_list(jobnum_list, task)
-			utils.safe_write(os.fdopen(jdl_fd, 'w'), data)
+			safe_write(os.fdopen(jdl_fd, 'w'), data)
 		except Exception:
-			utils.remove_files([jdl_fn])
+			remove_files([jdl_fn])
 			raise BackendError('Could not write jdl data to %s.' % jdl_fn)
 		return jdl_fn

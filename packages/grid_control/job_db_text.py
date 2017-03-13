@@ -13,8 +13,8 @@
 # | limitations under the License.
 
 import os, time, fnmatch
-from grid_control import utils
 from grid_control.job_db import Job, JobDB, JobError
+from grid_control.utils import DictFormat, ensure_dir_exists
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
 from hpfwk import clear_current_exception
@@ -25,7 +25,7 @@ class TextFileJobDB(JobDB):
 	def __init__(self, config, job_limit=-1, job_selector=None):
 		JobDB.__init__(self, config, job_limit, job_selector)
 		self._path_db = config.get_work_path('jobs')
-		self._fmt = utils.DictFormat(escape_strings=True)
+		self._fmt = DictFormat(escape_strings=True)
 		try:
 			self._job_map = self._read_jobs(self._job_limit)
 		except Exception:
@@ -81,7 +81,7 @@ class TextFileJobDB(JobDB):
 		return job
 
 	def _read_jobs(self, job_limit):
-		utils.ensure_dir_exists(self._path_db, 'job database directory', JobError)
+		ensure_dir_exists(self._path_db, 'job database directory', JobError)
 
 		candidates = []
 		for job_fn in fnmatch.filter(os.listdir(self._path_db), 'job_*.txt'):

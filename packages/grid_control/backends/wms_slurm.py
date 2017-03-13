@@ -12,13 +12,13 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
+from grid_control.utils import resolve_install_path
 from hpfwk import clear_current_exception
 from python_compat import identity, ifilter
 
@@ -53,7 +53,7 @@ class SLURM(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submit_exec=utils.resolve_install_path('sbatch'),
+			submit_exec=resolve_install_path('sbatch'),
 			check_executor=CheckJobsMissingState(config, SLURMCheckJobs(config)),
 			cancel_executor=CancelJobsWithProcessBlind(config, 'scancel', unknown_id='not in queue !'))
 

@@ -13,8 +13,8 @@
 # | limitations under the License.
 
 import time
-from grid_control import utils
 from grid_control.backends.backend_tools import BackendExecutor, ProcessCreatorAppendArguments
+from grid_control.utils import abort
 from grid_control.utils.activity import Activity
 from hpfwk import AbstractError
 from python_compat import identity, lmap
@@ -55,7 +55,7 @@ class CancelJobsWithProcess(CancelJobs):
 	def execute(self, wms_id_list, wms_name):
 		proc = self._proc_factory.create_proc(wms_id_list)
 		for result in self._parse(wms_id_list, proc):
-			if not utils.abort():
+			if not abort():
 				yield result
 		if proc.status(timeout=0, terminate=True) != 0:
 			self._handle_error(proc)

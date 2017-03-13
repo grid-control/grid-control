@@ -13,11 +13,11 @@
 # | limitations under the License.
 
 import os, sys
-from grid_control import utils
 from grid_control.backends.aspect_status import CheckInfo, CheckJobs, expand_status_map
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_glitewms import GliteWMS
 from grid_control.job_db import Job
+from grid_control.utils import abort, filter_dict
 from hpfwk import ExceptionCollector, clear_current_exception
 from python_compat import imap, lmap, lzip
 
@@ -32,7 +32,7 @@ class GliteWMSDirectCheckJobs(CheckJobs):
 		exc = ExceptionCollector()
 		for wms_id in wms_id_list:
 			try:
-				job_info = utils.filter_dict(dict(self._status_fun(wms_id)),
+				job_info = filter_dict(dict(self._status_fun(wms_id)),
 					value_filter=lambda v: v not in ['', '0'])
 				job_info[CheckInfo.RAW_STATUS] = job_info.pop('status', '').lower()
 				if 'destination' in job_info:
@@ -45,7 +45,7 @@ class GliteWMSDirectCheckJobs(CheckJobs):
 				yield (wms_id, self._status_map.get(job_info[CheckInfo.RAW_STATUS], Job.UNKNOWN), job_info)
 			except Exception:
 				exc.collect()
-				if utils.abort():
+				if abort():
 					break
 		exc.raise_any(BackendError('Encountered errors while checking job status'))
 

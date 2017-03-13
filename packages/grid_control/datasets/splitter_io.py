@@ -177,7 +177,7 @@ class TarPartitionWriterV1(TarPartitionWriter):
 			partition[DataSplitter.FileList] = url_list
 		self._close_nested_tar(outer_tar, nested_tar)
 		# Write metadata to allow reconstruction of data splitter
-		splitter_info_dict = {'MaxJobs': partition_num + 1}
+		splitter_info_dict = {'MaxJobs': partition_num + 1, 'ClassName': 'BlockBoundarySplitter'}
 		self._add_to_tar(outer_tar, 'Metadata', self._fmt.format(splitter_info_dict))
 
 
@@ -213,7 +213,8 @@ class TarPartitionWriterV2(TarPartitionWriter):
 			partition[DataSplitter.FileList] = url_list
 		self._close_nested_tar(outer_tar, nested_tar)
 		# Write metadata to allow reconstruction of data splitter
-		for (fn, data) in [('Metadata', 'MaxJobs=%d' % (last_valid_pnum + 1)), ('Version', '2')]:
+		metadata_data = 'MaxJobs=%d\nClassName=BlockBoundarySplitter' % (last_valid_pnum + 1)
+		for (fn, data) in [('Metadata', metadata_data), ('Version', '2')]:
 			self._add_to_tar(outer_tar, fn, data)
 
 

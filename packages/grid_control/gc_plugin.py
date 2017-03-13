@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -23,8 +23,9 @@ class ConfigurablePlugin(Plugin):
 
 	def bind(cls, value, **kwargs):
 		config = kwargs.pop('config')
+		cls_config = config.change_view(add_sections=cls.config_section_list)
 		for entry in value.split():
-			yield InstanceFactory(entry, cls.get_class(entry), config)
+			yield InstanceFactory(entry, cls.get_class(entry), cls_config)
 	bind = classmethod(bind)
 
 

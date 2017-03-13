@@ -14,13 +14,17 @@
 
 import re
 from grid_control.utils.webservice import GridJSONRestClient
+from grid_control_cms.access_cms import get_cms_cert
 from python_compat import ifilter, imap, izip, lmap, set
 
 
 class SiteDB(object):
+	query_cache = {}
+
 	def __init__(self, url=None):
 		self._url = url or 'https://cmsweb.cern.ch/sitedb/data/prod'
-		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query siteDB!')
+		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query siteDB!',
+			cert=get_cms_cert())
 
 	def cms_name_to_se(self, cms_name):
 		cms_name_regex = re.compile(cms_name.replace('*', '.*').replace('%', '.*'))
@@ -51,11 +55,9 @@ class SiteDB(object):
 
 	def _query(self, api, **kwargs):
 		key = (self._url, api, tuple(kwargs.items()))
-		if key not in SiteDB.queryCache:
-			SiteDB.queryCache[key] = self._gjrc.get(api=api, params=kwargs or None)
-		data = SiteDB.queryCache[key]
+		if key not in SiteDB.query_cache:
+			SiteDB.query_cache[key] = self._gjrc.get(api=api, params=kwargs or None)
+		data = SiteDB.query_cache[key]
 		columns = data['desc']['columns']
 		for row in data['result']:
 			yield dict(izip(columns, row))
-
-SiteDB.queryCache = {}  # <global-state>

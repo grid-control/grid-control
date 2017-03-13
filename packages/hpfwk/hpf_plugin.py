@@ -177,6 +177,7 @@ class Plugin(object):
 	config_section_list = []
 
 	_cls_cache = {}
+	_map_cls_inheritance = {}
 	_map_cls_alias2cls_base_list = {}
 	_map_cls_alias2depth_fqname = {}
 	_map_cls_name2child_info_list = {}
@@ -202,6 +203,15 @@ class Plugin(object):
 		return cls._cls_cache[cls][cls_name]
 	get_class = classmethod(get_class)
 
+	def get_class_children(cls):
+		base_cls_list = list(cls.iter_class_bases())
+		base_cls_list.reverse()
+		result = cls._map_cls_inheritance
+		for base_cls in base_cls_list:
+			result = result.get(base_cls.__name__, {})
+		return result
+	get_class_children = classmethod(get_class_children)
+
 	def get_class_info_list(cls):
 		return Plugin._map_cls_name2child_info_list.get(cls.__name__.lower(), [])
 	get_class_info_list = classmethod(get_class_info_list)
@@ -224,6 +234,9 @@ class Plugin(object):
 	def register_class(cls, module_name, cls_name, alias_list, base_cls_names):
 		cls_path = '%s.%s' % (module_name, cls_name)
 		cls_depth = len(base_cls_names)
+		_map_cls_inheritance = cls._map_cls_inheritance
+		for base_cls_name in base_cls_names:
+			_map_cls_inheritance = _map_cls_inheritance.setdefault(base_cls_name, {})
 		for name in [cls_name] + alias_list:
 			cls_name_entry = cls._map_cls_alias2depth_fqname.setdefault(name.lower(), [])
 			cls._map_cls_alias2cls_base_list[name.lower()] = base_cls_names
@@ -343,7 +356,7 @@ def _safe_import(root, module):
 	try:
 		result = __import__(str.join('.', module), {}, {}, module[-1])
 	except Exception:
-		sys.stderr.write('import error: %s %s\n%r' % (root, module, sys.path))
+		logging.getLogger().error('import error: %s %s\n%r', root, module, sys.path)
 		raise
 	sys.path = old_path
 	return result

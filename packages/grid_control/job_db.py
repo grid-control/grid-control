@@ -128,9 +128,11 @@ class JobClass(JobClassHolder):
 	DISABLED = JobClassHolder(Job.DISABLED)
 	DONE = JobClassHolder(Job.DONE)
 	ENDSTATE = JobClassHolder(Job.SUCCESS, Job.DISABLED)
+	INIT = JobClassHolder(Job.INIT)
 	PROCESSED = JobClassHolder(Job.SUCCESS, Job.FAILED, Job.CANCELLED, Job.ABORTED)
 	PROCESSING = JobClassHolder(Job.SUBMITTED, Job.WAITING, Job.READY,
 		Job.QUEUED, Job.UNKNOWN, Job.RUNNING)
+	RUNNING = JobClassHolder(Job.RUNNING)
 	RUNNING_DONE = JobClassHolder(Job.RUNNING, Job.DONE)
 	FAILING = JobClassHolder(Job.FAILED, Job.ABORTED, Job.CANCELLED)
 	SUBMIT_CANDIDATES = JobClassHolder(Job.INIT, Job.FAILED, Job.ABORTED, Job.CANCELLED)

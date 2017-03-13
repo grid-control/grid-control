@@ -12,9 +12,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.jdl_writer import JDLWriter
 from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
+from grid_control.utils import resolve_install_path
 from python_compat import imap
 
 
@@ -23,8 +23,8 @@ class EuropeanDataGrid(GridWMS):
 
 	def __init__(self, config, name):
 		GridWMS.__init__(self, config, name,
-			submit_exec=utils.resolve_install_path('edg-job-submit'),
-			output_exec=utils.resolve_install_path('edg-job-get-output'),
+			submit_exec=resolve_install_path('edg-job-submit'),
+			output_exec=resolve_install_path('edg-job-get-output'),
 			check_executor=GridCheckJobs(config, 'edg-job-status'),
 			cancel_executor=GridCancelJobs(config, 'edg-job-cancel'),
 			jdl_writer=EDGJDL())

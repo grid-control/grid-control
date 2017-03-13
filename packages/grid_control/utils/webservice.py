@@ -15,7 +15,7 @@
 import os, logging
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.parsing import parse_json
-from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception
+from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception, ignore_exception
 from python_compat import identity, json, resolve_fun
 
 
@@ -33,9 +33,9 @@ class RestClient(object):
 		if not session:
 			try:
 				self._session = RestSession.create_instance('RequestsSession')
+				# pulling in incompatible dependencies can cause many different types of exceptions
 			except Exception:
 				clear_current_exception()
-				# pulling in incompatible dependencies can cause many different types of exceptions
 				self._session = RestSession.create_instance('Urllib2Session')
 
 	def delete(self, url=None, api=None, headers=None, params=None):
@@ -93,19 +93,18 @@ class JSONRestClient(RestClient):
 
 
 class GridJSONRestClient(JSONRestClient):
-	def __init__(self, url=None, cert_error_msg='', cert_error_cls=Exception):
+	def __init__(self, url=None, cert_error_msg='', cert_error_cls=Exception, cert=None):
 		(self._cert_error_msg, self._cert_error_cls) = (cert_error_msg, cert_error_cls)
-		JSONRestClient.__init__(self, url=url)
-		try:
-			self._get_current_cert()
-		except Exception:
-			clear_current_exception()
+		JSONRestClient.__init__(self, url=url, cert=cert)
+		if not self._cert:
+			self._cert = ignore_exception(Exception, None, self._get_grid_cert)
+		if not self._cert:
 			self._log.warning(self._fmt_cert_error('Using this webservice requires a valid grid proxy!'))
 
 	def _fmt_cert_error(self, msg):
 		return (self._cert_error_msg + ' ' + msg).strip()
 
-	def _get_current_cert(self):
+	def _get_grid_cert(self):
 		cert = os.environ.get('X509_USER_PROXY', '')
 		if not cert:
 			self._raise_cert_error('Environment variable X509_USER_PROXY is not set!')
@@ -118,5 +117,6 @@ class GridJSONRestClient(JSONRestClient):
 		raise self._cert_error_cls(self._fmt_cert_error(msg))
 
 	def _request(self, request_fun, url, api, headers, params=None, data=None):
-		self._cert = self._get_current_cert()
+		if not self._cert:
+			self._cert = self._get_grid_cert()
 		return JSONRestClient._request(self, request_fun, url, api, headers, params, data)

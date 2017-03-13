@@ -165,6 +165,8 @@ class ProcessStream(object):
 
 
 class LocalProcess(Process):
+	fd_creation_lock = GCLock()
+
 	def __init__(self, cmd, *args, **kwargs):
 		self._signal_dict = {}
 		for attr in dir(signal):
@@ -308,7 +310,6 @@ class LocalProcess(Process):
 		if daemon:
 			return start_daemon(desc, *args)
 		return start_thread(desc, *args)
-LocalProcess.fd_creation_lock = GCLock()  # <global-state>
 
 
 class ProcessReadStream(ProcessStream):

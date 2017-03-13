@@ -12,8 +12,8 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.backends import WMS
+from grid_control.utils import DictFormat, split_blackwhite_list
 from hpfwk import APIError
 from python_compat import identity, ifilter, imap, lmap
 
@@ -21,7 +21,7 @@ from python_compat import identity, ifilter, imap, lmap
 class JDLWriter(object):
 	def __init__(self):
 		self._esc_dict = {'\\': r'\\', '\"': r'\"', '\n': r'\n'}
-		self._fmt = utils.DictFormat(' = ')
+		self._fmt = DictFormat(' = ')
 
 	def format(self, req_list, result=None):
 		contents = self.prepare(req_list, result)
@@ -69,7 +69,7 @@ class JDLWriter(object):
 	def _format_reqs_sites(self, sites):
 		def _fmt_sites(site):
 			return 'RegExp(%s, other.GlueCEUniqueID)' % self._escape(site)
-		(blacklist, whitelist) = utils.split_blackwhite_list(sites)
+		(blacklist, whitelist) = split_blackwhite_list(sites)
 		sitereqs = lmap(lambda x: '!' + _fmt_sites(x), blacklist)
 		if whitelist:
 			sitereqs.append('(%s)' % str.join(' || ', imap(_fmt_sites, whitelist)))

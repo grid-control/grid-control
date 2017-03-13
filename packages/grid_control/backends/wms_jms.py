@@ -12,13 +12,13 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import WMS
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
+from grid_control.utils import resolve_install_path
 from python_compat import identity, ifilter, izip, lmap, next
 
 
@@ -55,7 +55,7 @@ class JMS(LocalWMS):
 
 	def __init__(self, config, name):
 		LocalWMS.__init__(self, config, name,
-			submit_exec=utils.resolve_install_path('job_submit'),
+			submit_exec=resolve_install_path('job_submit'),
 			check_executor=CheckJobsMissingState(config, JMSCheckJobs(config)),
 			cancel_executor=CancelJobsWithProcessBlind(config, 'job_cancel', unknown_id='not in queue !'))
 

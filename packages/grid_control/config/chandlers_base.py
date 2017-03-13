@@ -1,4 +1,4 @@
-# | Copyright 2014-2016 Karlsruhe Institute of Technology
+# | Copyright 2014-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 import logging
 from grid_control.config.config_entry import ConfigError
-from grid_control.utils import get_user_bool
+from grid_control.utils.user_interface import UserInputInterface
 from python_compat import imap, lfilter
 
 
@@ -58,17 +58,17 @@ class TriggerAbort(object):
 class TriggerInit(object):
 	# Change handler to trigger re-inits
 	def __init__(self, option):
-		self._option = option
+		(self._option, self._uii) = (option, UserInputInterface())
 
 	def __call__(self, config, old_obj, cur_obj, cur_entry, obj2str):
 		log = logging.getLogger('config.onchange.%s' % self._option.lower())
 		if config.is_interactive(self._option, default=True):
 			msg = 'The option "%s" was changed from the old value:' % cur_entry.format_opt()
-			if get_user_bool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
+			if self._uii.prompt_bool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
 					('\n\t> %s\nDo you want to abort?' % obj2str(cur_obj).lstrip()), False):
 				raise ConfigError('Abort due to unintentional config change!')
 			msg = 'A partial reinitialization (same as --reinit %s) is needed to apply this change!'
-			if not get_user_bool((msg + ' Do you want to continue?') % self._option, True):
+			if not self._uii.prompt_bool((msg + ' Do you want to continue?') % self._option, True):
 				log.log(logging.INFO1, 'Using stored value %s for option %s',
 					obj2str(old_obj), cur_entry.format_opt())
 				return old_obj

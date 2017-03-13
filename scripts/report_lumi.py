@@ -13,12 +13,15 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys
-from gc_scripts import Activity, ClassSelector, FileInfo, FileInfoProcessor, JobClass, ScriptOptions, get_cmssw_info, get_script_object_cmdline, iter_jobnum_output_dn, utils  # pylint:disable=line-too-long
+import os, sys, logging
+from gc_scripts import Activity, ClassSelector, ConsoleTable, FileInfo, FileInfoProcessor, JobClass, ScriptOptions, get_cmssw_info, get_script_object_cmdline, iter_jobnum_output_dn, utils  # pylint:disable=line-too-long
 from grid_control.datasets import DataSplitter
 from grid_control_cms.lumi_tools import format_lumi, merge_lumi_list, parse_lumi_filter
 from hpfwk import clear_current_exception
 from python_compat import imap, irange, lmap, set, sorted
+
+
+LOG = logging.getLogger('script')
 
 
 def convert_lumi_expr(opts, args):
@@ -69,22 +72,22 @@ def lumi_calc(opts, work_dn, jobnum_list, splitter):
 	for sample, lumi_list in map_sample2run_lumi_range.items():
 		if opts.job_events:
 			if map_sample2output_events.get(sample, None):
-				sys.stdout.write('\n')
+				LOG.info('')
 			display_dict_list = lmap(lambda pfn: {0: pfn, 1: map_sample2output_events[sample][pfn]},
 				map_sample2output_events[sample])
 			if display_dict_list:
 				display_dict_list.append('=')
 			display_dict_list += [{0: 'Processed in total', 1: map_sample2input_events.get(sample)}]
-			utils.display_table([(0, ''), (1, '#Events')], display_dict_list,
+			ConsoleTable.create([(0, ''), (1, '#Events')], display_dict_list,
 				title='Sample: %s' % sample)
 		if opts.job_json:
 			json_fn = os.path.join(opts.output_dir or work_dn, 'processed_%s.json' % sample)
 			write_lumi_json(lumi_list, open(json_fn, 'w'))
-			sys.stdout.write('Saved processed lumi sections in %s\n' % json_fn)
+			LOG.info('Saved processed lumi sections in %s', json_fn)
 		if opts.job_gc:
-			sys.stdout.write('\nList of processed lumisections\n' + '-' * 30 + '\n')
+			LOG.info('\nList of processed lumisections\n' + '-' * 30)
 			write_lumi_gc(lumi_list)
-		sys.stdout.write('\n')
+		LOG.info('')
 
 
 def process_fwjr(sample, fwjr_xml_dom,
@@ -124,12 +127,19 @@ def process_jobs(opts, work_dn, jobnum_list, splitter):
 			sys.exit(os.EX_OK)
 		except Exception:
 			clear_current_exception()
-			sys.stderr.write('Error while parsing framework output of job %s!\n' % jobnum)
+			LOG.error('Error while parsing framework output of job %s!', jobnum)
 			continue
 	return (map_sample2run_info_dict, map_sample2input_events, map_sample2output_events)
 
 
-def write_lumi_ext(run_lumi_range_list, stream=sys.stdout):
+def write_any(value, stream):
+	if stream is None:
+		LOG.info(value.rstrip())
+	else:
+		stream.write(value.rstrip() + '\n')
+
+
+def write_lumi_ext(run_lumi_range_list, stream=None):
 	map_run2lumi_list = {}
 	write_iter = _iter_run_dict(map_run2lumi_list, run_lumi_range_list, 'extended lumi format')
 	for (lumi_list, lumi_start, lumi_end) in write_iter:
@@ -137,11 +147,11 @@ def write_lumi_ext(run_lumi_range_list, stream=sys.stdout):
 	_write_run_dict(map_run2lumi_list, stream)
 
 
-def write_lumi_gc(run_lumi_range_list, stream=sys.stdout):
-	stream.write('%s\n' % utils.wrap_list(format_lumi(run_lumi_range_list), 60, ',\n'))
+def write_lumi_gc(run_lumi_range_list, stream=None):
+	write_any('%s\n' % utils.wrap_list(format_lumi(run_lumi_range_list), 60, ',\n'), stream)
 
 
-def write_lumi_json(run_lumi_range_list, stream=sys.stdout):
+def write_lumi_json(run_lumi_range_list, stream=None):
 	map_run2lumi_range_list = {}
 	write_iter = _iter_run_dict(map_run2lumi_range_list, run_lumi_range_list, 'JSON format')
 	for (lumi_range_list, lumi_start, lumi_end) in write_iter:
@@ -204,7 +214,7 @@ def _main():
 
 def _write_run_dict(run_dict, stream):
 	run_entry_iter = imap(lambda run: '\t"%d": %s' % (run, run_dict[run]), sorted(run_dict.keys()))
-	stream.write('{\n%s\n}\n' % str.join(',\n', run_entry_iter))
+	write_any('{\n%s\n}' % str.join(',\n', run_entry_iter), stream)
 
 
 if __name__ == '__main__':

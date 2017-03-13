@@ -6,10 +6,14 @@ global options
 
   * ``config id`` = <text> (default: <config file name w/o extension> or 'unnamed')
     Identifier for the current configuration
+  * ``delete`` = <job selector> (default: '')
+    The unfinished jobs selected by this expression are cancelled.
   * ``package paths`` = <list of paths> (default: '')
     Specify paths to additional grid-control packages with user defined plugins that are outside of the base package directory
   * ``plugin paths`` = <list of paths> (default: '<current directory>')
     Specifies paths that are used to search for plugins
+  * ``reset`` = <job selector> (default: '')
+    The jobs selected by this expression are reset to the INIT state
   * ``variable markers`` = <list of values> (default: '@ __')
     Specifies how variables are marked
   * ``workdir`` = <path> (default: <workdir base>/work.<config file name>)
@@ -50,7 +54,7 @@ Workflow options
     Toggle to control the submission of jobs
   * ``submission time requirement`` = <duration hh[:mm[:ss]]> (default: <wall time>)
     Toggle to control the submission of jobs
-  * ``workdir space timeout`` = <integer> (default: 5)
+  * ``workdir space timeout`` = <duration hh[:mm[:ss]]> (default: 00:00:05)
     Specify timeout for workdir space check
 
 SimpleJobManager options
@@ -67,7 +71,7 @@ SimpleJobManager options
   * ``chunks submit`` = <integer> (default: 100)
     Specify maximal number of jobs to submit in each job cycle
   * ``defect tries / kick offender`` = <integer> (default: 10)
-    Threshold for dropping jobs causing status retrieval errors
+    Threshold for dropping jobs causing status retrieval errors (disable check with 0)
   * ``in flight`` = <integer> (default: no limit (-1))
     Maximum number of concurrently submitted jobs
   * ``in queue`` = <integer> (default: no limit (-1))
@@ -365,6 +369,16 @@ dataset options
   * ``resync mode shrink`` = <enum: disable|complete|changed|ignore> (default: changed)
     Sets the resync mode for shrunken files
 
+CMS grid proxy options
+----------------------
+
+  * ``new proxy lifetime`` = <duration hh[:mm[:ss]]> (default: 03:12:00)
+    Specify the new lifetime for a newly created grid proxy
+  * ``new proxy roles`` = <list of values> (default: '')
+    Specify the new roles for a newly created grid proxy (in addition to the cms role)
+  * ``new proxy timeout`` = <duration hh[:mm[:ss]]> (default: 00:00:10)
+    Specify the timeout for waiting to create a new grid proxy
+
 TaskExecutableWrapper options
 -----------------------------
 
@@ -374,14 +388,6 @@ TaskExecutableWrapper options
     Path to the executable
   * ``[<prefix>] send executable`` = <boolean> (default: True)
     Toggle to control if the specified executable should be send together with the job
-
-action options
---------------
-
-  * ``delete`` = <job selector> (default: '')
-    The unfinished jobs selected by this expression are cancelled.
-  * ``reset`` = <job selector> (default: '')
-    The jobs selected by this expression are reset to the INIT state
 
 interactive options
 -------------------
@@ -408,6 +414,8 @@ logging options
     Logging messages above this log level will use the long form output
   * ``<logger name> <handler> file stack / <logger name> file stack`` = <integer> (default: 1)
     Level of detail for file stack information shown in exception logs
+  * ``<logger name> <handler> thread stack / <logger name> thread stack`` = <integer> (default: 1)
+    Level of detail for thread stack information shown in exception logs
   * ``<logger name> <handler> tree / <logger name> tree`` = <integer> (default: 2)
     Level of detail for exception tree information shown in exception logs
   * ``<logger name> <handler> variables / <logger name> variables`` = <integer> (default: 200)
@@ -420,6 +428,10 @@ logging options
     Logging level of log handlers
   * ``<logger name> propagate`` = <boolean> (default: <depends on the logger>)
     Toggle log propagation
+  * ``activity stream stderr / activity stream`` = <plugin> (default: 'default')
+    Specify activity stream class that displays the current activity tree on stderr
+  * ``activity stream stdout / activity stream`` = <plugin> (default: 'default')
+    Specify activity stream class that displays the current activity tree on stdout
   * ``debug mode`` = <boolean> (default: False)
     Toggle debug mode (detailed exception output on stdout)
   * ``display logger`` = <boolean> (default: False)
@@ -431,16 +443,6 @@ parameters options
   * ``parameters`` = <text> (default: '')
     Specify the parameter expression that defines the parameter space. The syntax depends on the used parameter factory.
 
-GUI options
------------
-
-  * ``report`` = <list of plugins> (default: 'BasicReport')
-    Type of report to display during operations
-  * report manager = <plugin> (Default: 'MultiReport')
-    Specifiy compositor class to merge the different plugins given in ``report``
-  * ``report options`` = <text> (default: '')
-    Specify options for the report plugin
-
 Matcher options
 ---------------
 
@@ -450,19 +452,19 @@ Matcher options
 GridEngineDiscoverNodes options
 -------------------------------
 
-  * ``discovery timeout`` = <integer> (default: 30)
+  * ``discovery timeout`` = <duration hh[:mm[:ss]]> (default: 00:00:30)
     Specify timeout of the process that is used to discover backend featues
 
 GridEngineDiscoverQueues options
 --------------------------------
 
-  * ``discovery timeout`` = <integer> (default: 30)
+  * ``discovery timeout`` = <duration hh[:mm[:ss]]> (default: 00:00:30)
     Specify timeout of the process that is used to discover backend featues
 
 PBSDiscoverNodes options
 ------------------------
 
-  * ``discovery timeout`` = <integer> (default: 30)
+  * ``discovery timeout`` = <duration hh[:mm[:ss]]> (default: 00:00:30)
     Specify timeout of the process that is used to discover backend featues
 
 CheckJobsWithProcess options
@@ -472,6 +474,16 @@ CheckJobsWithProcess options
     Toggle the indiscriminate logging of the job status tool output
   * ``check timeout`` = <duration hh[:mm[:ss]]> (default: 00:01:00)
     Specify timeout of the process that is used to check the job status
+
+GridEngineCheckJobs options
+---------------------------
+
+  * ``check promiscuous`` = <boolean> (default: False)
+    Toggle the indiscriminate logging of the job status tool output
+  * ``check timeout`` = <duration hh[:mm[:ss]]> (default: 00:01:00)
+    Specify timeout of the process that is used to check the job status
+  * ``job status key`` = <list of values> (default: 'JB_jobnum JB_jobnumber JB_job_number')
+    List of property names that are used to determine the wms id of jobs
 
 EmptyDataProcessor options
 --------------------------
@@ -747,6 +759,30 @@ UserMetadataSplitter options
   * ``split metadata matcher`` = <plugin> (Default: start)
     Specifiy matcher plugin that is used to match the lookup expressions
 
+ANSIGUI options
+---------------
+
+  * ``gui dump stream`` = <boolean> (default: False)
+    Toggle dumping any buffered log streams recorded during GUI operations
+  * ``gui element`` = <list of plugin[:name] ...> (default: 'report activity log')
+    Specify the GUI elements that form the GUI display
+  * gui element manager = <plugin> (Default: 'MultiGUIElement')
+    Specifiy compositor class to merge the different plugins given in ``gui element``
+  * ``gui refresh delay`` = <float> (default: 0.2)
+    Specify the refresh delay for gui elements
+  * ``gui refresh interval`` = <float> (default: 1.0)
+    Specify the refresh interval for gui elements
+
+SimpleConsole options
+---------------------
+
+  * ``report`` = <list of plugins> (default: 'BasicHeaderReport BasicReport')
+    Type of report to display during operations
+  * report manager = <plugin> (Default: 'MultiReport')
+    Specifiy compositor class to merge the different plugins given in ``report``
+  * ``report options`` = <text> (default: '')
+    Specify options for the report plugin
+
 AddFilePrefix options
 ---------------------
 
@@ -1004,6 +1040,38 @@ ScriptMonitoring options
     Specify the maximal script runtime after which the script is aborted
   * ``silent`` = <boolean> (default: True)
     Do not show output of event scripts
+
+ActivityGUIElement options
+--------------------------
+
+  * ``activity height interval`` = <integer> (default: 2)
+    Specify the interval for activity height changes
+  * ``activity height max`` = <integer> (default: 5)
+    Specify the maximum height of the activity gui element
+  * ``activity height min`` = <integer> (default: 1)
+    Specify the minimal height of the activity gui element
+
+UserLogGUIElement options
+-------------------------
+
+  * ``log dump`` = <boolean> (default: True)
+    Toggle dump of the log history when grid-control is quitting
+  * ``log length`` = <integer> (default: 200)
+    Specify length of the log history
+  * ``log wrap`` = <boolean> (default: True)
+    Toggle wrapping of log entries
+
+ReportGUIElement options
+------------------------
+
+  * ``report`` = <list of plugins> (default: 'HeaderReport BasicReport ColorBarReport')
+    Type of report to display during operations
+  * report manager = <plugin> (Default: 'MultiReport')
+    Specifiy compositor class to merge the different plugins given in ``report``
+  * ``report interval`` = <float> (default: 1.0)
+    Specify the interval between report updates
+  * ``report options`` = <text> (default: '')
+    Specify options for the report plugin
 
 LocalSBStorageManager options
 -----------------------------

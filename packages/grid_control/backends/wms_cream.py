@@ -13,13 +13,13 @@
 # | limitations under the License.
 
 import os, re, tempfile
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
+from grid_control.utils import ensure_dir_exists, remove_files, resolve_install_path
 from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import clear_current_exception
@@ -78,8 +78,8 @@ class CreamWMS(GridWMS):
 	def __init__(self, config, name):
 		cancel_executor = CancelAndPurgeJobs(config, CREAMCancelJobs(config), CREAMPurgeJobs(config))
 		GridWMS.__init__(self, config, name,
-			submit_exec=utils.resolve_install_path('glite-ce-job-submit'),
-			output_exec=utils.resolve_install_path('glite-ce-job-output'),
+			submit_exec=resolve_install_path('glite-ce-job-submit'),
+			output_exec=resolve_install_path('glite-ce-job-output'),
 			check_executor=CREAMCheckJobs(config),
 			cancel_executor=ChunkedExecutor(config, 'cancel', cancel_executor))
 
@@ -106,7 +106,7 @@ class CreamWMS(GridWMS):
 			if len(gc_id_jobnum_list) == 1:
 				# For single jobs create single subdir
 				tmp_dn = os.path.join(tmp_dn, md5(gc_id_jobnum_list[0][0]).hexdigest())
-			utils.ensure_dir_exists(tmp_dn)
+			ensure_dir_exists(tmp_dn)
 		except Exception:
 			raise BackendError('Temporary path "%s" could not be created.' % tmp_dn, BackendError)
 
@@ -145,7 +145,7 @@ class CreamWMS(GridWMS):
 
 			if exit_code != 0:
 				if 'Keyboard interrupt raised by user' in proc.stdout.read_log():
-					utils.remove_files([log, tmp_dn])
+					remove_files([log, tmp_dn])
 					raise StopIteration
 				else:
 					self._log.log_process(proc)
@@ -159,7 +159,7 @@ class CreamWMS(GridWMS):
 			yield (jobnum, None)
 
 		purge_log_fn = tempfile.mktemp('.log')
-		purge_proc = LocalProcess(utils.resolve_install_path('glite-ce-job-purge'),
+		purge_proc = LocalProcess(resolve_install_path('glite-ce-job-purge'),
 			'--noint', '--logfile', purge_log_fn, str.join(' ', done))
 		exit_code = purge_proc.status(timeout=60)
 		if exit_code != 0:
@@ -167,4 +167,4 @@ class CreamWMS(GridWMS):
 				pass
 			else:
 				self._log.log_process(proc)
-		utils.remove_files([log, purge_log_fn, tmp_dn])
+		remove_files([log, purge_log_fn, tmp_dn])

@@ -12,16 +12,16 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control import utils
 from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
+from grid_control.utils import deprecated, resolve_install_path
 
 
 class Glite(GridWMS):
 	def __init__(self, config, name):
-		utils.deprecated('Please use the GliteWMS backend for grid jobs!')
+		deprecated('Please use the GliteWMS backend for grid jobs!')
 		GridWMS.__init__(self, config, name,
-			submit_exec=utils.resolve_install_path('glite-job-submit'),
-			output_exec=utils.resolve_install_path('glite-job-output'),
+			submit_exec=resolve_install_path('glite-job-submit'),
+			output_exec=resolve_install_path('glite-job-output'),
 			check_executor=GridCheckJobs(config, 'glite-job-status'),
 			cancel_executor=GridCancelJobs(config, 'glite-job-cancel'))
 		self._submit_args_dict.update({'-r': self._ce, '--config-vo': self._config_fn})

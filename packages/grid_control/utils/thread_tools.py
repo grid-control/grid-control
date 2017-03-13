@@ -81,10 +81,22 @@ def tchain(iterable_list, timeout=None,
 	exc.raise_any(ex_cls(ex_msg))
 
 
+def with_lock(lock, fun, *args, **kwargs):
+	lock.acquire()
+	try:
+		return fun(*args, **kwargs)
+	finally:
+		lock.release()
+
+
 class GCEvent(object):
 	# Event with blocking, interruptible wait and python >= 2.7 return value
-	def __init__(self):
-		self._cond = threading.Condition(threading.Lock())
+	def __init__(self, rlock=False):
+		if rlock:  # signal handlers using events need to use rlock
+			lock = threading.RLock()
+		else:
+			lock = threading.Lock()
+		self._cond = threading.Condition(lock)
 		try:
 			self._cond_notify_all = self._cond.notify_all
 		except Exception:
@@ -221,15 +233,8 @@ class GCThreadPool(object):
 		self._exc = ExceptionCollector(self._log)
 
 	def start_daemon(self, desc, fun, *args, **kwargs):
-		self._lock.acquire()
-		try:
-			self._token += 1
-			self._token_time[self._token] = time.time()
-			self._token_desc[self._token] = desc
-		finally:
-			self._lock.release()
 		_start_thread(desc=desc, daemon=True, fun=self._run_thread,
-			args=(self._token, fun, args, kwargs), kwargs={})
+			args=(with_lock(self._lock, self._register_token, desc), fun, args, kwargs), kwargs={})
 
 	def wait_and_drop(self, timeout=None):
 		while True:
@@ -255,6 +260,12 @@ class GCThreadPool(object):
 			if timeout is not None:
 				timeout -= time.time() - t_current
 
+	def _register_token(self, desc):
+		self._token += 1
+		self._token_time[self._token] = time.time()
+		self._token_desc[self._token] = desc
+		return self._token
+
 	def _run_thread(self, token, fun, args, kwargs):
 		trace_fun = get_trace_fun()
 		if trace_fun:
@@ -262,12 +273,8 @@ class GCThreadPool(object):
 		try:
 			fun(*args, **kwargs)
 		except Exception:
-			self._lock.acquire()
-			try:
-				self._exc.collect(logging.ERROR, 'Exception in thread %r',
-					self._token_desc[token], exc_info=get_current_exception())
-			finally:
-				self._lock.release()
+			with_lock(self._lock, self._exc.collect, logging.ERROR, 'Exception in thread %r',
+				self._token_desc[token], exc_info=get_current_exception())
 		self._lock.acquire()
 		try:
 			self._token_time.pop(token, None)

@@ -48,6 +48,8 @@ sys.excepthook = gc_excepthook  # <alias>
 
 
 class GCLogHandler(logging.FileHandler):
+	config_instances = []
+
 	# This handler stores several pieces of debug information in a file
 	def __init__(self, fn_candidates, mode='a', *args, **kwargs):
 		(self._fn, self._mode) = (None, mode)
@@ -86,4 +88,3 @@ class GCLogHandler(logging.FileHandler):
 		logging.FileHandler.emit(self, record)
 		sys.stderr.write('\nIn case this is caused by a bug, please send the log file:\n' +
 			'\t%r\n' % self._fn + 'to grid-control-dev@googlegroups.com\n')
-GCLogHandler.config_instances = []  # <global-state>

@@ -1,4 +1,4 @@
-# | Copyright 2012-2016 Karlsruhe Institute of Technology
+# | Copyright 2012-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@ from grid_control.config import TriggerResync
 from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
 from grid_control.utils import split_opt
+from grid_control.utils.activity import Activity, ProgressActivity
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import JSONRestClient
@@ -74,9 +75,11 @@ class CMSBaseProvider(DataProvider):
 		if self._cache_dataset is None:
 			self._cache_dataset = [self._dataset_path]
 			if '*' in self._dataset_path:
+				activity = Activity('Getting dataset list for %s' % self._dataset_path)
 				self._cache_dataset = list(self._get_cms_dataset_list(self._dataset_path))
 				if not self._cache_dataset:
 					raise DatasetError('No datasets selected by DBS wildcard %s !' % self._dataset_path)
+				activity.finish()
 		return self._cache_dataset
 
 	def get_query_interval(self):
@@ -84,6 +87,7 @@ class CMSBaseProvider(DataProvider):
 		return 2 * 60 * 60  # 2 hour delay minimum
 
 	def _fill_cms_fi_list(self, block, block_path):
+		activity_fi = Activity('Getting file information')
 		lumi_used = False
 		lumi_info_dict = {}
 		if self._lumi_query:  # central lumi query
@@ -105,6 +109,7 @@ class CMSBaseProvider(DataProvider):
 		if lumi_used:
 			block.setdefault(DataProvider.Metadata, []).extend(['Runs', 'Lumi'])
 		block[DataProvider.FileList] = fi_list
+		activity_fi.finish()
 
 	def _get_cms_dataset_list(self, dataset_path):
 		raise AbstractError
@@ -113,13 +118,17 @@ class CMSBaseProvider(DataProvider):
 		return None
 
 	def _get_gc_block_list(self, use_phedex):
-		for dataset_path in self.get_dataset_name_list():
+		dataset_name_list = self.get_dataset_name_list()
+		progress_ds = ProgressActivity('Getting dataset', len(dataset_name_list))
+		for dataset_idx, dataset_path in enumerate(dataset_name_list):
+			progress_ds.update_progress(dataset_idx, message='Getting dataset %s' % dataset_path)
 			counter = 0
 			cms_block_iter = self._iter_cms_blocks_filtered(dataset_path, do_query_sites=not use_phedex)
 			for (block_path, replica_infos) in cms_block_iter:
 				result = {}
 				result[DataProvider.Dataset] = block_path.split('#')[0]
 				result[DataProvider.BlockName] = block_path.split('#')[1]
+				activity_block = Activity('Getting block %s' % result[DataProvider.BlockName])
 
 				if use_phedex:  # Start parallel phedex query
 					replicas_dict = {}
@@ -135,17 +144,21 @@ class CMSBaseProvider(DataProvider):
 				if len(result[DataProvider.FileList]):
 					counter += 1
 					yield result
+				activity_block.finish()
 
 			if counter == 0:
 				raise DatasetError('Dataset %s does not contain any valid blocks!' % dataset_path)
+		progress_ds.finish()
 
 	def _get_phedex_replica_list(self, block_path, replicas_dict):
+		activity_fi = Activity('Getting file replica information from PhEDex')
 		# Get dataset se list from PhEDex (perhaps concurrent with get_dbs_file_list)
 		replicas_dict[block_path] = []
 		for phedex_block in self._pjrc.get(params={'block': block_path})['phedex']['block']:
 			for replica in phedex_block['replica']:
 				replica_info = (replica['node'], replica.get('se'), replica['complete'] == 'y')
 				replicas_dict[block_path].append(replica_info)
+		activity_fi.finish()
 
 	def _iter_cms_blocks(self, dataset_path, do_query_sites):
 		raise AbstractError

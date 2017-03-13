@@ -13,9 +13,8 @@
 # | limitations under the License.
 
 import os, shlex
-from grid_control import utils
 from grid_control.config import ConfigError
-from grid_control.utils import clean_path
+from grid_control.utils import accumulate, clean_path
 from grid_control.utils.parsing import parse_dict, split_advanced, split_brackets
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError, Plugin
@@ -44,7 +43,7 @@ def parse_parameter_option(option):
 	tokens = list(split_brackets(option.lower()))
 	if len(tokens) and '(' in tokens[0]:
 		# parse tuple in as general way as possible
-		result = [tuple(utils.accumulate(tokens[0], '',
+		result = [tuple(accumulate(tokens[0], '',
 			do_emit=lambda i, b: not is_valid_parameter_char(i),
 			do_add=lambda i, b: is_valid_parameter_char(i)))]
 		if tokens[1:]:

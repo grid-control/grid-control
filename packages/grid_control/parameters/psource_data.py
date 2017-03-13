@@ -13,11 +13,11 @@
 # | limitations under the License.
 
 import os, time
-from grid_control import utils
 from grid_control.config import TriggerResync
 from grid_control.datasets import DataProvider, DataSplitter, DatasetError, PartitionProcessor
 from grid_control.gc_exceptions import UserError
 from grid_control.parameters.psource_base import LimitedResyncParameterSource, NullParameterSource
+from grid_control.utils import ensure_dir_exists, rename_file
 from grid_control.utils.activity import Activity, ProgressActivity
 from grid_control.utils.parsing import str_time_long
 from python_compat import md5_hex, set
@@ -114,7 +114,7 @@ class DataParameterSource(BaseDataParameterSource):
 
 		# Settings:
 		(self._dn, self._keep_old) = (config.get_work_path(), keep_old)
-		utils.ensure_dir_exists(self._dn, 'partition map directory', DatasetError)
+		ensure_dir_exists(self._dn, 'partition map directory', DatasetError)
 		self._set_reader(self._init_reader())
 
 		if not self.get_parameter_len():
@@ -137,8 +137,8 @@ class DataParameterSource(BaseDataParameterSource):
 	def _init_reader(self):
 		# look for aborted inits / resyncs - and try to restore old state if possible
 		if self._exists_data_path('map.tar.resync') and self._exists_data_path('cache.dat.resync'):
-			utils.rename_file(self._get_data_path('cache.dat.resync'), self._get_data_path('cache.dat'))
-			utils.rename_file(self._get_data_path('map.tar.resync'), self._get_data_path('map.tar'))
+			rename_file(self._get_data_path('cache.dat.resync'), self._get_data_path('cache.dat'))
+			rename_file(self._get_data_path('map.tar.resync'), self._get_data_path('map.tar'))
 		elif self._exists_data_path('map.tar.resync') or self._exists_data_path('cache.dat.resync'):
 			raise DatasetError('Found broken dataset partition resync state in work directory')
 
@@ -154,8 +154,8 @@ class DataParameterSource(BaseDataParameterSource):
 				provider.get_block_list_cached(show_stats=True))
 			partition_iter = self._splitter.split_partitions(block_iter)
 			DataSplitter.save_partitions(self._get_data_path('map.tar.init'), partition_iter)
-			utils.rename_file(self._get_data_path('cache.dat.init'), self._get_data_path('cache.dat'))
-			utils.rename_file(self._get_data_path('map.tar.init'), self._get_data_path('map.tar'))
+			rename_file(self._get_data_path('cache.dat.init'), self._get_data_path('cache.dat'))
+			rename_file(self._get_data_path('map.tar.init'), self._get_data_path('map.tar'))
 		return DataSplitter.load_partitions(self._get_data_path('map.tar'))
 
 	def _resync_partitions(self, path, block_list_old, block_list_new):

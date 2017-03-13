@@ -14,10 +14,10 @@
 # | limitations under the License.
 
 import os, sys, random, logging
-from gc_scripts import ScriptOptions, gc_create_config, utils
+from gc_scripts import ConsoleTable, ScriptOptions, gc_create_config
 from grid_control.datasets import DataSplitter, PartitionReader
 from grid_control.parameters import ParameterAdapter, ParameterInfo, ParameterSource
-from python_compat import ifilter, imap, izip, lfilter, lmap, md5_hex, set, sorted
+from python_compat import StringBuffer, ifilter, imap, izip, lfilter, lmap, md5_hex, set, sorted
 
 
 random.seed(0)
@@ -120,7 +120,7 @@ def list_parameters(psrc, opts):
 	if opts.untracked:
 		header_list.extend(sorted(imap(lambda n: (n, '(%s)' % n),
 			ifilter(lambda n: n not in ['GC_PARAM', 'GC_JOB_ID'], untracked_vn_list))))
-	utils.display_table(header_list, psp_list)
+	ConsoleTable.create(header_list, psp_list)
 
 
 def save_parameters(psrc, fn):
@@ -152,7 +152,9 @@ def setup_config(opts, args):
 		if opts.dataset:
 			param_config.set('default lookup', 'DATASETNICK')
 		if opts.verbose > 2:
-			config.change_view(set_sections=None).write(sys.stdout)
+			buffer = StringBuffer()
+			config.change_view(set_sections=None).write(buffer)
+			logging.getLogger('script').info(buffer.getvalue().rstrip())
 	return config
 
 
@@ -180,7 +182,7 @@ def _main():
 	psrc = get_psrc(options.opts, options.args)
 
 	if options.opts.show_sources:
-		sys.stdout.write(str.join('\n', psrc.show()) + '\n\n')
+		logging.getLogger('script').info(str.join('\n', psrc.show()) + '\n')
 	if options.opts.list_parameters:
 		list_parameters(psrc, options.opts)
 	if options.opts.save:

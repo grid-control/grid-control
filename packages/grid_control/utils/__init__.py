@@ -12,15 +12,18 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, glob, stat, time, signal, fnmatch, logging, operator
+import os, sys, glob, stat, time, fnmatch, logging, operator
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import UniqueList
-from grid_control.utils.parsing import parse_bool, parse_type, str_dict
+from grid_control.utils.parsing import parse_type, str_dict
 from grid_control.utils.process_base import LocalProcess
-from grid_control.utils.table import ColumnTable, ParseableTable, RowTable
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
+from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import NestedException, clear_current_exception
-from python_compat import exit_without_cleanup, get_user_input, ifilter, iidfilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sort_inplace, sorted, tarfile, unspecified  # pylint:disable=line-too-long
+from python_compat import exit_without_cleanup, ifilter, iidfilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sort_inplace, sorted, tarfile, unspecified  # pylint:disable=line-too-long
+
+
+_GLOBAL_STATE = {}
 
 
 class GCIOError(NestedException):
@@ -37,11 +40,8 @@ class PathError(NestedException):
 
 def abort(new=None):
 	if new is not None:
-		abort.state = new
-	try:
-		return abort.state
-	except Exception:
-		return False
+		_GLOBAL_STATE[abort] = new
+	return _GLOBAL_STATE.get(abort, False)
 
 
 def accumulate(iterable, empty, do_emit, do_add=lambda item, buffer: True, add_fun=operator.add):
@@ -88,12 +88,12 @@ def create_tarball(tar_path, match_info_list):
 def deprecated(text):
 	log = logging.getLogger('console')
 	log.critical('\n%s\n[DEPRECATED] %s', open(get_path_share('fail.txt'), 'r').read(), text)
-	if not get_user_bool('Do you want to continue?', False):
+	if not UserInputInterface().prompt_bool('Do you want to continue?', False):
 		sys.exit(os.EX_TEMPFAIL)
 
 
-def disk_usage(dn, timeout=5):
-	def _disk_usage():
+def disk_space_avail(dn, timeout=5):
+	def _disk_space_avail():
 		if os.path.exists(dn):
 			try:
 				stat_info = os.statvfs(dn)
@@ -107,7 +107,7 @@ def disk_usage(dn, timeout=5):
 		return -1
 
 	try:
-		return hang_protection(_disk_usage, timeout)
+		return hang_protection(_disk_space_avail, timeout)
 	except TimeoutException:
 		logging.getLogger('console').critical(
 			'Unable to get free disk space for directory %s after waiting for %d sec!\n' % (dn, timeout) +
@@ -125,19 +125,6 @@ def display_selection(log, items_before, items_after, message, formatter, log_le
 				log.log(log_level, ' * %s', formatter(item))
 			else:
 				log.log(log_level, '   %s', formatter(item))
-
-
-def display_table(head, data, fmt_string='', fmt=None, title=None, pivot=False):
-	wraplen = get_default_property(display_table, 'wraplen', 100)
-	table_mode = get_default_property(display_table, 'mode', 'default')
-
-	if table_mode == 'parseable':
-		return ParseableTable(head, data, '|')
-	if table_mode == 'longlist':
-		pivot = not pivot
-	if pivot:
-		return RowTable(head, data, fmt, wraplen, title=title)
-	return ColumnTable(head, data, fmt_string, fmt, wraplen, title=title)
 
 
 def ensure_dir_exists(dn, name='directory', exception_type=PathError):
@@ -238,31 +225,6 @@ def get_path_share(*args, **kw):
 	return get_path_pkg(kw.get('pkg', 'grid_control'), 'share', *args)
 
 
-def get_user_bool(text, default):
-	def _get_user_input(text, default, choices, parser=parse_bool):
-		log = logging.getLogger('console')
-		while True:
-			handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
-			try:
-				userinput = get_user_input('%s %s: ' % (text, '[%s]' % default))
-			except Exception:
-				sys.stdout.write('\n')  # continue on next line
-				raise
-			signal.signal(signal.SIGINT, handler)
-			if userinput == '':
-				return parser(default)
-			if parser(userinput) is not None:
-				return parser(userinput)
-			valid = str.join(', ', imap(lambda x: '"%s"' % x, choices[:-1]))
-			log.critical('Invalid input! Answer with %s or "%s"', valid, choices[-1])
-
-	ask_user_fun = get_default_property(get_user_bool, 'ask_user_fun', _get_user_input)
-	default_str = 'no'
-	if default:
-		default_str = 'yes'
-	return ask_user_fun(text, default_str, ['yes', 'no'])
-
-
 def get_version():
 	def _get_version():
 		try:
@@ -277,6 +239,14 @@ def get_version():
 			clear_current_exception()
 		return sys.modules['grid_control'].__version__ + ' or later'
 	return get_default_property(get_version, 'version_cache', _get_version, default_delayed=True)
+
+
+def guard(fun_start, fun_final, fun, *args, **kwargs):
+	fun_start()
+	try:
+		return fun(*args, **kwargs)
+	finally:
+		fun_final()
 
 
 def intersect_first_dict(dict1, dict2):

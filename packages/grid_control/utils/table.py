@@ -21,9 +21,22 @@ class Table(object):
 
 
 class ConsoleTable(Table):
+	wraplen = 100
+	table_mode = 'default'
+
 	def __init__(self):
 		Table.__init__(self)
 		self._log = logging.getLogger('console')
+
+	def create(cls, head, data, fmt_string='', fmt=None, title=None, pivot=False):
+		if ConsoleTable.table_mode == 'ParseableTable':
+			return ParseableTable(head, data, '|')
+		if ConsoleTable.table_mode == 'Pivot':
+			pivot = not pivot
+		if pivot:
+			return RowTable(head, data, fmt, ConsoleTable.wraplen, title=title)
+		return ColumnTable(head, data, fmt_string, fmt, ConsoleTable.wraplen, title=title)
+	create = classmethod(create)
 
 	def _write_line(self, msg):
 		self._log.info(msg)

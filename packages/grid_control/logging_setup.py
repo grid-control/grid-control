@@ -14,11 +14,12 @@
 
 import os, sys, time, logging, threading
 from grid_control.gc_exceptions import GCError, GCLogHandler
+from grid_control.stream_base import ActivityStream
 from grid_control.utils.data_structures import UniqueList, make_enum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
-from grid_control.utils.thread_tools import GCLock
-from hpfwk import AbstractError, clear_current_exception, format_exception
-from python_compat import imap, irange, lmap, set, sorted, tarfile
+from grid_control.utils.thread_tools import GCLock, with_lock
+from hpfwk import AbstractError, format_exception, ignore_exception
+from python_compat import any, imap, irange, lmap, set, sorted, tarfile
 
 
 LogLevelEnum = make_enum(lmap(lambda level: logging.getLevelName(level).upper(), irange(51)),  # pylint:disable=invalid-name
@@ -83,7 +84,8 @@ def logging_configure_handler(config, logger_name, handler_str, handler):
 		ex_context=config.get_int(get_handler_option('code context'), 2, on_change=None),
 		ex_vars=config.get_int(get_handler_option('variables'), 200, on_change=None),
 		ex_fstack=config.get_int(get_handler_option('file stack'), 1, on_change=None),
-		ex_tree=config.get_int(get_handler_option('tree'), 2, on_change=None))
+		ex_tree=config.get_int(get_handler_option('tree'), 2, on_change=None),
+		ex_threads=config.get_int(get_handler_option('thread stack'), 1, on_change=None))
 	handler.setFormatter(fmt)
 	return handler
 
@@ -122,7 +124,7 @@ def logging_create_handlers(config, logger_name):
 
 
 def logging_defaults():
-	formatter_verbose = GCFormatter(ex_context=2, ex_vars=200, ex_fstack=1, ex_tree=2)
+	formatter_verbose = GCFormatter(ex_context=2, ex_vars=200, ex_fstack=1, ex_tree=2, ex_threads=1)
 	root_logger = clean_logger()
 	root_logger.manager.loggerDict.clear()
 	root_logger.setLevel(logging.DEFAULT)
@@ -134,14 +136,8 @@ def logging_defaults():
 	abort_handler = register_handler(abort_logger, StderrStreamHandler(), formatter_verbose)
 
 	# Output verbose exception information into dedicated GC log (in gc / tmp / user directory)
-	try:
-		register_handler(abort_logger,
-			GCLogHandler(get_debug_file_candidates(), mode='w'), formatter_verbose)
-		formatter_quiet = GCFormatter(ex_context=0, ex_vars=0, ex_fstack=0, ex_tree=1)
-		abort_handler.setFormatter(formatter_quiet)
-		root_handler.setFormatter(formatter_quiet)
-	except Exception:  # otherwise use verbose settings for default output
-		clear_current_exception()
+	ignore_exception(Exception, None, _register_debug_log,
+		abort_logger, abort_handler, formatter_verbose, root_handler)
 
 	# External libraries
 	logging.getLogger('requests').setLevel(logging.WARNING)
@@ -181,12 +177,13 @@ def logging_setup(config):
 		config.set_int('abort variables', 1000, '?=')
 		config.set_int('abort file stack', 2, '?=')
 		config.set_int('abort tree', 2, '?=')
+
 	display_logger = config.get_bool('display logger', False, on_change=None)
 
 	# Find logger names in options
 	logger_names_set = set()
 	for option in config.get_option_list():
-		if option in ['debug mode', 'display logger']:
+		if any(imap(option.startswith, ['debug mode', 'display logger', 'activity stream'])):
 			pass
 		elif option.count(' ') == 0:
 			logger_names_set.add('')
@@ -201,6 +198,14 @@ def logging_setup(config):
 
 	if display_logger:
 		dump_log_setup(logging.WARNING)
+
+	# Setup activity logs
+	StdoutStreamHandler.push_std_stream(
+		config.get_plugin(['activity stream', 'activity stream stdout'],
+			'default', cls=ActivityStream, require_plugin=False, pargs=(sys.stdout,), on_change=None,
+			pkwargs={'register_callback': True}),
+		config.get_plugin(['activity stream', 'activity stream stderr'],
+			'default', cls=ActivityStream, require_plugin=False, pargs=(sys.stderr,), on_change=None))
 
 
 def parse_logging_args(arg_list):
@@ -242,17 +247,15 @@ class GCFormatter(logging.Formatter):
 		(self._ex_fstack, self._ex_tree, self._ex_threads) = (ex_fstack, ex_tree, ex_threads)
 
 	def __repr__(self):
-		return '%s(quiet = %r, code = %r, var = %r, file = %r, tree = %r)' % (self.__class__.__name__,
-			tuple(imap(logging.getLevelName, self._force_details_range)), self._ex_context,
-			self._ex_vars, self._ex_fstack, self._ex_tree)
+		return '%s(quiet = %r, code = %r, var = %r, file = %r, tree = %r, thread = %r)' % (
+			self.__class__.__name__, tuple(imap(logging.getLevelName, self._force_details_range)),
+			self._ex_context, self._ex_vars, self._ex_fstack, self._ex_tree, self._ex_threads)
 
 	def format(self, record):
 		record.message = record.getMessage()
-		try:
+		force_time = False
+		if hasattr(record, 'print_time'):
 			force_time = record.print_time
-		except Exception:
-			force_time = False
-			clear_current_exception()
 		force_details = (record.levelno <= self._force_details_range[0])
 		force_details = force_details or (record.levelno >= self._force_details_range[1])
 		if force_time or force_details:
@@ -272,6 +275,9 @@ class GCFormatter(logging.Formatter):
 
 
 class GCStreamHandler(logging.Handler):
+	global_instances = []
+	global_lock = GCLock()
+
 	# In contrast to StreamHandler, this logging handler doesn't keep a stream copy
 	def __init__(self):
 		logging.Handler.__init__(self)
@@ -293,13 +299,26 @@ class GCStreamHandler(logging.Handler):
 	def handle(self, record):
 		filter_result = self.filter(record)
 		if filter_result:
-			lock = self.global_lock or self.lock
-			lock.acquire()
-			try:
-				self.emit(record)
-			finally:
-				lock.release()
+			with_lock(self.global_lock or self.lock, self.emit, record)
 		return filter_result
+
+	def pop_std_stream(cls):
+		def _pop_std_stream(handler_cls, ref_stream):
+			ignore_exception(AttributeError, None, lambda stream: stream.disable(), handler_cls.stream[-1])
+			handler_cls.stream.pop()
+			ignore_exception(AttributeError, None, lambda stream: stream.enable(), handler_cls.stream[-1])
+		_pop_std_stream(StdoutStreamHandler, sys.stdout)
+		_pop_std_stream(StderrStreamHandler, sys.stderr)
+	pop_std_stream = classmethod(pop_std_stream)
+
+	def push_std_stream(cls, stream_stdout, stream_stderr):
+		def _push_std_stream(handler_cls, user_stream):
+			ignore_exception(AttributeError, None, lambda stream: stream.disable(), handler_cls.stream[-1])
+			handler_cls.stream.append(user_stream)
+			ignore_exception(AttributeError, None, lambda stream: stream.enable(), handler_cls.stream[-1])
+		_push_std_stream(StdoutStreamHandler, stream_stdout)
+		_push_std_stream(StderrStreamHandler, stream_stderr)
+	push_std_stream = classmethod(push_std_stream)
 
 	def set_global_lock(cls, lock=None):
 		GCStreamHandler.global_lock.acquire()
@@ -309,11 +328,11 @@ class GCStreamHandler(logging.Handler):
 			instance.release()
 		GCStreamHandler.global_lock.release()
 	set_global_lock = classmethod(set_global_lock)
-GCStreamHandler.global_instances = []  # <global-state>
-GCStreamHandler.global_lock = GCLock()  # <global-state>
 
 
 class ProcessArchiveHandler(logging.Handler):
+	tar_locks = {}
+
 	def __init__(self, fn, log=None):
 		logging.Handler.__init__(self)
 		self._fn = fn
@@ -325,11 +344,7 @@ class ProcessArchiveHandler(logging.Handler):
 
 	def emit(self, record):
 		if record.pathname == '<process>':
-			self._lock.acquire()
-			try:
-				self._write_process_log(record)
-			finally:
-				self._lock.release()
+			with_lock(self._lock, self._write_process_log, record)
 			self._log.warning('All logfiles were moved to %s', self._fn)
 
 	def _write_process_log(self, record):
@@ -353,16 +368,25 @@ class ProcessArchiveHandler(logging.Handler):
 		except Exception:
 			raise GCError('Unable to log results of external call "%s" to "%s"' % (
 				record.proc.get_call(), self._fn))
-ProcessArchiveHandler.tar_locks = {}  # <global-state>
 
 
 class StderrStreamHandler(GCStreamHandler):
+	stream = [sys.stderr]
+
 	def get_stream(self):
-		return StderrStreamHandler.stream
-StderrStreamHandler.stream = sys.stderr  # <global-state>
+		return StderrStreamHandler.stream[-1]
 
 
 class StdoutStreamHandler(GCStreamHandler):
+	stream = [sys.stdout]
+
 	def get_stream(self):
-		return StdoutStreamHandler.stream
-StdoutStreamHandler.stream = sys.stdout  # <global-state>
+		return StdoutStreamHandler.stream[-1]
+
+
+def _register_debug_log(abort_logger, abort_handler, formatter_verbose, root_handler):
+	register_handler(abort_logger,
+		GCLogHandler(get_debug_file_candidates(), mode='w'), formatter_verbose)
+	formatter_quiet = GCFormatter(ex_context=0, ex_vars=0, ex_fstack=0, ex_tree=1, ex_threads=0)
+	abort_handler.setFormatter(formatter_quiet)
+	root_handler.setFormatter(formatter_quiet)

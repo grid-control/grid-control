@@ -13,13 +13,14 @@
 # | limitations under the License.
 
 import os, time, logging
-from grid_control import utils
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters.psource_base import ParameterError, ParameterInfo, ParameterMetadata, ParameterSource  # pylint:disable=line-too-long
+from grid_control.utils import ensure_dir_exists, filter_dict, get_list_difference, swap
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.file_objects import ZipFile
 from grid_control.utils.parsing import str_time_short
+from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import APIError
 from python_compat import ifilter, iidfilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5_hex, set, sort_inplace, sorted  # pylint:disable=line-too-long
 
@@ -52,7 +53,7 @@ class ParameterAdapter(ConfigurablePlugin):
 		result['GC_JOB_ID'] = jobnum
 		result['GC_PARAM'] = pnum
 		self._psrc.fill_parameter_content(pnum, result)
-		return utils.filter_dict(result, value_filter=lambda x: x != '')
+		return filter_dict(result, value_filter=lambda x: x != '')
 
 	def get_job_len(self):
 		return self._psrc.get_parameter_len()
@@ -128,7 +129,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		self._psrc_raw = source
 		BasicParameterAdapter.__init__(self, config, source)
 		self._map_jobnum2pnum = {}
-		utils.ensure_dir_exists(config.get_work_path(), 'parameter storage directory', ParameterError)
+		ensure_dir_exists(config.get_work_path(), 'parameter storage directory', ParameterError)
 		self._path_jobnum2pnum = config.get_work_path('params.map.gz')
 		self._path_params = config.get_work_path('params.dat.gz')
 
@@ -142,7 +143,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 				'between jobs and parameter/dataset content! This can lead to invalid results!')
 			user_msg = ('Do you want to perform a syncronization between ' +
 				'the current mapping and the new one to avoid this?')
-			if utils.get_user_bool(user_msg, True):
+			if UserInputInterface().prompt_bool(user_msg, True):
 				init_requested = False
 		do_init = init_requested or init_needed
 
@@ -237,7 +238,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 
 		result_redo = result_redo.difference(result_disable)
 		if result_redo or result_disable:
-			map_pnum2jobnum = dict(ismap(utils.swap, self._map_jobnum2pnum.items()))
+			map_pnum2jobnum = dict(ismap(swap, self._map_jobnum2pnum.items()))
 
 			def _translate_pnum(pnum):
 				return map_pnum2jobnum.get(pnum, pnum)
@@ -289,7 +290,7 @@ def _diff_pspi_list(pa_old, pa_new, result_redo, result_disable):
 		if pspi_old[TrackingInfo.ACTIVE] and not pspi_new[TrackingInfo.ACTIVE]:
 			result_disable.add(pspi_new[TrackingInfo.pnum])
 	# pspi_list_changed is ignored, since it is already processed by the change handler above
-	(pspi_list_added, pspi_list_missing, _) = utils.get_list_difference(
+	(pspi_list_added, pspi_list_missing, _) = get_list_difference(
 		_translate_pa2pspi_list(pa_old), _translate_pa2pspi_list(pa_new),
 		itemgetter(TrackingInfo.HASH), _handle_matching_pspi)
 	return (map_jobnum2pnum, pspi_list_added, pspi_list_missing)

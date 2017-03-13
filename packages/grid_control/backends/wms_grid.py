@@ -13,7 +13,6 @@
 # | limitations under the License.
 
 import os, sys, calendar, tempfile
-from grid_control import utils
 from grid_control.backends.aspect_cancel import CancelJobsWithProcess
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ProcessCreatorViaStdin
@@ -21,9 +20,11 @@ from grid_control.backends.broker_base import Broker
 from grid_control.backends.jdl_writer import JDLWriter
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
+from grid_control.utils import ensure_dir_exists, filter_dict, remove_files, resolve_install_path, safe_write  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.process_base import LocalProcess
+from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import clear_current_exception
 from python_compat import identity, ifilter, imap, lfilter, lmap, md5, parsedate, tarfile
 
@@ -76,7 +77,7 @@ class GridWMS(BasicWMS):
 				tmp_dn = os.path.join(root_dn, md5(gc_id_jobnum_list[0][0]).hexdigest())
 			else:
 				tmp_dn = root_dn
-			utils.ensure_dir_exists(tmp_dn)
+			ensure_dir_exists(tmp_dn)
 		except Exception:
 			raise BackendError('Temporary path "%s" could not be created.' % tmp_dn, BackendError)
 
@@ -112,7 +113,7 @@ class GridWMS(BasicWMS):
 
 		if exit_code != 0:
 			if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout=0):
-				utils.remove_files([jobs, root_dn])
+				remove_files([jobs, root_dn])
 				raise StopIteration
 			else:
 				self._log.log_process(proc, files={'jobs': SafeFile(jobs).read()})
@@ -124,7 +125,7 @@ class GridWMS(BasicWMS):
 		for jobnum in todo:
 			yield (jobnum, None)
 
-		utils.remove_files([jobs, tmp_dn])
+		remove_files([jobs, tmp_dn])
 
 	def _get_site_list(self):
 		return None
@@ -147,7 +148,7 @@ class GridWMS(BasicWMS):
 			if (self._sb_warn_size > 0) and (sb_in_size > self._sb_warn_size * 1024 * 1024):
 				user_msg = 'Sandbox is very large (%d bytes) and can cause issues with the WMS!' % sb_in_size
 				user_msg += ' Do you want to continue?'
-				if not utils.get_user_bool(user_msg, False):
+				if not UserInputInterface().prompt_bool(user_msg, False):
 					sys.exit(os.EX_OK)
 				self._sb_warn_size = 0
 
@@ -174,14 +175,14 @@ class GridWMS(BasicWMS):
 		jdl_fd, jdl_fn = tempfile.mkstemp('.jdl')
 		try:
 			jdl_line_list = self._make_jdl(jobnum, task)
-			utils.safe_write(os.fdopen(jdl_fd, 'w'), jdl_line_list)
+			safe_write(os.fdopen(jdl_fd, 'w'), jdl_line_list)
 		except Exception:
-			utils.remove_files([jdl_fn])
+			remove_files([jdl_fn])
 			raise BackendError('Could not write jdl data to %s.' % jdl_fn)
 
 		try:
 			submit_arg_list = []
-			for key_value in utils.filter_dict(self._submit_args_dict, value_filter=identity).items():
+			for key_value in filter_dict(self._submit_args_dict, value_filter=identity).items():
 				submit_arg_list.extend(key_value)
 			submit_arg_list.append(jdl_fn)
 
@@ -203,14 +204,14 @@ class GridWMS(BasicWMS):
 				else:
 					self._log.log_process(proc, files={'jdl': SafeFile(jdl_fn).read()})
 		finally:
-			utils.remove_files([jdl_fn])
+			remove_files([jdl_fn])
 		job_data = {'jdl': str.join('', jdl_line_list)}
 		return (jobnum, self._create_gc_id(wms_id), job_data)
 
 	def _write_wms_id_list(self, gc_id_jobnum_list):
 		try:
 			job_fd, job_fn = tempfile.mkstemp('.jobids')
-			utils.safe_write(os.fdopen(job_fd, 'w'), str.join('\n', self._iter_wms_ids(gc_id_jobnum_list)))
+			safe_write(os.fdopen(job_fd, 'w'), str.join('\n', self._iter_wms_ids(gc_id_jobnum_list)))
 		except Exception:
 			raise BackendError('Could not write wms ids to %s.' % job_fn)
 		return job_fn
@@ -285,7 +286,7 @@ class GridCheckJobs(CheckJobsWithProcess):
 class GridProcessCreator(ProcessCreatorViaStdin):
 	def __init__(self, config, cmd, args):
 		ProcessCreatorViaStdin.__init__(self, config)
-		(self._cmd, self._args) = (utils.resolve_install_path(cmd), args)
+		(self._cmd, self._args) = (resolve_install_path(cmd), args)
 
 	def _arguments(self):
 		return [self._cmd] + self._args

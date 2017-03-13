@@ -54,19 +54,19 @@
 
       * grid_control.tasks.task_data DataTask
 
-       * grid_control_cms.cmssw SCRAMTask
+       * grid_control_cms.task_cmssw SCRAMTask
 
-        * grid_control_cms.cmssw CMSSW
+        * grid_control_cms.task_cmssw CMSSW
 
-         * grid_control_cms.cmssw_advanced CMSSWAdvanced CMSSW_Advanced
+         * grid_control_cms.task_cmssw_advanced CMSSWAdvanced CMSSW_Advanced
 
     * grid_control.datasets.pproc_base PartitionProcessor
 
      * grid_control.datasets.pproc_basic BasicPartitionProcessor basic
 
-      * grid_control_cms.cmssw CMSSWPartitionProcessor cmsswpart
+      * grid_control_cms.pproc_cms CMSSWPartitionProcessor cmsswpart
 
-     * grid_control_cms.cmssw LFNPartitionProcessor lfnprefix
+     * grid_control_cms.pproc_cms LFNPartitionProcessor lfnprefix
 
      * grid_control_cms.lumi_proc LumiPartitionProcessor
 
@@ -80,5 +80,5 @@
 
      * grid_control.output_processor DebugJobInfoProcessor
 
-      * grid_control_cms.cmssw CMSSWDebugJobInfoProcessor
+      * grid_control_cms.task_cmssw CMSSWDebugJobInfoProcessor
 

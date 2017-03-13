@@ -1,5 +1,11 @@
   * hpfwk.hpf_plugin Plugin
 
+   * grid_control.stream_base ActivityStream
+
+    * grid_control_gui.stream_gui MultiActivityStream multi
+
+     * grid_control_gui.stream_gui SimpleActivityStream simple default
+
    * grid_control.gc_plugin ConfigurablePlugin
 
     * grid_control.gui GUI
@@ -16,6 +22,22 @@
 
        * grid_control_gui.event_jabber JabberAlarm jabber
 
+     * grid_control_gui.ge_base GUIElement
+
+      * grid_control_gui.ge_base BufferGUIElement
+
+       * grid_control_gui.ge_basic ActivityGUIElement activity
+
+       * grid_control_gui.ge_base BasicGUIElement
+
+        * grid_control_gui.ge_basic ReportGUIElement report
+
+       * grid_control_gui.ge_basic SpanGUIElement span
+
+       * grid_control_gui.ge_basic UserLogGUIElement log
+
+      * grid_control_gui.ge_base MultiGUIElement
+
    * grid_control.report Report
 
     * grid_control_gui.report_wms BackendReport backend
@@ -23,6 +45,10 @@
     * grid_control.report ConsoleReport
 
      * grid_control_gui.report_textbar BarReport bar
+
+     * grid_control.report BasicHeaderReport basicheader
+
+      * grid_control_gui.report_gui HeaderReport header
 
      * grid_control_gui.report_gui CategoryBaseReport
 

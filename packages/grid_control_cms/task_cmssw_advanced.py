@@ -13,12 +13,12 @@
 # | limitations under the License.
 
 import os
-from grid_control import utils
 from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider
 from grid_control.utils.parsing import str_dict_cfg
-from grid_control_cms.cmssw import CMSSW
+from grid_control.utils.table import ConsoleTable
 from grid_control_cms.lumi_tools import format_lumi, parse_lumi_filter, str_lumi
+from grid_control_cms.task_cmssw import CMSSW
 from python_compat import ichain, imap, lfilter, lmap, set, sorted
 
 
@@ -101,4 +101,4 @@ class CMSSWAdvanced(CMSSW):  # pylint:disable=too-many-ancestors
 					self._nm_cfg.lookup(nick, '', is_selector=False)))
 				tmp[2] = str_lumi_nice(self._nm_lumi.lookup(nick, '', is_selector=False))
 				report.append(tmp)
-			utils.display_table(head, report, 'cl')
+			ConsoleTable.create(head, report, 'cl')

@@ -1,4 +1,4 @@
-# | Copyright 2016 Karlsruhe Institute of Technology
+# | Copyright 2016-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@ import math, time
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from grid_control.report import LocationReport, Report
-from grid_control.utils import display_table
 from grid_control.utils.parsing import parse_str, str_time_short
+from grid_control.utils.table import ConsoleTable
 from python_compat import imap, itemgetter, lmap, lzip, sorted
 
 
@@ -69,7 +69,7 @@ class BackendReport(Report):
 		stats = self._get_hierachical_stats_dict(job_db)
 		displace_states_list = lmap(itemgetter(1), self._state_map)
 		header = [('', 'Category')] + lzip(displace_states_list, displace_states_list)
-		display_table(header, _transform(stats, [], len(self._idx_list)),
+		ConsoleTable.create(header, _transform(stats, [], len(self._idx_list)),
 			fmt_string='l' + 'c' * len(state_map), fmt={'': lambda x: str.join(' ', x)})
 
 	def _get_entry(self, state_map, data, label):

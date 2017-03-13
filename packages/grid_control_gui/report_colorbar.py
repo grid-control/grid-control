@@ -15,7 +15,7 @@
 from grid_control.job_db import JobClass
 from grid_control.job_selector import ClassSelector
 from grid_control.report import ConsoleReport
-from grid_control_gui.ansi import Console
+from grid_control_gui.ansi import ANSI
 
 
 class JobProgressBar(object):
@@ -40,26 +40,24 @@ class JobProgressBar(object):
 		blocks_run = int(round(running / float(self._total) * complete))
 		blocks_fail = min(complete - blocks_ok - blocks_proc - blocks_run,
 			int(round(failed / float(self._total) * complete)))
-		self._bar = Console.COLOR_GREEN + '=' * blocks_ok
-		self._bar += Console.COLOR_BLUE + '=' * blocks_run
-		self._bar += Console.COLOR_WHITE + '=' * blocks_proc
+		self._bar = ANSI.color_green + '=' * blocks_ok
+		self._bar += ANSI.color_blue + '=' * blocks_run
+		self._bar += ANSI.color_white + '=' * blocks_proc
 		self._bar += ' ' * (complete - blocks_ok - blocks_proc - blocks_run - blocks_fail)
-		self._bar += Console.COLOR_RED + '=' * blocks_fail
-		self._bar = '[' + Console.RESET + self._bar + Console.RESET + ']'
+		self._bar += ANSI.color_red + '=' * blocks_fail
+		self._bar = '[' + ANSI.reset + self._bar + ANSI.reset + ']'
 		if self._display_text:
 			if success == self._total and self._jobs_on_finish:
-				self._bar += ' (%s |%s)' % (Console.fmt('%5d' % self._total, [Console.COLOR_GREEN]),
-					Console.fmt('finished'.center(14), [Console.COLOR_GREEN]))
+				self._bar += ' (%s |%s)' % (ANSI.color_green + '%5d' % self._total + ANSI.reset,
+					ANSI.color_green + 'finished'.center(14) + ANSI.reset)
 			elif success == self._total:
-				self._bar += ' (%s)' % (Console.fmt('finished'.center(21), [Console.COLOR_GREEN]))
+				self._bar += ' (%s)' % (ANSI.color_green + 'finished'.center(21) + ANSI.reset)
 			else:
-				def _fmt(value):
-					return str(value).rjust(4)  # int(math.log(self._total) / math.log(10)) + 1)
+				def _fmt(color, value):  # rjust by int(math.log(self._total) / math.log(10)) + 1)?
+					return color + str(value).rjust(4) + ANSI.reset
 				self._bar += ' ( %s|%s|%s|%s )' % (
-					Console.fmt(_fmt(success), [Console.COLOR_GREEN]),
-					Console.fmt(_fmt(running), [Console.COLOR_BLUE]),
-					Console.fmt(_fmt(queued), [Console.COLOR_WHITE]),
-					Console.fmt(_fmt(failed), [Console.COLOR_RED]))
+					_fmt(ANSI.color_green, success), _fmt(ANSI.color_blue, running),
+					_fmt(ANSI.color_white, queued), _fmt(ANSI.color_red, failed))
 
 
 class ColorBarReport(ConsoleReport):
@@ -67,7 +65,7 @@ class ColorBarReport(ConsoleReport):
 
 	def __init__(self, job_db, task, jobs=None, config_str=''):
 		ConsoleReport.__init__(self, job_db, task, jobs, config_str)
-		self._bar = JobProgressBar(len(job_db), 65, jobs_on_finish=True)
+		self._bar = JobProgressBar(len(job_db), 65, display_text=False, jobs_on_finish=True)
 
 	def get_height(self):
 		return 1
@@ -78,4 +76,4 @@ class ColorBarReport(ConsoleReport):
 			len(job_db.get_job_list(ClassSelector(JobClass.ATWMS))),
 			len(job_db.get_job_list(ClassSelector(JobClass.RUNNING_DONE))),
 			len(job_db.get_job_list(ClassSelector(JobClass.FAILING))))
-		self._output(str(self._bar))
+		self._output.info(str(self._bar))

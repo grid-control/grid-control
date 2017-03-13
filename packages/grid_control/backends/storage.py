@@ -13,11 +13,12 @@
 # | limitations under the License.
 
 import os, shutil
-from grid_control import utils
 from grid_control.config import ConfigError, NoVarCheck
 from grid_control.gc_plugin import NamedPlugin
+from grid_control.utils import get_path_share
 from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
+from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import NestedException
 from python_compat import imap, set
 
@@ -53,7 +54,7 @@ def se_rm(target):
 
 
 def se_runcmd(cmd, env_dict, *urls):
-	lib_fn = utils.get_path_share('gc-run.lib')
+	lib_fn = get_path_share('gc-run.lib')
 	se_path_iter = imap(lambda x: '"%s"' % _ensure_se_prefix(x).replace('dir://', 'file://'), urls)
 	env_str = str.join(' ', imap(lambda x: 'export %s="%s";' % (x, env_dict[x]), env_dict))
 	exec_str = '. %s || exit 99; %s %s %s' % (lib_fn, env_str, cmd, str.join(' ', se_path_iter))
@@ -131,7 +132,8 @@ class SEStorageManager(StorageManager):
 					self._log.info('Copy %s to SE %d failed', desc, idx + 1)
 					self._log.critical(proc.stderr.read(timeout=0))
 					self._log.critical('Unable to copy %s! You can try to copy it manually.', desc)
-					if not utils.get_user_bool('Is %s (%s) available on SE %s?' % (desc, source, se_path), False):
+					msg = 'Is %s (%s) available on SE %s?' % (desc, source, se_path)
+					if not UserInputInterface().prompt_bool(msg, False):
 						raise StorageError('%s is missing on SE %s!' % (desc, se_path))
 
 	def get_dependency_list(self):

@@ -13,9 +13,9 @@
 # | limitations under the License.
 
 import logging
-from grid_control import utils
 from grid_control.backends.backend_tools import BackendError, BackendExecutor
 from grid_control.job_db import Job
+from grid_control.utils import abort
 from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError
 from python_compat import set
@@ -75,7 +75,7 @@ class CheckJobsWithProcess(CheckJobs):
 		self._status = CheckStatus.OK
 		proc = self._proc_factory.create_proc(wms_id_list)
 		for job_info in self._parse(proc):
-			if job_info and not utils.abort():
+			if job_info and not abort():
 				yield self._parse_job_info(job_info)
 		if proc.status(timeout=0, terminate=True) != 0:
 			self._handle_error(proc)

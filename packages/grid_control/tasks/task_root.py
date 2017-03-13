@@ -13,9 +13,9 @@
 # | limitations under the License.
 
 import os, logging
-from grid_control import utils
 from grid_control.config import ConfigError, TriggerInit
 from grid_control.tasks.task_user import UserTask
+from grid_control.utils import Result, get_path_share, merge_dict_list
 
 
 class ROOTTask(UserTask):
@@ -40,7 +40,7 @@ class ROOTTask(UserTask):
 
 		# Apply default handling from UserTask
 		UserTask.__init__(self, config, name)
-		self._update_map_error_code2message(utils.get_path_share('gc-run.root.sh'))
+		self._update_map_error_code2message(get_path_share('gc-run.root.sh'))
 
 		# Collect lib files needed by executable
 		self._lib_fn_list = []
@@ -53,7 +53,7 @@ class ROOTTask(UserTask):
 
 	def get_sb_in_fpi_list(self):
 		return UserTask.get_sb_in_fpi_list(self) + self._lib_fn_list + [
-			utils.Result(path_abs=utils.get_path_share('gc-run.root.sh'), path_rel='gc-run.root.sh')]
+			Result(path_abs=get_path_share('gc-run.root.sh'), path_rel='gc-run.root.sh')]
 
 	def get_task_dict(self):
-		return utils.merge_dict_list([UserTask.get_task_dict(self), {'GC_ROOTSYS': self._rootpath}])
+		return merge_dict_list([UserTask.get_task_dict(self), {'GC_ROOTSYS': self._rootpath}])

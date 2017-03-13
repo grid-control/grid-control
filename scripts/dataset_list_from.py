@@ -13,8 +13,9 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
+import logging
 from gc_scripts import Plugin, gc_create_config
+from python_compat import StringBuffer
 
 
 def add_dataset_list_options(parser):
@@ -50,16 +51,18 @@ def add_dataset_list_options(parser):
 
 
 def discover_dataset(provider_name, config_dict):
+	buffer = StringBuffer()
 	config = gc_create_config(config_dict={'dataset': config_dict})
 	config = config.change_view(set_sections=['dataset'])
 	provider = Plugin.get_class('DataProvider').create_instance(provider_name,
 		config, 'dataset', config_dict['dataset'], None)
 	if config_dict['dump config'] == 'True':
-		config.write(sys.stdout, print_default=True, print_minimal=True)
-		return
+		config.write(buffer, print_default=True, print_minimal=True)
+		return logging.getLogger('script').info(buffer.getvalue().rstrip())
 	strip_metadata = config_dict['strip'] == 'True'
 	block_iter = provider.get_block_list_cached(show_stats=False)
 	if config_dict['output']:
 		return provider.save_to_file(config_dict['output'], block_iter, strip_metadata)
-	for _ in provider.save_to_stream(sys.stdout, block_iter, strip_metadata):
+	for _ in provider.save_to_stream(buffer, block_iter, strip_metadata):
 		pass
+	logging.getLogger('script').info(buffer.getvalue().rstrip())

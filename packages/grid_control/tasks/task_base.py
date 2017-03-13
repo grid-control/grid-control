@@ -13,11 +13,11 @@
 # | limitations under the License.
 
 import os, time, random, logging
-from grid_control import utils
 from grid_control.backends import WMS
 from grid_control.config import ConfigError, NoVarCheck, TriggerInit
 from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
 from grid_control.parameters import ParameterAdapter, ParameterFactory, ParameterInfo
+from grid_control.utils import Result, get_path_share, get_version, merge_dict_list, replace_with_dict  # pylint:disable=line-too-long
 from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.parsing import str_guid
 from hpfwk import AbstractError
@@ -80,7 +80,7 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 
 		# Get error messages from gc-run.lib comments
 		self.map_error_code2message = {}
-		self._update_map_error_code2message(utils.get_path_share('gc-run.lib'))
+		self._update_map_error_code2message(get_path_share('gc-run.lib'))
 
 		# Init parameter source manager
 		psrc_repository = {}
@@ -109,9 +109,9 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			'GC_TASK_DATE': self.task_date,
 			'GC_TASK_TIME': self.task_time,
 			'GC_TASK_ID': self.task_id,
-			'GC_VERSION': utils.get_version(),
+			'GC_VERSION': get_version(),
 		}
-		return utils.merge_dict_list([task_base_dict, self._task_var_dict])
+		return merge_dict_list([task_base_dict, self._task_var_dict])
 	get_task_dict = lru_cache()(get_task_dict)
 
 	def can_finish(self):
@@ -127,7 +127,7 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		return list(self._dependencies)
 
 	def get_description(self, jobnum):  # (task name, job name, job type)
-		return utils.Result(taskName=self.task_id, jobType=None,
+		return Result(taskName=self.task_id, jobType=None,
 			job_name=self._job_name_generator.get_name(task=self, jobnum=jobnum))
 
 	def get_intervention(self):
@@ -154,7 +154,7 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 
 	def get_sb_in_fpi_list(self):  # Get file path infos for input sandbox
 		def create_fpi(fn):
-			return utils.Result(path_abs=fn, path_rel=os.path.basename(fn))
+			return Result(path_abs=fn, path_rel=os.path.basename(fn))
 		return lmap(create_fpi, self._sb_in_fn_list)
 
 	def get_sb_out_fn_list(self):  # Get files for output sandbox
@@ -182,12 +182,12 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 
 	def substitute_variables(self, name, inp, jobnum=None, additional_var_dict=None, check=True):
 		additional_var_dict = additional_var_dict or {}
-		merged_var_dict = utils.merge_dict_list([additional_var_dict, self.get_task_dict()])
+		merged_var_dict = merge_dict_list([additional_var_dict, self.get_task_dict()])
 		if jobnum is not None:
 			merged_var_dict.update(self.get_job_dict(jobnum))
 
 		def do_subst(value):
-			return utils.replace_with_dict(value, merged_var_dict,
+			return replace_with_dict(value, merged_var_dict,
 				ichain([self.get_var_alias_map().items(), izip(additional_var_dict, additional_var_dict)]))
 		result = do_subst(do_subst(str(inp)))
 		if check and self._var_checker.check(result):

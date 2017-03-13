@@ -49,7 +49,7 @@ class DataProvider(ConfigurablePlugin):
 		self._nick_producer = dataset_config.get_plugin(
 			['nickname source', '%s nickname source' % datasource_name], 'SimpleNickNameProducer',
 			cls=DataProcessor, pargs=(datasource_name,))
-		self._dataset_processor = dataset_proc or config.get_composited_plugin(
+		self._dataset_processor = dataset_proc or dataset_config.get_composited_plugin(
 			'%s processor' % datasource_name,
 			'NickNameConsistencyProcessor EntriesConsistencyDataProcessor URLDataProcessor ' +
 			'URLCountDataProcessor EntriesCountDataProcessor EmptyDataProcessor UniqueDataProcessor ' +
