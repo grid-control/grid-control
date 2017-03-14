@@ -24,11 +24,11 @@ def display_metadata(dataset_list, block, metadata_key_list, metadata_list, base
 	header_list = (base_header_list or []) + lzip(sorted(metadata_key_list), sorted(metadata_key_list))
 	for metadata in metadata_list:
 		metadata['Block'] = block.get(DataProvider.BlockName)
-	header_list = [('Block', 'Block')] + header_list
+	header_list.insert(0, ('Block', 'Block'))
 	if len(dataset_list) > 1:
 		for metadata in metadata_list:
 			metadata['Dataset'] = block[DataProvider.Dataset]
-		header_list = [('Dataset', 'Dataset')] + header_list
+		header_list.insert(0, ('Dataset', 'Dataset'))
 	title = ''
 	if len(dataset_list) == 1:
 		title = 'Dataset: %s' % dataset_list[0]

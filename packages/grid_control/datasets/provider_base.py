@@ -19,6 +19,7 @@ from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import abort, ensure_dir_exists, get_list_difference, split_list
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
+from grid_control.utils.file_objects import erase_content
 from hpfwk import AbstractError, InstanceFactory, NestedException
 from python_compat import StringBuffer, identity, ifilter, imap, irange, itemgetter, json, lmap, lrange, md5_hex, set, sort_inplace  # pylint:disable=line-too-long
 
@@ -269,10 +270,10 @@ class DataProvider(ConfigurablePlugin):
 					writer.write(' %s' % _get_metadata_str(fi, metadata_idx_list_file))
 				writer.write('\n')
 			stream.write(writer.getvalue())
-			writer.seek(0)
-			writer.truncate(0)
+			erase_content(writer)
 			write_separator = True
 			yield block
+		writer.close()
 	save_to_stream = staticmethod(save_to_stream)
 
 	def _create_block_cache(self, show_stats, iter_fun):
@@ -299,7 +300,9 @@ class DataProvider(ConfigurablePlugin):
 		buffer = StringBuffer()
 		for _ in DataProvider.save_to_stream(buffer, self.iter_blocks_normed()):
 			pass
-		return md5_hex(buffer.getvalue())
+		value = buffer.getvalue()
+		buffer.close()
+		return md5_hex(value)
 
 	def _iter_blocks_raw(self):
 		# List of (partial or complete) block dicts with format

@@ -148,7 +148,7 @@ class PlotReport(Report):
 		time_step_list_truncated = []
 		metric_list_truncated = []
 		for time_step, metric in izip(time_step_list, metric_list):
-			if (time_step > lim_low) and (time_step < lim_high):
+			if lim_low < time_step < lim_high:
 				metric_list_truncated.append(metric)
 				time_step_list_truncated.append(time_step)
 		return (time_step_list_truncated, metric_list_truncated)
@@ -397,7 +397,7 @@ def _get_metric_timeslice_cum(job_metrics, time_start, time_end,
 			return extract_metric(job_metrics)
 		return 0
 
-	if (job_time_start < time_end) and (job_time_end >= time_end):
+	if job_time_start < time_end <= job_time_end:
 		# current timeslice ends between job_time_start & job_time_end
 		# compute ratio of covered metric
 		time_covered = (job_time_end - time_end) / float(job_time_end - job_time_start)

@@ -139,7 +139,7 @@ class CMSSW(SCRAMTask):
 		self._old_release_top = None
 		if self._project_area:
 			scram_arch_env_path = os.path.join(self._project_area, '.SCRAM', self._scram_arch, 'Environment')
-			self._old_release_top = self._parse_scram_file(scram_arch_env_path).get('RELEASETOP', None)
+			self._old_release_top = self._parse_scram_file(scram_arch_env_path).get('RELEASETOP')
 
 		self._update_map_error_code2message(
 			get_path_share('gc-run.cmssw.sh', pkg='grid_control_cms'))

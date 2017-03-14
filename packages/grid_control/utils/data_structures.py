@@ -31,7 +31,7 @@ def make_enum(enum_name_list=None, cls=None, use_hash=True, register=True):
 			raise Exception('Invalid enum value %s (allowed are %r)' % (repr(value), allowed_str))
 		return enum
 
-	def _register_name(cls, name):
+	def _register_enum(cls, name):
 		value = len(cls.enum_name_list)
 		if use_hash:
 			value += int(enum_id, 16)
@@ -57,10 +57,10 @@ def make_enum(enum_name_list=None, cls=None, use_hash=True, register=True):
 	cls.enum2str = _map_value2name.get
 	cls.str2enum = classmethod(_str2enum)
 	cls.intstr2enum = classmethod(_intstr2enum)
-	cls.register_name = classmethod(_register_name)
+	cls.register_enum = classmethod(_register_enum)
 
 	for enum_name in enum_name_list:
-		cls.register_name(enum_name)
+		cls.register_enum(enum_name)
 	if register:
 		make_enum.enum_list.append(cls)
 	return cls

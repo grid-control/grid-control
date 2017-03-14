@@ -161,7 +161,7 @@ class ColumnTable(UserConsoleTable):
 			if not isinstance(entry, str):
 				for proc_entry in _process_entry(entry):
 					yield proc_entry
-				if (idx != 0) and (idx != len(entries) - 1):
+				if idx not in (0, len(entries) - 1):
 					if None in headwrap[:-1]:
 						yield list(_process_entry('~'))[0]
 			else:

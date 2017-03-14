@@ -123,7 +123,7 @@ class ConfigContainer(object):
 
 class ConfigEntry(object):
 	# Holder of config information
-	OptTypeDesc = {'?=': 'default', '+=': 'append', '^=': 'prepend', '-=': 'replace',
+	map_opt_type2desc = {'?=': 'default', '+=': 'append', '^=': 'prepend', '-=': 'replace',
 		'=': 'override', '*=': 'finalize', '!=': 'modified'}
 
 	def __init__(self, section, option, value, opttype, source,
@@ -153,12 +153,10 @@ class ConfigEntry(object):
 		prefix += ' %s' % self.opttype
 
 		line_list = lidfilter(imap(str.strip, self.value.strip().splitlines()))
-		if not line_list:
-			line_list = [prefix]  # just prefix - without trailing whitespace
-		elif len(line_list) > 1:
-			line_list = [prefix] + line_list  # prefix on first line - rest on other lines
-		else:
+		if len(line_list) == 1:
 			line_list = [prefix + ' ' + line_list[0]]  # everything on one line
+		else:
+			line_list.insert(0, prefix)  # prefix on first line - rest on other lines
 
 		result = ''
 		for line in line_list:

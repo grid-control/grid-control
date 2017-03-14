@@ -17,7 +17,7 @@ from grid_control.gc_plugin import NamedPlugin
 from grid_control_gui.ansi import ANSI
 from grid_control_gui.stream_gui import GUIStream
 from hpfwk import AbstractError
-from python_compat import StringBuffer, imap, izip, lmap, irange, partial
+from python_compat import StringBuffer, imap, izip, lmap, partial
 
 
 class GUIElement(NamedPlugin):

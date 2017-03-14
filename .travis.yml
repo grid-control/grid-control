@@ -12,11 +12,11 @@ before_install:
   - pip install codecov
   - pip install 'coverage<4'
 script:
-  - ./packages/gcUpdatePlugins.py # randomized order
-  - ./packages/gcUpdatePlugins.py
-  - ./packages/gcUpdatePlugins.py
-  - ./packages/gcUpdatePlugins.py
-  - ./packages/gcUpdatePlugins.py
+  - ./packages/grid_control_update.py # randomized order
+  - ./packages/grid_control_update.py
+  - ./packages/grid_control_update.py
+  - ./packages/grid_control_update.py
+  - ./packages/grid_control_update.py
   - export WRAPPER='coverage run -a'
   - ./setup.py install > setup.log 2>&1 || cat setup.log
   - rm -rf packages

@@ -15,7 +15,7 @@
 import os, re, tempfile
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
-from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments
+from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments, unpack_wildcard_tar  # pylint:disable=line-too-long
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
@@ -23,7 +23,7 @@ from grid_control.utils import ensure_dir_exists, remove_files, resolve_install_
 from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import clear_current_exception
-from python_compat import imap, irange, md5, tarfile
+from python_compat import imap, irange, md5
 
 
 class CREAMCancelJobs(CancelJobsWithProcessBlind):
@@ -92,12 +92,37 @@ class CreamWMS(GridWMS):
 		if self._use_delegate is False:
 			self._submit_args_dict['-a'] = ' '
 
-	def _make_jdl(self, jobnum, task):
-		return ['[\n'] + GridWMS._make_jdl(self, jobnum, task) + [
-			'OutputSandboxBaseDestUri = "gsiftp://localhost";\n]']
+	def get_jobs_output_chunk(self, tmp_dn, gc_id_jobnum_list, wms_id_list_done):
+		map_gc_id2jobnum = dict(gc_id_jobnum_list)
+		jobs = str.join(' ', self._iter_wms_ids(gc_id_jobnum_list))
+		log = tempfile.mktemp('.log')
+		proc = LocalProcess(self._output_exec, '--noint', '--logfile', log, '--dir', tmp_dn, jobs)
 
-	# Get output of jobs and yield output dirs
+		# yield output dirs
+		current_jobnum = None
+		for line in imap(str.strip, proc.stdout.iter(timeout=20)):
+			match = re.match(self._output_regex, line)
+			if match:
+				wms_id = match.groupdict()['rawId']
+				current_jobnum = map_gc_id2jobnum.get(self._create_gc_id(wms_id))
+				wms_id_list_done.append(wms_id)
+				yield (current_jobnum, match.groupdict()['output_dn'])
+				current_jobnum = None
+		exit_code = proc.status(timeout=10, terminate=True)
+
+		if exit_code != 0:
+			if 'Keyboard interrupt raised by user' in proc.stdout.read_log():
+				remove_files([log, tmp_dn])
+				raise StopIteration
+			else:
+				self._log.log_process(proc)
+			self._log.error('Trying to recover from error ...')
+			for dn in os.listdir(tmp_dn):
+				yield (None, os.path.join(tmp_dn, dn))
+		remove_files([log])
+
 	def _get_jobs_output(self, gc_id_jobnum_list):
+		# Get output of jobs and yield output dirs
 		if len(gc_id_jobnum_list) == 0:
 			raise StopIteration
 
@@ -110,61 +135,36 @@ class CreamWMS(GridWMS):
 		except Exception:
 			raise BackendError('Temporary path "%s" could not be created.' % tmp_dn, BackendError)
 
+		map_gc_id2jobnum = dict(gc_id_jobnum_list)
+		jobnum_list_todo = list(map_gc_id2jobnum.values())
+		wms_id_list_done = []
 		activity = Activity('retrieving %d job outputs' % len(gc_id_jobnum_list))
 		chunk_pos_iter = irange(0, len(gc_id_jobnum_list), self._chunk_size)
 		for ids in imap(lambda x: gc_id_jobnum_list[x:x + self._chunk_size], chunk_pos_iter):
-			map_gc_id2jobnum = dict(ids)
-			jobs = ' '.join(self._iter_wms_ids(ids))
-			log = tempfile.mktemp('.log')
-
-			proc = LocalProcess(self._output_exec, '--noint', '--logfile', log, '--dir', tmp_dn, jobs)
-
-			# yield output dirs
-			todo = map_gc_id2jobnum.values()
-			done = []
-			current_jobnum = None
-			for line in imap(str.strip, proc.stdout.iter(timeout=20)):
-				match = re.match(self._output_regex, line)
-				if match:
-					current_jobnum = map_gc_id2jobnum.get(self._create_gc_id(match.groupdict()['rawId']))
-					todo.remove(current_jobnum)
-					done.append(match.groupdict()['rawId'])
-					output_dn = match.groupdict()['output_dn']
-					if os.path.exists(output_dn):
-						if 'GC_WC.tar.gz' in os.listdir(output_dn):
-							wildcard_tar = os.path.join(output_dn, 'GC_WC.tar.gz')
-							try:
-								tarfile.TarFile.open(wildcard_tar, 'r:gz').extractall(output_dn)
-								os.unlink(wildcard_tar)
-							except Exception:
-								self._log.error('Can\'t unpack output files contained in %s', wildcard_tar)
-								clear_current_exception()
-					yield (current_jobnum, output_dn)
-					current_jobnum = None
-			exit_code = proc.status(timeout=10, terminate=True)
-
-			if exit_code != 0:
-				if 'Keyboard interrupt raised by user' in proc.stdout.read_log():
-					remove_files([log, tmp_dn])
-					raise StopIteration
-				else:
-					self._log.log_process(proc)
-				self._log.error('Trying to recover from error ...')
-				for dn in os.listdir(tmp_dn):
-					yield (None, os.path.join(tmp_dn, dn))
+			for (current_jobnum, output_dn) in self.get_jobs_output_chunk(tmp_dn, ids, wms_id_list_done):
+				unpack_wildcard_tar(self._log, output_dn)
+				jobnum_list_todo.remove(current_jobnum)
+				yield (current_jobnum, output_dn)
 		activity.finish()
 
 		# return unretrievable jobs
-		for jobnum in todo:
+		for jobnum in jobnum_list_todo:
 			yield (jobnum, None)
+		self._purge_done_jobs(wms_id_list_done)
+		remove_files([tmp_dn])
 
+	def _make_jdl(self, jobnum, task):
+		return ['[\n'] + GridWMS._make_jdl(self, jobnum, task) + [
+			'OutputSandboxBaseDestUri = "gsiftp://localhost";\n]']
+
+	def _purge_done_jobs(self, wms_id_list_done):
 		purge_log_fn = tempfile.mktemp('.log')
 		purge_proc = LocalProcess(resolve_install_path('glite-ce-job-purge'),
-			'--noint', '--logfile', purge_log_fn, str.join(' ', done))
+			'--noint', '--logfile', purge_log_fn, str.join(' ', wms_id_list_done))
 		exit_code = purge_proc.status(timeout=60)
 		if exit_code != 0:
 			if self._explain_error(purge_proc, exit_code):
 				pass
 			else:
-				self._log.log_process(proc)
-		remove_files([log, purge_log_fn, tmp_dn])
+				self._log.log_process(purge_proc)
+		remove_files([purge_log_fn])

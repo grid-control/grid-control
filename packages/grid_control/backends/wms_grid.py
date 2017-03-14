@@ -15,7 +15,7 @@
 import os, sys, calendar, tempfile
 from grid_control.backends.aspect_cancel import CancelJobsWithProcess
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
-from grid_control.backends.backend_tools import ProcessCreatorViaStdin
+from grid_control.backends.backend_tools import ProcessCreatorViaStdin, unpack_wildcard_tar
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.jdl_writer import JDLWriter
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
@@ -26,7 +26,7 @@ from grid_control.utils.file_objects import SafeFile
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import clear_current_exception
-from python_compat import identity, ifilter, imap, lfilter, lmap, md5, parsedate, tarfile
+from python_compat import identity, ifilter, imap, lfilter, lmap, md5, parsedate
 
 
 class GridWMS(BasicWMS):
@@ -95,16 +95,8 @@ class GridWMS(BasicWMS):
 			if line.startswith(tmp_dn):
 				todo.remove(current_jobnum)
 				output_dn = line.strip()
-				if os.path.exists(output_dn):
-					if 'GC_WC.tar.gz' in os.listdir(output_dn):
-						wildcard_tar = os.path.join(output_dn, 'GC_WC.tar.gz')
-						try:
-							tarfile.TarFile.open(wildcard_tar, 'r:gz').extractall(output_dn)
-							os.unlink(wildcard_tar)
-						except Exception:
-							self._log.error('Can\'t unpack output files contained in %s', wildcard_tar)
-							clear_current_exception()
-				yield (current_jobnum, line.strip())
+				unpack_wildcard_tar(self._log, output_dn)
+				yield (current_jobnum, output_dn)
 				current_jobnum = None
 			else:
 				current_jobnum = map_gc_id2jobnum.get(self._create_gc_id(line), current_jobnum)

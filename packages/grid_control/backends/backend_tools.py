@@ -12,16 +12,29 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import os
 from grid_control.config import join_config_locations
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import resolve_install_path, wait
 from grid_control.utils.process_base import LocalProcess
-from hpfwk import AbstractError, NestedException
-from python_compat import any, identity, ifilter, imap, irange, lmap
+from hpfwk import AbstractError, NestedException, clear_current_exception
+from python_compat import any, identity, ifilter, imap, irange, lmap, tarfile
 
 
 class BackendError(NestedException):
 	pass
+
+
+def unpack_wildcard_tar(log, output_dn):
+	if os.path.exists(output_dn):
+		if 'GC_WC.tar.gz' in os.listdir(output_dn):
+			wildcard_tar = os.path.join(output_dn, 'GC_WC.tar.gz')
+			try:
+				tarfile.TarFile.open(wildcard_tar, 'r:gz').extractall(output_dn)
+				os.unlink(wildcard_tar)
+			except Exception:
+				log.error('Can\'t unpack output files contained in %s', wildcard_tar)
+				clear_current_exception()
 
 
 class BackendDiscovery(ConfigurablePlugin):
@@ -102,14 +115,14 @@ class ChunkedExecutor(ForwardingExecutor):
 		ForwardingExecutor.__init__(self, config, executor)
 		self._chunk_size = config.get_int(join_config_locations(option_prefix, 'chunk size'),
 			def_chunk_size, on_change=None)
-		self._chunk_time = config.get_int(join_config_locations(option_prefix, 'chunk interval'),
+		self._chunk_interval = config.get_int(join_config_locations(option_prefix, 'chunk interval'),
 			def_chunk_interval, on_change=None)
 
 	def execute(self, wms_id_list, *args, **kwargs):
 		do_wait = False
 		chunk_pos_iter = irange(0, len(wms_id_list), self._chunk_size)
 		for wms_id_chunk in imap(lambda x: wms_id_list[x:x + self._chunk_size], chunk_pos_iter):
-			if do_wait and not wait(self._chunk_time):
+			if do_wait and not wait(self._chunk_interval):
 				break
 			do_wait = True
 			for result in self._executor.execute(wms_id_chunk, *args, **kwargs):

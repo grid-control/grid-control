@@ -16,6 +16,11 @@ import os, gzip
 from python_compat import BytesBufferBase, bytes2str, imap, str2bytes, tarfile
 
 
+def erase_content(fp):
+	fp.seek(0)
+	fp.truncate(0)
+
+
 class SafeFile(object):
 	def __init__(self, fn, mode='r', keep_old=False):
 		if mode not in ['r', 'w']:

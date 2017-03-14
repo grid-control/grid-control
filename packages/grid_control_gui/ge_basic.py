@@ -17,36 +17,11 @@ from grid_control.logging_setup import GCStreamHandler
 from grid_control.report import Report
 from grid_control.stream_base import ActivityStream
 from grid_control.utils.activity import Activity
+from grid_control.utils.file_objects import erase_content
 from grid_control_gui.ansi import ANSI
 from grid_control_gui.ge_base import BasicGUIElement, BufferGUIElement
 from grid_control_gui.stream_gui import GUIStream
 from python_compat import lmap, sorted
-
-
-class AfterImageGUIElement(BufferGUIElement):
-	def __init__(self, config, name, workflow, redraw_event, truncate_back=True):
-		BufferGUIElement.__init__(self, config, name, workflow, redraw_event, truncate_back)
-		self._old_lines = {}
-
-	def _format_old_line(self, cur_time, line_idx, old_line_raw, old_line_age):
-		line_brightness = max(0, 0.8 - (cur_time - old_line_age) / 4.)
-		if (line_brightness == 0) or (line_idx > self._layout_height):
-			self._old_lines.pop(line_idx)
-		return ANSI.color_grayscale(line_brightness) + old_line_raw + ANSI.reset + ANSI.erase_line
-
-	def _process_lines(self, output_list):
-		cur_time = time.time()
-		old_lines = dict(self._old_lines)
-		for line_idx, cur_line in enumerate(BufferGUIElement._process_lines(self, output_list)):
-			(old_line_raw, old_line_age) = old_lines.pop(line_idx, (None, None))
-			cur_line_raw = ANSI.strip_fmt(cur_line)
-			if old_line_raw and not cur_line_raw:
-				yield self._format_old_line(cur_time, line_idx, old_line_raw, old_line_age)
-			else:
-				yield cur_line
-				self._old_lines[line_idx] = (cur_line_raw, cur_time)
-		for old_line_idx in sorted(old_lines):
-			yield self._format_old_line(cur_time, old_line_idx, *old_lines.pop(old_line_idx))
 
 
 class ReportGUIElement(BasicGUIElement):
@@ -76,43 +51,35 @@ class ReportGUIElement(BasicGUIElement):
 		return self._dirty or (time.time() - self._report_last > self._report_interval)
 
 	def _update_buffer(self):
-		self._buffer.truncate(0)
+		erase_content(self._buffer)
 		self._report.show_report(self._job_manager.job_db)
 		self._report_last = time.time()
 
 
-class ActivityGUIElement(AfterImageGUIElement):
-	alias_list = ['activity']
+class AfterImageGUIElement(BufferGUIElement):
+	def __init__(self, config, name, workflow, redraw_event, truncate_back=True):
+		BufferGUIElement.__init__(self, config, name, workflow, redraw_event, truncate_back)
+		self._old_lines = {}
 
-	def __init__(self, config, name, workflow, redraw_event):
-		AfterImageGUIElement.__init__(self, config, name, workflow, redraw_event)
-		self._stream = ActivityStream.create_instance('simple', self._buffer)
-		self._height_max = config.get_int('activity height max', 5, on_change=None)
-		self._height_min = config.get_int('activity height min', 1, on_change=None)
-		self._height_interval = config.get_int('activity height interval', 5, on_change=None)
-		(self._height_last, self._height_last_time) = (0, 0)
+	def _format_old_line(self, cur_time, line_idx, old_line_raw, old_line_age):
+		line_brightness = max(0, 0.8 - (cur_time - old_line_age) / 4.)
+		if (line_brightness == 0) or (line_idx > self._layout_height):
+			self._old_lines.pop(line_idx)
+		return ANSI.color_grayscale(line_brightness) + old_line_raw + ANSI.reset + ANSI.erase_line
 
-	def draw_finish(self):
-		AfterImageGUIElement.draw_finish(self)
-		Activity.callbacks.remove(self.make_dirty)
-
-	def draw_init(self):
-		Activity.callbacks.append(self.make_dirty)
-		AfterImageGUIElement.draw_init(self)
-
-	def get_height(self):
-		if (self._height_last > self._layout_height) or (time.time() - self._height_last_time > self._height_interval):
-			self._height_last_time = time.time()
-			return self._height_last
-		return self._layout_height
-
-	def _update_buffer(self):
-		self._buffer.truncate(0)
-		self._stream.write()
-		message = ANSI.strip_cmd(self._buffer.getvalue()).strip()
-		self._buffer.truncate(0)
-		self._height_last = max(self._layout_height, 1 + message.count('\n'))
-		self._buffer.write(message)
+	def _process_lines(self, output_list):
+		cur_time = time.time()
+		old_lines = dict(self._old_lines)
+		for line_idx, cur_line in enumerate(BufferGUIElement._process_lines(self, output_list)):
+			(old_line_raw, old_line_age) = old_lines.pop(line_idx, (None, None))
+			cur_line_raw = ANSI.strip_fmt(cur_line)
+			if old_line_raw and not cur_line_raw:
+				yield self._format_old_line(cur_time, line_idx, old_line_raw, old_line_age)
+			else:
+				yield cur_line
+				self._old_lines[line_idx] = (cur_line_raw, cur_time)
+		for old_line_idx in sorted(old_lines):
+			yield self._format_old_line(cur_time, old_line_idx, *old_lines.pop(old_line_idx))
 
 
 class SpanGUIElement(BufferGUIElement):
@@ -153,7 +120,7 @@ class UserLogGUIElement(BufferGUIElement):
 
 	def _update_buffer(self):
 		msg_line_list = lmap(lambda line: line + '\n', self._buffer.getvalue().splitlines())
-		self._buffer.truncate(0)
+		erase_content(self._buffer)
 		self._buffer.write(str.join('', msg_line_list[-self._log_max:]))
 
 	def _wrap_lines(self, output_list):
@@ -171,3 +138,37 @@ class UserLogGUIElement(BufferGUIElement):
 				tmp_len += token_len
 			if tmp:
 				yield tmp
+
+
+class ActivityGUIElement(AfterImageGUIElement):
+	alias_list = ['activity']
+
+	def __init__(self, config, name, workflow, redraw_event):
+		AfterImageGUIElement.__init__(self, config, name, workflow, redraw_event)
+		self._stream = ActivityStream.create_instance('simple', self._buffer)
+		self._height_max = config.get_int('activity height max', 5, on_change=None)
+		self._height_min = config.get_int('activity height min', 1, on_change=None)
+		self._height_interval = config.get_int('activity height interval', 5, on_change=None)
+		(self._height_last, self._height_next_time) = (0, 0)
+
+	def draw_finish(self):
+		AfterImageGUIElement.draw_finish(self)
+		Activity.callbacks.remove(self.make_dirty)
+
+	def draw_init(self):
+		Activity.callbacks.append(self.make_dirty)
+		AfterImageGUIElement.draw_init(self)
+
+	def get_height(self):
+		if (self._height_last > self._layout_height) or (time.time() > self._height_next_time):
+			self._height_next_time = time.time() + self._height_interval
+			return self._height_last
+		return self._layout_height
+
+	def _update_buffer(self):
+		erase_content(self._buffer)
+		self._stream.write()
+		message = ANSI.strip_cmd(self._buffer.getvalue()).strip()
+		self._buffer.truncate(0)
+		self._height_last = max(self._layout_height, 1 + message.count('\n'))
+		self._buffer.write(message)

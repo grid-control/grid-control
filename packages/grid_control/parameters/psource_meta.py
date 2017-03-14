@@ -154,7 +154,7 @@ class RangeParameterSource(ForwardingParameterSource):
 
 		def _translate(source, target):
 			for pnum in source:
-				if (pnum >= self._pos_start) and (pnum <= self._pos_end):
+				if self._pos_start <= pnum <= self._pos_end:
 					target.add(pnum - self._pos_start)
 		_translate(psrc_redo, result_redo)
 		_translate(psrc_disable, result_disable)

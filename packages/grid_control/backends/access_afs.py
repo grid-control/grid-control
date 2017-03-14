@@ -16,11 +16,13 @@ import os, time
 from grid_control.backends.access import AccessTokenError, RefreshableAccessToken
 from grid_control.utils import resolve_install_path
 from grid_control.utils.process_base import LocalProcess
+from grid_control.utils.thread_tools import GCLock, with_lock
 from python_compat import imap, lmap, rsplit
 
 
 class AFSAccessToken(RefreshableAccessToken):
 	alias_list = ['afs', 'AFSProxy']
+	env_lock = GCLock()
 
 	def __init__(self, config, name):
 		RefreshableAccessToken.__init__(self, config, name)
@@ -29,7 +31,7 @@ class AFSAccessToken(RefreshableAccessToken):
 		self._cache = None
 		self._map_auth_name2fn = dict(imap(lambda name: (name, config.get_work_path('proxy.%s' % name)),
 			['KRB5CCNAME', 'KRBTKFILE']))
-		self._backup_tickets(config)
+		with_lock(AFSAccessToken.env_lock, self._backup_tickets, config)
 		self._tickets = config.get_list('tickets', [], on_change=None)
 
 	def get_auth_fn_list(self):
@@ -45,7 +47,7 @@ class AFSAccessToken(RefreshableAccessToken):
 		return self._get_principal().split('@')[0]
 
 	def _backup_tickets(self, config):
-		import stat, shutil  # TODO: thread safety of os.environ changes / fix for remote backends
+		import stat, shutil
 		for name in self._map_auth_name2fn:  # store kerberos files in work directory for persistency
 			if name in os.environ:
 				fn = os.environ[name].replace('FILE:', '')

@@ -139,6 +139,13 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 		if combined_entry:
 			new_cmd_line = combined_entry.value.split() + self._cmd_line_args
 		(opts, _) = _parse_cmd_line(new_cmd_line)
+		if opts.debug_console:
+			handle_debug_interrupt()
+		if opts.debug_trace:
+			debug_trace_kwargs = {}
+			for key_value in opts.debug_trace:
+				debug_trace_kwargs[key_value.split('=')[0]] = key_value.split('=')[1]
+			DebugInterface().set_trace(**debug_trace_kwargs)
 
 		def set_config_from_opt(section, option, value):
 			if value is not None:
@@ -175,7 +182,7 @@ def _debug_watchdog():
 					fp.close()
 		except Exception:
 			pass
-		time.sleep(2)
+		time.sleep(60)
 
 
 def _parse_cmd_line(cmd_line_args):
@@ -198,6 +205,8 @@ def _parse_cmd_line(cmd_line_args):
 	parser.add_text(None, 'J', 'job-selector')
 	parser.add_text(None, 'm', 'max-retry')
 	parser.add_text(None, ' ', 'reset')
+	parser.add_bool(None, ' ', 'debug-console', False)  # undocumented debug option
+	parser.add_list(None, ' ', 'debug-trace')  # undocumented debug option
 	# Deprecated options - refer to new report script instead
 	for (sopt, lopt) in [('-r', 'report'), ('-R', 'site-report'), ('-T', 'time-report'),
 			('-M', 'task-report'), ('-D', 'detail-report'), ('', 'help-vars')]:

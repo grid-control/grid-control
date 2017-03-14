@@ -762,8 +762,6 @@ UserMetadataSplitter options
 ANSIGUI options
 ---------------
 
-  * ``gui dump stream`` = <boolean> (default: False)
-    Toggle dumping any buffered log streams recorded during GUI operations
   * ``gui element`` = <list of plugin[:name] ...> (default: 'report activity log')
     Specify the GUI elements that form the GUI display
   * gui element manager = <plugin> (Default: 'MultiGUIElement')
@@ -1041,15 +1039,11 @@ ScriptMonitoring options
   * ``silent`` = <boolean> (default: True)
     Do not show output of event scripts
 
-ActivityGUIElement options
---------------------------
+FrameGUIElement options
+-----------------------
 
-  * ``activity height interval`` = <integer> (default: 2)
-    Specify the interval for activity height changes
-  * ``activity height max`` = <integer> (default: 5)
-    Specify the maximum height of the activity gui element
-  * ``activity height min`` = <integer> (default: 1)
-    Specify the minimal height of the activity gui element
+  * ``gui dump stream`` = <boolean> (default: False)
+    Toggle dumping any buffered log streams recorded during GUI operations
 
 UserLogGUIElement options
 -------------------------
@@ -1060,6 +1054,16 @@ UserLogGUIElement options
     Specify length of the log history
   * ``log wrap`` = <boolean> (default: True)
     Toggle wrapping of log entries
+
+ActivityGUIElement options
+--------------------------
+
+  * ``activity height interval`` = <integer> (default: 5)
+    Specify the interval for activity height changes
+  * ``activity height max`` = <integer> (default: 5)
+    Specify the maximum height of the activity gui element
+  * ``activity height min`` = <integer> (default: 1)
+    Specify the minimal height of the activity gui element
 
 ReportGUIElement options
 ------------------------

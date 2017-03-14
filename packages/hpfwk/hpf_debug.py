@@ -74,6 +74,33 @@ class DebugInterface(object):
 		console.push('del readline')
 		return console
 
+	def set_trace(self, filename=None, lineno=None, fun_name=None, event=None,
+			stop_on_match=False, start_on_match=False):
+		def _output_trace(frame, event, arg):
+			arg_str = ignore_exception(Exception, '<repr failed>', repr, arg)
+			thread_name = ignore_exception(Exception, '<unknown thread>', get_thread_name)
+			self._stream.write('%s %s:%s %s %s %s\n' % (thread_name, frame.f_code.co_filename,
+				frame.f_lineno, frame.f_code.co_name, event, arg_str))
+
+		def _trace_fun(frame, event, arg):
+			if _trace_fun.started:
+				_output_trace(frame, event, arg)
+			elif (filename is None) or (filename in frame.f_code.co_filename):
+				if (lineno is None) or (lineno == frame.f_lineno):
+					if (fun_name is None) or (fun_name == frame.f_code.co_name):
+						if start_on_match:
+							_trace_fun.started = True
+						_output_trace(frame, event, arg)
+						if stop_on_match and not _trace_fun.stopped:
+							set_trace_fun(None)
+							_trace_fun.stopped = True
+							self._interrupt_fun(duration=0)
+							return
+			return _trace_fun
+		_trace_fun.started = False
+		_trace_fun.stopped = False
+		set_trace_fun(_trace_fun)
+
 	def show_stack(self, stack_depth=None, thread_id=None, show_vars=-1, show_code=0):
 		def _show_frame_list(frame):
 			if stack_depth in (None, 'all'):
@@ -105,7 +132,7 @@ class DebugInterface(object):
 	def _get_console_env_dict(self, env_dict):
 		env_dict = env_dict or {}
 		env_dict.update({'stack': self.show_stack, 'locals': self._get_locals,
-			'trace': self._set_trace, 'resume': self._resume, 'threads': self._get_thread_list})
+			'trace': self.set_trace, 'resume': self._resume, 'threads': self._get_thread_list})
 		msg = '\nDEBUG MODE ENABLED!\n  available debug commands: %s\n' % str.join(', ', env_dict)
 		msg += '  list of active threads [%d]:\n' % len(list(threading.enumerate()))
 		msg += '  available thread ids: %s\n' % list(self._get_thread_id2_frame_map().keys())
@@ -142,23 +169,6 @@ class DebugInterface(object):
 	def _resume(self, duration=None):
 		if duration is not None:
 			self._interrupt_fun(duration)
-		raise SystemExit()
-
-	def _set_trace(self, filename=None, lineno=None, fun_name=None, event=None, stop=False):
-		def _trace_fun(frame, event, arg):
-			if (filename is None) or (filename in frame.f_code.co_filename):
-				if (lineno is None) or (lineno == frame.f_lineno):
-					if (fun_name is None) or (fun_name == frame.f_code.co_name):
-						self._stream.write('%s %s:%s %s %s %s\n' % (get_thread_name(),
-							frame.f_code.co_filename, frame.f_lineno, frame.f_code.co_name, event, arg))
-						if stop and not _trace_fun.interrupted:
-							set_trace_fun(None)
-							_trace_fun.interrupted = True
-							self._interrupt_fun(duration=0)
-							return
-			return _trace_fun
-		_trace_fun.interrupted = False
-		set_trace_fun(_trace_fun)
 		raise SystemExit()
 
 

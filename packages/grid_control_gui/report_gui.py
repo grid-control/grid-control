@@ -47,14 +47,10 @@ class CategoryBaseReport(ConsoleReport):
 		# Assignment of jobs to categories (depending on variables and using datasetnick if available)
 		job_config_dict = {}
 		vn_list = []
-		vn_blacklist = ['GC_', 'SEED_', 'DATASET', 'FILE_NAMES', 'JOB_RANDOM', 'SKIP_EVENTS']
 		for jobnum in self._jobs:
 			if task:
 				job_config_dict = task.get_job_dict(jobnum)
-			def _is_ignored(vn):
-				return not any(imap(vn.startswith, vn_blacklist))
-			vn_list = lfilter(_is_ignored, sorted(job_config_dict.keys()))
-			print vn_list
+			vn_list = lfilter(self._is_ignored_vn, sorted(job_config_dict.keys()))
 			cat_key = str.join('|', imap(lambda vn: '%s=%s' % (vn, job_config_dict[vn]), vn_list))
 			map_cat2jobs.setdefault(cat_key, []).append(jobnum)
 			if cat_key not in map_cat2desc:
@@ -99,6 +95,10 @@ class CategoryBaseReport(ConsoleReport):
 			cat_dict[job_state] = cat_dict.get(job_state, 0) + 1
 		# (<state overview>, <descriptions>, <#subcategories>)
 		return (cat_state_dict, dict(self._map_cat2desc), {})
+
+	def _is_ignored_vn(self, vn):
+		vn_list = ['GC_', 'SEED_', 'DATASET', 'FILE_NAMES', 'JOB_RANDOM', 'SKIP_EVENTS', 'MAX_EVENTS']
+		return not any(imap(vn.startswith, vn_list))
 
 
 class AdaptiveBaseReport(CategoryBaseReport):
@@ -220,7 +220,7 @@ class AdaptiveBaseReport(CategoryBaseReport):
 			(var_key_merge, var_key_merge_delta) = (None, 0)
 			for var_key in sorted(var_key_result):
 				delta = sum(imap(len, var_key_result[var_key])) - len(var_key_result[var_key])
-				if (delta <= delta_goal) and (delta > var_key_merge_delta):
+				if var_key_merge_delta < delta <= delta_goal:
 					(var_key_merge, var_key_merge_delta) = (var_key, delta)
 			if var_key_merge:
 				for merge_list in var_key_result[var_key_merge]:

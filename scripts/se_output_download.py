@@ -591,7 +591,7 @@ def _parse_cmd_line():
 			'--keep-local-ok --no-mark-dl --ignore-mark-dl')
 
 	options = parser.script_parse(verbose_short=None)
-	if len(options.args) != 1:  # we need exactly one positional argument (config file)
+	if len(options.args) < 1:  # we need exactly one positional argument (config file)
 		parser.exit_with_usage(msg='Config file not specified!')
 	options.opts.threads = int(options.opts.threads)
 	return options

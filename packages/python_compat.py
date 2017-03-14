@@ -47,7 +47,7 @@ def resolve_fun(*args):
 				return result
 		else:
 			return location  # function
-	raise Exception('Builtins not found: ' + str.join(',', args))
+	raise Exception('Unable to find function in ' + repr(args))
 
 
 def unspecified(value):

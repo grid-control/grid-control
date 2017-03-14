@@ -423,7 +423,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			job_status_str_list.append('(%s)' % job_obj.get('dest'))
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and job_obj.get('reason'):
 			job_status_str_list.append('(%s)' % job_obj.get('reason'))
-		elif (state == Job.SUCCESS) and (job_obj.get('runtime', None) is not None):
+		elif (state == Job.SUCCESS) and (job_obj.get('runtime') is not None):
 			if (job_obj.get('runtime') or 0) >= 0:
 				job_status_str_list.append('(runtime %s)' % str_time_long(job_obj.get('runtime') or 0))
 		elif state == Job.FAILED:

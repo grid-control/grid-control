@@ -71,7 +71,7 @@ def lumi_calc(opts, work_dn, jobnum_list, splitter):
 
 	for sample, lumi_list in map_sample2run_lumi_range.items():
 		if opts.job_events:
-			if map_sample2output_events.get(sample, None):
+			if map_sample2output_events.get(sample):
 				LOG.info('')
 			display_dict_list = lmap(lambda pfn: {0: pfn, 1: map_sample2output_events[sample][pfn]},
 				map_sample2output_events[sample])

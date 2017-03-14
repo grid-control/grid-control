@@ -152,7 +152,7 @@ class ConfigInterface(object):
 				source = '<%s by %s>' % (desc, self._get_caller())
 			entry = self._config_view.set(norm_config_locations(option), value, opttype, source, unique)
 			self._log.log(logging.INFO2, 'Setting %s %s %s ', desc,
-				ConfigEntry.OptTypeDesc[opttype], entry.format(print_section=True))
+				ConfigEntry.map_opt_type2desc[opttype], entry.format(print_section=True))
 			return entry
 		except Exception:
 			raise ConfigError('Unable to set %s %r to %r (source: %r)' % (desc, option, value, source))

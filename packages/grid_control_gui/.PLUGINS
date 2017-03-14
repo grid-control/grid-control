@@ -26,7 +26,9 @@
 
       * grid_control_gui.ge_base BufferGUIElement
 
-       * grid_control_gui.ge_basic ActivityGUIElement activity
+       * grid_control_gui.ge_basic AfterImageGUIElement
+
+        * grid_control_gui.ge_basic ActivityGUIElement activity
 
        * grid_control_gui.ge_base BasicGUIElement
 
@@ -35,6 +37,8 @@
        * grid_control_gui.ge_basic SpanGUIElement span
 
        * grid_control_gui.ge_basic UserLogGUIElement log
+
+      * grid_control_gui.gui_ansi FrameGUIElement
 
       * grid_control_gui.ge_base MultiGUIElement
 
@@ -59,6 +63,8 @@
       * grid_control_gui.report_gui ModuleReport module
 
      * grid_control_gui.report_colorbar ColorBarReport cbar
+
+     * grid_control_gui.report_WIP SimpleStateReport state
 
      * grid_control_gui.report_time TimeReport time
 

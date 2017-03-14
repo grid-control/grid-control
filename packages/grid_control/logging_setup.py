@@ -303,12 +303,12 @@ class GCStreamHandler(logging.Handler):
 		return filter_result
 
 	def pop_std_stream(cls):
-		def _pop_std_stream(handler_cls, ref_stream):
+		def _pop_std_stream(handler_cls):
 			ignore_exception(AttributeError, None, lambda stream: stream.disable(), handler_cls.stream[-1])
 			handler_cls.stream.pop()
 			ignore_exception(AttributeError, None, lambda stream: stream.enable(), handler_cls.stream[-1])
-		_pop_std_stream(StdoutStreamHandler, sys.stdout)
-		_pop_std_stream(StderrStreamHandler, sys.stderr)
+		_pop_std_stream(StdoutStreamHandler)
+		_pop_std_stream(StderrStreamHandler)
 	pop_std_stream = classmethod(pop_std_stream)
 
 	def push_std_stream(cls, stream_stdout, stream_stderr):

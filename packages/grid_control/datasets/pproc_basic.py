@@ -51,9 +51,9 @@ class BasicPartitionProcessor(PartitionProcessor):
 			self._vn_file_names: self._format_fn_list(partition_info[DataSplitter.FileList]),
 			self._vn_max_events: partition_info[DataSplitter.NEntries],
 			self._vn_skip_events: partition_info.get(DataSplitter.Skipped, 0),
-			self._vn_prefix + 'PATH': partition_info.get(DataSplitter.Dataset, None),
-			self._vn_prefix + 'BLOCK': partition_info.get(DataSplitter.BlockName, None),
-			self._vn_prefix + 'NICK': partition_info.get(DataSplitter.Nickname, None),
+			self._vn_prefix + 'PATH': partition_info.get(DataSplitter.Dataset),
+			self._vn_prefix + 'BLOCK': partition_info.get(DataSplitter.BlockName),
+			self._vn_prefix + 'NICK': partition_info.get(DataSplitter.Nickname),
 		})
 		if self._datasource_name == 'dataset':
 			result[self._vn_prefix + 'SPLIT'] = pnum

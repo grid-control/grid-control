@@ -81,7 +81,7 @@ class LocalWMS(BasicWMS):
 			bind_kwargs={'inherit': True, 'tags': [self]}, pargs=('queue', 'queues', _get_queues_list))
 
 		self._scratch_path = config.get_list('scratch path', ['TMPDIR', '/tmp'], on_change=True)
-		self._submit_opt_str = config.get('submit options', '', on_change=None)
+		self._submit_opt_list = shlex.split(config.get('submit options', '', on_change=None))
 		self._memory = config.get_int('memory', -1, on_change=None)
 
 	def parse_submit_output(self, data):
@@ -124,6 +124,15 @@ class LocalWMS(BasicWMS):
 	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
 		raise AbstractError
 
+	def _get_submit_proc(self, jobnum, sandbox, job_name, reqs):
+		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
+		submit_args = list(self._submit_opt_list)
+		submit_args.extend(shlex.split(self._get_submit_arguments(jobnum, job_name,
+			reqs, sandbox, stdout, stderr)))
+		submit_args.append(get_path_share('gc-local.sh'))
+		submit_args.extend(shlex.split(self._get_job_arguments(jobnum, sandbox)))
+		return LocalProcess(self._submit_exec, *submit_args)
+
 	def _submit_job(self, jobnum, task):
 		# Submit job and yield (jobnum, WMS ID, other data)
 		activity = Activity('submitting job %d' % jobnum)
@@ -146,14 +155,8 @@ class LocalWMS(BasicWMS):
 		if (self._memory > 0) and (reqs.get(WMS.MEMORY, 0) < self._memory):
 			reqs[WMS.MEMORY] = self._memory  # local jobs need higher (more realistic) memory requirements
 
-		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
 		job_name = task.get_description(jobnum).job_name
-		submit_args = shlex.split(self._submit_opt_str)
-		submit_args.extend(shlex.split(self._get_submit_arguments(jobnum, job_name,
-			reqs, sandbox, stdout, stderr)))
-		submit_args.append(get_path_share('gc-local.sh'))
-		submit_args.extend(shlex.split(self._get_job_arguments(jobnum, sandbox)))
-		proc = LocalProcess(self._submit_exec, *submit_args)
+		proc = self._get_submit_proc(jobnum, sandbox, job_name, reqs)
 		exit_code = proc.status(timeout=20, terminate=True)
 		wms_id_str = proc.stdout.read(timeout=0).strip().strip('\n')
 		wms_id = ignore_exception(Exception, None, self.parse_submit_output, wms_id_str)

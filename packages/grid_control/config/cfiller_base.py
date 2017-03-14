@@ -33,7 +33,7 @@ class ConfigFiller(Plugin):
 		opttype = '='
 		try:
 			option = option.strip()
-			if option[-1] in imap(itemgetter(0), ConfigEntry.OptTypeDesc.keys()):
+			if option[-1] in imap(itemgetter(0), ConfigEntry.map_opt_type2desc.keys()):
 				opttype = option[-1] + '='
 				option = option[:-1].strip()
 			container.append(ConfigEntry(section.strip(), option, value.strip(), opttype, source))

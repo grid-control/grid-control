@@ -97,7 +97,7 @@ class TextFileJobDB(JobDB):
 		idx = 0
 		for (jobnum, job_fn) in sorted(candidates):
 			idx += 1
-			if (job_limit >= 0) and (jobnum >= job_limit):
+			if jobnum >= job_limit >= 0:
 				self._log.info('Stopped reading job infos at job #%d out of %d available job files, ' +
 					'since the limit of %d jobs is reached', jobnum, len(candidates), job_limit)
 				break
@@ -125,5 +125,5 @@ class TextFileJobDB(JobDB):
 		for key, value in job_obj.history.items():
 			data['history_' + str(key)] = value
 		if job_obj.gc_id is not None:
-			data['id'] = job_obj.dict.get('legacy_gc_id', None) or job_obj.gc_id  # store legacy gc_id
+			data['id'] = job_obj.dict.get('legacy_gc_id') or job_obj.gc_id  # store legacy gc_id
 		return data
