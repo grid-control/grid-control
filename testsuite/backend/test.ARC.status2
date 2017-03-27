@@ -1,0 +1,54 @@
+Job: gsiftp://grid-arc0.desy.de:2811/jobs/U3pLDmfrXYonXlDnJp9YSwCoABFKDmABFKDmWpJKDmABFKDmoDon2m
+ Name: ARC
+ State: Finished (FINISHED)
+ Exit Code: 0
+ Owner: /C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober
+ Other Messages: SubmittedVia=org.nordugrid.gridftpjob
+ Queue: grid
+ Requested Slots: 1
+ Stdin: /dev/null
+ Stdout: out
+ Stderr: err
+ Submitted: 2016-06-18 18:01:23
+ End Time: 2016-06-18 19:14:05
+ Submitted from: 131.169.168.65:56263
+ Used CPU Time: 
+ Used Wall Time: 
+ Results must be retrieved before: 2016-06-25 18:21:58
+ Entry valid from: 2016-06-18 20:30:10
+ Entry valid for: 20 minutes
+ ID on service: U3pLDmfrXYonXlDnJp9YSwCoABFKDmABFKDmWpJKDmABFKDmoDon2m
+ Service information URL: ldap://grid-arc0.desy.de:2135/Mds-Vo-Name=local,o=grid??sub?(objectClass=*) (org.nordugrid.ldapng)
+ Job status URL: ldap://grid-arc0.desy.de:2135/Mds-Vo-Name=local,o=grid??sub?(nordugrid-job-globalid=gsiftp:\2f\2fgrid-arc0.desy.de:2811\2fjobs\2fU3pLDmfrXYonXlDnJp9YSwCoABFKDmABFKDmWpJKDmABFKDmoDon2m) (org.nordugrid.ldapng)
+ Job management URL: gsiftp://grid-arc0.desy.de:2811/jobs (org.nordugrid.gridftpjob)
+ Stagein directory URL: gsiftp://grid-arc0.desy.de:2811/jobs/U3pLDmfrXYonXlDnJp9YSwCoABFKDmABFKDmWpJKDmABFKDmoDon2m
+ Stageout directory URL: gsiftp://grid-arc0.desy.de:2811/jobs/U3pLDmfrXYonXlDnJp9YSwCoABFKDmABFKDmWpJKDmABFKDmoDon2m
+ Session directory URL: gsiftp://grid-arc0.desy.de:2811/jobs/U3pLDmfrXYonXlDnJp9YSwCoABFKDmABFKDmWpJKDmABFKDmoDon2m
+
+Job: gsiftp://grid-arc0.desy.de:2811/jobs/xBBMDmPwXYonXlDnJp9YSwCoABFKDmABFKDmlqLKDmABFKDmycOlCn
+ Name: ARC
+ State: Finished (FINISHED)
+ Exit Code: 0
+ Owner: /C=DE/O=GermanGrid/OU=uni-hamburg/CN=Fred Markus Stober
+ Other Messages: SubmittedVia=org.nordugrid.gridftpjob
+ Queue: grid
+ Requested Slots: 1
+ Stdin: /dev/null
+ Stdout: out
+ Stderr: err
+ Submitted: 2016-06-18 18:06:17
+ End Time: 2016-06-18 19:15:27
+ Submitted from: 131.169.168.65:56391
+ Used CPU Time: 
+ Used Wall Time: 
+ Results must be retrieved before: 2016-06-25 18:33:07
+ Entry valid from: 2016-06-18 20:30:10
+ Entry valid for: 20 minutes
+ ID on service: xBBMDmPwXYonXlDnJp9YSwCoABFKDmABFKDmlqLKDmABFKDmycOlCn
+ Service information URL: ldap://grid-arc0.desy.de:2135/Mds-Vo-Name=local,o=grid??sub?(objectClass=*) (org.nordugrid.ldapng)
+ Job status URL: ldap://grid-arc0.desy.de:2135/Mds-Vo-Name=local,o=grid??sub?(nordugrid-job-globalid=gsiftp:\2f\2fgrid-arc0.desy.de:2811\2fjobs\2fxBBMDmPwXYonXlDnJp9YSwCoABFKDmABFKDmlqLKDmABFKDmycOlCn) (org.nordugrid.ldapng)
+ Job management URL: gsiftp://grid-arc0.desy.de:2811/jobs (org.nordugrid.gridftpjob)
+ Stagein directory URL: gsiftp://grid-arc0.desy.de:2811/jobs/xBBMDmPwXYonXlDnJp9YSwCoABFKDmABFKDmlqLKDmABFKDmycOlCn
+ Stageout directory URL: gsiftp://grid-arc0.desy.de:2811/jobs/xBBMDmPwXYonXlDnJp9YSwCoABFKDmABFKDmlqLKDmABFKDmycOlCn
+ Session directory URL: gsiftp://grid-arc0.desy.de:2811/jobs/xBBMDmPwXYonXlDnJp9YSwCoABFKDmABFKDmlqLKDmABFKDmycOlCn
+

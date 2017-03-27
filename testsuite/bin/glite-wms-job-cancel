@@ -1,0 +1,10 @@
+#!/usr/bin/env python
+
+import os, sys, random, time
+print os.environ.get('GC_TEST_FILE', '/dev/null')
+fp = open(os.environ.get('GC_TEST_FILE', '/dev/null'))
+content = fp.read()
+print repr(content)
+sys.stdout.write(content)
+if 'error' in content.lower():
+	sys.exit(2)

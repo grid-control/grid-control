@@ -1,0 +1,16 @@
+
+******  JobID=[https://grid-cr0.desy.de:8443/CREAM052718106]
+	Status        = [ABORTED]
+	ExitCode      = []
+	FailureReason = [BLAH error: submission command failed (exit code = 1) (stdout:) (stderr:qsub: Unauthorized Request  MSG=group ACL is not satisfied: user cmsger030@grid-cr0.desy.de, queue desy-) N/A (jobId = CREAM052718106)]
+	Description   = [submission to BLAH failed [retry count=3]]
+
+
+
+******  JobID=[https://grid-cr0.desy.de:8443/CREAM910144555]
+	Status        = [ABORTED]
+	ExitCode      = []
+	FailureReason = [BLAH error: submission command failed (exit code = 1) (stdout:) (stderr:qsub: Unauthorized Request  MSG=group ACL is not satisfied: user cmsger030@grid-cr0.desy.de, queue desy-) N/A (jobId = CREAM910144555)]
+	Description   = [submission to BLAH failed [retry count=3]]
+
+

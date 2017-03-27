@@ -1,0 +1,4 @@
+#!/bin/sh
+
+cat ${GC_TEST_FILE:-/dev/null}
+exit ${GC_TEST_RET:-0}

@@ -1,0 +1,46 @@
+  * hpfwk.hpf_plugin Plugin
+
+   * grid_control.gc_plugin ConfigurablePlugin
+
+    * grid_control.datasets.provider_base DataProvider
+
+     * grid_control_tests.plugins_testsuite TestsuiteProvider
+
+    * grid_control.gui GUI
+
+     * grid_control_tests.plugins_testsuite TestsuiteGUIFail
+
+    * grid_control.gc_plugin NamedPlugin
+
+     * grid_control.monitoring EventHandler
+
+      * grid_control.monitoring Monitoring NullMonitor
+
+       * grid_control_tests.plugins_testsuite TestsuiteAbortMonitor
+
+       * grid_control_tests.plugins_testsuite TestsuiteHandler
+
+     * grid_control_gui.ge_base GUIElement
+
+      * grid_control_gui.ge_basic BufferGUIElement
+
+       * grid_control_tests.plugins_testsuite TestsuiteGUIElement debug
+
+     * grid_control.tasks.task_base TaskModule
+
+      * grid_control_tests.plugins_testsuite TestsuiteAbortTask
+
+      * grid_control_tests.plugins_testsuite TestsuiteTask
+
+     * grid_control.backends.wms WMS NullWMS
+
+      * grid_control.backends.wms BasicWMS
+
+       * grid_control_tests.plugins_testsuite TestsuiteWMS
+
+      * grid_control_tests.plugins_testsuite TestsuiteAbortBackend
+
+    * grid_control.datasets.pproc_base PartitionProcessor
+
+     * grid_control_tests.plugins_testsuite TestsuitePartitionProcessor
+

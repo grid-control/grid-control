@@ -1,0 +1,6 @@
+JOBID=0
+EXITCODE=0
+TIME=496
+FILE="cd4ce73f52940d6daffbbb82d29bcac8  histo_reconstruction.root  pfembTauTau_data_embedding_SingleMu_2011A_PR_v1_0_0_pt0_0_histo_reconstruction.root  srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/aburgmei/embedding/20110420-emb2/"
+FILE1="e41fa44c6595595428c79db135930bc6  histo_simulation.root  pfembTauTau_data_embedding_SingleMu_2011A_PR_v1_0_0_pt0_0_histo_simulation.root  srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/aburgmei/embedding/20110420-emb2/"
+FILE2="acac0de54ef6c683ce479b227ba1fc85  embedded_RECO.root  pfembTauTau_data_embedding_SingleMu_2011A_PR_v1_0_0_pt0_0_embedded_RECO.root  srm://dcache-se-cms.desy.de:8443/srm/managerv2?SFN=/pnfs/desy.de/cms/tier2/store/user/aburgmei/embedding/20110420-emb2/"

@@ -1,0 +1,220 @@
+#!/bin/sh
+
+cat << EOF
+ekpplus001
+     state = offline
+     np = 4
+     properties = goodsl5_64
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus001 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=22385,nsessions=1,nusers=1,idletime=2795625,totmem=5622360kb,availmem=4466788kb,physmem=4015868kb,ncpus=2,loadave=0.00,netload=1287214435334,size=37941220kb:37982596kb,state=free,jobs=1854853.ekpplusctl.ekpplus.cluster 1739060.ekpplusctl.ekpplus.cluster 1739059.ekpplusctl.ekpplus.cluster 1854855.ekpplusctl.ekpplus.cluster 1807005.ekpplusctl.ekpplus.cluster 1739049.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256151
+     note = SGE TEST HOST
+
+ekpplus002
+     state = offline
+     np = 4
+     properties = goodsl5_64
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus002 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=31701,nsessions=1,nusers=1,idletime=4281697,totmem=7927656kb,availmem=6448488kb,physmem=4015868kb,ncpus=2,loadave=0.00,netload=1877751032232,size=153676420kb:153716452kb,state=free,jobs=1765494.ekpplusctl.ekpplus.cluster 1771016.ekpplusctl.ekpplus.cluster 1854856.ekpplusctl.ekpplus.cluster 1806995.ekpplusctl.ekpplus.cluster 1859743.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256181
+     note = SGE TEST HOST
+
+ekpplus003
+     state = offline
+     np = 4
+     properties = goodsl5_64
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus003 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=28785,nsessions=1,nusers=1,idletime=4281694,totmem=5975756kb,availmem=3916276kb,physmem=4015868kb,ncpus=2,loadave=0.00,netload=2175808379657,size=37601256kb:37642188kb,state=free,jobs=1739050.ekpplusctl.ekpplus.cluster 1859627.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256187
+     note = SGE TEST HOST
+
+ekpplus004
+     state = offline
+     np = 2
+     properties = goodsl5_64,nb
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus004 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=? 0,nsessions=? 0,nusers=0,idletime=4281681,totmem=5975756kb,availmem=4770104kb,physmem=4015868kb,ncpus=2,loadave=0.00,netload=931673040135,size=36517460kb:36551284kb,state=free,jobs=,varattr=,rectime=1289256189
+     note = SGE TEST HOST
+
+ekpplus005
+     state = offline
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus005 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=27617,nsessions=1,nusers=1,idletime=3058014,totmem=7947892kb,availmem=6613720kb,physmem=4036104kb,ncpus=2,loadave=0.00,netload=1466542847377,size=237360244kb:237413852kb,state=free,jobs=1765267.ekpplusctl.ekpplus.cluster 1778574.ekpplusctl.ekpplus.cluster 1763416.ekpplusctl.ekpplus.cluster 1854843.ekpplusctl.ekpplus.cluster 1866507.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256162
+     note = SGE TEST HOST
+
+ekpplus006
+     state = offline
+     np = 4
+     properties = goodsl5_64
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus006 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=26646,nsessions=1,nusers=1,idletime=4103756,totmem=5975756kb,availmem=3877348kb,physmem=4015868kb,ncpus=2,loadave=0.00,netload=1987746704573,size=36412548kb:36551284kb,state=free,jobs=1763426.ekpplusctl.ekpplus.cluster 1763425.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256162
+     note = SGE TEST HOST
+
+ekpplus007
+     state = down,offline
+     np = 4
+     properties = goodsl5_64
+     ntype = cluster
+     note = broken hardware
+
+ekpplus008
+     state = offline
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus008 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=2672,nsessions=1,nusers=1,idletime=2796772,totmem=5975948kb,availmem=5830552kb,physmem=4016060kb,ncpus=2,loadave=0.00,netload=5385920859,size=36465708kb:36551284kb,state=free,jobs=1764035.ekpplusctl.ekpplus.cluster 1750400.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256153
+     note = SGE TEST MACHINE
+
+ekpplus009
+     state = down,offline
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+     note = broken hardware
+
+ekpplus010
+     state = free
+     np = 4
+     properties = goodsl5_64
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus010 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=? 0,nsessions=? 0,nusers=0,idletime=2725855,totmem=36166064kb,availmem=34761768kb,physmem=4036104kb,ncpus=2,loadave=1.00,netload=2415526339771,size=209585624kb:209639896kb,state=free,jobs=1765107.ekpplusctl.ekpplus.cluster 1765374.ekpplusctl.ekpplus.cluster 1854833.ekpplusctl.ekpplus.cluster 1765375.ekpplusctl.ekpplus.cluster 1883119.ekpplusctl.ekpplus.cluster 1883175.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256172
+     note = SGE TEST MACHINE
+
+ekpplus011
+     state = offline
+     np = 4
+     properties = goodsl5_64
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus011 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=? 0,nsessions=? 0,nusers=0,idletime=2710564,totmem=7455256kb,availmem=7371640kb,physmem=3543468kb,ncpus=2,loadave=0.00,netload=3100585255,size=237314168kb:237413852kb,state=free,jobs=1750402.ekpplusctl.ekpplus.cluster 1763421.ekpplusctl.ekpplus.cluster 1739046.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256161
+     note = Job killer
+
+ekpplus012
+     state = free
+     np = 4
+     properties = goodsl5_64
+     ntype = cluster
+     jobs = 0/1915623.ekpplusctl.ekpplus.cluster
+     status = opsys=linux,uname=Linux ekpplus012 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=4685,nsessions=1,nusers=1,idletime=899651,totmem=7947892kb,availmem=7207568kb,physmem=4036104kb,ncpus=2,loadave=1.00,netload=4265597704036,size=92163288kb:92298916kb,state=free,jobs=1763419.ekpplusctl.ekpplus.cluster 1854842.ekpplusctl.ekpplus.cluster 1762718.ekpplusctl.ekpplus.cluster 1915623.ekpplusctl.ekpplus.cluster 1915679.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256176
+
+ekpplus013
+     state = free
+     np = 4
+     properties = goodsl5_64
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus013 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=? 0,nsessions=? 0,nusers=0,idletime=2298462,totmem=7943664kb,availmem=7066296kb,physmem=4036104kb,ncpus=2,loadave=0.00,netload=3923063403118,size=282267260kb:284525136kb,state=free,jobs=1763428.ekpplusctl.ekpplus.cluster 1788847.ekpplusctl.ekpplus.cluster 1750403.ekpplusctl.ekpplus.cluster 1854844.ekpplusctl.ekpplus.cluster 1768960.ekpplusctl.ekpplus.cluster 1883120.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256177
+
+ekpplus014
+     state = down,offline
+     np = 4
+     properties = good,nb
+     ntype = cluster
+     note = broken hardware
+
+ekpplus015
+     state = free
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus015 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=? 0,nsessions=? 0,nusers=0,idletime=2280499,totmem=36149680kb,availmem=35207640kb,physmem=4019720kb,ncpus=2,loadave=0.00,netload=3609424923255,size=209606856kb:209639896kb,state=free,jobs=1739056.ekpplusctl.ekpplus.cluster 1763415.ekpplusctl.ekpplus.cluster 1908784.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256172
+
+ekpplus016
+     state = free
+     np = 4
+     properties = goodsl5_64
+     ntype = cluster
+     jobs = 0/1917102.ekpplusctl.ekpplus.cluster
+     status = opsys=linux,uname=Linux ekpplus016 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=2720,nsessions=1,nusers=1,idletime=4281605,totmem=8032076kb,availmem=7065064kb,physmem=4015868kb,ncpus=2,loadave=1.03,netload=4350292389899,size=188221672kb:188339640kb,state=free,jobs=1771017.ekpplusctl.ekpplus.cluster 1854832.ekpplusctl.ekpplus.cluster 1739041.ekpplusctl.ekpplus.cluster 1762543.ekpplusctl.ekpplus.cluster 1917102.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256175
+
+ekpplus018
+     state = down,offline
+     np = 4
+     properties = good,nb
+     ntype = cluster
+     note = broken hardware
+
+ekpplus019
+     state = down,offline
+     np = 2
+     properties = 32bit
+     ntype = cluster
+     note = broken hardware
+
+ekpplus020
+     state = down,offline
+     np = 1
+     properties = good,nb
+     ntype = cluster
+     note = broken hardware
+
+ekpplus021
+     state = down,offline
+     np = 2
+     properties = good
+     ntype = cluster
+     note = machine does not exist
+
+ekpplus022
+     state = free
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus022 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=? 0,nsessions=? 0,nusers=0,idletime=2372077,totmem=6269348kb,availmem=6123168kb,physmem=2060360kb,ncpus=2,loadave=0.00,netload=3555903420705,size=72744300kb:72777208kb,state=free,jobs=1770735.ekpplusctl.ekpplus.cluster 1775391.ekpplusctl.ekpplus.cluster 1770533.ekpplusctl.ekpplus.cluster 1776476.ekpplusctl.ekpplus.cluster 1739047.ekpplusctl.ekpplus.cluster 1773160.ekpplusctl.ekpplus.cluster 1859479.ekpplusctl.ekpplus.cluster 1883128.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256174
+
+ekpplus023
+     state = free
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus023 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=? 0,nsessions=? 0,nusers=0,idletime=1515024,totmem=5972148kb,availmem=4475784kb,physmem=2060360kb,ncpus=2,loadave=0.00,netload=3102154320932,size=237376672kb:237413852kb,state=free,jobs=1806999.ekpplusctl.ekpplus.cluster 1775079.ekpplusctl.ekpplus.cluster 1775950.ekpplusctl.ekpplus.cluster 1767886.ekpplusctl.ekpplus.cluster 1739055.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256174
+
+ekpplus024
+     state = down,offline
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+
+ekpplus025
+     state = offline
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus025 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=? 0,nsessions=? 0,nusers=0,idletime=1500118,totmem=5972148kb,availmem=5938112kb,physmem=2060360kb,ncpus=2,loadave=0.00,netload=1668432187,size=237380968kb:237413852kb,state=free,jobs=1763053.ekpplusctl.ekpplus.cluster 1766768.ekpplusctl.ekpplus.cluster 1762358.ekpplusctl.ekpplus.cluster 1771103.ekpplusctl.ekpplus.cluster 1766504.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256179
+     note = NEEDS RESTART
+
+ekpplus026
+     state = down,offline
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+     jobs = 0/1880132.ekpplusctl.ekpplus.cluster, 1/1880190.ekpplusctl.ekpplus.cluster, 2/1880195.ekpplusctl.ekpplus.cluster
+     note = NEEDS RESTART
+
+ekpplus027
+     state = free
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus027 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=? 0,nsessions=? 0,nusers=0,idletime=996896,totmem=6269348kb,availmem=4641704kb,physmem=2060360kb,ncpus=2,loadave=0.00,netload=3160545688367,size=72744340kb:72777208kb,state=free,jobs=1778802.ekpplusctl.ekpplus.cluster 1766592.ekpplusctl.ekpplus.cluster 1772762.ekpplusctl.ekpplus.cluster 1783103.ekpplusctl.ekpplus.cluster 1783209.ekpplusctl.ekpplus.cluster 1772675.ekpplusctl.ekpplus.cluster 1775290.ekpplusctl.ekpplus.cluster 1883116.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256154
+
+ekpplus028
+     state = free
+     np = 4
+     properties = goodsl5_64,nb
+     ntype = cluster
+     status = opsys=linux,uname=Linux ekpplus028 2.6.19-ekp2-amd64-smp #1 SMP Thu May 31 11:38:37 CEST 2007 x86_64,sessions=? 0,nsessions=? 0,nusers=0,idletime=1754247,totmem=5972148kb,availmem=5055908kb,physmem=2060360kb,ncpus=2,loadave=0.00,netload=3235516531280,size=73037448kb:73070300kb,state=free,jobs=1770545.ekpplusctl.ekpplus.cluster 1767876.ekpplusctl.ekpplus.cluster 1770328.ekpplusctl.ekpplus.cluster 1883158.ekpplusctl.ekpplus.cluster,varattr=,rectime=1289256178
+
+ekpplus029
+     state = down,offline
+     np = 2
+     properties = badbuttesting,nb
+     ntype = cluster
+     note = broken hardware
+
+ekpplus030
+     state = down,offline
+     np = 2
+     properties = badbuttesting,nb
+     ntype = cluster
+     note = broken hardware
+
+
+EOF

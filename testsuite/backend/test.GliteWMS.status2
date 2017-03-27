@@ -1,0 +1,31 @@
+
+======================= glite-wms-job-status Success =====================
+BOOKKEEPING INFORMATION:
+
+Status info for the Job : https://grid-lb0.desy.de:9000/gI6QdIJdvkCj3V2nqRQInw
+Current Status:     Done (Success)
+Logged Reason(s):
+    - job completed
+    - Job Terminated Successfully
+Exit code:          0
+Status Reason:      Job Terminated Successfully
+Destination:        cream02.athena.hellasgrid.gr:8443/cream-pbs-cms
+Submitted:          Sun Nov 14 22:05:22 2010 CET
+==========================================================================
+
+
+======================= glite-wms-job-status Success =====================
+BOOKKEEPING INFORMATION:
+
+Status info for the Job : https://lb-3-fzk.gridka.de:9000/h261HCD0QRxIn1gr-8Q8VA
+Current Status:     Running 
+Status Reason:      Job successfully submitted to Globus
+Destination:        ce126.cern.ch:2119/jobmanager-lcglsf-grid_2nh_cms
+Submitted:          Sun Nov 14 22:05:34 2010 CET
+==========================================================================
+
+
+                           *** Log file created ***
+Possible Errors and Debug messages have been printed in the following file:
+/tmp/glite-wms-job-status_12043_6301_1289764503.log
+

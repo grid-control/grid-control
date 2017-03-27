@@ -1,0 +1,11 @@
+#!/bin/sh
+
+GT=$(cat $1 | grep globaltag | cut -d "=" -f 2 | grep -v print | head -n 1 | sed -e "s/'/\"/g" | cut -d '"' -f 2)
+echo "globaltag:${GT:-GR_R_44_V12::All}"
+
+if [ -f $1 ]; then
+	cat $1 | md5sum | cut -d " " -f 1
+else
+	echo "Invalid file"
+	exit 1
+fi

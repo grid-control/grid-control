@@ -1,0 +1,16 @@
+#!/bin/sh
+
+cat << EOF
+
+Connecting to the service https://wms-1-fzk.gridka.de:7443/glite_wms_wmproxy_server
+
+
+Error - Operation Failed
+The Operation is not allowed: Cancel has already been requested
+
+Method: jobCancel
+
+
+
+EOF
+exit 2

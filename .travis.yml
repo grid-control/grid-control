@@ -1,35 +1,199 @@
+os: linux
 language: python
 python:
-  - "2.6"
-  - "2.7"
-  - "3.2"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "pypy"
-  - "pypy3"
-before_install:
-  - pip install codecov
-  - pip install 'coverage<4'
+  - 2.6
+  - 2.7
+  - 3.2
+  - 3.3
+  - 3.4
+  - 3.5
+  - 3.6
+  - 3.7-dev
+  - pypy-5.3.1
+env:
+  - WRAPPER='coverage run -a'
+matrix:
+  include:
+  - python: pypy
+    env: WRAPPER=''
+  - python: pypy3
+    env: WRAPPER=''
+before_install: |
+  if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+    brew update > /dev/null
+    brew install openssl readline > /dev/null
+    (brew outdated pyenv || brew upgrade pyenv) > /dev/null
+    export PYENV_VERSION=$PYTHON
+    pyenv install fail-$PYTHON
+    export PATH="/Users/travis/.pyenv/shims:${PATH}"
+    python --version
+  fi
+  pip install codecov
+  pip install 'coverage<4'
 script:
-  - ./packages/grid_control_update.py # randomized order
-  - ./packages/grid_control_update.py
-  - ./packages/grid_control_update.py
-  - ./packages/grid_control_update.py
-  - ./packages/grid_control_update.py
-  - export WRAPPER='coverage run -a'
+  - echo 'travis_fold:start:gc_env_setup'
   - ./setup.py install > setup.log 2>&1 || cat setup.log
+  - echo > gc_debug_stack.log
+  - export GC_CHECK_OUTPUT=true
+  - export GC_SCRIPT="/$(grep gridcontrol setup.log | cut -d "/" -f 2-)/gridcontrol"
   - rm -rf packages
   - ls
-  - export GC_CHECK_OUTPUT=true
-  - export GC_SCRIPT=$VIRTUAL_ENV/bin/gridcontrol
-  - if [[ $TRAVIS_PYTHON_VERSION == 'pypy'* ]]; then export WRAPPER=''; fi
+  - echo 'travis_fold:end:gc_env_setup'
+  - echo 'travis_fold:start:stress_test_basic'
   - $WRAPPER $GC_SCRIPT -s -o '[jobs] continuous = False' docs/examples/ExampleS1_stresstest.conf
   - $WRAPPER $GC_SCRIPT --reset INIT docs/examples/ExampleS1_stresstest.conf
   - $WRAPPER $GC_SCRIPT -o '[jobs] continuous = False' docs/examples/ExampleS1_stresstest.conf
   - $WRAPPER $GC_SCRIPT -o '[interactive] default = False' -d ALL docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER $GC_SCRIPT -G --debug docs/examples/ExampleS1_stresstest.conf
+  - $WRAPPER $GC_SCRIPT -G --debug docs/examples/ExampleS1_stresstest.conf --logging config=INFO --logging classloader
+  - $WRAPPER $GC_SCRIPT -G docs/examples/ExampleS1_stresstest.conf > test.ansi; EXITCODE=$?
+  - if [ "$EXITCODE" != "0" ]; then cat test.ansi; fi
+  - $WRAPPER $GC_SCRIPT -o '[global] gui = NullGUI' docs/examples/ExampleS1_stresstest.conf --debug-trace="fun_name=xyz"
   - $WRAPPER $GC_SCRIPT docs/examples/ExampleS1_stresstest.conf
   - diff ExampleS1_stresstest.list docs/examples/ExampleS1_stresstest.list.ref
+  - echo 'travis_fold:end:stress_test_basic'
+  - echo 'travis_fold:start:stress_test_cms_1'
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms1.conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms1.conf --help-conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms1.conf --help-confmin
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms1.conf -cm 1
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms1.conf
+  - echo 'travis_fold:end:stress_test_cms_1'
+  - echo 'travis_fold:start:stress_test_cms_2'
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms2.conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms2.conf -cm 1
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms2.conf
+  - echo 'travis_fold:end:stress_test_cms_2'
+  - echo 'travis_fold:start:stress_test_cms_3'
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms3.conf
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms3.conf -cm 1
+  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS2_stresscms3.conf
+  - diff ExampleS2_stresscms3.list docs/examples/ExampleS2_stresscms3.list.ref
+  - echo 'travis_fold:end:stress_test_cms_3'
+  - echo 'travis_fold:start:scripts_se_download'
+  - $WRAPPER ./scripts/se_output_download.py || echo
+  - $WRAPPER ./scripts/se_output_download.py docs/examples/ExampleS1_stresstest.conf -T trivial --slowdown=0 -J 1,5 -m --show-host --no-verify-md5
+  - $WRAPPER ./scripts/se_output_download.py docs/examples/ExampleS1_stresstest.conf -T trivial --slowdown=0 -J 1,3,4 -t 2 --shuffle
+  - echo 'travis_fold:end:scripts_se_download'
+  - echo 'travis_fold:start:scripts_dataset_nick'
+  - $WRAPPER ./scripts/dataset_nick.py || echo
+  - $WRAPPER ./scripts/dataset_nick.py /TEST/DATASET -l
+  - $WRAPPER ./scripts/dataset_nick.py testsuite/datasets/dataA.dbs -l
+  - echo 'travis_fold:end:scripts_dataset_nick'
+  - echo 'travis_fold:start:scripts_se_output_md5_list'
+  - $WRAPPER ./scripts/se_output_md5_list.py || echo
+  - $WRAPPER ./scripts/se_output_md5_list.py docs/examples/ExampleS1_stresstest.conf id:x || echo
+  - $WRAPPER ./scripts/se_output_md5_list.py docs/examples/ExampleS1_stresstest.conf nick:Dataset2_changed
+  - echo 'travis_fold:end:scripts_se_output_md5_list'
+  - echo 'travis_fold:start:scripts_parameter_info'
+  - $WRAPPER ./scripts/parameter_info.py || echo
+  - $WRAPPER ./scripts/parameter_info.py -l 'A' -p 'A=123' -S param.gz -vvvta --parseable
+  - $WRAPPER ./scripts/parameter_info.py -l 'var("A")' -p 'A=123 456' -F modular --parseable
+  - $WRAPPER ./scripts/parameter_info.py "A B <data>" -D True -p "A=1 2 3" -p "B=x y" -lcc --logging INFO2
+  - $WRAPPER ./scripts/parameter_info.py docs/examples/ExampleS1_stresstest.conf -TlcLv -D docs/examples/work.ExampleS1_stresstest/datamap.tar
+  - echo 'travis_fold:end:scripts_parameter_info'
+  - echo 'travis_fold:start:scripts_dataset_list_from'
+  - $WRAPPER ./scripts/dataset_list_from_gc.py || echo
+  - $WRAPPER ./scripts/dataset_list_from_gc.py docs/examples/ExampleS1_stresstest.conf --dump-config
+  - $WRAPPER ./scripts/dataset_list_from_gc.py docs/examples/ExampleS1_stresstest.conf -i OutputDirsFromConfig,JobInfoFromOutputDir,FilesFromJobInfo -d @SE_OUTPUT_FILE@
+  - $WRAPPER ./scripts/dataset_list_from_gc.py docs/examples/ExampleS1_stresstest.conf -s '*' -D'.:-1:' -d '@DELIMETER_DS@' -o output.dbs
+  - $WRAPPER ./scripts/dataset_list_from_ls.py -D '_:1:2'
+  - echo 'travis_fold:end:scripts_dataset_list_from'
+  - echo 'travis_fold:start:scripts_report_lumi'
+  - $WRAPPER ./scripts/report_lumi.py -j || echo
+  - $WRAPPER ./scripts/report_lumi.py -G || echo
+  - $WRAPPER ./scripts/report_lumi.py -G x || echo
+  - $WRAPPER ./scripts/report_lumi.py -F 1-2 || echo
+  - $WRAPPER ./scripts/report_lumi.py -J 1-2 || echo
+  - $WRAPPER ./scripts/report_lumi.py -GJF 123:1-123:10
+  - $WRAPPER ./scripts/report_lumi.py -gjep docs/examples/ExampleS2_stresscms1.conf
+  - rm docs/examples/work.ExampleS2_stresscms1/output/job_0/cmssw.dbs.tar.gz
+  - rm docs/examples/work.ExampleS2_stresscms2/datamap.tar
+  - $WRAPPER ./scripts/report_lumi.py -j docs/examples/ExampleS2_stresscms2.conf
+  - echo 'travis_fold:end:scripts_report_lumi'
+  - echo 'travis_fold:start:scripts_report'
+  - $WRAPPER ./scripts/report.py | echo
+  - $WRAPPER ./scripts/report.py docs/examples/ExampleS1_stresstest.conf -R "modern bar module trivial null lean" -T
+  - $WRAPPER ./scripts/report.py --report-list -T -R variables docs/examples/ExampleS2_stresscms2.conf --pivot
+  - echo 'travis_fold:end:scripts_report'
+  - echo 'travis_fold:start:scripts_plugin'
+  - $WRAPPER ./scripts/plugins.py || echo
+  - $WRAPPER ./scripts/plugins.py --parseable WMS
+  - $WRAPPER ./scripts/plugins.py -p WMS
+  - $WRAPPER ./scripts/plugins.py -c WMS
+  - echo 'travis_fold:end:scripts_plugin'
+  - echo 'travis_fold:start:testsuite_backend'
+  - $WRAPPER ./testsuite/backend/TEST_backend.py
+  - $WRAPPER ./testsuite/backend/TEST_broker.py
+  - $WRAPPER ./testsuite/backend/TEST_cancel.py
+  - $WRAPPER ./testsuite/backend/TEST_discover.py
+  - $WRAPPER ./testsuite/backend/TEST_jdl.py
+  - $WRAPPER ./testsuite/backend/TEST_proxy.py
+  - $WRAPPER ./testsuite/backend/TEST_status.py
+  - echo 'travis_fold:end:testsuite_backend'
+  - echo 'travis_fold:start:testsuite_cms'
+  - $WRAPPER ./testsuite/cms/TEST_cmssw.py
+  - $WRAPPER ./testsuite/cms/TEST_cmssw_scanner.py
+  - $WRAPPER ./testsuite/cms/TEST_lumifilter.py
+  - $WRAPPER ./testsuite/cms/TEST_lumiproc.py
+  - $WRAPPER ./testsuite/cms/TEST_lumitools.py
+  - $WRAPPER ./testsuite/cms/TEST_provider_cms.py
+  - $WRAPPER ./testsuite/cms/TEST_provider_das.py
+  - $WRAPPER ./testsuite/cms/TEST_sitedb.py
+  - echo 'travis_fold:end:testsuite_cms'
+  - echo 'travis_fold:start:testsuite_config'
+  - $WRAPPER ./testsuite/config/TEST_configAPI1.py
+  - $WRAPPER ./testsuite/config/TEST_configAPI2.py
+  - $WRAPPER ./testsuite/config/TEST_configAPI3.py
+  - $WRAPPER ./testsuite/config/TEST_configAPI4.py
+  - $WRAPPER ./testsuite/config/TEST_configContainer.py
+  - $WRAPPER ./testsuite/config/TEST_configHandlers.py
+  - $WRAPPER ./testsuite/config/TEST_configModify.py
+  - $WRAPPER ./testsuite/config/TEST_configParser.py
+  - $WRAPPER ./testsuite/config/TEST_config.py
+  - $WRAPPER ./testsuite/config/TEST_configTyped.py
+  - $WRAPPER ./testsuite/config/TEST_configView.py
+  - $WRAPPER ./testsuite/config/TEST_interactive.py
+  - $WRAPPER ./testsuite/config/TEST_matcher.py
+  - echo 'travis_fold:end:testsuite_config'
+  - echo 'travis_fold:start:testsuite_datasets'
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync1.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync2.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync3.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync4.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync5.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync_meta.py
+  - $WRAPPER ./testsuite/datasets/TEST_dataresync_reorder.py
+  - $WRAPPER ./testsuite/datasets/TEST_processor.py
+  - $WRAPPER ./testsuite/datasets/TEST_provider.py
+  - $WRAPPER ./testsuite/datasets/TEST_scanner.py
+  - $WRAPPER ./testsuite/datasets/TEST_splitterio.py
+  - $WRAPPER ./testsuite/datasets/TEST_splitter.py
+  - echo 'travis_fold:end:testsuite_datasets'
+  - echo 'travis_fold:start:testsuite_parameters'
+  - $WRAPPER ./testsuite/parameters/TEST_config_param.py
+  - $WRAPPER ./testsuite/parameters/TEST_padapter1.py
+  - $WRAPPER ./testsuite/parameters/TEST_padapter.py
+  - $WRAPPER ./testsuite/parameters/TEST_pfactory.py
+  - $WRAPPER ./testsuite/parameters/TEST_pproc.py
+  - $WRAPPER ./testsuite/parameters/TEST_psource.py
+  - echo 'travis_fold:end:testsuite_parameters'
+  - echo 'travis_fold:start:testsuite_basic'
+  - $WRAPPER ./testsuite/TEST_debug.py
+  - $WRAPPER ./testsuite/TEST_exception.py
+  - $WRAPPER ./testsuite/TEST_go.py
+  - $WRAPPER ./testsuite/TEST_gui.py
+  - $WRAPPER ./testsuite/TEST_jobdb.py
+  - $WRAPPER ./testsuite/TEST_jobselector.py
+  - $WRAPPER ./testsuite/TEST_logging.py
+  - $WRAPPER ./testsuite/TEST_monitoring.py
+  - $WRAPPER ./testsuite/TEST_output_processor.py
+  - $WRAPPER ./testsuite/TEST_plugins.py
+  - $WRAPPER ./testsuite/TEST_process.py
+  - $WRAPPER ./testsuite/TEST_report.py
+  - $WRAPPER ./testsuite/TEST_task.py
+  - $WRAPPER ./testsuite/TEST_taskresync.py
+  - $WRAPPER ./testsuite/TEST_utils.py
+  - $WRAPPER ./testsuite/TEST_webservice.py
+  - echo 'travis_fold:end:testsuite_basic'
 after_success:
   - codecov

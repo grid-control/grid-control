@@ -1,0 +1,24 @@
+status="UNKNOWN"
+jdl="[
+VirtualOrganisation = \"cms\";
+OutputSandbox = { \"gc.stdout\", \"gc.stderr\", \"job.info\", \"cmssw.log.gz\", \"cmssw.dbs.tar.gz\" };
+Executable = \"gc-run.sh\";
+Requirements = other.GlueHostNetworkAdapterOutboundIP && (other.GlueCEPolicyMaxWallClockTime >= 720) && (other.GlueCEPolicyMaxCPUTime >= 720) && (other.GlueHostMainMemoryRAMSize >= 3000) && Member(\"VO-cms-slc6_amd64_gcc481\", other.GlueHostApplicationSoftwareRunTimeEnvironment);
+Arguments = \"999\";
+StdError = \"gc.stderr\";
+StdOutput = \"gc.stdout\";
+RetryCount = 2;
+InputSandbox = { \"/.automount/net_rw/net__scratch_cms/institut_3b/tmuller/cms/htt/analysis/CMSSW_7_1_5/src/grid-control/packages/grid_control/share/gc-run.sh\", \"/net/scratch_cms/institut_3b/tmuller/artus/2016-04-22_13-29_analysis/workdir/gc-run.lib\", \"/net/scratch_cms/institut_3b/tmuller/artus/2016-04-22_13-29_analysis/workdir/files/GC4179474491ce/CREAMWMS/gc-sandbox.tar.gz\", \"/net/scratch_cms/institut_3b/tmuller/artus/2016-04-22_13-29_analysis/workdir/jobs/job_999.var\" };
+Rank = -other.GlueCEStateEstimatedResponseTime;
+OutputSandboxBaseDestUri = \"gsiftp://localhost\";
+]"
+attempt=2
+retcode=0
+rawid="https://grid-ce.physik.rwth-aachen.de:8443/CREAM204150833"
+changed=1461325292.51
+submitted=1461324866.53
+history_1="N/A"
+runtime=393
+rawId="https://grid-ce.physik.rwth-aachen.de:8443/CREAM619600362"
+id="WMSID.CREAMWMS.https://grid-ce.physik.rwth-aachen.de:8443/CREAM619600362"
+history_2="N/A"

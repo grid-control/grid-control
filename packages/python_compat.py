@@ -336,6 +336,13 @@ if __name__ == '__main__':
 	import re, doctest
 	logging.basicConfig()
 	doctest.testmod()
+	pattern_list = [
+		r' %s,', r'[^_\'\/\.a-zA-Z]%s\(', r'[^_\'\/\.a-zA-Z]%s\.',
+		r'\(%s[,\)]', r', %s[,\)]', r' = %s[,\)\n]', r'=%s[^_\'\/\.a-zA-Z]'
+	]
+	builtin_avoid = ['basestring', 'cmp', 'filter', 'map', 'range', 'reduce', 'xrange', 'zip']
+	fun_re_list = lchain(imap(lambda pattern: imap(lambda fun, pattern=pattern:
+		(fun, re.compile(pattern % fun)), __all__ + builtin_avoid), pattern_list))
 	for (root, dirs, files) in os.walk('.'):
 		if root.startswith('./.') or ('source_check' in root):
 			continue
@@ -346,14 +353,10 @@ if __name__ == '__main__':
 			tmp = open(fn).read().replace('\'zip(', '').replace('def set(', '').replace('type(range(', '')
 			tmp = tmp.replace('def filter(', '').replace('def next(', '').replace('next()', '')
 			tmp = tmp.replace('python_compat_popen2', '')
-			builtin_avoid = ['basestring', 'cmp', 'filter', 'map', 'range', 'reduce', 'xrange', 'zip']
 			needed = set()
-			pattern_list = [
-				r' %s,', r'[^_\'\/\.a-zA-Z]%s\(', r'[^_\'\/\.a-zA-Z]%s\.',
-				r'\(%s[,\)]', r', %s[,\)]', r' = %s[,\)\n]', r'=%s[^_\'\/\.a-zA-Z]'
-			]
-			for pattern in pattern_list:
-				needed.update(ifilter(lambda name: re.search(pattern % name, tmp), __all__ + builtin_avoid))
+			for (fun_name, re_matcher) in fun_re_list:
+				if re_matcher.search(tmp):
+					needed.add(fun_name)
 			imported = set()
 			for iline in ifilter(lambda line: 'python_compat ' in line, tmp.splitlines()):
 				try:

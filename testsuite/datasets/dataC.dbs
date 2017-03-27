@@ -1,0 +1,10 @@
+[/MY/DATASET#test]
+prefix = /path/to/
+se list = SE1,SE2
+metadata = ['KEY1', 'KEY2']
+; comment key1 => [1,2,3], key2 => "Test"
+file1 = 5 [[1,2,3], "Test1"]
+file2 = 15 [[9, 8, 7], "Test2"]
+nickname = TESTNICK
+id = 423
+events = 20
