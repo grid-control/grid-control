@@ -19,7 +19,7 @@ from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
 from grid_control.utils import resolve_path, resolve_paths
 from grid_control.utils.data_structures import make_enum
-from grid_control.utils.parsing import parse_bool, parse_dict, parse_list, parse_time, str_dict_cfg, str_time_short  # pylint:disable=line-too-long
+from grid_control.utils.parsing import parse_bool, parse_dict_cfg, parse_list, parse_time, str_dict_cfg, str_time_short  # pylint:disable=line-too-long
 from grid_control.utils.thread_tools import GCEvent
 from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import APIError, ExceptionCollector, Plugin, clear_current_exception
@@ -64,7 +64,7 @@ class TypedConfigInterface(ConfigInterface):
 		# Default key is accessed via key == None (None is never in keys!)
 		return self._get_internal('dictionary',
 			obj2str=lambda value: str_dict_cfg(value, parser, strfun),
-			str2obj=lambda value: parse_dict(value, parser),
+			str2obj=lambda value: parse_dict_cfg(value, parser),
 			def2obj=lambda value: (value, sorted(ifilter(lambda key: key is not None, value.keys()))),
 			option=option, default_obj=default, **kwargs)
 
@@ -236,11 +236,15 @@ class SimpleConfigInterface(TypedConfigInterface):
 		return DictLookup(source_dict, source_order, matcher_obj, single, include_default)
 
 	def get_matcher(self, option, default=unspecified, default_matcher='start', negate=False,
-			filter_parser=str, filter_str=str.__str__, **kwargs):
+			filter_parser=None, filter_str=str.__str__, **kwargs):
 		matcher_opt = join_config_locations(option, 'matcher')
 		matcher_obj = self.get_plugin(matcher_opt, default_matcher,
 			cls=Matcher, pargs=(matcher_opt,), pkwargs=kwargs)
-		filter_expr = self.get(option, default, str2obj=filter_parser, obj2str=filter_str, **kwargs)
+
+		def _filter_parser(value):
+			return str.join(' ', value.split())
+		filter_expr = self.get(option, default, str2obj=filter_parser or _filter_parser,
+			obj2str=filter_str, **kwargs)
 		return matcher_obj.create_matcher(filter_expr)
 
 	def get_state(self, statename, detail='', default=False):

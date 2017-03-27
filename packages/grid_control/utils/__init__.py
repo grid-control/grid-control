@@ -12,22 +12,19 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, glob, stat, time, fnmatch, logging, operator
+import os, sys, glob, stat, time, logging, operator
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import UniqueList
-from grid_control.utils.parsing import parse_type, str_dict
+from grid_control.utils.file_objects import SafeFile
+from grid_control.utils.parsing import parse_type, str_dict_linear
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
 from grid_control.utils.user_interface import UserInputInterface
-from hpfwk import NestedException, clear_current_exception
-from python_compat import exit_without_cleanup, ifilter, iidfilter, imap, irange, lfilter, lmap, lzip, next, reduce, rsplit, sort_inplace, sorted, tarfile, unspecified  # pylint:disable=line-too-long
+from hpfwk import NestedException, clear_current_exception, ignore_exception
+from python_compat import exit_without_cleanup, ifilter, iidfilter, imap, irange, izip_longest, lfilter, lmap, lzip, next, reduce, rsplit, sort_inplace, sorted, tarfile, unspecified  # pylint:disable=line-too-long
 
 
 _GLOBAL_STATE = {}
-
-
-class GCIOError(NestedException):
-	pass
 
 
 class ParsingError(NestedException):
@@ -61,20 +58,19 @@ def clean_path(value):
 	return os.path.normpath(os.path.expandvars(os.path.expanduser(value.strip())))
 
 
-def create_tarball(tar_path, match_info_list):
+def create_tarball(tar_path, match_info_iter):
 	tar = tarfile.open(tar_path, 'w:gz')
 	activity = Activity('Generating tarball')
-	for (path_abs, path_rel, path_status) in match_info_list:
-		if path_status is True:  # Existing file
-			tar.add(path_abs, path_rel, recursive=False)
-		elif path_status is False:  # Existing file
-			if not os.path.exists(path_abs):
-				raise PathError('File %s does not exist!' % path_rel)
-			tar.add(path_abs, path_rel, recursive=False)
-		elif path_status is None:  # Directory
-			activity.update('Generating tarball: %s' % path_rel)
+	for (path_source, path_target) in match_info_iter:
+		if isinstance(path_source, str):
+			if not os.path.exists(path_source):
+				raise PathError('File %s does not exist!' % path_target)
+			tar.add(path_source, path_target, recursive=False)
+		elif path_source is None:  # Update activity
+			activity.update('Generating tarball: %s' % path_target)
 		else:  # File handle
-			info, handle = path_status.get_tar_info()
+			info, handle = path_source.get_tar_info()
+			info.name = path_target
 			info.mtime = time.time()
 			info.mode = stat.S_IRUSR + stat.S_IWUSR + stat.S_IRGRP + stat.S_IROTH
 			if info.name.endswith('.sh') or info.name.endswith('.py'):
@@ -87,7 +83,7 @@ def create_tarball(tar_path, match_info_list):
 
 def deprecated(text):
 	log = logging.getLogger('console')
-	log.critical('\n%s\n[DEPRECATED] %s', open(get_path_share('fail.txt'), 'r').read(), text)
+	log.critical('\n%s\n[DEPRECATED] %s', SafeFile(get_path_share('fail.txt')).read_close(), text)
 	if not UserInputInterface().prompt_bool('Do you want to continue?', False):
 		sys.exit(os.EX_TEMPFAIL)
 
@@ -168,14 +164,6 @@ def filter_processors(processor_list, id_fun=lambda proc: proc.__class__.__name_
 	return result
 
 
-def get_default_property(obj, attr_name, default, default_delayed=False):
-	if not hasattr(obj, attr_name):
-		if default_delayed:
-			default = default()
-		setattr(obj, attr_name, default)
-	return getattr(obj, attr_name)
-
-
 def get_file_name(fn):  # Return file name without extension
 	return rsplit(os.path.basename(str(fn)).lstrip('.'), '.', 1)[0]
 
@@ -226,27 +214,12 @@ def get_path_share(*args, **kw):
 
 
 def get_version():
-	def _get_version():
-		try:
-			proc_ver = LocalProcess('svnversion', '-c', get_path_pkg())
-			version = proc_ver.get_output(timeout=10).strip()
-			if lfilter(str.isdigit, version):
-				proc_branch = LocalProcess('svn info', get_path_pkg())
-				if 'stable' in proc_branch.get_output(timeout=10):
-					return '%s - stable' % version
-				return '%s - testing' % version
-		except Exception:
-			clear_current_exception()
-		return sys.modules['grid_control'].__version__ + ' or later'
-	return get_default_property(get_version, 'version_cache', _get_version, default_delayed=True)
+	return sys.modules['grid_control'].__version__
 
 
-def guard(fun_start, fun_final, fun, *args, **kwargs):
-	fun_start()
-	try:
-		return fun(*args, **kwargs)
-	finally:
-		fun_final()
+def grouper(iterable, output_len, fillvalue=None):
+	args = [iter(iterable)] * output_len
+	return izip_longest(fillvalue=fillvalue, *args)
 
 
 def intersect_first_dict(dict1, dict2):
@@ -255,35 +228,20 @@ def intersect_first_dict(dict1, dict2):
 			dict1.pop(key1)
 
 
-def match_file_name(fn, pat_list):
-	match = None
-	for pat in pat_list:
-		if fnmatch.fnmatch(fn, pat.lstrip('-')):
-			match = not pat.startswith('-')
-	return match
-
-
-def match_files(path_root, pattern_list, path_rel=''):
-	# Return (root, fn, state) - state: None == dir, True/False = (un)checked file, other = filehandle
-	yield (path_root, path_rel, None)
-	fn_list = os.listdir(os.path.join(path_root, path_rel))
-	for name in imap(lambda x: os.path.join(path_rel, x), fn_list):
-		match = match_file_name(name, pattern_list)
-		path_abs = os.path.join(path_root, name)
-		if match is False:
-			continue
-		elif os.path.islink(path_abs):  # Not excluded symlinks
-			yield (path_abs, name, True)
-		elif os.path.isdir(path_abs):  # Recurse into directories
-			if match is True:  # (backwards compat: add parent directory - not needed?)
-				yield (path_abs, name, True)
-				for result in match_files(path_root, ['*'], name):
-					yield result
-			else:
-				for result in match_files(path_root, pattern_list, name):
-					yield result
-		elif match is True:  # Add matches
-			yield (path_abs, name, True)
+def is_dumb_terminal(stream=sys.stdout):
+	term_env = os.environ.get('TERM', 'dumb')
+	if os.environ.get('GC_TERM', ''):
+		term_env = os.environ['GC_TERM']
+	if term_env == 'gc_color256':
+		return False
+	elif term_env == 'gc_color':
+		return None
+	missing_attr = (not hasattr(stream, 'isatty')) or not hasattr(stream, 'fileno')
+	if (term_env == 'dumb') or missing_attr or not stream.isatty():
+		return True
+	if '16' in term_env:
+		return None  # low color mode
+	return False  # high color mode
 
 
 def merge_dict_list(dict_list):
@@ -294,13 +252,10 @@ def merge_dict_list(dict_list):
 
 
 def ping_host(host):
-	proc = LocalProcess('ping', '-Uqnc', 1, '-W', 1, host)
-	try:
-		tmp = proc.get_output(timeout=1).splitlines()
-		if tmp[-1].endswith('ms'):
-			return float(tmp[-1].split('/')[-2]) / 1000.
-	except Exception:
-		return None
+	proc = ignore_exception(Exception, None, LocalProcess, 'ping', '-Uqnc', 1, '-W', 1, host)
+	ping_str_list = ignore_exception(Exception, '', proc.get_output, timeout=1).strip().split('\n')
+	if ping_str_list[-1].endswith('ms'):
+		return ignore_exception(Exception, None, lambda: float(ping_str_list[-1].split('/')[-2]) / 1000.)
 
 
 def prune_processors(do_prune, processor_list, log, message, formatter=None, id_fun=None):
@@ -342,7 +297,7 @@ def resolve_install_path(path):
 	result_exe = lfilter(lambda fn: os.access(fn, os.X_OK), result)  # filter executable files
 	if not result_exe:
 		raise PathError('Files matching %s:\n\t%s\nare not executable!' % (
-			path, str.join('\n\t', result_exe)))
+			path, str.join('\n\t', result)))
 	return result_exe[0]
 
 
@@ -528,7 +483,7 @@ class Result(object):
 		self.__dict__ = kwargs
 
 	def __repr__(self):
-		return 'Result(%s)' % str_dict(self.__dict__)
+		return 'Result(%s)' % str_dict_linear(self.__dict__)
 
 
 class TwoSidedIterator(object):
@@ -544,37 +499,3 @@ class TwoSidedIterator(object):
 		while self._left + self._right < len(self.__content):
 			self._left += 1
 			yield self.__content[self._left - 1]
-
-
-class PersistentDict(dict):
-	def __init__(self, filename, delimeter='=', lower_case_key=True):
-		dict.__init__(self)
-		self._fmt = DictFormat(delimeter)
-		self._fn = filename
-		key_parser = {None: parse_type}
-		if lower_case_key:
-			key_parser[None] = lambda k: parse_type(k.lower())
-		try:
-			self.update(self._fmt.parse(open(filename), key_parser=key_parser))
-		except Exception:
-			clear_current_exception()
-		self._old_dict = self.items()
-
-	def get(self, key, default=None, auto_update=True):
-		value = dict.get(self, key, default)
-		if auto_update:
-			self.write({key: value})
-		return value
-
-	def write(self, newdict=None, update=True):
-		if not update:
-			self.clear()
-		self.update(newdict or {})
-		if dict(self._old_dict) == dict(self.items()):
-			return
-		try:
-			if self._fn:
-				safe_write(open(self._fn, 'w'), self._fmt.format(self))
-		except Exception:
-			raise GCIOError('Could not write to file %s' % self._fn)
-		self._old_dict = self.items()

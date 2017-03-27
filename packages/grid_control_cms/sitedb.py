@@ -23,8 +23,7 @@ class SiteDB(object):
 
 	def __init__(self, url=None):
 		self._url = url or 'https://cmsweb.cern.ch/sitedb/data/prod'
-		self._gjrc = GridJSONRestClient(self._url, 'VOMS proxy needed to query siteDB!',
-			cert=get_cms_cert())
+		self._gjrc = GridJSONRestClient(get_cms_cert(), self._url, 'VOMS proxy needed to query siteDB!')
 
 	def cms_name_to_se(self, cms_name):
 		cms_name_regex = re.compile(cms_name.replace('*', '.*').replace('%', '.*'))

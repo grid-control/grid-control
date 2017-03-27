@@ -93,9 +93,9 @@ class JSONRestClient(RestClient):
 
 
 class GridJSONRestClient(JSONRestClient):
-	def __init__(self, url=None, cert_error_msg='', cert_error_cls=Exception, cert=None):
+	def __init__(self, cert=None, url=None, cert_error_msg='', cert_error_cls=Exception):
 		(self._cert_error_msg, self._cert_error_cls) = (cert_error_msg, cert_error_cls)
-		JSONRestClient.__init__(self, url=url, cert=cert)
+		JSONRestClient.__init__(self, cert, url)
 		if not self._cert:
 			self._cert = ignore_exception(Exception, None, self._get_grid_cert)
 		if not self._cert:

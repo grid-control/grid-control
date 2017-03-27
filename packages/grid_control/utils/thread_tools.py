@@ -46,23 +46,20 @@ def start_thread(desc, fun, *args, **kwargs):
 		fun=_default_thread_wrapper(fun), args=args, kwargs=kwargs)
 
 
-def tchain(iterable_list, timeout=None,
+def tchain(iterable_iter, timeout=None, max_concurrent=None,
 		ex_cls=NestedException, ex_msg='Caught exception during threaded chain'):
 	# Combines multiple, threaded generators into single generator
 	threads = []
 	result = GCQueue()
 	exc = ExceptionCollector()
-	for idx, iterable in enumerate(iterable_list):
-		def _generator_thread(iterable):  # TODO: Python 3.5 hickup related to pep 479?
-			try:
-				try:
-					for item in iterable:
-						result.put(item)
-				finally:
-					result.put(GCQueue)  # Use GCQueue as end-of-generator marker
-			except Exception:
-				exc.collect()
-		threads.append(start_daemon('generator thread %d' % idx, _generator_thread, iterable))
+	iterable_list = list(iterable_iter)
+
+	def _start_generators():
+		while iterable_list and ((max_concurrent is None) or (len(threads) < max_concurrent)):
+			iterable = iterable_list.pop(0)
+			threads.append(start_daemon('tchain generator thread (%s)' % repr(iterable)[:50],
+				_tchain_thread, exc, iterable, result))
+	_start_generators()
 
 	if timeout is not None:
 		t_end = time.time() + timeout
@@ -76,6 +73,7 @@ def tchain(iterable_list, timeout=None,
 			break
 		if tmp == GCQueue:
 			threads.pop()  # which thread is irrelevant - only used as counter
+			_start_generators()
 		else:
 			yield tmp
 	exc.raise_any(ex_cls(ex_msg))
@@ -105,38 +103,32 @@ class GCEvent(object):
 		self._flag = False
 
 	def clear(self):
-		self._cond.acquire()
-		try:
+		def _clear_flag():
 			self._flag = False
-		finally:
-			self._cond.release()
-		return False
+			return False
+		return with_lock(self._cond, _clear_flag)
 
 	def is_set(self):
 		return self._flag
 
 	def set(self):
-		self._cond.acquire()
-		try:
+		def _set_flag():
 			self._flag = True
 			self._cond_notify_all()
-		finally:
-			self._cond.release()
-		return True
+			return True
+		return with_lock(self._cond, _set_flag)
 
 	def wait(self, timeout, description='event'):
-		if timeout is None:
-			timeout = BLOCKING_EQUIVALENT
-		self._cond.acquire()
-		try:
+		def _wait(_timeout):
 			try:
 				if not self._flag:
-					self._cond.wait(timeout)
+					self._cond.wait(_timeout)
 				return self._flag  # return current flag state after wait / wakeup
-			finally:
-				self._cond.release()
-		except KeyboardInterrupt:
-			raise KeyboardInterrupt('Interrupted while waiting for %s' % description)
+			except KeyboardInterrupt:
+				raise KeyboardInterrupt('Interrupted while waiting for %s' % description)
+		if timeout is None:
+			timeout = BLOCKING_EQUIVALENT
+		return with_lock(self._cond, _wait, timeout)
 
 
 class GCLock(object):
@@ -226,9 +218,7 @@ class GCThreadPool(object):
 	def __init__(self):
 		self._lock = GCLock()
 		self._notify = GCEvent()
-		self._token = 0
-		self._token_time = {}
-		self._token_desc = {}
+		(self._token, self._token_time, self._token_desc) = (0, {}, {})
 		self._log = logging.getLogger('thread_pool')
 		self._exc = ExceptionCollector(self._log)
 
@@ -244,8 +234,7 @@ class GCThreadPool(object):
 				# discard stale threads
 				for token in list(self._token_time):
 					if timeout and (t_current - self._token_time.get(token, 0) > timeout):
-						self._token_time.pop(token, None)
-						self._token_desc.pop(token, None)
+						self._unregister_token(token)
 				if not self._token_time:  # no active threads
 					return True
 				# drop all threads if timeout is reached
@@ -275,13 +264,12 @@ class GCThreadPool(object):
 		except Exception:
 			with_lock(self._lock, self._exc.collect, logging.ERROR, 'Exception in thread %r',
 				self._token_desc[token], exc_info=get_current_exception())
-		self._lock.acquire()
-		try:
-			self._token_time.pop(token, None)
-			self._token_desc.pop(token, None)
-		finally:
-			self._lock.release()
+		with_lock(self._lock, self._unregister_token, token)
 		self._notify.set()
+
+	def _unregister_token(self, token):
+		self._token_time.pop(token, None)
+		self._token_desc.pop(token, None)
 
 
 def _default_thread_wrapper(fun):
@@ -315,3 +303,14 @@ def _start_thread(desc, daemon, fun, args, kwargs):
 	return thread
 _start_thread.counter = 0  # <global-state>
 _start_thread.lock = GCLock()  # <global-state>
+
+
+def _tchain_thread(exc, iterable, result):
+	try:
+		try:
+			for item in iterable:
+				result.put(item)
+		finally:
+			result.put(GCQueue)  # Use GCQueue as end-of-generator marker
+	except Exception:
+		exc.collect()

@@ -67,7 +67,7 @@ class TriggerInit(object):
 			if self._uii.prompt_bool(msg + ('\n\t> %s\nto the new value:' % obj2str(old_obj).lstrip()) +
 					('\n\t> %s\nDo you want to abort?' % obj2str(cur_obj).lstrip()), False):
 				raise ConfigError('Abort due to unintentional config change!')
-			msg = 'A partial reinitialization (same as --reinit %s) is needed to apply this change!'
+			msg = 'A partial reinitialization (reinit: %s) is needed to apply this change!'
 			if not self._uii.prompt_bool((msg + ' Do you want to continue?') % self._option, True):
 				log.log(logging.INFO1, 'Using stored value %s for option %s',
 					obj2str(old_obj), cur_entry.format_opt())

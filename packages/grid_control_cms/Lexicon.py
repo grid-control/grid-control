@@ -128,7 +128,7 @@ def jobrange(candidate):
 
 def cmsname(candidate):
     """
-    Check candidate as a (partial) CMS name. Should pass:
+    Check candidate as a CMS name. Should pass:
         T2
         T2_UK
         T2_UK_SGrid

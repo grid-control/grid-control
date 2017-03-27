@@ -1,13 +1,5 @@
   * hpfwk.hpf_plugin Plugin
 
-   * grid_control.stream_base ActivityStream
-
-    * grid_control.stream_base DefaultActivityStream default
-
-    * grid_control.stream_base NullOutputStream
-
-    * grid_control.stream_base SingleActivityStream single
-
    * grid_control.config.cfiller_base ConfigFiller
 
     * grid_control.config.cfiller_base CompatConfigFiller
@@ -35,6 +27,16 @@
       * grid_control.config.cview_tagged TaggedConfigView
 
    * grid_control.gc_plugin ConfigurablePlugin
+
+    * grid_control.stream_base ActivityMonitor
+
+     * grid_control.stream_base DefaultActivityMonitor default_stream
+
+     * grid_control.stream_base NullOutputStream null
+
+     * grid_control.stream_base SingleActivityMonitor single_stream
+
+     * grid_control.stream_base TimedActivityMonitor timed_stream
 
     * grid_control.backends.backend_tools BackendDiscovery
 
@@ -164,6 +166,8 @@
 
      * grid_control.datasets.provider_multi MultiDatasetProvider
 
+      * grid_control.datasets.provider_multi ThreadedMultiDatasetProvider
+
      * grid_control.datasets.provider_scan ScanProviderBase
 
       * grid_control.datasets.provider_scan GCProvider gc
@@ -190,9 +194,7 @@
 
     * grid_control.gui GUI
 
-     * grid_control.gui NullGUI
-
-     * grid_control.gui SimpleConsole
+     * grid_control.gui NullGUI null
 
     * grid_control.datasets.scanner_base InfoScanner
 
@@ -224,11 +226,11 @@
 
     * grid_control.job_db JobDB
 
-     * grid_control.job_db_text TextFileJobDB
+     * grid_control.job_db_text TextFileJobDB textdb
 
-      * grid_control.job_db_zip ZippedJobDB
+      * grid_control.job_db_zip ZippedJobDB zipdb
 
-       * grid_control.job_db_zip Migrate2ZippedJobDB
+       * grid_control.job_db_zip Migrate2ZippedJobDB migrate
 
     * grid_control.tasks.task_base JobNamePlugin
 
@@ -238,11 +240,15 @@
 
     * grid_control.config.matcher_base Matcher
 
+     * grid_control.config.matcher_base AlwaysMatcher always
+
      * grid_control.config.matcher_base BasicMatcher
 
       * grid_control.config.matcher_base EndMatcher end
 
       * grid_control.config.matcher_base EqualMatcher equal
+
+      * grid_control.config.matcher_base ShellStyleMatcher shell
 
       * grid_control.config.matcher_base StartMatcher start
 
@@ -251,8 +257,6 @@
      * grid_control.config.matcher_base ExprMatcher expr eval
 
      * grid_control.config.matcher_base RegExMatcher regex
-
-      * grid_control.config.matcher_base ShellStyleMatcher shell
 
     * grid_control.gc_plugin NamedPlugin
 
@@ -290,7 +294,7 @@
 
      * grid_control.monitoring EventHandler
 
-      * grid_control.monitoring Monitoring
+      * grid_control.monitoring Monitoring NullMonitor
 
        * grid_control.monitoring MultiMonitor
 
@@ -300,9 +304,27 @@
 
        * grid_control.monitoring MultiMonitor
 
-     * grid_control.job_manager JobManager
+     * grid_control.job_manager JobManager NullJobManager
 
       * grid_control.job_manager SimpleJobManager
+
+     * grid_control.report Report
+
+      * grid_control.report ConsoleReport
+
+       * grid_control.report HeaderReport
+
+      * grid_control.report ImageReport
+
+      * grid_control.report MultiReport
+
+      * grid_control.report NullReport null
+
+      * grid_control.report TableReport
+
+       * grid_control.report LocationReport location
+
+       * grid_control.report TrivialReport trivial
 
      * grid_control.backends.storage StorageManager
 
@@ -318,7 +340,7 @@
 
         * grid_control.tasks.task_root ROOTTask ROOTMod root
 
-     * grid_control.backends.wms WMS
+     * grid_control.backends.wms WMS NullWMS
 
       * grid_control.backends.wms BasicWMS
 
@@ -542,11 +564,15 @@
 
     * grid_control.parameters.psource_meta MultiParameterSource
 
+     * grid_control.parameters.psource_meta BaseCombineParameterSource
+
+      * grid_control.parameters.psource_meta CombineParameterSource combine
+
+      * grid_control.parameters.psource_meta LinkParameterSource link
+
      * grid_control.parameters.psource_meta BaseZipParameterSource
 
       * grid_control.parameters.psource_meta ZipLongParameterSource zip
-
-       * grid_control.parameters.psource_WIP CombineParameterSource combine
 
       * grid_control.parameters.psource_meta ZipShortParameterSource szip
 
@@ -603,20 +629,6 @@
     * grid_control.backends.condor_wms.processhandler LocalProcessHandler
 
     * grid_control.backends.condor_wms.processhandler SSHProcessHandler
-
-   * grid_control.report Report
-
-    * grid_control.report ConsoleReport
-
-     * grid_control.report BasicHeaderReport basicheader
-
-     * grid_control.report BasicReport basic
-
-    * grid_control.report LocationReport location
-
-    * grid_control.report MultiReport
-
-    * grid_control.report NullReport null
 
    * grid_control.utils.webservice RestSession
 

@@ -19,7 +19,7 @@ from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import abort, ensure_dir_exists, get_list_difference, split_list
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
-from grid_control.utils.file_objects import erase_content
+from grid_control.utils.file_objects import SafeFile, erase_content, with_file_iter
 from hpfwk import AbstractError, InstanceFactory, NestedException
 from python_compat import StringBuffer, identity, ifilter, imap, irange, itemgetter, json, lmap, lrange, md5_hex, set, sort_inplace  # pylint:disable=line-too-long
 
@@ -219,14 +219,8 @@ class DataProvider(ConfigurablePlugin):
 		# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
 		if os.path.dirname(path):
 			ensure_dir_exists(os.path.dirname(path), 'dataset cache directory')
-		fp = open(path, 'w')
-		try:
-			for block in DataProvider.save_to_stream(fp, block_iter, strip_metadata):
-				yield block
-		except Exception:
-			fp.close()
-			raise
-		fp.close()
+		return with_file_iter(SafeFile(path, 'w'),
+			lambda fp: DataProvider.save_to_stream(fp, block_iter, strip_metadata))
 	save_to_file_iter = staticmethod(save_to_file_iter)
 
 	def save_to_stream(stream, block_iter, strip_metadata=False):

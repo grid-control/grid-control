@@ -20,7 +20,7 @@ from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
 from grid_control.utils import abort, wait
-from grid_control.utils.file_objects import SafeFile
+from grid_control.utils.file_objects import SafeFile, with_file
 from grid_control.utils.parsing import str_time_long
 from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import clear_current_exception
@@ -30,6 +30,7 @@ from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
 class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 	config_section_list = NamedPlugin.config_section_list + ['jobs']
 	config_tag_name = 'jobmgr'
+	alias_list = ['NullJobManager']
 
 	def __init__(self, config, name, task, eventhandler):
 		NamedPlugin.__init__(self, config, name)
@@ -61,18 +62,19 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		self._interactive_delete = config.is_interactive('delete jobs', True)
 		self._interactive_reset = config.is_interactive('reset jobs', True)
 		self._do_shuffle = config.get_bool('shuffle', False, on_change=None)
-		self._report_cls = Report.get_class(config.get('abort report', 'LocationReport', on_change=None))
+		self._abort_report = config.get_plugin('abort report', 'LocationReport',
+			cls=Report, pargs=(self.job_db, task), on_change=None)
 		self._show_blocker = True
 		self._callback_list = []
 
 	def add_event_handler(self, callback):
 		self._callback_list.append(callback)
 
-	def cancel(self, task, wms, jobnum_list, interactive, show_jobs):
+	def cancel(self, wms, jobnum_list, interactive, show_jobs):
 		if len(jobnum_list) == 0:
 			return
 		if show_jobs:
-			self._report_cls(self.job_db, task, jobnum_list).show_report(self.job_db)
+			self._abort_report.show_report(self.job_db, jobnum_list)
 		if interactive and not self._uii.prompt_bool('Do you really want to cancel these jobs?', True):
 			return
 
@@ -93,7 +95,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		if map_gc_id2jobnum:
 			jobnum_list = list(map_gc_id2jobnum.values())
 			self._log.warning('There was a problem with cancelling the following jobs:')
-			self._report_cls(self.job_db, task, jobnum_list).show_report(self.job_db)
+			self._abort_report.show_report(self.job_db, jobnum_list)
 			if (not interactive) or self._uii.prompt_bool('Do you want to mark them as cancelled?', True):
 				lmap(_mark_cancelled, jobnum_list)
 		if interactive:
@@ -118,7 +120,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		if len(jobnum_list_timeout):
 			change = True
 			self._log.warning('Timeout for the following jobs:')
-			self.cancel(task, wms, jobnum_list_timeout, interactive=False, show_jobs=True)
+			self.cancel(wms, jobnum_list_timeout, interactive=False, show_jobs=True)
 
 		# Process task interventions
 		self._process_intervention(task, wms)
@@ -139,7 +141,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		jobs = self.job_db.get_job_list(selector)
 		if jobs:
 			self._log.warning('Cancelling the following jobs:')
-			self.cancel(task, wms, jobs, interactive=self._interactive_delete, show_jobs=True)
+			self.cancel(wms, jobs, interactive=self._interactive_delete, show_jobs=True)
 
 	def finish(self):
 		self._eventhandler.on_workflow_finish()
@@ -148,15 +150,15 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		self._callback_list.remove(callback)
 
 	def reset(self, task, wms, select):
-		jobs = self.job_db.get_job_list(JobSelector.create(select, task=task))
-		if jobs:
+		jobnum_list = self.job_db.get_job_list(JobSelector.create(select, task=task))
+		if jobnum_list:
 			self._log.warning('Resetting the following jobs:')
-			self._report_cls(self.job_db, task, jobs).show_report(self.job_db)
+			self._abort_report.show_report(self.job_db, jobnum_list)
 			ask_user_msg = 'Are you sure you want to reset the state of these jobs?'
 			if self._interactive_reset or self._uii.prompt_bool(ask_user_msg, False):
-				self.cancel(task, wms, self.job_db.get_job_list(
-					ClassSelector(JobClass.PROCESSING), jobs), interactive=False, show_jobs=False)
-				for jobnum in jobs:
+				self.cancel(wms, self.job_db.get_job_list(
+					ClassSelector(JobClass.PROCESSING), jobnum_list), interactive=False, show_jobs=False)
+				for jobnum in jobnum_list:
 					self.job_db.commit(jobnum, Job())
 
 	def retrieve(self, task, wms):
@@ -308,9 +310,8 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 	def _log_disabled_jobs(self):
 		disabled = self.job_db.get_job_list(ClassSelector(JobClass.DISABLED))
 		try:
-			fp = SafeFile(self._disabled_jobs_logfile, 'w')
-			fp.write(str.join('\n', imap(str, disabled)))
-			fp.close()
+			with_file(SafeFile(self._disabled_jobs_logfile, 'w'),
+				lambda fp: fp.write(str.join('\n', imap(str, disabled))))
 		except Exception:
 			raise JobError('Could not write disabled jobs to file %s!' % self._disabled_jobs_logfile)
 		if disabled:
@@ -348,12 +349,12 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			self.job_db.set_job_limit(max_job_len_new)
 			applied_change = True
 		if redo:
-			self.cancel(task, wms, self.job_db.get_job_list(
+			self.cancel(wms, self.job_db.get_job_list(
 				ClassSelector(JobClass.PROCESSING), redo), interactive=False, show_jobs=True)
 			_reset_state(redo, Job.INIT)
 			applied_change = True
 		if disable:
-			self.cancel(task, wms, self.job_db.get_job_list(
+			self.cancel(wms, self.job_db.get_job_list(
 				ClassSelector(JobClass.PROCESSING), disable), interactive=False, show_jobs=True)
 			_reset_state(disable, Job.DISABLED)
 			applied_change = True
@@ -419,8 +420,8 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			job_status_str_list.append('(WMS:%s)' % job_obj.gc_id.split('.')[1])
 		if (state == Job.SUBMITTED) and (job_obj.attempt > 1):
 			job_status_str_list.append('(retry #%s)' % (job_obj.attempt - 1))
-		elif (state == Job.QUEUED) and (job_obj.get('dest') != 'N/A'):
-			job_status_str_list.append('(%s)' % job_obj.get('dest'))
+		elif (state == Job.QUEUED) and (job_obj.get_job_location() != 'N/A'):
+			job_status_str_list.append('(%s)' % job_obj.get_job_location())
 		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and job_obj.get('reason'):
 			job_status_str_list.append('(%s)' % job_obj.get('reason'))
 		elif (state == Job.SUCCESS) and (job_obj.get('runtime') is not None):
@@ -433,7 +434,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 				msg_list.append('error code: %d' % exit_code)
 				if self._log.isEnabledFor(logging.DEBUG) and (exit_code in self._map_error_code2message):
 					msg_list.append(self._map_error_code2message[exit_code])
-			_add_msg(msg_list, job_obj.get('dest'))
+			_add_msg(msg_list, job_obj.get_job_location())
 			if len(msg_list):
 				job_status_str_list.append('(%s)' % str.join(' - ', msg_list))
 		self._log.log_time(logging.INFO, str.join(' ', job_status_str_list))

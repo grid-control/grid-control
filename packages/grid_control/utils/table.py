@@ -28,14 +28,14 @@ class ConsoleTable(Table):
 		Table.__init__(self)
 		self._log = logging.getLogger('console')
 
-	def create(cls, head, data, fmt_string='', fmt=None, title=None, pivot=False):
+	def create(cls, head, data, align_str='', fmt_dict=None, title=None, pivot=False):
 		if ConsoleTable.table_mode == 'ParseableTable':
 			return ParseableTable(head, data, '|')
 		if ConsoleTable.table_mode == 'Pivot':
 			pivot = not pivot
 		if pivot:
-			return RowTable(head, data, fmt, ConsoleTable.wraplen, title=title)
-		return ColumnTable(head, data, fmt_string, fmt, ConsoleTable.wraplen, title=title)
+			return RowTable(head, data, fmt_dict, ConsoleTable.wraplen, title=title)
+		return ColumnTable(head, data, align_str, fmt_dict, ConsoleTable.wraplen, title=title)
 	create = classmethod(create)
 
 	def _write_line(self, msg):
@@ -73,13 +73,13 @@ class UserConsoleTable(ConsoleTable):
 
 
 class ColumnTable(UserConsoleTable):
-	def __init__(self, head, data, fmt_string='', fmt=None, wrap_len=100, title=None):
+	def __init__(self, head, data, align_str='', fmt_dict=None, wrap_len=100, title=None):
 		UserConsoleTable.__init__(self, title)
 		self._wrap_len = wrap_len
 		head = list(head)
-		just_fun = self._get_just_fun_dict(head, fmt_string)
+		just_fun = self._get_just_fun_dict(head, align_str)
 		# return formatted, but not yet aligned entries; len dictionary; just function
-		(entries, lendict, just) = self._format_data(head, data, just_fun, fmt or {})
+		(entries, lendict, just) = self._format_data(head, data, just_fun, fmt_dict or {})
 		(headwrap, lendict) = self._wrap_head(head, lendict)
 
 		def _get_key_padded_name(key, name):
@@ -88,7 +88,7 @@ class ColumnTable(UserConsoleTable):
 		self._print_table(headwrap, headentry, entries, just, lendict)
 		self._write_line('')
 
-	def _format_data(self, head, data, just_fun, fmt):
+	def _format_data(self, head, data, just_fun, fmt_dict):
 		# adjust to lendict of column (considering escape sequence correction)
 		def _get_key_len(key, name):
 			return (key, len(name))
@@ -106,7 +106,7 @@ class ColumnTable(UserConsoleTable):
 			if isinstance(entry, dict):
 				tmp = {}
 				for key, _ in head:
-					tmp[key] = str(fmt.get(key, str)(entry.get(key, '')))
+					tmp[key] = str(fmt_dict.get(key, str)(entry.get(key, '')))
 					lendict[key] = max(lendict[key], _stripped_len(tmp[key]))
 				result.append(tmp)
 			else:
@@ -130,13 +130,13 @@ class ColumnTable(UserConsoleTable):
 				yield key
 			yield None
 
-	def _get_just_fun_dict(self, head, fmt_string):
+	def _get_just_fun_dict(self, head, align_str):
 		just_fun_dict = {'l': str.ljust, 'r': str.rjust, 'c': str.center}
 		# just_fun = {id1: str.center, id2: str.rjust, ...}
 
-		def _get_key_format(head_entry, fmt_string):
-			return (head_entry[0], just_fun_dict[fmt_string])
-		return dict(ismap(_get_key_format, izip(head, fmt_string)))
+		def _get_key_format(head_entry, align_str):
+			return (head_entry[0], just_fun_dict[align_str])
+		return dict(ismap(_get_key_format, izip(head, align_str)))
 
 	def _print_table(self, headwrap, headentry, entries, just, lendict):
 		for (keys, entry) in self._wrap_formatted_data(headwrap, [headentry, '='] + entries):
@@ -196,7 +196,7 @@ class ColumnTable(UserConsoleTable):
 
 
 class RowTable(UserConsoleTable):
-	def __init__(self, head, data, fmt=None, wrap_len=100, title=None):
+	def __init__(self, head, data, fmt_dict=None, wrap_len=100, title=None):
 		UserConsoleTable.__init__(self, title)
 		head = list(head)
 
@@ -204,14 +204,15 @@ class RowTable(UserConsoleTable):
 			return name
 
 		maxhead = max(imap(len, ismap(_get_header_name, head)))
-		fmt = fmt or {}
+		fmt_dict = fmt_dict or {}
 		show_line = False
 		for entry in data:
 			if isinstance(entry, dict):
 				if show_line:
 					self._write_line(('-' * (maxhead + 2)) + '-+-' + '-' * min(30, wrap_len - maxhead - 10))
 				for (key, name) in head:
-					self._write_line(name.rjust(maxhead + 2) + ' | ' + str(fmt.get(key, str)(entry.get(key, ''))))
+					value = str(fmt_dict.get(key, str)(entry.get(key, '')))
+					self._write_line(name.rjust(maxhead + 2) + ' | ' + value)
 				show_line = True
 			elif show_line:
 				self._write_line(('=' * (maxhead + 2)) + '=+=' + '=' * min(30, wrap_len - maxhead - 10))

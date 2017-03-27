@@ -46,7 +46,7 @@ def _get_cms_cert(config):
 		# password in variable name removes it from debug log
 		password = getpass.getpass('Please enter proxy password: ')
 		try:
-			proc = LocalProcess(resolve_install_path('voms-proxy-info'), '--voms',
+			proc = LocalProcess(resolve_install_path('voms-proxy-init'), '--voms',
 				str.join(':', ['cms'] + role), '--valid', '%d:%d' % (lifetime / 60, lifetime % 60))
 			if password:
 				proc.stdin.write(password + '\n')

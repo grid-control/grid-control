@@ -8,6 +8,8 @@ global options
     Identifier for the current configuration
   * ``delete`` = <job selector> (default: '')
     The unfinished jobs selected by this expression are cancelled.
+  * ``gui`` = <plugin> (default: 'BasicConsoleGUI')
+    Specify GUI plugin to handle the user interaction
   * ``package paths`` = <list of paths> (default: '')
     Specify paths to additional grid-control packages with user defined plugins that are outside of the base package directory
   * ``plugin paths`` = <list of paths> (default: '<current directory>')
@@ -42,8 +44,6 @@ Workflow options
     Enable continuous running mode
   * ``duration`` = <duration hh[:mm[:ss]]> (default: <continuous mode on: infinite (-1), off: exit immediately (0)>)
     Maximal duration of the job processing pass. The default depends on the value of the 'continuous' option.
-  * ``gui`` = <plugin> (default: 'SimpleConsole')
-    Specify GUI plugin to handle the user interaction
   * ``job manager`` = <plugin[:name]> (default: 'SimpleJobManager')
     Specify the job management plugin to handle the job cycle
   * ``monitor`` = <list of plugin[:name] ...> (default: 'scripts')
@@ -60,7 +60,7 @@ Workflow options
 SimpleJobManager options
 ------------------------
 
-  * ``abort report`` = <text> (default: 'LocationReport')
+  * ``abort report`` = <plugin[:name]> (default: 'LocationReport')
     Specify report plugin to display in case of job cancellations
   * ``chunks check`` = <integer> (default: 100)
     Specify maximal number of jobs to check in each job cycle
@@ -100,7 +100,7 @@ SimpleJobManager options
 backend options
 ---------------
 
-  * ``<prefix> chunk interval`` = <integer> (default: <depends on the process>)
+  * ``<prefix> chunk interval`` = <duration hh[:mm[:ss]]> (default: <depends on the process>)
     Specify the interval between (submit, check, ...) chunks
   * ``<prefix> chunk size`` = <integer> (default: <depends on the process>)
     Specify the size of (submit, check, ...) chunks
@@ -170,8 +170,12 @@ CMSSW options
 
   * ``wall time`` = <duration hh[:mm[:ss]]>
     Requested wall time also used for checking the proxy lifetime
-  * ``area files`` = <list of values> (default: '-.* -config bin lib python module */data *.xml *.sql *.db *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*')
+  * ``area files`` = <filter option> (default: '-.* -config bin lib python module data *.xml *.sql *.db *.cfi *.cff *.py -CVS -work.* *.pcm')
     List of files that should be taken from the CMSSW project area for running the job
+  * ``area files matcher`` = <plugin> (Default: 'blackwhite')
+    Specifiy matcher plugin that is used to match filter expressions
+  * ``area files basename`` = <boolean> (default: True)
+    Toggle between using the relative path or just the file base name to match area files
   * ``arguments`` = <text> (default: '')
     Arguments that will be passed to the *cmsRun* call
   * ``config file`` = <list of paths> (default: <no default> or '' if prolog / epilog script is given)
@@ -248,8 +252,12 @@ CMSSWAdvanced options
 
   * ``wall time`` = <duration hh[:mm[:ss]]>
     Requested wall time also used for checking the proxy lifetime
-  * ``area files`` = <list of values> (default: '-.* -config bin lib python module */data *.xml *.sql *.db *.cf[if] *.py -*/.git -*/.svn -*/CVS -*/work.*')
+  * ``area files`` = <filter option> (default: '-.* -config bin lib python module data *.xml *.sql *.db *.cfi *.cff *.py -CVS -work.* *.pcm')
     List of files that should be taken from the CMSSW project area for running the job
+  * ``area files matcher`` = <plugin> (Default: 'blackwhite')
+    Specifiy matcher plugin that is used to match filter expressions
+  * ``area files basename`` = <boolean> (default: True)
+    Toggle between using the relative path or just the file base name to match area files
   * ``arguments`` = <text> (default: '')
     Arguments that will be passed to the *cmsRun* call
   * ``config file`` = <list of paths> (default: <no default> or '' if prolog / epilog script is given)
@@ -334,7 +342,7 @@ dataset options
 
   * ``<datasource>`` = <list of [<nickname> : [<provider> :]] <dataset specifier> > (default: '')
     List of datasets to process (including optional nickname and dataset provider information)
-  * <datasource> manager = <plugin> (Default: ':MultiDatasetProvider:')
+  * <datasource> manager = <plugin> (Default: ':ThreadedMultiDatasetProvider:')
     Specifiy compositor class to merge the different plugins given in ``<datasource>``
   * ``<datasource> default query interval`` = <duration hh[:mm[:ss]]> (default: 00:01:00)
     Specify the default limit for the dataset query interval
@@ -428,9 +436,9 @@ logging options
     Logging level of log handlers
   * ``<logger name> propagate`` = <boolean> (default: <depends on the logger>)
     Toggle log propagation
-  * ``activity stream stderr / activity stream`` = <plugin> (default: 'default')
+  * ``activity stream stderr / activity stream`` = <plugin> (default: 'default_stream')
     Specify activity stream class that displays the current activity tree on stderr
-  * ``activity stream stdout / activity stream`` = <plugin> (default: 'default')
+  * ``activity stream stdout / activity stream`` = <plugin> (default: 'default_stream')
     Specify activity stream class that displays the current activity tree on stdout
   * ``debug mode`` = <boolean> (default: False)
     Toggle debug mode (detailed exception output on stdout)
@@ -443,11 +451,25 @@ parameters options
   * ``parameters`` = <text> (default: '')
     Specify the parameter expression that defines the parameter space. The syntax depends on the used parameter factory.
 
+ActivityMonitor options
+-----------------------
+
+  * ``activity max length`` = <integer> (default: 75)
+    Specify maximum number of activities to display
+
 Matcher options
 ---------------
 
   * ``<prefix> case sensitive`` = <boolean>
     Toggle case sensitivity for the matcher
+
+TimedActivityMonitor options
+----------------------------
+
+  * ``activity interval`` = <float> (default: 5.0)
+    Specify interval to display the
+  * ``activity max length`` = <integer> (default: 75)
+    Specify maximum number of activities to display
 
 GridEngineDiscoverNodes options
 -------------------------------
@@ -697,6 +719,14 @@ DASProvider options
   * ``phedex sites order`` = <enum: source|matcher> (Default: source)
     Specifiy the order of the filtered list
 
+ThreadedMultiDatasetProvider options
+------------------------------------
+
+  * ``dataprovider thread max`` = <integer> (default: 3)
+    Specify the maximum number of threads used for dataset query
+  * ``dataprovider thread timeout`` = <duration hh[:mm[:ss]]> (default: 00:15:00)
+    Specify the timeout for the dataset query to fail
+
 DBSInfoProvider options
 -----------------------
 
@@ -766,20 +796,18 @@ ANSIGUI options
     Specify the GUI elements that form the GUI display
   * gui element manager = <plugin> (Default: 'MultiGUIElement')
     Specifiy compositor class to merge the different plugins given in ``gui element``
-  * ``gui refresh delay`` = <float> (default: 0.2)
-    Specify the refresh delay for gui elements
-  * ``gui refresh interval`` = <float> (default: 1.0)
-    Specify the refresh interval for gui elements
+  * ``gui redraw delay`` = <float> (default: 0.05)
+    Specify the redraw delay for gui elements
+  * ``gui redraw interval`` = <float> (default: 0.1)
+    Specify the redraw interval for gui elements
 
-SimpleConsole options
----------------------
+BasicConsoleGUI options
+-----------------------
 
-  * ``report`` = <list of plugins> (default: 'BasicHeaderReport BasicReport')
+  * ``report`` = <list of plugin[:name] ...> (default: 'BasicTheme')
     Type of report to display during operations
   * report manager = <plugin> (Default: 'MultiReport')
     Specifiy compositor class to merge the different plugins given in ``report``
-  * ``report options`` = <text> (default: '')
-    Specify options for the report plugin
 
 AddFilePrefix options
 ---------------------
@@ -840,6 +868,8 @@ MatchOnFilename options
     Specify filename filter to select files for the dataset
   * ``filename filter matcher`` = <plugin> (Default: 'shell')
     Specifiy matcher plugin that is used to match filter expressions
+  * ``filename filter relative`` = <boolean> (default: True)
+    Toggle between using the absolute path or just the base path to match file names
 
 MetadataFromCMSSW options
 -------------------------
@@ -866,8 +896,6 @@ OutputDirsFromConfig options
 
   * ``source config`` = <path>
     Specify source config file that contains the workflow whose output is queried for dataset files
-  * ``job database`` = <plugin> (default: 'TextFileJobDB')
-    Specify job database plugin that is used to store job information
   * ``source job selector`` = <text> (default: '')
     Specify job selector to apply to jobs in the task
   * ``workflow`` = <plugin[:name]> (default: 'Workflow:global')
@@ -906,6 +934,14 @@ BlackWhiteMatcher options
     Toggle case sensitivity for the matcher
   * ``<prefix> mode`` = <plugin> (default: 'start')
     Specify the matcher plugin that is used to match the subexpressions of the filter
+
+GUIElement options
+------------------
+
+  * ``gui height interval`` = <float> (default: 10.0)
+    Specify the interval for gui element height changes
+  * ``gui refresh interval`` = <float> (default: 0.2)
+    Specify the interval for gui element refresh cycles
 
 GridAccessToken options
 -----------------------
@@ -1034,7 +1070,7 @@ ScriptMonitoring options
     Specify script that is executed when a job is submitted
   * ``on submit type`` = <enum: executable|command> (Default: executable)
     Specifiy the type of command
-  * ``script timeout`` = <duration hh[:mm[:ss]]> (default: 00:00:05)
+  * ``script timeout`` = <duration hh[:mm[:ss]]> (default: 00:00:20)
     Specify the maximal script runtime after which the script is aborted
   * ``silent`` = <boolean> (default: True)
     Do not show output of event scripts
@@ -1042,12 +1078,20 @@ ScriptMonitoring options
 FrameGUIElement options
 -----------------------
 
-  * ``gui dump stream`` = <boolean> (default: False)
+  * ``gui dump stream`` = <boolean> (default: True)
     Toggle dumping any buffered log streams recorded during GUI operations
+  * ``gui height interval`` = <float> (default: 10.0)
+    Specify the interval for gui element height changes
+  * ``gui refresh interval`` = <float> (default: 0.2)
+    Specify the interval for gui element refresh cycles
 
 UserLogGUIElement options
 -------------------------
 
+  * ``gui height interval`` = <float> (default: 10.0)
+    Specify the interval for gui element height changes
+  * ``gui refresh interval`` = <float> (default: 0.2)
+    Specify the interval for gui element refresh cycles
   * ``log dump`` = <boolean> (default: True)
     Toggle dump of the log history when grid-control is quitting
   * ``log length`` = <integer> (default: 200)
@@ -1058,24 +1102,54 @@ UserLogGUIElement options
 ActivityGUIElement options
 --------------------------
 
-  * ``activity height interval`` = <integer> (default: 5)
-    Specify the interval for activity height changes
   * ``activity height max`` = <integer> (default: 5)
     Specify the maximum height of the activity gui element
   * ``activity height min`` = <integer> (default: 1)
     Specify the minimal height of the activity gui element
+  * ``activity stream`` = <plugin> (default: 'multi_stream')
+    Specify activity stream class that displays the current activity tree on the gui
+  * ``gui height interval`` = <float> (default: 10.0)
+    Specify the interval for gui element height changes
+  * ``gui refresh interval`` = <float> (default: 0.2)
+    Specify the interval for gui element refresh cycles
 
 ReportGUIElement options
 ------------------------
 
-  * ``report`` = <list of plugins> (default: 'HeaderReport BasicReport ColorBarReport')
+  * ``gui height interval`` = <float> (default: 10.0)
+    Specify the interval for gui element height changes
+  * ``gui refresh interval`` = <float> (default: 0.2)
+    Specify the interval for gui element refresh cycles
+  * ``report`` = <list of plugin[:name] ...> (default: 'ANSITheme')
     Type of report to display during operations
   * report manager = <plugin> (Default: 'MultiReport')
     Specifiy compositor class to merge the different plugins given in ``report``
-  * ``report interval`` = <float> (default: 1.0)
-    Specify the interval between report updates
-  * ``report options`` = <text> (default: '')
-    Specify options for the report plugin
+
+ColorBarReport options
+----------------------
+
+  * ``report bar show numbers`` = <boolean> (default: False)
+    Toggle displaying numeric information in the job progress bar
+
+ModernReport options
+--------------------
+
+  * ``report categories max`` = <integer> (default: <20% of the console height>)
+    Specify the maximum amount of categories that should be displayed
+
+TimeReport options
+------------------
+
+  * ``dollar per hour`` = <float> (default: 0.013)
+    Specify how much a cpu hour costs for the computing cost estimation
+
+BackendReport options
+---------------------
+
+  * ``report hierarchy`` = <list of values> (default: 'wms')
+    Specify the hierarchy of backend variables in the report table
+  * ``report history`` = <boolean> (default: False)
+    Toggle the inclusion of history job information in the report
 
 LocalSBStorageManager options
 -----------------------------

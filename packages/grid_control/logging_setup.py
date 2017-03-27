@@ -14,11 +14,11 @@
 
 import os, sys, time, logging, threading
 from grid_control.gc_exceptions import GCError, GCLogHandler
-from grid_control.stream_base import ActivityStream
+from grid_control.stream_base import ActivityMonitor
 from grid_control.utils.data_structures import UniqueList, make_enum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
 from grid_control.utils.thread_tools import GCLock, with_lock
-from hpfwk import AbstractError, format_exception, ignore_exception
+from hpfwk import AbstractError, format_exception, ignore_exception, rethrow
 from python_compat import any, imap, irange, lmap, set, sorted, tarfile
 
 
@@ -202,10 +202,10 @@ def logging_setup(config):
 	# Setup activity logs
 	StdoutStreamHandler.push_std_stream(
 		config.get_plugin(['activity stream', 'activity stream stdout'],
-			'default', cls=ActivityStream, require_plugin=False, pargs=(sys.stdout,), on_change=None,
+			'default_stream', cls=ActivityMonitor, require_plugin=False, pargs=(sys.stdout,), on_change=None,
 			pkwargs={'register_callback': True}),
 		config.get_plugin(['activity stream', 'activity stream stderr'],
-			'default', cls=ActivityStream, require_plugin=False, pargs=(sys.stderr,), on_change=None))
+			'default_stream', cls=ActivityMonitor, require_plugin=False, pargs=(sys.stderr,), on_change=None))
 
 
 def parse_logging_args(arg_list):
@@ -355,19 +355,19 @@ class ProcessArchiveHandler(logging.Handler):
 		files['stdout'] = record.proc.stdout.read_log()
 		files['stderr'] = record.proc.stderr.read_log()
 		files['stdin'] = record.proc.stdin.read_log()
-		try:
+
+		def _log_tar():
 			tar = tarfile.TarFile.open(self._fn, 'a')
 			for key, value in record.files.items():
 				if os.path.exists(value):
-					value = SafeFile(value).read()
+					value = SafeFile(value).read_close()
 				file_obj = VirtualFile(os.path.join(entry, key), [value])
 				info, handle = file_obj.get_tar_info()
 				tar.addfile(info, handle)
 				handle.close()
 			tar.close()
-		except Exception:
-			raise GCError('Unable to log results of external call "%s" to "%s"' % (
-				record.proc.get_call(), self._fn))
+		rethrow(GCError('Unable to log results of external call "%s" to "%s"' % (
+			record.proc.get_call(), self._fn)), _log_tar)
 
 
 class StderrStreamHandler(GCStreamHandler):

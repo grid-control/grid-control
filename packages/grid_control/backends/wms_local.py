@@ -18,7 +18,7 @@ from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.utils import ensure_dir_exists, get_path_share, remove_files, resolve_install_path
 from grid_control.utils.activity import Activity
-from grid_control.utils.file_objects import VirtualFile
+from grid_control.utils.file_objects import SafeFile, VirtualFile
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCLock, with_lock
 from hpfwk import AbstractError, ExceptionCollector, ignore_exception
@@ -118,7 +118,8 @@ class LocalWMS(BasicWMS):
 	def _get_sandbox_file_list(self, task, monitor, sm_list):
 		files = BasicWMS._get_sandbox_file_list(self, task, monitor, sm_list)
 		for idx, auth_fn in enumerate(self._token.get_auth_fn_list()):
-			files.append(VirtualFile(('_proxy.dat.%d' % idx).replace('.0', ''), open(auth_fn, 'r').read()))
+			files.append(VirtualFile(('_proxy.dat.%d' % idx).replace('.0', ''),
+				SafeFile(auth_fn).read_close()))
 		return files
 
 	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
@@ -168,7 +169,7 @@ class LocalWMS(BasicWMS):
 			self._log.warning('%s did not yield job id:\n%s', self._submit_exec, wms_id_str)
 		gc_id = self._create_gc_id(wms_id)
 		if gc_id is not None:
-			open(os.path.join(sandbox, gc_id), 'w')
+			SafeFile(os.path.join(sandbox, gc_id), 'w').write_close('')
 		else:
 			self._log.log_process(proc)
 		return (jobnum, gc_id, {'sandbox': sandbox})

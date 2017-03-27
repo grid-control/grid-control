@@ -79,7 +79,7 @@ class MultiDataProcessor(DataProcessor):
 			self._log, 'Removed %d inactive dataset processors!')
 
 	def __repr__(self):
-		return str.join('->', imap(repr, self._processor_list))
+		return str.join(' => ', imap(repr, self._processor_list))
 
 	def disable_stream_singletons(self):
 		for processor in self._processor_list:
@@ -103,7 +103,7 @@ class NullDataProcessor(DataProcessor):
 		DataProcessor.__init__(self, config, datasource_name)
 
 	def __repr__(self):
-		return '%s()' % self.__class__.__name__
+		return self._repr_base()
 
 	def process_block(self, block):
 		return block

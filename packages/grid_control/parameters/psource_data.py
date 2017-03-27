@@ -63,11 +63,11 @@ class BaseDataParameterSource(LimitedResyncParameterSource):
 	def get_parameter_len(self):
 		return self._len
 
+	def get_psrc_hash(self):
+		return md5_hex(repr([self._name, self._len]))
+
 	def show_psrc(self):
 		return ['%s: src = %s' % (self.__class__.__name__, self._name)]
-
-	def _get_psrc_hash(self):
-		return md5_hex(repr([self._name, self._len]))
 
 	def _set_reader(self, reader):
 		(self._reader, self._len) = (reader, None)
@@ -81,7 +81,7 @@ class DataParameterSource(BaseDataParameterSource):
 	def __new__(cls, config, datasource_name, repository, keep_old=True):
 		provider_name_default = config.get(
 			['default provider', '%s provider' % datasource_name], 'ListProvider')
-		provider = config.get_composited_plugin(datasource_name, '', ':MultiDatasetProvider:',
+		provider = config.get_composited_plugin(datasource_name, '', ':ThreadedMultiDatasetProvider:',
 			cls=DataProvider, require_plugin=False, on_change=TriggerResync(['datasets', 'parameters']),
 			bind_kwargs={'datasource_name': datasource_name, 'provider_name_default': provider_name_default})
 		if not provider:

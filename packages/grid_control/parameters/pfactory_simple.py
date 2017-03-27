@@ -1,4 +1,4 @@
-# | Copyright 2013-2016 Karlsruhe Institute of Technology
+# | Copyright 2013-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,12 +12,10 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config import ConfigError
 from grid_control.parameters.config_param import is_valid_parameter_char
 from grid_control.parameters.pfactory_base import ParameterError, UserParameterFactory
 from grid_control.parameters.psource_base import NullParameterSource, ParameterSource
 from grid_control.parameters.psource_lookup import parse_lookup_factory_args
-from hpfwk import APIError
 from python_compat import imap, irange, lchain, lfilter, lmap, next, reduce
 
 
@@ -52,7 +50,7 @@ class SimpleParameterFactory(UserParameterFactory):
 		elif len(args) == 3:
 			return self._create_psrc('SubSpaceParameterSource', repository, args[2], args[0])
 		else:
-			raise APIError('Invalid subspace reference!: %r' % args)
+			raise ParameterError('Invalid subspace reference!: %r' % args)
 
 	def _create_psrc_ref(self, arg, repository):
 		ref_type_default = 'dataset'
@@ -63,7 +61,7 @@ class SimpleParameterFactory(UserParameterFactory):
 			return self._create_psrc('DataParameterSource', repository, arg)
 		elif ref_type == 'csv':
 			return self._create_psrc('CSVParameterSource', repository, arg)
-		raise APIError('Unknown reference type: "%s"' % ref_type)
+		raise ParameterError('Unknown reference type: "%s"' % ref_type)
 
 	def _create_psrc_var(self, var_list, lookup_list):  # create variable source
 		psrc_list = []
@@ -107,7 +105,7 @@ class SimpleParameterFactory(UserParameterFactory):
 					return self._create_psrc_meta('ChainParameterSource', *args_complete)
 				elif operator == ',':
 					return self._create_psrc_meta('ZipLongParameterSource', *args_complete)
-				raise APIError('Unknown token: "%s"' % operator)
+				raise ParameterError('Unknown token: "%s"' % operator)
 			return result
 		elif isinstance(node, int):
 			return node
@@ -158,7 +156,7 @@ def _tok2tree(value, precedence):
 			yield token
 			token = next(token_iter, None)
 		if level != 0:
-			raise ConfigError(error_msg)
+			raise ParameterError(error_msg)
 
 	while token:
 		if token == '(':
@@ -185,7 +183,7 @@ def _tok2tree(value, precedence):
 
 	_clear_operator_stack(precedence.keys(), operator_stack, token_stack)
 	if len(token_stack) != 1:
-		raise Exception('Invalid stack state detected: %s' % repr(token_stack))
+		raise ParameterError('Invalid stack state detected: %s' % repr(token_stack))
 	return token_stack[0]
 
 

@@ -46,7 +46,7 @@
 
      * grid_control.monitoring EventHandler
 
-      * grid_control.monitoring Monitoring
+      * grid_control.monitoring Monitoring NullMonitor
 
        * grid_control_cms.event_dashboard DashBoard
 

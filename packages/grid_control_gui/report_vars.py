@@ -12,21 +12,57 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.job_selector import JobSelector
-from grid_control.report import Report
-from grid_control.utils.table import ConsoleTable
-from python_compat import imap, lzip, set, sorted
+from grid_control.gc_exceptions import UserError
+from grid_control.job_db import JobClass
+from grid_control.report import TableReport
+from grid_control.utils.parsing import parse_str
+from grid_control_gui.cat_manager import JobCategoryManager
+from python_compat import imap, itemgetter, lmap, lzip, set, sorted
 
 
-class VariablesReport(Report):
+class ModuleReport(TableReport):
+	alias_list = ['module']
+
+	def __init__(self, config, name, job_db, task=None):
+		TableReport.__init__(self, config, name, job_db, task)
+		self._cat_manager = JobCategoryManager(config, job_db, task)
+
+	def show_report(self, job_db, jobnum_list):
+		(cat_state_dict, map_cat2desc, _) = self._cat_manager.get_category_infos(job_db, jobnum_list)
+		infos = []
+		head = set()
+		(state_class_map, cat_order) = self._get_js_class_infos()
+		for cat_key in map_cat2desc:
+			tmp = dict(map_cat2desc[cat_key])
+			head.update(tmp.keys())
+			for job_state in cat_state_dict[cat_key]:
+				job_class_name = state_class_map.get(job_state, 'N/A')
+				tmp[job_class_name] = tmp.get(job_class_name, 0) + cat_state_dict[cat_key][job_state]
+			infos.append(tmp)
+		self._show_table(lmap(lambda x: (x, x), sorted(head) + cat_order),
+			infos, align_str='c' * len(head),
+			fmt_dict=dict.fromkeys(cat_order, lambda x: '%7d' % parse_str(x, int, 0)))
+
+	def _get_js_class_infos(self):
+		job_class_list = [('AT WMS', JobClass.ATWMS), ('RUNNING', JobClass.RUNNING),
+			('FAILING', JobClass.FAILING), ('SUCCESS', JobClass.SUCCESS)]
+		state_class_map = {}
+		for (job_class_name, job_class) in job_class_list:
+			for job_state in job_class.state_list:
+				state_class_map[job_state] = job_class_name
+		return (state_class_map, lmap(itemgetter(0), job_class_list))
+
+
+class VariablesReport(TableReport):
 	alias_list = ['variables', 'vars']
 
-	def __init__(self, job_db, task, jobs=None, config_str=''):
-		Report.__init__(self, job_db, task, jobs, config_str)
+	def __init__(self, config, name, job_db, task=None):
+		TableReport.__init__(self, config, name, job_db, task)
+		if not task:
+			raise UserError('Variables report needs task information!')
 		self._task = task
-		self._selector = JobSelector.create(config_str, task=task)
 
-	def show_report(self, job_db):
+	def show_report(self, job_db, jobnum_list):
 		task_config = {}
 		if self._task:
 			task_config = self._task.get_task_dict()
@@ -35,7 +71,7 @@ class VariablesReport(Report):
 			header.extend(imap(lambda key: (key, '<%s>' % key), self._task.get_transient_variables()))
 		variables = set()
 		entries = []
-		for jobnum in job_db.get_job_list(self._selector):
+		for jobnum in jobnum_list:
 			job_config = {}
 			if self._task:
 				job_config = self._task.get_job_dict(jobnum)
@@ -45,4 +81,4 @@ class VariablesReport(Report):
 				entry.update(self._task.get_transient_variables())
 			entry.update(job_config)
 			entries.append(entry)
-		ConsoleTable.create(sorted(header + lzip(variables, variables)), entries)
+		self._show_table(sorted(header + lzip(variables, variables)), entries)

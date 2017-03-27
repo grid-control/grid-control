@@ -46,8 +46,9 @@ class EventHandler(NamedPlugin):
 
 
 class Monitoring(EventHandler):
-	# Monitoring base class with submodule support
+	# Monitoring base class
 	config_tag_name = 'monitor'
+	alias_list = ['NullMonitor']
 
 	def get_file_list(self):
 		return []
@@ -96,7 +97,7 @@ class ScriptMonitoring(Monitoring):
 		self._script_status = config.get_command('on status', '', on_change=None)
 		self._script_output = config.get_command('on output', '', on_change=None)
 		self._script_finish = config.get_command('on finish', '', on_change=None)
-		self._script_timeout = config.get_time('script timeout', 5, on_change=None)
+		self._script_timeout = config.get_time('script timeout', 20, on_change=None)
 		self._path_work = config.get_work_path()
 		self._tp = GCThreadPool()
 

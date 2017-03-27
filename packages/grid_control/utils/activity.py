@@ -141,7 +141,7 @@ class ProgressActivity(Activity):
 		self.update(self._get_progress_message())
 
 	def _get_progress_message(self):
-		if self._progress_max in (None, 0):
+		if (self._progress_max in (None, 0)) and (self._progress is None):
 			return self._progress_message or ''
 		progress = (self._progress or 0) + 1
 		if self._progress_max is not None:

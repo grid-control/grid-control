@@ -91,31 +91,28 @@ class ConfigInterface(object):
 		return unspecified
 
 	def _get_internal(self, desc, obj2str, str2obj, def2obj, option, default_obj,
-			on_change=unspecified, on_valid=unspecified, persistent=False):
+			on_change=unspecified, on_valid=unspecified, persistent=False, override=None):
+		if self._log.isEnabledFor(logging.DEBUG2):
+			self._log.log(logging.DEBUG2, 'Config query from: %r', self._get_caller())
 		# Make sure option is in a consistent format
 		option_list = norm_config_locations(option)
-		option_str = str.join(' / ', option_list)
+		self._log.log(logging.DEBUG1, 'Config query for config option %r', str.join(' / ', option_list))
+		if override:
+			return str2obj(override)
 		default_str = None
 		try:
-			if self._log.isEnabledFor(logging.DEBUG2):
-				self._log.log(logging.DEBUG2, 'Config query from: %r', self._get_caller())
 			default_str = self._get_default_str(default_obj, def2obj, obj2str)
-			if not (unspecified(default_str) or isinstance(default_str, str)):
-				raise APIError('Invalid default string supplied: %r' % default_str)
-
-			self._log.log(logging.DEBUG1, 'Config query for config option %r', option_str)
 			(old_entry, cur_entry) = self._config_view.get(option_list, default_str, persistent=persistent)
-			if on_change == unspecified:
-				on_change = self._default_on_change
-			if on_valid == unspecified:
-				on_valid = self._default_on_valid
-			return self._process_entries(old_entry, cur_entry, desc, obj2str, str2obj, on_change, on_valid)
+			return self._process_entries(old_entry, cur_entry, desc, obj2str, str2obj,
+				when_unspecified(on_change, self._default_on_change),
+				when_unspecified(on_valid, self._default_on_valid))
 		except Exception:
 			if unspecified(default_obj):
 				default_str = 'no default'  # pylint:disable=redefined-variable-type
 			elif not default_str:
 				default_str = repr(default_obj)
-			raise ConfigError('Unable to get %r from option %r (%s)' % (desc, option_str, default_str))
+			raise ConfigError('Unable to get %r from option %r (%s)' % (desc,
+				str.join(' / ', option_list), default_str))
 
 	def _process_entries(self, old_entry, cur_entry, desc, obj2str, str2obj, on_change, on_valid):
 		# Wrap parsing of object

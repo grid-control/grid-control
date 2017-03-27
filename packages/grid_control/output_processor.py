@@ -15,6 +15,7 @@
 import os, gzip, logging
 from grid_control.utils import DictFormat
 from grid_control.utils.data_structures import make_enum
+from grid_control.utils.file_objects import SafeFile
 from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception, get_current_exception
 from python_compat import bytes2str, ifilter, izip
 
@@ -48,7 +49,7 @@ class JobInfoProcessor(OutputProcessor):
 			if not os.path.exists(fn):
 				raise JobResultError('Job result file %r does not exist' % fn)
 			try:
-				info_content = open(fn, 'r').read()
+				info_content = SafeFile(fn).read_close()
 			except Exception:
 				raise JobResultError('Unable to read job result file %r' % fn)
 			if not info_content:
@@ -85,11 +86,10 @@ class DebugJobInfoProcessor(JobInfoProcessor):
 						if fn.endswith('.gz'):
 							fp = gzip.open(full_fn)
 							content = bytes2str(fp.read())
+							fp.close()
 						else:
-							fp = open(full_fn)
-							content = fp.read()
+							content = SafeFile(full_fn).read_close()
 						self._log.error(fn + '\n' + content + '-' * 50)
-						fp.close()
 					except Exception:
 						self._log.exception('Unable to display %s', fn)
 						clear_current_exception()
@@ -126,5 +126,6 @@ class FileInfoProcessor(JobInfoProcessor):
 				(file_idx, file_prop) = file_key.replace('OUTPUT_FILE_', '').split('_')
 				if isinstance(file_data, str):
 					file_data = file_data.strip('"')
+				file_prop = file_prop.lower().replace('dest', 'namedest').replace('local', 'namelocal')
 				result.setdefault(int(file_idx), {})[FileInfo.str2enum(file_prop)] = file_data
 			return list(result.values())

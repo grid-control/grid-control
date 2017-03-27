@@ -16,6 +16,10 @@
 import os, sys, logging, itertools
 
 
+class ZipExhausted(Exception):
+	pass
+
+
 def identity(value):
 	return value
 
@@ -42,6 +46,8 @@ def resolve_fun(*args):
 						for member_name_part in member_name.split('.'):
 							result = getattr(result, member_name_part)
 				except Exception:
+					if 'Condition' in location:
+						raise
 					continue
 				_log.debug('using %s', location)
 				return result
@@ -118,8 +124,26 @@ def _itemgetter(*items):
 			return obj[item]
 	else:
 		def _get(obj):
-			return tuple(imap(lambda item: obj[item], items))
+			return tuple(imap(obj.__getitem__, items))
 	return _get
+
+
+def _izip_longest(*args, **kwargs):
+	fillvalue = kwargs.get('fillvalue')
+	counter = [len(args) - 1]
+
+	def _sentinel():
+		if not counter[0]:
+			raise ZipExhausted
+		counter[0] -= 1
+		yield fillvalue
+	fillers = itertools.repeat(fillvalue)
+	iterators = lmap(lambda it: itertools.chain(it, _sentinel(), fillers), args)
+	try:
+		while iterators:
+			yield tuple(imap(lambda it: it.next(), iterators))
+	except ZipExhausted:
+		pass
 
 
 def _lru_cache(maxsize=128):
@@ -149,6 +173,14 @@ def _next(iterable, default=unspecified, *args):
 		if not unspecified(default):
 			return default
 		raise
+
+
+def _partial(fun, *args, **kwargs):
+	def _partial_fun(*fun_args, **fun_kwargs):
+		new_kwargs = dict(kwargs)
+		new_kwargs.update(fun_kwargs)
+		return fun(*(args + fun_args), **new_kwargs)
+	return _partial_fun
 
 
 def _relpath(path, start=None):
@@ -182,14 +214,6 @@ def _rsplit(value, sep, maxsplit=None):
 	return str_parts
 
 
-def _partial(fun, *args, **kwargs):
-	def _partial_fun(*fun_args, **fun_kwargs):
-		new_kwargs = dict(kwargs)
-		new_kwargs.update(fun_kwargs)
-		return fun(*(args + fun_args), **new_kwargs)
-	return _partial_fun
-
-
 def _sorted(unsorted_iterable, key=None, reverse=False):
 	""" Sort list by either using the function key that returns
 	the key to sort by - default is the identity function.
@@ -206,7 +230,6 @@ def _sorted(unsorted_iterable, key=None, reverse=False):
 		unsorted_list.reverse()
 	return unsorted_list
 
-
 all = resolve_fun('<builtin>:all', _all)  # >= py-2.5
 any = resolve_fun('<builtin>:any', _any)  # >= py-2.5
 BytesBuffer = resolve_fun('cStringIO:StringIO', 'io:BytesIO')  # < py-2.6
@@ -219,6 +242,7 @@ imap = resolve_fun('itertools:imap', '<builtin-py3>:map')  # < py-3.0
 irange = resolve_fun('<builtin-py2>:xrange', '<builtin-py3>:range')  # < py-3.0
 ismap = resolve_fun('itertools:starmap')
 itemgetter = resolve_fun('operator:itemgetter', _itemgetter)  # >= py-2.4
+izip_longest = resolve_fun('itertools:izip_longest', _izip_longest)  # >= py-2.6
 izip = resolve_fun('itertools:izip', '<builtin-py3>:zip')  # < py-3.0
 lchain = _get_listified(ichain)
 lru_cache = resolve_fun('functools:lru_cache', _lru_cache)  # >= py-3.2
@@ -302,10 +326,10 @@ else:
 
 __all__ = ['all', 'any', 'bytes2str', 'BytesBuffer', 'BytesBufferBase', 'exit_without_cleanup',
 	'get_user_input', 'ichain', 'identity', 'ifilter', 'iidfilter', 'imap', 'irange', 'ismap',
-	'itemgetter', 'izip', 'json', 'lchain', 'lfilter', 'lidfilter', 'lmap', 'lrange', 'lru_cache',
-	'lsmap', 'lzip', 'md5', 'md5_hex', 'next', 'parsedate', 'partial', 'reduce', 'relpath',
-	'resolve_fun', 'rsplit', 'set', 'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile',
-	'unicode', 'unspecified', 'when_unspecified']
+	'itemgetter', 'izip', 'izip_longest', 'json', 'lchain', 'lfilter', 'lidfilter', 'lmap', 'lrange',
+	'lru_cache', 'lsmap', 'lzip', 'md5', 'md5_hex', 'next', 'parsedate', 'partial', 'reduce',
+	'relpath', 'resolve_fun', 'rsplit', 'set', 'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer',
+	'tarfile', 'unicode', 'unspecified', 'when_unspecified']
 
 
 if __name__ == '__main__':

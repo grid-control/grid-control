@@ -92,4 +92,4 @@ class DashBoard(Monitoring):
 		self._start_publish(job_obj, jobnum, 'status', [{'StatusValue': status_dashboard,
 			'StatusValueReason': data.get('reason', status_dashboard).upper(),
 			'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),
-			'StatusDestination': data.get('dest', '')}, add_dict])
+			'StatusDestination': job_obj.get_job_location()}, add_dict])

@@ -19,4 +19,4 @@ config = gc_create_config(config_dict={
 
 # Create and run workflow with GUI output
 workflow = gc_create_workflow(config)
-workflow.run()
+workflow.run(duration=-1)

@@ -1,5 +1,5 @@
 codecov:
-  branch: testsuite
+  branch: testing
 comment:
   layout: header, changes, diff
 coverage:
@@ -9,6 +9,7 @@ coverage:
     - packages/grid_control_cms/Lexicon.py
     - packages/grid_control_cms/share/fragmentForCMSSW.py
     - packages/grid_control_gui/xmpp/*
+    - packages/grid_control_tests/*
     - packages/python_compat_json.py
     - packages/python_compat_popen2.py
     - packages/python_compat.py

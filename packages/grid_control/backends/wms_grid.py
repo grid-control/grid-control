@@ -108,7 +108,7 @@ class GridWMS(BasicWMS):
 				remove_files([jobs, root_dn])
 				raise StopIteration
 			else:
-				self._log.log_process(proc, files={'jobs': SafeFile(jobs).read()})
+				self._log.log_process(proc, files={'jobs': SafeFile(jobs).read_close()})
 			self._log.error('Trying to recover from error ...')
 			for dn in os.listdir(root_dn):
 				yield (None, os.path.join(root_dn, dn))
@@ -194,7 +194,7 @@ class GridWMS(BasicWMS):
 				if self._explain_error(proc, exit_code):
 					pass
 				else:
-					self._log.log_process(proc, files={'jdl': SafeFile(jdl_fn).read()})
+					self._log.log_process(proc, files={'jdl': SafeFile(jdl_fn).read_close()})
 		finally:
 			remove_files([jdl_fn])
 		job_data = {'jdl': str.join('', jdl_line_list)}

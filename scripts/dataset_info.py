@@ -14,9 +14,9 @@
 # | limitations under the License.
 
 import os, sys, logging
-from gc_scripts import ConsoleTable, ScriptOptions, gc_create_config, utils
+from gc_scripts import ConsoleTable, ScriptOptions, gc_create_config
 from grid_control.datasets import DataProvider, DatasetError
-from grid_control.utils import thread_tools
+from grid_control.utils import intersect_first_dict, thread_tools
 from python_compat import imap, itemgetter, izip, lzip, set, sort_inplace, sorted
 
 
@@ -44,7 +44,7 @@ def get_dataset_config(opts, args):
 	config_dict = {'dbs blacklist T1 *': 'False', 'remove empty blocks *': 'False',
 		'remove empty files *': 'False', 'location format *': opts.location,
 		'nickname check collision *': 'False',
-		'dataset *': dataset, 'dataset provider *': opts.provider}
+		'dataset *': dataset.replace(r'\n', '\n'), 'dataset provider *': opts.provider}
 	if opts.metadata or opts.block_metadata:
 		config_dict['lumi filter *'] = '-'
 		config_dict['keep lumi metadata *'] = 'True'
@@ -53,7 +53,9 @@ def get_dataset_config(opts, args):
 
 def get_dataset_info(opts, args):
 	config = get_dataset_config(opts, args)
-	provider = config.get_plugin('dataset', cls=DataProvider)
+	provider = config.get_composited_plugin('dataset', cls=DataProvider,
+		bind_kwargs={'provider_name_default': config.get('dataset provider')},
+		default_compositor=':ThreadedMultiDatasetProvider:')  # -T disables multi-threading further below
 	block_list = provider.get_block_list_cached(show_stats=False)
 	if len(block_list) == 0:
 		raise DatasetError('No blocks!')
@@ -148,7 +150,7 @@ def list_metadata_common(dataset_list, block_list):
 		if block[DataProvider.FileList]:
 			result = get_file_metadata(block, block[DataProvider.FileList][0])
 		for fi in block[DataProvider.FileList]:
-			utils.intersect_first_dict(result, get_file_metadata(block, fi))
+			intersect_first_dict(result, get_file_metadata(block, fi))
 		return result
 
 	for block in block_list:
@@ -216,17 +218,19 @@ def save_dataset(fn, block_list):
 
 
 def _main():
-	# Disable threaded queries
-	def _no_thread(desc, fun, *args, **kargs):
-		fun(*args, **kargs)
-		return type('DummyThread', (), {'join': lambda self: None})()
-	thread_tools.start_daemon = _no_thread
-
 	# Add some enums for consistent access to info dicts
 	DataProvider.NFiles = -1
 	DataProvider.NBlocks = -2
 
 	options = _parse_cmd_line()
+
+	# Disable threaded queries
+	def _no_thread(desc, fun, *args, **kargs):
+		fun(*args, **kargs)
+		return type('DummyThread', (), {'join': lambda self: None})()
+	if not options.opts.threaded:
+		thread_tools.start_daemon = _no_thread
+
 	(provider, dataset_list, block_list) = get_dataset_info(options.opts, options.args)
 
 	if options.opts.list_datasets:
@@ -274,6 +278,8 @@ def _parse_cmd_line():
 		help='Gives config file entries to run over given dataset(s)')
 	parser.add_bool(None, 'n', 'config-nick', default=False,
 		help='Use dataset path to derive nickname in case it it undefined')
+	parser.add_bool(None, 'T', 'threaded', default=True,
+		help='Toggle multi-threaded dataset retrieval')
 	parser.add_text(None, 'L', 'location', default='hostname',
 		help='Format of location information')
 	options = parser.script_parse()

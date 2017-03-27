@@ -35,7 +35,7 @@ class UserError(GCError):
 
 def gc_excepthook(*exc_info):
 	# Exception handler for interactive mode:
-	if hasattr(gc_excepthook, 'restore') and getattr(gc_excepthook, 'restore'):
+	if hasattr(gc_excepthook, 'restore_old_hook') and getattr(gc_excepthook, 'restore_old_hook'):
 		sys.excepthook = INITIAL_EXCEPTHOOK
 	version = ignore_exception(Exception, 'unknown version',
 		lambda: sys.modules['grid_control'].__version__)

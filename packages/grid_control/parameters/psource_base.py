@@ -15,7 +15,7 @@
 import time, logging
 from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import md5_hex, set
+from python_compat import set
 
 
 ParameterInfo = make_enum(['ACTIVE', 'HASH', 'REQS', 'FILES'])  # pylint:disable=invalid-name
@@ -69,6 +69,9 @@ class ParameterSource(Plugin):
 	def get_psrc_hash(self):
 		raise AbstractError
 
+	def get_resync_request(self):
+		return []
+
 	def get_used_psrc_list(self):
 		return [self]
 
@@ -85,14 +88,16 @@ class LimitedResyncParameterSource(ParameterSource):
 		ParameterSource.__init__(self)
 		(self._resync_interval, self._resync_force, self._resync_last) = (-1, False, time.time())
 
-	def get_psrc_hash(self):
-		if self._resync_enabled():
-			return md5_hex(repr(time.time()))
-		return self._get_psrc_hash()
+	def get_resync_request(self):
+		t_last_resync = abs(time.time() - self._resync_last)
+		resync_needed = self._resync_interval >= 0 and (t_last_resync >= self._resync_interval)
+		if self._resync_force or resync_needed:
+			return [self]
+		return []
 
 	def resync_psrc(self):
 		result = None
-		if self._resync_enabled():
+		if self.get_resync_request():
 			result = self._resync_psrc()
 			self._resync_force = False
 			self._resync_last = time.time()
@@ -103,14 +108,6 @@ class LimitedResyncParameterSource(ParameterSource):
 			self._resync_interval = interval
 		if force is not None:
 			self._resync_force = force
-
-	def _get_psrc_hash(self):
-		raise AbstractError
-
-	def _resync_enabled(self):
-		t_last_resync = abs(time.time() - self._resync_last)
-		resync_needed = self._resync_interval >= 0 and (t_last_resync >= self._resync_interval)
-		return self._resync_force or resync_needed
 
 	def _resync_psrc(self):
 		pass

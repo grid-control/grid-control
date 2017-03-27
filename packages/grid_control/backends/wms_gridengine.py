@@ -151,7 +151,7 @@ class GridEngine(PBSGECommon):  # pylint:disable=too-many-ancestors
 		if self._project:
 			params += ' -P %s' % self._project
 		# Job requirements
-		(queue, nodes) = (reqs.get(WMS.QUEUES, [''])[0], reqs.get(WMS.SITES))
+		(queue, nodes) = ((reqs.get(WMS.QUEUES) or [''])[0], reqs.get(WMS.SITES))
 		if not nodes and queue:
 			params += ' -q %s' % queue
 		elif nodes and queue:

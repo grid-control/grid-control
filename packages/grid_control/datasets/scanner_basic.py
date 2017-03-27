@@ -16,8 +16,8 @@ import os, logging
 from grid_control.config import ConfigError, create_config
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
-from grid_control.job_db import Job
-from grid_control.job_selector import JobSelector
+from grid_control.job_db import JobClass
+from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.utils import DictFormat, clean_path, filter_dict, split_opt
 from grid_control.utils.activity import ProgressActivity
 from grid_control.utils.parsing import parse_str
@@ -199,9 +199,13 @@ class MatchOnFilename(InfoScanner):
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		self._match = config.get_matcher('filename filter', '*.root', default_matcher='shell')
+		self._relative = config.get_bool('filename filter relative', True)
 
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
-		if self._match.match(item) > 0:
+		fn_match = item
+		if self._relative:
+			fn_match = os.path.basename(item)
+		if self._match.match(fn_match) > 0:
 			yield (item, metadata_dict, entries, location_list, obj_dict)
 
 
@@ -236,19 +240,18 @@ class OutputDirsFromConfig(InfoScanner):
 		ext_config = ext_config_raw.change_view(set_sections=['global'])
 		self._ext_work_dn = ext_config.get_work_path()
 		logging.getLogger().disabled = True
-		self._ext_workflow = ext_config.get_plugin('workflow', 'Workflow:global',
-			cls='Workflow', pargs=('task',))
+		ext_workflow = ext_config.get_plugin('workflow', 'Workflow:global',
+			cls='Workflow', pkwargs={'monitor': 'NullMonitor', 'wms': 'NullWMS'})
 		logging.getLogger().disabled = False
-		self._ext_task = self._ext_workflow.task
-		ext_job_db = ext_config.get_plugin('job database', 'TextFileJobDB', cls='JobDB',
-			pkwargs={'job_selector': lambda jobnum, job_obj: job_obj.state == Job.SUCCESS}, on_change=None)
+		self._ext_task = ext_workflow.task
 		job_selector = JobSelector.create(config.get('source job selector', ''), task=self._ext_task)
-		self._selected = sorted(ext_job_db.get_job_list(job_selector))
+		self._selected = sorted(ext_workflow.job_manager.job_db.get_job_list(AndJobSelector(
+			ClassSelector(JobClass.SUCCESS), job_selector)))
 
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		progress_max = None
 		if self._selected:
-			progress_max = self._selected[-1]
+			progress_max = self._selected[-1] + 1
 		progress = ProgressActivity('Reading job logs', progress_max)
 		for jobnum in self._selected:
 			progress.update_progress(jobnum)

@@ -13,7 +13,6 @@
 # | limitations under the License.
 
 import os, sys
-from hpfwk.hpf_compat import clear_current_exception, impl_detail
 
 
 HPF_STARTUP_DIRECTORY = os.getcwd()
@@ -44,6 +43,20 @@ class AbstractError(APIError):
 		APIError.__init__(self, '%s is an abstract function!' % fun_name)
 
 
+def clear_current_exception():
+	# automatic cleanup in >= py-3.0
+	impl_detail(sys, 'exc_clear', args=(), default=None)
+
+
+def except_nested(ex_cls, ex_value):
+	if isinstance(ex_value, ex_cls):
+		return True
+	if hasattr(ex_value, 'nested'):
+		for ex_nested in ex_value.nested:
+			if except_nested(ex_cls, ex_nested):
+				return True
+
+
 def get_current_exception():
 	return sys.exc_info()[1]
 
@@ -56,6 +69,14 @@ def ignore_exception(exception_cls, exception_default, fun, *args, **kwargs):
 		return exception_default
 
 
+def impl_detail(module, name, args, default, fun=lambda x: x):
+	# access some python implementation detail with default
+	try:
+		return fun(getattr(module, name)(*args))
+	except Exception:
+		return default
+
+
 def parse_frame(frame):
 	def _get_frame_dict(cur_frame):  # Parse single stack frame
 		return {'idx': 0,
@@ -64,6 +85,15 @@ def parse_frame(frame):
 			'fun': cur_frame.f_code.co_name,
 			'locals': dict(cur_frame.f_locals)}
 	return _parse_helper(_get_frame_dict, frame)  # use _parse_helper for correct path resolution
+
+
+def rethrow(ex_value, fun, *args, **kwargs):
+	try:
+		return fun(*args, **kwargs)
+	except Exception:
+		if hasattr(ex_value, 'nested'):
+			ex_value.nested.append(ExceptionWrapper(get_current_exception(), _get_current_traceback()))
+		raise ex_value
 
 
 class ExceptionCollector(object):

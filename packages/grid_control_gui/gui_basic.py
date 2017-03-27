@@ -12,27 +12,21 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.gc_plugin import ConfigurablePlugin
-from hpfwk import NestedException
+import logging
+from grid_control.gui import GUI
+from grid_control.report import Report
 
 
-class GUIException(NestedException):
-	pass
-
-
-class GUI(ConfigurablePlugin):
-	config_section_list = ConfigurablePlugin.config_section_list + ['gui']
-	alias_list = []
-
+class BasicConsoleGUI(GUI):
 	def __init__(self, config, workflow):
-		ConfigurablePlugin.__init__(self, config)
+		GUI.__init__(self, config, workflow)
+		self._log = logging.getLogger('workflow')
+		self._workflow = workflow
+		self._report = config.get_composited_plugin('report', 'BasicTheme', 'MultiReport',
+			cls=Report, on_change=None, pargs=(workflow.job_manager.job_db, workflow.task))
 
 	def start_interface(self):
-		pass
-
-	def end_interface(self):
-		pass
-
-
-class NullGUI(GUI):
-	alias_list = ['null']
+		self._log.info('')
+		self._report.show_report(self._workflow.job_manager.job_db,
+			self._workflow.job_manager.job_db.get_job_list())
+		self._log.info('')

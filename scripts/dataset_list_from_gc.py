@@ -15,7 +15,7 @@
 
 import sys
 from dataset_list_from import add_dataset_list_options, discover_dataset
-from gc_scripts import ScriptOptions, utils
+from gc_scripts import ScriptOptions
 
 
 def _main():
@@ -37,7 +37,7 @@ def _main():
 
 	# Positional parameters override options
 	if not options.args:
-		utils.exit_with_usage(parser.usage())
+		parser.exit_with_usage()
 	tmp = {'cmssw-out': 'CMSSW_EVENTS_WRITE', 'cmssw-in': 'CMSSW_EVENTS_READ', 'datamod': 'MAX_EVENTS'}
 	if options.opts.info_scanner:
 		options.config_dict['scanner'] = options.opts.info_scanner.replace(',', ' ')

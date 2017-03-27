@@ -16,7 +16,7 @@ import re, random
 from grid_control.backends import WMS
 from grid_control.config import ConfigError
 from grid_control.parameters.psource_base import ParameterInfo, ParameterMetadata, ParameterSource
-from grid_control.utils.parsing import parse_time, parse_type, str_dict
+from grid_control.utils.parsing import parse_time, parse_type, str_dict_linear
 from hpfwk import ignore_exception
 from python_compat import imap, lmap, md5_hex
 
@@ -72,7 +72,7 @@ class InternalParameterSource(ImmutableParameterSource):
 	def __init__(self, value_list, meta_list):
 		(self._value_list, self._meta_list) = (value_list, meta_list)
 		self._keys = lmap(lambda pm: pm.get_value(), meta_list)
-		ImmutableParameterSource.__init__(self, (lmap(str_dict, value_list), self._keys))
+		ImmutableParameterSource.__init__(self, (lmap(str_dict_linear, value_list), self._keys))
 
 	def __repr__(self):
 		return '<internal:%s=%s>' % (str.join('|', self._keys), self.get_psrc_hash())

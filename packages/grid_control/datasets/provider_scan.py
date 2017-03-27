@@ -209,8 +209,6 @@ class GCProvider(ScanProviderBase):
 			ds_config.set('source job selector', selector)
 		ext_config = create_config(dataset_expr)
 		ext_task_name = ext_config.change_view(set_sections=['global']).get(['module', 'task'])
-		if 'ParaMod' in ext_task_name:  # handle old config files
-			ext_task_name = ext_config.change_view(set_sections=['ParaMod']).get('module')
 		ext_task_cls = Plugin.get_class(ext_task_name)
 		for ext_task_cls in Plugin.get_class(ext_task_name).iter_class_bases():
 			try:

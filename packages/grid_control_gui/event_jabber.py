@@ -14,6 +14,7 @@
 
 import os, stat, time
 from grid_control.monitoring import Monitoring
+from grid_control.utils.file_objects import SafeFile
 from hpfwk import clear_current_exception
 
 
@@ -28,7 +29,7 @@ class JabberAlarm(Monitoring):
 		password_fn = config.get_path('source password file')
 		os.chmod(password_fn, stat.S_IRUSR)
 		# password in variable name removes it from debug log!
-		self._source_password = open(password_fn).read().strip()
+		self._source_password = SafeFile(password_fn).read_close().strip()
 		try:  # xmpp contains many deprecated constructs
 			import warnings
 			warnings.simplefilter('ignore', DeprecationWarning)

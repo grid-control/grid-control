@@ -115,7 +115,7 @@ class ChunkedExecutor(ForwardingExecutor):
 		ForwardingExecutor.__init__(self, config, executor)
 		self._chunk_size = config.get_int(join_config_locations(option_prefix, 'chunk size'),
 			def_chunk_size, on_change=None)
-		self._chunk_interval = config.get_int(join_config_locations(option_prefix, 'chunk interval'),
+		self._chunk_interval = config.get_time(join_config_locations(option_prefix, 'chunk interval'),
 			def_chunk_interval, on_change=None)
 
 	def execute(self, wms_id_list, *args, **kwargs):

@@ -14,12 +14,12 @@
 # | limitations under the License.
 
 import os, sys, time, random, logging
-from gc_scripts import ConsoleTable, FileInfo, FileInfoProcessor, Job, Plugin, ScriptOptions, get_script_object_cmdline, str_file_size  # pylint:disable=line-too-long
+from gc_scripts import ConsoleTable, FileInfo, FileInfoProcessor, Job, Plugin, ScriptOptions, get_script_object, str_file_size  # pylint:disable=line-too-long
 from grid_control.backends.storage import se_copy, se_exists, se_mkdir, se_rm
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.thread_tools import GCEvent, start_daemon
-from hpfwk import clear_current_exception, get_thread_state
-from python_compat import all, any, imap, lfilter, md5, sorted
+from hpfwk import clear_current_exception
+from python_compat import all, any, imap, lfilter, md5, resolve_fun, sorted
 
 
 try:
@@ -28,11 +28,12 @@ except Exception:
 	clear_current_exception()
 	ANSI = None  # pylint:disable=invalid-name
 try:
-	from grid_control_gui.report_textbar import BasicProgressBar
+	from grid_control_gui.report_bar import BasicProgressBar
 except Exception:
 	clear_current_exception()
 	BasicProgressBar = None  # pylint:disable=invalid-name
 
+get_thread_state = resolve_fun('threading:Thread.is_alive', 'threading:Thread.isAlive')  # pylint:disable=invalid-name
 
 JobDownloadStatus = make_enum(['JOB_OK', 'JOB_ALREADY', 'JOB_NO_OUTPUT',  # pylint:disable=invalid-name
 	'JOB_PROCESSING', 'JOB_FAILED', 'JOB_RETRY', 'JOB_INCOMPLETE'])
@@ -205,7 +206,7 @@ def get_se_host(se_path):
 
 def loop_download(opts, args):
 	# Init everything in each loop to pick up changes
-	script_obj = get_script_object_cmdline(args, only_success=True)
+	script_obj = get_script_object(args[0], opts.job_selector, only_success=True)
 	token = Plugin.get_class('AccessToken').create_instance(opts.token, script_obj.new_config, 'token')
 	work_dn = script_obj.config.get_work_path()
 
@@ -343,13 +344,11 @@ def process_job_files(opts, work_dn, _inc_download_result,
 
 class Display(object):
 	def _match_result(self, result):
-		if ANSI is None:
-			if not result:
-				return 'FAIL'
-			return 'MATCH'
-		if not result:
-			return ANSI.fmt('FAIL', [ANSI.color_red])
-		return ANSI.fmt('MATCH', [ANSI.color_green])
+		result_map = {True: 'MATCH', False: 'FAIL'}
+		if ANSI is not None:
+			result_map = {True: ANSI.reset + ANSI.color_green + 'MATCH' + ANSI.reset,
+				False: ANSI.reset + ANSI.color_red + 'FAIL' + ANSI.reset}
+		return result_map[result]
 
 	def _rate(self, cur_size, ref_size, ref_time):
 		return str_file_size(((cur_size - ref_size) / max(1., time.time() - ref_time))) + '/s'
@@ -446,16 +445,15 @@ class ThreadedJobDownloadDisplay(JobDownloadDisplay):
 		return str.join('\n', imap(str.strip, imap(str, self._output_str_list)))
 
 	def monitor_transfer_progress(self, fi_idx, cur_size=None, old_size=0, start_time=0, old_time=0):
-		if fi_idx > len(self._fi_list):
-			return
-		intro_str = '[%s-%s] ' % (self._jobnum, fi_idx)
-		if cur_size is None:
-			self._output_str_list[0] = intro_str + self._build_transfer_intro_str(fi_idx)
-		elif old_time is None:
-			self._bar = None
-		else:
-			self._output_str_list[1] = intro_str + self._build_transfer_info_str(fi_idx,
-				cur_size, old_size, start_time, old_time)
+		if fi_idx <= len(self._fi_list):
+			intro_str = '[%s-%s] ' % (self._jobnum, fi_idx)
+			if cur_size is None:
+				self._output_str_list[0] = intro_str + self._build_transfer_intro_str(fi_idx)
+			elif old_time is None:
+				self._bar = None
+			else:
+				self._output_str_list[1] = intro_str + self._build_transfer_info_str(fi_idx,
+					cur_size, old_size, start_time, old_time)
 
 	def process_job_files_begin(self, fi_list):
 		self._fi_list = fi_list
@@ -542,6 +540,8 @@ def _parse_cmd_line():
 
 	parser.add_text(None, 'o', 'output', default=None,
 		help='specify the local output directory')
+	parser.add_text(None, 'J', 'job-selector', default=None,
+		help='specify the job selector')
 	parser.add_text(None, 'O', 'tmp-dir', default='/tmp',
 		help='specify the local tmp directory')
 	parser.add_text(None, 'T', 'token', default='VomsProxy',
@@ -591,7 +591,7 @@ def _parse_cmd_line():
 			'--keep-local-ok --no-mark-dl --ignore-mark-dl')
 
 	options = parser.script_parse(verbose_short=None)
-	if len(options.args) < 1:  # we need exactly one positional argument (config file)
+	if len(options.args) != 1:  # we need exactly one positional argument (config file)
 		parser.exit_with_usage(msg='Config file not specified!')
 	options.opts.threads = int(options.opts.threads)
 	return options

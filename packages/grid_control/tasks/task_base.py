@@ -214,7 +214,7 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 
 	def _update_map_error_code2message(self, fn):
 		# Read comments with error codes at the beginning of file: # <code> - description
-		for line in ifilter(lambda x: x.startswith('#'), SafeFile(fn).readlines()):
+		for line in ifilter(lambda x: x.startswith('#'), SafeFile(fn).iter_close()):
 			tmp = lmap(str.strip, line.lstrip('#').split(' - ', 1))
 			if tmp[0].isdigit() and (len(tmp) == 2):
 				self.map_error_code2message[int(tmp[0])] = tmp[1]

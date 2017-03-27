@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import logging
-from grid_control.utils.parsing import str_dict
+from grid_control.utils.parsing import str_dict_linear
 from hpfwk import APIError, NestedException, clear_current_exception
 from python_compat import ichain, ifilter, imap, lchain, lidfilter, lmap, set, sorted, unspecified
 
@@ -133,7 +133,7 @@ class ConfigEntry(object):
 		(self.value, self.opttype, self.accessed, self.used) = (value, opttype, accessed, used)
 
 	def __repr__(self):
-		return '%s(%s)' % (self.__class__.__name__, str_dict(self.__dict__))
+		return '%s(%s)' % (self.__class__.__name__, str_dict_linear(self.__dict__))
 
 	def combine_entries(cls, entry_iter):
 		(result, entry_list_used) = cls._process_and_mark_entries(entry_iter)
@@ -222,13 +222,13 @@ class ConfigEntry(object):
 		def _merge_subsequent_entries(entry_iter):
 			prev_entry = None
 			for entry in entry_iter:
+				entry = ConfigEntry(entry.section, entry.option, entry.value, entry.opttype,
+					'<processed>', entry.order, entry.accessed, entry.used)  # copy entry for modifications
 				if prev_entry and (entry.opttype == prev_entry.opttype):
 					if entry.opttype == '+=':
 						entry.value = prev_entry.value + '\n' + entry.value
-						entry.source = '<processed>'
 					elif entry.opttype == '^=':
 						entry.value = entry.value + '\n' + prev_entry.value
-						entry.source = '<processed>'
 					else:
 						yield prev_entry
 				prev_entry = entry

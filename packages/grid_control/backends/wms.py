@@ -20,7 +20,7 @@ from grid_control.backends.aspect_status import CheckInfo
 from grid_control.backends.storage import StorageManager
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.output_processor import JobResult
-from grid_control.utils import DictFormat, Result, abort, create_tarball, ensure_dir_exists, get_path_pkg, get_path_share, merge_dict_list, resolve_path, safe_write  # pylint:disable=line-too-long
+from grid_control.utils import DictFormat, Result, abort, create_tarball, ensure_dir_exists, get_path_pkg, get_path_share, get_version, merge_dict_list, resolve_path, safe_write  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.file_objects import SafeFile, VirtualFile
@@ -46,6 +46,7 @@ BackendJobState = make_enum([  # pylint:disable=invalid-name
 class WMS(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['wms', 'backend']
 	config_tag_name = 'wms'
+	alias_list = ['NullWMS']
 
 	def __init__(self, config, name):
 		name = (name or self.__class__.__name__).upper().replace('.', '_')
@@ -120,10 +121,9 @@ class BasicWMS(WMS):
 
 		self._runlib = config.get_work_path('gc-run.lib')
 		if not os.path.exists(self._runlib):
-			fp = SafeFile(self._runlib, 'w')
-			content = SafeFile(get_path_share('gc-run.lib')).read()
-			fp.write(content.replace('__GC_VERSION__', __import__('grid_control').__version__))
-			fp.close()
+			content = SafeFile(get_path_share('gc-run.lib')).read_close()
+			content = content.replace('__GC_VERSION__', get_version())
+			SafeFile(self._runlib, 'w').write_close(content)
 		self._path_output = config.get_work_path('output')
 		self._path_file_cache = config.get_work_path('files')
 		ensure_dir_exists(self._path_output, 'output directory')
@@ -176,9 +176,9 @@ class BasicWMS(WMS):
 		def _convert(fn_list):
 			for fn in fn_list:
 				if isinstance(fn, str):
-					yield (fn, os.path.basename(fn), False)
+					yield (fn, os.path.basename(fn))
 				else:
-					yield (None, os.path.basename(fn.name), fn)
+					yield (fn, os.path.basename(fn.name))
 
 		# Package sandbox tar file
 		self._log.log(logging.INFO1, 'Packing sandbox')

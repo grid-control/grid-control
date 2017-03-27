@@ -14,11 +14,13 @@
 
 import os
 from grid_control.backends import WMS
-from grid_control.config import ConfigError
+from grid_control.config import ConfigError, Matcher, TriggerInit
 from grid_control.output_processor import DebugJobInfoProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from grid_control.utils import DictFormat, Result, clean_path, create_tarball, get_path_share, match_files  # pylint:disable=line-too-long
+from grid_control.utils import Result, clean_path, create_tarball, get_path_share
+from grid_control.utils.file_objects import SafeFile
+from grid_control.utils.persistency import load_dict
 from grid_control.utils.table import ConsoleTable
 from grid_control.utils.user_interface import UserInputInterface
 from python_compat import ifilter, imap, set, sorted, unspecified
@@ -29,6 +31,7 @@ class SCRAMTask(DataTask):
 
 	def __init__(self, config, name):
 		DataTask.__init__(self, config, name)
+		config.set('area files matcher mode', 'shell', '?=')
 
 		# SCRAM settings
 		scram_arch_default = unspecified
@@ -46,9 +49,12 @@ class SCRAMTask(DataTask):
 
 		else:  # scram setup used from project area
 			self._project_area = config.get_path('project area')
-			self._project_area_selector_list = config.get_list('area files', ['-.*', '-config', 'bin',
-				'lib', 'python', 'module', '*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py',
-				'-*/.git', '-*/.svn', '-*/CVS', '-*/work.*']) + ['*.pcm']  # FIXME
+			self._always_matcher = Matcher.create_instance('AlwaysMatcher', config, [''])
+			self._project_area_base_fn = config.get_bool('area files basename', True,
+				on_change=TriggerInit('sandbox'))
+			self._project_area_matcher = config.get_matcher('area files',
+				'-.* -config bin lib python module data *.xml *.sql *.db *.cfi *.cff *.py -CVS -work.* *.pcm',
+				default_matcher='blackwhite', on_change=TriggerInit('sandbox'))
 			self._log.info('Project area found in: %s', self._project_area)
 
 			# try to determine scram settings from environment settings
@@ -93,11 +99,7 @@ class SCRAMTask(DataTask):
 
 	def _parse_scram_file(self, fn):
 		try:
-			fp = open(fn, 'r')
-			try:
-				return DictFormat().parse(fp, key_parser={None: str})
-			finally:
-				fp.close()
+			return load_dict(fn, '=')
 		except Exception:
 			raise ConfigError('Project area file %s cannot be parsed!' % fn)
 
@@ -178,8 +180,8 @@ class CMSSW(SCRAMTask):
 				return
 			# Generate CMSSW tarball
 			if self._project_area:
-				create_tarball(self._project_area_tarball,
-					match_files(self._project_area, self._project_area_selector_list))
+				create_tarball(self._project_area_tarball, _match_files(self._project_area,
+					self._project_area_matcher, self._always_matcher, self._project_area_base_fn))
 			if self._project_area_tarball_on_se:
 				config.set_state(True, 'init', detail='storage')
 
@@ -279,32 +281,18 @@ class CMSSW(SCRAMTask):
 		return config_file_list_todo
 
 	def _config_is_instrumented(self, fn):
-		fp = open(fn, 'r')
-		try:
-			cfg = fp.read()
-		finally:
-			fp.close()
+		cfg = SafeFile(fn).read_close()
 		for tag in self._needed_vn_set:
 			if (not '__%s__' % tag in cfg) and (not '@%s@' % tag in cfg):
 				return False
 		return True
 
 	def _config_store_backup(self, source, target, fragment_path=None):
-		fp = open(source, 'r')
-		try:
-			content = fp.read()
-		finally:
-			fp.close()
-		fp = open(target, 'w')
-		try:
-			fp.write(content)
-			if fragment_path:
-				self._log.info('Instrumenting... %s', os.path.basename(source))
-				fragment_fp = open(fragment_path, 'r')
-				fp.write(fragment_fp.read())
-				fragment_fp.close()
-		finally:
-			fp.close()
+		content = SafeFile(source).read_close()
+		if fragment_path:
+			self._log.info('Instrumenting... %s', os.path.basename(source))
+			content += SafeFile(fragment_path).read_close()
+		SafeFile(target, 'w').write_close(content)
 
 	def _create_datasource(self, config, name, psrc_repository, psrc_list):
 		psrc_data = SCRAMTask._create_datasource(self, config, name, psrc_repository, psrc_list)
@@ -371,3 +359,31 @@ class CMSSW(SCRAMTask):
 				self._log.warning('Config file %r was not instrumented!', cfg)
 			result.append(cfg_new)
 		return result
+
+
+def _match_files(dn_root, matcher, selected_dir_matcher, base_fn, dn_rel=''):
+	# Return (source fn, target fn) - source == None => update activity
+	yield (None, dn_rel)
+	for fn in os.listdir(os.path.join(dn_root, dn_rel)):
+		fn_rel = os.path.join(dn_rel, fn)
+		fn_abs = os.path.join(dn_root, fn_rel)
+		if base_fn:
+			match = matcher.match(fn)
+		else:
+			match = matcher.match(fn_rel)
+		if match < 0:
+			continue
+		elif os.path.islink(fn_abs):  # Not excluded symlinks
+			yield (fn_abs, fn_rel)
+		elif os.path.isdir(fn_abs):  # Recurse into directories
+			dir_matcher = matcher
+			if match > 0:  # directory was manually selected - add everything
+				dir_matcher = selected_dir_matcher
+			yield_base_dir = True
+			for result in _match_files(dn_root, dir_matcher, selected_dir_matcher, base_fn, fn_rel):
+				if yield_base_dir:
+					yield (fn_abs, fn_rel)
+					yield_base_dir = False
+				yield result
+		elif match > 0:  # Add matches
+			yield (fn_abs, fn_rel)

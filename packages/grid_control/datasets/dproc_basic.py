@@ -27,6 +27,9 @@ class EmptyDataProcessor(DataProcessor):
 		self._empty_block = config.get_bool(self._get_dproc_opt('remove empty blocks'), True)
 		(self._removed_files, self._removed_blocks) = (0, 0)
 
+	def __repr__(self):
+		return self._repr_base('files=%s, blocks=%s' % (self._empty_files, self._empty_block))
+
 	def process_block(self, block):
 		if self._empty_files:
 			def _has_entries(fi):

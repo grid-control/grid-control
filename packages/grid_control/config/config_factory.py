@@ -20,18 +20,19 @@ from grid_control.config.cview_base import SimpleConfigView
 from grid_control.gc_exceptions import GCLogHandler
 from grid_control.utils import ensure_dir_exists, get_file_name, resolve_path
 from grid_control.utils.data_structures import UniqueList
-from grid_control.utils.file_objects import SafeFile
+from grid_control.utils.file_objects import SafeFile, with_file
 from python_compat import lfilter
 
 
 def create_config(config_file=None, config_dict=None, use_default_files=False,
 		additional=None, register=False, path_base=None,
-		load_old_config=True, load_only_old_config=False):
+		load_old_config=True, load_only_old_config=False, **kwargs):
 	filler_list = []
 	if use_default_files:
 		filler_list.append(ConfigFiller.create_instance('DefaultFilesConfigFiller'))
 	if config_file:
 		filler_list.append(GeneralFileConfigFiller([config_file]))
+	config_dict = config_dict or kwargs.get('configDict')
 	if config_dict:
 		filler_list.append(ConfigFiller.create_instance('DictConfigFiller', config_dict))
 	filler_list.extend(additional or [])
@@ -134,8 +135,8 @@ class ConfigFactory(object):
 		return result
 
 	def _write_file(self, fn, message=None, **kwargs):
-		fp = SafeFile(fn, 'w')
-		if message is not None:
-			fp.write(message)
-		self._view.write(fp, **kwargs)
-		fp.close()
+		def _write_msg_view(fp):
+			if message is not None:
+				fp.write(message)
+			self._view.write(fp, **kwargs)
+		with_file(SafeFile(fn, 'w'), _write_msg_view)

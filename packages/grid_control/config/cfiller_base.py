@@ -47,7 +47,7 @@ class CompatConfigFiller(ConfigFiller):
 	def __init__(self, persistency_file):
 		self._persistency_dict = {}
 		if os.path.exists(persistency_file):
-			self._persistency_dict = load_dict(persistency_file, ' = ')
+			self._persistency_dict = load_dict(persistency_file, ' = ', fmt_key=str.lower)
 
 	def fill(self, container):
 		def _set_persistent_setting(section, key):
@@ -96,7 +96,7 @@ class FileConfigFiller(ConfigFiller):
 		log = logging.getLogger(('config.%s' % get_file_name(config_fn)).rstrip('.').lower())
 		log.log(logging.INFO1, 'Reading config file %s', config_fn)
 		config_fn = resolve_path(config_fn, search_path_list, exception_type=ConfigError)
-		config_str_list = SafeFile(config_fn).readlines()
+		config_str_list = list(SafeFile(config_fn).iter_close())
 
 		# Single pass, non-recursive list retrieval
 		tmp_content_configfile = {}
@@ -236,11 +236,7 @@ class PythonConfigFiller(DictConfigFiller):
 	def __init__(self, config_fn_list):
 		from grid_control_settings import Settings
 		for config_fn in config_fn_list:
-			fp = SafeFile(config_fn)
-			try:
-				exec_wrapper(fp.read(), {'Settings': Settings})
-			finally:
-				fp.close()
+			exec_wrapper(SafeFile(resolve_path(config_fn, ['.'])).read_close(), {'Settings': Settings})
 		DictConfigFiller.__init__(self, Settings.get_config_dict())
 
 

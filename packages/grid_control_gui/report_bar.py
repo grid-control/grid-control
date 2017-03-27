@@ -12,15 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.job_db import JobClass
-from grid_control.job_selector import ClassSelector
+from grid_control.job_db import Job
 from grid_control.report import ConsoleReport
 
 
 class BasicProgressBar(object):
-	def __init__(self, value_min=0, value_max=100, total_width=16):
+	def __init__(self, value_min=0, value_max=100, total_width=16, value=0):
 		(self._min, self._max, self._width) = (value_min, value_max, total_width)
-		self.update(0)
+		self.update(value)
 
 	def __str__(self):
 		return str(self._bar)
@@ -49,13 +48,10 @@ class BasicProgressBar(object):
 class BarReport(ConsoleReport):
 	alias_list = ['bar']
 
-	def __init__(self, job_db, task, jobs=None, config_str=''):
-		ConsoleReport.__init__(self, job_db, task, jobs, config_str)
+	def __init__(self, config, name, job_db, task=None):
+		ConsoleReport.__init__(self, config, name, job_db, task)
 		self._bar = BasicProgressBar(0, len(job_db), 65)
 
-	def get_height(self):
-		return 1
-
-	def show_report(self, job_db):
-		self._bar.update(len(job_db.get_job_list(ClassSelector(JobClass.SUCCESS))))
-		self._output.info(str(self._bar))
+	def show_report(self, job_db, jobnum_list):
+		self._bar.update(self._get_job_state_dict(job_db, jobnum_list)[Job.SUCCESS])
+		self._show_line(str(self._bar))

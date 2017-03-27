@@ -14,11 +14,13 @@
 # | limitations under the License.
 
 import os, sys, logging
-from gc_scripts import Activity, ClassSelector, ConsoleTable, FileInfo, FileInfoProcessor, JobClass, ScriptOptions, get_cmssw_info, get_script_object_cmdline, iter_jobnum_output_dn, utils  # pylint:disable=line-too-long
+from gc_scripts import Activity, ClassSelector, ConsoleTable, FileInfo, FileInfoProcessor, JobClass, ScriptOptions, get_cmssw_info, get_script_object_cmdline, iter_jobnum_output_dn  # pylint:disable=line-too-long
 from grid_control.datasets import DataSplitter
+from grid_control.utils import wrap_list
+from grid_control.utils.file_objects import SafeFile, with_file
 from grid_control_cms.lumi_tools import format_lumi, merge_lumi_list, parse_lumi_filter
-from hpfwk import clear_current_exception
-from python_compat import imap, irange, lmap, set, sorted
+from hpfwk import NestedException, clear_current_exception, rethrow
+from python_compat import imap, irange, lmap, partial, set, sorted
 
 
 LOG = logging.getLogger('script')
@@ -26,10 +28,8 @@ LOG = logging.getLogger('script')
 
 def convert_lumi_expr(opts, args):
 	# Lumi filter manuipulation
-	try:
-		run_lumi_range_list = parse_lumi_filter(str.join(' ', args))
-	except Exception:
-		raise Exception('Could not parse: %s' % str.join(' ', args))
+	run_lumi_range_list = rethrow(NestedException('Could not parse: %s' % str.join(' ', args)),
+		parse_lumi_filter, str.join(' ', args))
 
 	if opts.gc:
 		write_lumi_gc(run_lumi_range_list)
@@ -47,7 +47,7 @@ def iter_jobs(opts, work_dn, jobnum_list, splitter):
 			sample = fi[0][FileInfo.NameDest].split('.')[0]
 			sample = sample.replace(opts.replace % jobnum, '_')
 		elif splitter is not None:
-			partition = splitter.get_partition(jobnum)
+			partition = splitter.get_partition_checked(jobnum)
 			sample = partition.get(DataSplitter.Nickname, partition.get(DataSplitter.Dataset, ''))
 		else:
 			sample = 'sample'
@@ -82,7 +82,7 @@ def lumi_calc(opts, work_dn, jobnum_list, splitter):
 				title='Sample: %s' % sample)
 		if opts.job_json:
 			json_fn = os.path.join(opts.output_dir or work_dn, 'processed_%s.json' % sample)
-			write_lumi_json(lumi_list, open(json_fn, 'w'))
+			with_file(SafeFile(json_fn, 'w'), partial(write_lumi_json, lumi_list))
 			LOG.info('Saved processed lumi sections in %s', json_fn)
 		if opts.job_gc:
 			LOG.info('\nList of processed lumisections\n' + '-' * 30)
@@ -148,7 +148,7 @@ def write_lumi_ext(run_lumi_range_list, stream=None):
 
 
 def write_lumi_gc(run_lumi_range_list, stream=None):
-	write_any('%s\n' % utils.wrap_list(format_lumi(run_lumi_range_list), 60, ',\n'), stream)
+	write_any('%s\n' % wrap_list(format_lumi(run_lumi_range_list), 60, ',\n'), stream)
 
 
 def write_lumi_json(run_lumi_range_list, stream=None):
