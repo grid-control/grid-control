@@ -125,11 +125,11 @@ class TestsuiteProvider(DataProvider):
 		self._seed_block = dataset_config.pop('seed_block', 1512)
 		random.seed(dataset_config.pop('seed', 0))
 
-		def create_random_list(fmt, num):
+		def _create_rnd_list(fmt, num):
 			return lmap(lambda idx: fmt % md5_hex(repr([random.random(), idx])), irange(num))
-		self._dataset_list = create_random_list('/dataset/DS_%s', dataset_config.pop('datasets_avail', 9))
-		self._dir_list = create_random_list('DIR_%s', dataset_config.pop('directories_avail', 9))
-		self._location_list = create_random_list('SE_%s', dataset_config.pop('locations_avail', 6))
+		self._dataset_list = _create_rnd_list('/dataset/DS_%s', dataset_config.pop('datasets_avail', 9))
+		self._dir_list = _create_rnd_list('DIR_%s', dataset_config.pop('directories_avail', 9))
+		self._location_list = _create_rnd_list('SE_%s', dataset_config.pop('locations_avail', 6))
 		if dataset_config:
 			raise ConfigError('Unknown dataset options %r' % dataset_config)
 
@@ -162,8 +162,8 @@ class TestsuiteGUIFail(GUI):
 
 
 class TestsuiteAbortMonitor(Monitoring):
-	def __init__(self, config, name):
-		Monitoring.__init__(self, config, name)
+	def __init__(self, config, name, task):
+		Monitoring.__init__(self, config, name, task)
 		abort(True)
 
 

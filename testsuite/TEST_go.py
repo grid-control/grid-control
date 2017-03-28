@@ -34,6 +34,8 @@ def check_trigger():
 check_trigger.flag = False
 check_trigger()
 
+os.environ['GC_TERM'] = ''
+
 class Test_Run:
 	"""
 	>>> try_catch(lambda: gc_create_config([]), 'SystemExit')
@@ -86,16 +88,24 @@ class Test_Run:
 	>>> utils.abort(False)
 	False
 
-	>>> os.environ['GC_TERM'] = ''
-	>>> try_catch(lambda: _gc_run(['$GC_PACKAGES_PATH/../docs/examples/Example03_include.conf', '-o', '[global] gui = TestsuiteGUIFail', '-o', '[logging] activity stream = null', '-o', '[global] workdir = gcrun_test1', '-o', '[global] workdir create = True', '-o', '[global] backend = Host']), 'GUIException', 'GUI init exception')
+	>>> args_base = ['$GC_PACKAGES_PATH/../docs/examples/Example03_include.conf', '-o', '[logging] activity stream = null', '-o', '[global] workdir create = True', '-o', '[global] gui = TestsuiteGUIFail', '-o', '[global] backend = Host']
+	>>> try_catch(lambda: _gc_run(args_base + ['-o', '[global] workdir = gcrun_test1']), 'GUIException', 'GUI init exception')
 	caught
 	>>> testfwk_remove_files(['gcrun_test1/*', 'gcrun_test1'])
-	>>> _gc_run(['$GC_PACKAGES_PATH/../docs/examples/Example03_include.conf', '-o', '[global] gui = TestsuiteGUIFail', '-o', '[global] task = TestsuiteAbortTask', '-o', '[logging] activity stream = null', '-o', '[global] workdir = gcrun_test2', '-o', '[global] workdir create = True', '-o', '[global] backend = Host'])
+	>>> utils.abort(False)
+	False
+	>>> _gc_run(args_base + ['-o', '[global] workdir = gcrun_test2', '-o', '[global] task = TestsuiteAbortTask'])
 	>>> testfwk_remove_files(['gcrun_test2/*', 'gcrun_test2'])
-	>>> _gc_run(['$GC_PACKAGES_PATH/../docs/examples/Example03_include.conf', '-o', '[global] gui = TestsuiteGUIFail', '-o', '[global] backend = TestsuiteAbortBackend', '-o', '[logging] activity stream = null', '-o', '[global] workdir = gcrun_test3', '-o', '[global] workdir create = True', '-o', '[global] backend = Host'])
+	>>> utils.abort(False)
+	False
+	>>> _gc_run(args_base + ['-o', '[global] workdir = gcrun_test3', '-o', '[global] backend = TestsuiteAbortBackend'])
 	>>> testfwk_remove_files(['gcrun_test3/*', 'gcrun_test3'])
-	>>> _gc_run(['$GC_PACKAGES_PATH/../docs/examples/Example03_include.conf', '-o', '[global] gui = TestsuiteGUIFail', '-o', '[global] backend = TestsuiteAbortMonitor', '-o', '[logging] activity stream = null', '-o', '[global] workdir = gcrun_test4', '-o', '[global] workdir create = True', '-o', '[global] backend = Host'])
+	>>> utils.abort(False)
+	False
+	>>> _gc_run(args_base + ['-o', '[global] workdir = gcrun_test4', '-o', '[jobs] monitor = TestsuiteAbortMonitor'])
 	>>> testfwk_remove_files(['gcrun_test4/*', 'gcrun_test4'])
+	>>> utils.abort(False)
+	False
 	"""
 
 run_test()

@@ -53,10 +53,10 @@ class Test_LocalProcess:
 	>>> re.sub('cmd = .*sleep,', 'cmd = <sleep cmd>,', repr(p0))
 	"LocalProcess(cmd = <sleep cmd>, args = ['1'], status = 0, stdin log = '', stdout log = '', stderr log = '')"
 
-	>>> sorted(LocalProcess('find', '-name', 'test*.py').get_output(timeout=long_timeout).split())
+	>>> sorted(LocalProcess('find', '.', '-name', 'test*.py').get_output(timeout=long_timeout).split())
 	['./datasets/testResync.py', './parameters/testINC.py', './testDS.py', './testfwk.py', './testfwk_datasets.py']
 
-	>>> p1 = LocalProcess('find', '-name', 'test*.py')
+	>>> p1 = LocalProcess('find', '.', '-name', 'test*.py')
 	>>> sorted(p1.get_output(timeout=long_timeout).splitlines())
 	['./datasets/testResync.py', './parameters/testINC.py', './testDS.py', './testfwk.py', './testfwk_datasets.py']
 
@@ -87,7 +87,7 @@ class Test_LocalProcess:
 	>>> try_catch(lambda: p4.status_raise(timeout=0.5), 'ProcessTimeout', 'Process is still running')
 	caught
 
-	>>> p5 = LocalProcess('/usr/bin/find', '-name', 'test*.py', logging=False)
+	>>> p5 = LocalProcess('/usr/bin/find', '.', '-name', 'test*.py', logging=False)
 	>>> for x in sorted(p5.stdout.iter(timeout=long_timeout)):
 	...   print(x.strip())
 	./datasets/testResync.py
@@ -98,7 +98,7 @@ class Test_LocalProcess:
 	>>> p5.status(timeout=1)
 	0
 	>>> p5
-	LocalProcess(cmd = /usr/bin/find, args = ['-name', 'test*.py'], status = 0)
+	LocalProcess(cmd = /usr/bin/find, args = ['.', '-name', 'test*.py'], status = 0)
 	>>> p5.stdout.read_log()
 	''
 

@@ -154,7 +154,7 @@ for result in config_calls:
 					args_list.append(parg.strip().strip('"').strip("'"))
 
 			if isinstance(value.func, ast.Name):
-				if value.func.id == 'get_handler_option':
+				if value.func.id == '_get_handler_option':
 					return join_config_locations('<name:logger_name>', ['', '<name:handler_name>'], *args_list)
 				elif value.func.id == 'join_config_locations':
 					return join_config_locations(*args_list)

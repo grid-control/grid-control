@@ -5,7 +5,7 @@ from python_compat import any, lfilter, lmap, next, sorted
 def collect_and_sort_onelevel(source_iter, do_print=False):
 	sort_helper = []
 
-	def do_sort(sort_helper):
+	def _do_sort(sort_helper):
 		if sort_helper:
 			cls_tree = {
 				'Exception'.lower(): ['0'],
@@ -37,11 +37,11 @@ def collect_and_sort_onelevel(source_iter, do_print=False):
 			(defclass, src) = value
 			sort_helper.append((defclass, list(collect_and_sort_onelevel(merge(src)))))
 		else:
-			for entry in do_sort(sort_helper):
+			for entry in _do_sort(sort_helper):
 				yield entry
 			sort_helper = []
 			yield value
-	for entry in do_sort(sort_helper):
+	for entry in _do_sort(sort_helper):
 		yield entry
 
 
