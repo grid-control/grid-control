@@ -250,14 +250,14 @@ def _format_frame(frame, code_context, truncate_var_repr):
 	yield 'Stack #%s%02d [%s:%d] %s' % (exception_id,
 		frame['idx'], frame['file'], frame['line'], frame['fun'])
 
-	def get_source_code(line_num):
+	def _get_source_code(line_num):
 		return linecache.getline(frame['file'], line_num).rstrip().replace('\t', '  ')
 	delta_line_num = -code_context
 	while delta_line_num <= code_context:
 		if delta_line_num == 0:
-			yield '\t=>| %s' % get_source_code(frame['line'] + delta_line_num)
+			yield '\t=>| %s' % _get_source_code(frame['line'] + delta_line_num)
 		else:
-			yield '\t  | %s' % get_source_code(frame['line'] + delta_line_num)
+			yield '\t  | %s' % _get_source_code(frame['line'] + delta_line_num)
 		delta_line_num += 1
 	if (truncate_var_repr != -1) and frame['locals']:
 		yield ''

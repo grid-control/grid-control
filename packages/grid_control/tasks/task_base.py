@@ -153,9 +153,9 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		] + self.source.get_job_content(jobnum)[ParameterInfo.REQS]
 
 	def get_sb_in_fpi_list(self):  # Get file path infos for input sandbox
-		def create_fpi(fn):
+		def _create_fpi(fn):
 			return Result(path_abs=fn, path_rel=os.path.basename(fn))
-		return lmap(create_fpi, self._sb_in_fn_list)
+		return lmap(_create_fpi, self._sb_in_fn_list)
 
 	def get_sb_out_fn_list(self):  # Get files for output sandbox
 		return list(self._sb_out_fn_list)
@@ -164,10 +164,10 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		return []
 
 	def get_transient_variables(self):
-		def create_guid():
+		def _create_guid():
 			return str_guid(str.join('', imap(lambda x: "%02x" % x, imap(random.randrange, [256] * 16))))
 		return {'GC_DATE': time.strftime("%F"), 'GC_TIMESTAMP': time.strftime("%s"),
-			'GC_GUID': create_guid(), 'RANDOM': str(random.randrange(0, 900000000))}
+			'GC_GUID': _create_guid(), 'RANDOM': str(random.randrange(0, 900000000))}
 
 	def get_var_alias_map(self):
 		# Transient variables
@@ -186,10 +186,10 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		if jobnum is not None:
 			merged_var_dict.update(self.get_job_dict(jobnum))
 
-		def do_subst(value):
+		def _do_subst(value):
 			return replace_with_dict(value, merged_var_dict,
 				ichain([self.get_var_alias_map().items(), izip(additional_var_dict, additional_var_dict)]))
-		result = do_subst(do_subst(str(inp)))
+		result = _do_subst(_do_subst(str(inp)))
 		if check and self._var_checker.check(result):
 			raise ConfigError('%s references unknown variables: %s' % (name, result))
 		return result

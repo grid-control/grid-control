@@ -82,12 +82,12 @@ class BasicParameterFactory(ParameterFactory):
 		return _create_psrc('RepeatParameterSource', source, self._repeat)
 
 	def _register_psrc(self, pconfig, vn):
-		def replace_nonalnum(value):
+		def _replace_nonalnum(value):
 			if str.isalnum(value):
 				return value
 			return ' '
 		lookup_str = pconfig.get(vn, 'lookup', '')
-		lookup_list = lidfilter(str.join('', imap(replace_nonalnum, lookup_str)).split())
+		lookup_list = lidfilter(str.join('', imap(_replace_nonalnum, lookup_str)).split())
 		for (is_nested, psrc_type, args) in parse_lookup_factory_args(pconfig, [vn], lookup_list):
 			if is_nested:  # switch needs elevation beyond local scope
 				self._psrc_list_nested.append((psrc_type, args))

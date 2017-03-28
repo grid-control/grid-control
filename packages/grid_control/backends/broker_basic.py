@@ -95,12 +95,12 @@ class SimpleBroker(FilterBroker):
 			def _key_fun(item_prop_tuple):
 				item_prop_key, item_prop_value = item_prop_tuple
 
-				def enforce_type(key):
+				def _enforce_type(key):
 					value = item_prop_value.get(key)
 					if value is None:
 						return none_value[item_prop_type_list[key]]
 					return item_prop_type_list[key](value)
-				return (tuple(imap(enforce_type, sorted(item_prop_type_list))), item_prop_key)
+				return (tuple(imap(_enforce_type, sorted(item_prop_type_list))), item_prop_key)
 			self._item_list_sorted = lmap(lambda k_v: k_v[0],
 				sorted(self._item_list_discovered.items(), key=_key_fun))
 

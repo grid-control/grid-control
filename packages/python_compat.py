@@ -107,9 +107,9 @@ def _any(iterable):
 
 
 def _get_listified(fun):
-	def function(*args):
+	def _function(*args):
 		return list(fun(*args))
-	return function
+	return _function
 
 
 def _ichain(iterables):
@@ -147,23 +147,23 @@ def _izip_longest(*args, **kwargs):
 
 
 def _lru_cache(maxsize=128):
-	def decorating_function(user_function):
-		def fun_proxy(*args, **kargs):
+	def _decorating_function(user_function):
+		def _fun_proxy(*args, **kargs):
 			idx = None
-			for (cidx, value) in enumerate(fun_proxy.cache):
+			for (cidx, value) in enumerate(_fun_proxy.cache):
 				if value[0] == (args, kargs):
 					idx = cidx
 			if idx is not None:
-				(_, item) = fun_proxy.cache.pop(idx)
+				(_, item) = _fun_proxy.cache.pop(idx)
 			else:
-				item = fun_proxy.fun(*args, **kargs)
-			fun_proxy.cache.insert(0, ((args, kargs), item))
-			while len(fun_proxy.cache) > maxsize:
-				fun_proxy.cache.pop()
+				item = _fun_proxy.fun(*args, **kargs)
+			_fun_proxy.cache.insert(0, ((args, kargs), item))
+			while len(_fun_proxy.cache) > maxsize:
+				_fun_proxy.cache.pop()
 			return item
-		(fun_proxy.fun, fun_proxy.cache) = (user_function, [])
-		return fun_proxy
-	return decorating_function
+		(_fun_proxy.fun, _fun_proxy.cache) = (user_function, [])
+		return _fun_proxy
+	return _decorating_function
 
 
 def _next(iterable, default=unspecified, *args):

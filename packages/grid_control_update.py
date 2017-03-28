@@ -21,7 +21,7 @@ def update_plugin_files():
 	sys.path.append(base_dir)
 	from hpfwk.hpf_plugin import create_plugin_file
 
-	def select(path):
+	def _select(path):
 		for pat in ['/share', '_compat_', '/requests', '/xmpp']:
 			if pat in path:
 				return False
@@ -32,7 +32,7 @@ def update_plugin_files():
 	for package in package_list:
 		package = os.path.abspath(os.path.join(base_dir, package))
 		if os.path.isdir(package):
-			create_plugin_file(package, select)
+			create_plugin_file(package, _select)
 
 
 if __name__ == '__main__':

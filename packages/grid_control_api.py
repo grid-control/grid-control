@@ -97,7 +97,7 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 				debug_trace_kwargs[key_value.split('=')[0]] = key_value.split('=')[1]
 			DebugInterface().set_trace(**debug_trace_kwargs)
 
-		def set_config_from_opt(section, option, value):
+		def _set_config_from_opt(section, option, value):
 			if value is not None:
 				self._add_entry(container, section, option, str(value), '<cmdline>')  # pylint:disable=no-member
 		cmd_line_config_map = {
@@ -110,13 +110,13 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 		}
 		for section in cmd_line_config_map:
 			for (option, value) in cmd_line_config_map[section].items():
-				set_config_from_opt(section, option, value)
+				_set_config_from_opt(section, option, value)
 		for (logger_name, logger_level) in parse_logging_args(opts.logging):
-			set_config_from_opt('logging', logger_name + ' level', logger_level)
+			_set_config_from_opt('logging', logger_name + ' level', logger_level)
 		if opts.action is not None:
-			set_config_from_opt('workflow', 'action', opts.action.replace(',', ' '))
+			_set_config_from_opt('workflow', 'action', opts.action.replace(',', ' '))
 		if opts.continuous:
-			set_config_from_opt('workflow', 'duration', -1)
+			_set_config_from_opt('workflow', 'duration', -1)
 		if opts.override:
 			Plugin.create_instance('StringConfigFiller', opts.override).fill(container)
 

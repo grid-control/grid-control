@@ -256,7 +256,7 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 			hostname = None
 			logging.getLogger('console').warning('System call to resolve hostname is hanging!')
 
-		def get_default_config_fn_iter():  # return possible default config files
+		def _get_default_config_fn_iter():  # return possible default config files
 			if hostname:  # host / domain specific
 				for part_idx in irange(hostname.count('.') + 1, -1, -1):
 					yield get_path_pkg('../config/%s.conf' % hostname.split('.', part_idx)[-1])
@@ -266,7 +266,7 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 			if os.environ.get('GC_CONFIG'):
 				yield '$GC_CONFIG'  # environment specific
 
-		config_fn_list = list(get_default_config_fn_iter())
+		config_fn_list = list(_get_default_config_fn_iter())
 		log = logging.getLogger('config.sources.default')
 		log.log(logging.DEBUG1, 'Possible default config files: %s', str.join(', ', config_fn_list))
 		config_fn_iter = imap(lambda fn: resolve_path(fn, must_exist=False), config_fn_list)
