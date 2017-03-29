@@ -338,14 +338,14 @@ var_replacer() {
 # Get used space in mb
 getdiskusage() {
 	debug_helper $FUNCNAME "$@"
-	TMPVAR="`du --block-size=m -s $1 | awk '{gsub("M", "", $1); print $1}'`"
+	TMPVAR="`du -m -s $1 | awk '{gsub("M", "", $1); print $1}'`"
 	echo ${TMPVAR:-100000000}
 }
 
 # Get free space in mb
 getdiskspace() {
 	debug_helper $FUNCNAME "$@"
-	TMPVAR="`df --block-size=m -P $1 | awk 'END{gsub("M", "", $4); print $4}'`"
+	TMPVAR="`df -m -P $1 | awk 'END{print $4}'`"
 	echo ${TMPVAR:-0}
 }
 
@@ -500,7 +500,7 @@ url_copy_single_local() {
 	[ ! -f "${1#file://}" ] && return 101
 	mkdir -p `dirname ${2#file://}`
 	[ -f "${2#file://}" ] && return -101
-	cp -b "${1#file://}" "${2#file://}"
+	cp "${1#file://}" "${2#file://}"
 }
 
 url_copy_single_srm() {
