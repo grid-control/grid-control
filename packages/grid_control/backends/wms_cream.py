@@ -83,6 +83,9 @@ class CreamWMS(GridWMS):
 			check_executor=CREAMCheckJobs(config),
 			cancel_executor=ChunkedExecutor(config, 'cancel', cancel_executor))
 
+		self._delegate_exec = resolve_install_path('glite-ce-delegate-proxy')
+		self._use_delegate = config.get_bool('try delegate', True, on_change=None)
+		self._force_delegate = config.get_bool('force delegate', False, on_change=None)
 		self._chunk_size = config.get_int('job chunk size', 10, on_change=None)
 		self._submit_args_dict.update({'-r': self._ce, '--config-vo': self._config_fn})
 		self._output_regex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored' + \
@@ -91,6 +94,37 @@ class CreamWMS(GridWMS):
 		self._use_delegate = False
 		if self._use_delegate is False:
 			self._submit_args_dict['-a'] = ' '
+
+	def submit_jobs(self, jobnum_list, task):
+		if not self._begin_bulk_submission():  # Trying to delegate proxy failed
+			if self._force_delegate:  # User switched on forcing delegation => exception
+				raise BackendError('Unable to delegate proxy!')
+			self._log.error('Unable to delegate proxy! Continue with automatic delegation...')
+			self._submit_args_dict.update({'-a': ' '})
+			self._use_delegate = False
+		for result in GridWMS.submit_jobs(self, jobnum_list, task):
+			yield result
+
+	def _begin_bulk_submission(self):
+		self._submit_args_dict.update({'-d': None})
+		if self._use_delegate is False:
+			self._submit_args_dict.update({'-a': ' '})
+			return True
+		delegate_id = 'GCD' + md5_hex(str(time.time()))[:10]
+		activity = Activity('creating delegate proxy for job submission')
+		delegate_arg_list = []
+		if self._config_fn:
+			delegate_arg_list.extend(['--config', self._config_fn])
+		proc = LocalProcess(self._delegate_exec, '-d', delegate_id,
+			'--noint', '--logfile', '/dev/stderr', *delegate_arg_list)
+		output = proc.get_output(timeout=10, raise_errors=False)
+		if ('glite-wms-job-delegate-proxy Success' in output) and (delegate_id in output):
+			self._submit_args_dict.update({'-d': delegate_id})
+		activity.finish()
+
+		if proc.status(timeout=0, terminate=True) != 0:
+			self._log.log_process(proc)
+		return self._submit_args_dict.get('-d') is not None
 
 	def get_jobs_output_chunk(self, tmp_dn, gc_id_jobnum_list, wms_id_list_done):
 		map_gc_id2jobnum = dict(gc_id_jobnum_list)
