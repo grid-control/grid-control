@@ -124,9 +124,9 @@ class CreamWMS(GridWMS):
 
 	def get_jobs_output_chunk(self, tmp_dn, gc_id_jobnum_list, wms_id_list_done):
 		map_gc_id2jobnum = dict(gc_id_jobnum_list)
-		jobs = str.join(' ', self._iter_wms_ids(gc_id_jobnum_list))
+		jobs = list(self._iter_wms_ids(gc_id_jobnum_list))
 		log = tempfile.mktemp('.log')
-		proc = LocalProcess(self._output_exec, '--noint', '--logfile', log, '--dir', tmp_dn, jobs)
+		proc = LocalProcess(self._output_exec, '--noint', '--logfile', log, '--dir', tmp_dn, *jobs)
 
 		# yield output dirs
 		current_jobnum = None
