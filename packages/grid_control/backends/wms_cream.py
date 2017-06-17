@@ -127,6 +127,7 @@ class CreamWMS(GridWMS):
 		jobs = list(self._iter_wms_ids(gc_id_jobnum_list))
 		log = tempfile.mktemp('.log')
 		proc = LocalProcess(self._output_exec, '--noint', '--logfile', log, '--dir', tmp_dn, *jobs)
+		exit_code = proc.status(timeout=20*len(jobs), terminate=True)
 
 		# yield output dirs
 		current_jobnum = None
@@ -138,7 +139,6 @@ class CreamWMS(GridWMS):
 				wms_id_list_done.append(wms_id)
 				yield (current_jobnum, match.groupdict()['output_dn'])
 				current_jobnum = None
-		exit_code = proc.status(timeout=10, terminate=True)
 
 		if exit_code != 0:
 			if 'Keyboard interrupt raised by user' in proc.stdout.read_log():
