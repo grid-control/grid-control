@@ -102,25 +102,25 @@ class CreamWMS(GridWMS):
 			yield result
 
 	def _begin_bulk_submission(self):
-		self._submit_args_dict.update({'-d': None})
+		self._submit_args_dict.update({'-D': None})
 		if self._use_delegate is False:
 			self._submit_args_dict.update({'-a': ' '})
 			return True
 		delegate_id = 'GCD' + md5_hex(str(time.time()))[:10]
 		activity = Activity('creating delegate proxy for job submission')
-		delegate_arg_list = []
+		delegate_arg_list = ['-e', self._ce[:self._ce.rfind("/")]]
 		if self._config_fn:
 			delegate_arg_list.extend(['--config', self._config_fn])
 		proc = LocalProcess(self._delegate_exec, '-d', delegate_id,
-			'--noint', '--logfile', '/dev/stderr', *delegate_arg_list)
+			'--logfile', '/dev/stderr', *delegate_arg_list)
 		output = proc.get_output(timeout=10, raise_errors=False)
-		if ('glite-wms-job-delegate-proxy Success' in output) and (delegate_id in output):
-			self._submit_args_dict.update({'-d': delegate_id})
+		if ('succesfully delegated to endpoint' in output) and (delegate_id in output):
+			self._submit_args_dict.update({'-D': delegate_id})
 		activity.finish()
 
 		if proc.status(timeout=0, terminate=True) != 0:
 			self._log.log_process(proc)
-		return self._submit_args_dict.get('-d') is not None
+		return self._submit_args_dict.get('-D') is not None
 
 	def get_jobs_output_chunk(self, tmp_dn, gc_id_jobnum_list, wms_id_list_done):
 		map_gc_id2jobnum = dict(gc_id_jobnum_list)
