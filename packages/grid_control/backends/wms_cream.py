@@ -85,7 +85,6 @@ class CreamWMS(GridWMS):
 
 		self._delegate_exec = resolve_install_path('glite-ce-delegate-proxy')
 		self._use_delegate = config.get_bool('try delegate', True, on_change=None)
-		self._force_delegate = config.get_bool('force delegate', False, on_change=None)
 		self._chunk_size = config.get_int('job chunk size', 10, on_change=None)
 		self._submit_args_dict.update({'-r': self._ce, '--config-vo': self._config_fn})
 		self._output_regex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored' + \
@@ -96,8 +95,6 @@ class CreamWMS(GridWMS):
 
 	def submit_jobs(self, jobnum_list, task):
 		if not self._begin_bulk_submission():  # Trying to delegate proxy failed
-			if self._force_delegate:  # User switched on forcing delegation => exception
-				raise BackendError('Unable to delegate proxy!')
 			self._log.error('Unable to delegate proxy! Continue with automatic delegation...')
 			self._submit_args_dict.update({'-a': ' '})
 			self._use_delegate = False
