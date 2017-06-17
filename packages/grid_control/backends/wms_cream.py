@@ -91,7 +91,6 @@ class CreamWMS(GridWMS):
 		self._output_regex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored' + \
 			' in the dir (?P<output_dn>.*)$'
 
-		self._use_delegate = False
 		if self._use_delegate is False:
 			self._submit_args_dict['-a'] = ' '
 
