@@ -19,11 +19,11 @@ from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorA
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
-from grid_control.utils import ensure_dir_exists, filter_dict, remove_files, resolve_install_path, safe_write
+from grid_control.utils import ensure_dir_exists, remove_files, resolve_install_path
 from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import clear_current_exception
-from python_compat import identity, ifilter, imap, irange, md5, md5_hex
+from python_compat import imap, irange, md5, md5_hex
 
 
 class CREAMCancelJobs(CancelJobsWithProcessBlind):
