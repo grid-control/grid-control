@@ -15,7 +15,8 @@
 import os, re, tempfile, time
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
-from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments, unpack_wildcard_tar  # pylint:disable=line-too-long
+from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments
+from grid_control.backends.backend_tools import unpack_wildcard_tar
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
@@ -76,7 +77,9 @@ class CreamWMS(GridWMS):
 	alias_list = ['cream']
 
 	def __init__(self, config, name):
-		cancel_executor = CancelAndPurgeJobs(config, CREAMCancelJobs(config), CREAMPurgeJobs(config))
+		cancel_executor = CancelAndPurgeJobs(
+				config, CREAMCancelJobs(config), CREAMPurgeJobs(config)
+		)
 		GridWMS.__init__(self, config, name,
 			submit_exec=resolve_install_path('glite-ce-job-submit'),
 			output_exec=resolve_install_path('glite-ce-job-output'),
@@ -171,7 +174,9 @@ class CreamWMS(GridWMS):
 		activity = Activity('retrieving %d job outputs' % len(gc_id_jobnum_list))
 		chunk_pos_iter = irange(0, len(gc_id_jobnum_list), self._chunk_size)
 		for ids in imap(lambda x: gc_id_jobnum_list[x:x + self._chunk_size], chunk_pos_iter):
-			for (current_jobnum, output_dn) in self.get_jobs_output_chunk(tmp_dn, ids, wms_id_list_done):
+			for (current_jobnum, output_dn) in self.get_jobs_output_chunk(
+					tmp_dn, ids, wms_id_list_done
+			):
 				unpack_wildcard_tar(self._log, output_dn)
 				jobnum_list_todo.remove(current_jobnum)
 				yield (current_jobnum, output_dn)
