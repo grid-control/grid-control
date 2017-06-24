@@ -214,13 +214,16 @@ class GitParameterParser(ParameterParser):
 	alias_list = ['git']
 
 	def parse_value(self, pconfig, varexpr, vn, value):
+		version = pconfig.get(vn + ' version', default=self._get_version(value), persistent=True)
+		return [version]
+
+	def _get_version(self, value):
 		old_wd = os.getcwd()
 		os.chdir(clean_path(value))
 		git_proc = LocalProcess('git', 'rev-parse', '--short', 'HEAD')
 		version = git_proc.get_output(timeout=10, raise_errors=False)
 		os.chdir(old_wd)
-		version = pconfig.get(vn + ' version', default=version.strip() or 'undefined', persistent=True)
-		return [version]
+		return version.strip() or 'undefined'
 
 
 class LinesParameterParser(ParameterParser):
@@ -249,13 +252,16 @@ class SvnParameterParser(ParameterParser):
 	alias_list = ['svn']
 
 	def parse_value(self, pconfig, varexpr, vn, value):
+		version = pconfig.get(vn + ' version', default=self._get_version(value), persistent=True)
+		return [version]
+
+	def _get_version(self, value):
 		svn_proc = LocalProcess('svnversion', clean_path(value))
 		version = svn_proc.get_output(timeout=10, raise_errors=False).strip().lower()
 		# different SVN versions yield different output for unversioned directories:
 		if ('exported' in version) or ('unversioned' in version):
 			version = None
-		version = pconfig.get(vn + ' version', default=version or 'undefined', persistent=True)
-		return [version]
+		return version or 'undefined'
 
 
 class VerbatimParameterParser(ParameterParser):
