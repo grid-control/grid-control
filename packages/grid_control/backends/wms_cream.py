@@ -12,10 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, re, tempfile
+import os, re, tempfile, time
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
-from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments, unpack_wildcard_tar  # pylint:disable=line-too-long
+from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments
+from grid_control.backends.backend_tools import unpack_wildcard_tar
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
@@ -23,7 +24,7 @@ from grid_control.utils import ensure_dir_exists, remove_files, resolve_install_
 from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import clear_current_exception
-from python_compat import imap, irange, md5
+from python_compat import imap, irange, md5, md5_hex
 
 
 class CREAMCancelJobs(CancelJobsWithProcessBlind):
@@ -76,27 +77,60 @@ class CreamWMS(GridWMS):
 	alias_list = ['cream']
 
 	def __init__(self, config, name):
-		cancel_executor = CancelAndPurgeJobs(config, CREAMCancelJobs(config), CREAMPurgeJobs(config))
+		cancel_executor = CancelAndPurgeJobs(
+				config, CREAMCancelJobs(config), CREAMPurgeJobs(config)
+		)
 		GridWMS.__init__(self, config, name,
 			submit_exec=resolve_install_path('glite-ce-job-submit'),
 			output_exec=resolve_install_path('glite-ce-job-output'),
 			check_executor=CREAMCheckJobs(config),
 			cancel_executor=ChunkedExecutor(config, 'cancel', cancel_executor))
 
+		self._delegate_exec = resolve_install_path('glite-ce-delegate-proxy')
+		self._use_delegate = config.get_bool('try delegate', True, on_change=None)
 		self._chunk_size = config.get_int('job chunk size', 10, on_change=None)
 		self._submit_args_dict.update({'-r': self._ce, '--config-vo': self._config_fn})
 		self._output_regex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored' + \
 			' in the dir (?P<output_dn>.*)$'
 
-		self._use_delegate = False
 		if self._use_delegate is False:
 			self._submit_args_dict['-a'] = ' '
 
+	def submit_jobs(self, jobnum_list, task):
+		if not self._begin_bulk_submission():  # Trying to delegate proxy failed
+			self._log.error('Unable to delegate proxy! Continue with automatic delegation...')
+			self._submit_args_dict.update({'-a': ' '})
+			self._use_delegate = False
+		for result in GridWMS.submit_jobs(self, jobnum_list, task):
+			yield result
+
+	def _begin_bulk_submission(self):
+		self._submit_args_dict.update({'-D': None})
+		if self._use_delegate is False:
+			self._submit_args_dict.update({'-a': ' '})
+			return True
+		delegate_id = 'GCD' + md5_hex(str(time.time()))[:10]
+		activity = Activity('creating delegate proxy for job submission')
+		delegate_arg_list = ['-e', self._ce[:self._ce.rfind("/")]]
+		if self._config_fn:
+			delegate_arg_list.extend(['--config', self._config_fn])
+		proc = LocalProcess(self._delegate_exec, '-d', delegate_id,
+			'--logfile', '/dev/stderr', *delegate_arg_list)
+		output = proc.get_output(timeout=10, raise_errors=False)
+		if ('succesfully delegated to endpoint' in output) and (delegate_id in output):
+			self._submit_args_dict.update({'-D': delegate_id})
+		activity.finish()
+
+		if proc.status(timeout=0, terminate=True) != 0:
+			self._log.log_process(proc)
+		return self._submit_args_dict.get('-D') is not None
+
 	def get_jobs_output_chunk(self, tmp_dn, gc_id_jobnum_list, wms_id_list_done):
 		map_gc_id2jobnum = dict(gc_id_jobnum_list)
-		jobs = str.join(' ', self._iter_wms_ids(gc_id_jobnum_list))
+		jobs = list(self._iter_wms_ids(gc_id_jobnum_list))
 		log = tempfile.mktemp('.log')
-		proc = LocalProcess(self._output_exec, '--noint', '--logfile', log, '--dir', tmp_dn, jobs)
+		proc = LocalProcess(self._output_exec, '--noint', '--logfile', log, '--dir', tmp_dn, *jobs)
+		exit_code = proc.status(timeout=20 * len(jobs), terminate=True)
 
 		# yield output dirs
 		current_jobnum = None
@@ -108,7 +142,6 @@ class CreamWMS(GridWMS):
 				wms_id_list_done.append(wms_id)
 				yield (current_jobnum, match.groupdict()['output_dn'])
 				current_jobnum = None
-		exit_code = proc.status(timeout=10, terminate=True)
 
 		if exit_code != 0:
 			if 'Keyboard interrupt raised by user' in proc.stdout.read_log():
@@ -141,7 +174,9 @@ class CreamWMS(GridWMS):
 		activity = Activity('retrieving %d job outputs' % len(gc_id_jobnum_list))
 		chunk_pos_iter = irange(0, len(gc_id_jobnum_list), self._chunk_size)
 		for ids in imap(lambda x: gc_id_jobnum_list[x:x + self._chunk_size], chunk_pos_iter):
-			for (current_jobnum, output_dn) in self.get_jobs_output_chunk(tmp_dn, ids, wms_id_list_done):
+			for (current_jobnum, output_dn) in self.get_jobs_output_chunk(
+					tmp_dn, ids, wms_id_list_done
+			):
 				unpack_wildcard_tar(self._log, output_dn)
 				jobnum_list_todo.remove(current_jobnum)
 				yield (current_jobnum, output_dn)
