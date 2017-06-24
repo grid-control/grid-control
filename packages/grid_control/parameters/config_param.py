@@ -219,7 +219,8 @@ class GitParameterParser(ParameterParser):
 		git_proc = LocalProcess('git', 'rev-parse', '--short', 'HEAD')
 		version = git_proc.get_output(timeout=10, raise_errors=False)
 		os.chdir(old_wd)
-		return [version.strip() or 'undefined']
+		version = pconfig.get(vn + ' version', default=version.strip() or 'undefined', persistent=True)
+		return [version]
 
 
 class LinesParameterParser(ParameterParser):
@@ -253,7 +254,8 @@ class SvnParameterParser(ParameterParser):
 		# different SVN versions yield different output for unversioned directories:
 		if ('exported' in version) or ('unversioned' in version):
 			version = None
-		return [version or 'undefined']
+		version = pconfig.get(vn + ' version', default=version or 'undefined', persistent=True)
+		return [version]
 
 
 class VerbatimParameterParser(ParameterParser):
