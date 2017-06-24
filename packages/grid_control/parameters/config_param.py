@@ -70,9 +70,9 @@ class ParameterConfig(object):
 		option_list = config.get_option_list()
 		(self._map_vn2varexpr, self._map_varexpr_suffix2opt) = _parse_parameter_option_list(option_list)
 
-	def get(self, varexpr, suffix=None, default=unspecified):
+	def get(self, varexpr, suffix=None, default=unspecified, **kwargs):
 		return self._config.get(self._get_var_opt(varexpr, suffix), default,
-			on_change=self._on_change)
+			on_change=self._on_change, **kwargs)
 
 	def get_bool(self, varexpr, suffix=None, default=unspecified):  # needed for Matcher configuration
 		return self._config.get_bool(self._get_var_opt(varexpr, suffix), default,
