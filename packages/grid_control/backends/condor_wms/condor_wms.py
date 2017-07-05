@@ -19,7 +19,10 @@ from grid_control.backends.aspect_cancel import CancelAndPurgeJobs
 from grid_control.backends.aspect_status import CheckJobsMissingState
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
-from grid_control.backends.wms import BackendError, BasicWMS, WMS
+from grid_control.backends.wms import BackendError, WMS
+from grid_control.backends.wms_basic import BasicWMS
+from grid_control.backends.wms_condor import CondorCancelJobs, CondorCheckJobs
+from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
 from grid_control.utils import Result, ensure_dir_exists, get_path_share, remove_files, resolve_install_path, safe_write, split_blackwhite_list  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
@@ -58,13 +61,14 @@ class CondorJDLWriter(object):
 
 
 class Condor(BasicWMS):
+	alias_list = ['']
 	config_section_list = BasicWMS.config_section_list + ['condor']
 
 	def __init__(self, config, name):
 		self._sandbox_helper = SandboxHelper(config)
 		self._error_log_fn = config.get_work_path('error.tar')
 		cancel_executor = CancelAndPurgeJobs(config, CondorCancelJobs(config),
-				LocalPurgeJobs(config, self._sandbox_helper))
+			LocalPurgeJobs(config, self._sandbox_helper))
 		BasicWMS.__init__(self, config, name,
 			check_executor=CheckJobsMissingState(config, CondorCheckJobs(config)),
 			cancel_executor=cancel_executor)
@@ -81,7 +85,7 @@ class Condor(BasicWMS):
 		self._remote_type = config.get_enum('remote Type', PoolType, PoolType.LOCAL)
 		self._init_pool_interface(config)
 		# Sandbox base path where individual job data is stored, staged and returned to
-		self._sandbox_dn = config.get_path('sandbox path',
+		self._sandbox_dn = config.get_dn('sandbox path',
 			config.get_work_path('sandbox'), must_exist=False)
 		# broker for selecting sites - FIXME: this looks wrong... pool != site
 		self._pool_host_list = config.get_list(['poolhostlist', 'pool host list'], [])
@@ -124,7 +128,7 @@ class Condor(BasicWMS):
 							return
 						cleanup_proc.log_error(self._error_log_fn)
 						raise BackendError('Cleanup process %s returned: %s' % (
-							cleanup_proc.cmd, cleanup_proc.get_message()))
+							cleanup_proc.cmd, cleanup_proc.get_msg()))
 			except Exception:
 				self._log.warning('There might be some junk data left in: %s @ %s',
 					self._get_remote_output_dn(), self._proc_factory.get_domain())
@@ -205,11 +209,10 @@ class Condor(BasicWMS):
 		return jdl_req_str_list
 
 	def _get_jdl_str_list(self, jobnum_list, task):
-		(script_cmd, sb_in_fn_list) = self._get_script_and_fn_list(task)
 		# header for all jobs
 		jdl_str_list = [
 			'Universe = ' + self._universe,
-			'Executable = ' + script_cmd,
+			'Executable = ' + self._get_script(task),
 		]
 		jdl_str_list.extend(self._jdl_writer.get_jdl())
 		jdl_str_list.extend([
@@ -240,6 +243,7 @@ class Condor(BasicWMS):
 
 		# job specific data
 		for jobnum in jobnum_list:
+			sb_in_fn_list = self._get_sb_fn_list(jobnum, task)
 			jdl_str_list.extend(self._get_jdl_str_list_job(jobnum, task, sb_in_fn_list))
 
 		# combine JDL and add line breaks
@@ -247,10 +251,7 @@ class Condor(BasicWMS):
 
 	def _get_jdl_str_list_job(self, jobnum, task, sb_in_fn_list):
 		workdir = self._get_remote_output_dn(jobnum)
-		sb_out_fn_list = []
-		for (_, src, target) in self._get_out_transfer_info_list(task):
-			if src not in ('gc.stdout', 'gc.stderr'):
-				sb_out_fn_list.append(target)
+		sb_out_fn_list = ['job.info'] + task.get_sb_out_fn_list()
 		job_sb_in_fn_list = sb_in_fn_list + [os.path.join(workdir, 'job_%d.var' % jobnum)]
 		jdl_str_list = [
 			# store matching Grid-Control and Condor ID
@@ -321,26 +322,30 @@ class Condor(BasicWMS):
 		sandpath = os.path.join(self._sandbox_dn, str(jobnum), '')
 		return ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
 
-	def _get_script_and_fn_list(self, task):
+	def _get_sb_fn_list(self, jobnum, task):
 		# resolve file paths for different pool types
 		# handle gc executable separately
-		(script_cmd, sb_in_fn_list) = ('', [])
+		sb_in_fn_list = []
+		sb_in_fi_list_raw = self._get_sandbox_input_fn_list(jobnum, task)
 		if self._remote_type in (PoolType.SSH, PoolType.GSISSH):
-			for target in imap(lambda d_s_t: d_s_t[2], self._get_in_transfer_info_list(task)):
-				if 'gc-run.sh' in target:
-					script_cmd = os.path.join(self._get_remote_output_dn(), target)
-				else:
+			for target in imap(lambda d_s_t: d_s_t[2], sb_in_fi_list_raw):
+				if 'gc-run.sh' not in target:
 					sb_in_fn_list.append(os.path.join(self._get_remote_output_dn(), target))
 		else:
-			for source in imap(lambda d_s_t: d_s_t[1], self._get_in_transfer_info_list(task)):
-				if 'gc-run.sh' in source:
-					script_cmd = source
-				else:
+			for source in imap(lambda d_s_t: d_s_t[1], sb_in_fi_list_raw):
+				if 'gc-run.sh' not in source:
 					sb_in_fn_list.append(source)
 		if self._universe.lower() == 'docker':
-			script_cmd = './gc-run.sh'
 			sb_in_fn_list.append(get_path_share('gc-run.sh'))
-		return (script_cmd, sb_in_fn_list)
+		return sb_in_fn_list
+
+	def _get_script(self, task):
+		if self._universe.lower() == 'docker':
+			return './gc-run.sh'
+		elif self._remote_type in (PoolType.SSH, PoolType.GSISSH):
+			return os.path.join(self._get_remote_output_dn(), 'gc-run.sh')
+		else:
+			return get_path_share('gc-run.sh')
 
 	def _init_pool_interface(self, config):
 		# prepare commands and interfaces according to selected submit type
@@ -453,12 +458,12 @@ class Condor(BasicWMS):
 		if self._remote_type in (PoolType.SSH, PoolType.GSISSH):
 			activity_remote = Activity('preparing remote scheduler')
 			remote_output_dn = self._get_remote_output_dn()
-			# TODO: check whether shared remote files already exist and copy otherwise
-			for _, source_fn, target_fn in self._get_in_transfer_info_list(task):
-				self._check_and_log_proc(self._proc_factory.logged_copy_to_remote(source_fn,
-					os.path.join(remote_output_dn, target_fn)))
 			# copy job config files
 			for jobnum in jobnum_list:
+				# TODO: check whether shared remote files already exist and copy otherwise
+				for _, source_fn, target_fn in self._get_sandbox_input_fn_list(jobnum, task):
+					self._check_and_log_proc(self._proc_factory.logged_copy_to_remote(source_fn,
+						os.path.join(remote_output_dn, target_fn)))
 				self._check_and_log_proc(self._proc_factory.logged_copy_to_remote(
 					os.path.join(self._get_sandbox_dn(jobnum), 'job_%d.var' % jobnum),
 					os.path.join(self._get_remote_output_dn(jobnum), 'job_%d.var' % jobnum)))

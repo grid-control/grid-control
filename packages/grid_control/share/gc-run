@@ -1,0 +1,247 @@
+#!/bin/bash
+# | Copyright 2008-2017 Karlsruhe Institute of Technology
+# |
+# | Licensed under the Apache License, Version 2.0 (the "License");
+# | you may not use this file except in compliance with the License.
+# | You may obtain a copy of the License at
+# |
+# |     http://www.apache.org/licenses/LICENSE-2.0
+# |
+# | Unless required by applicable law or agreed to in writing, software
+# | distributed under the License is distributed on an "AS IS" BASIS,
+# | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# | See the License for the specific language governing permissions and
+# | limitations under the License.
+
+# Source: github.com/grid-control
+
+export GC_JOB_ID="$1"
+(
+	echo "JOBID=$GC_JOB_ID"
+	echo "RESULT=killed_by_wms"
+	echo "EXITCODE=107"
+) > "$GC_LANDINGZONE/job.info"
+export GC_DOCLEANUP="true"
+export GC_LANDINGZONE="$(pwd)"
+export GC_MARKER="$GC_LANDINGZONE/RUNNING.$$"
+export GC_FAIL_MARKER="$GC_LANDINGZONE/GCFAIL"
+export LC_ALL="C"
+source ./gc-run.lib || exit 101 # shellcheck source=/dev/null
+export GC_SCRATCH="$(getscratch)"
+export MY_JOBID="$GC_JOB_ID" # legacy script support
+shift
+gc_trap
+set +f
+
+# Print job informations
+"$GC_LANDINGZONE/gc-machine-info"
+export STARTDATE=$(date +%s)
+
+echo "==========================="
+timestamp "WRAPPER" "START"
+
+checkvar GC_JOB_ID
+checkvar GC_LANDINGZONE
+checkvar GC_SCRATCH
+echo "Environment variables:"
+export | display_short
+echo "Directory contents:"
+checkdir "Start directory" "$GC_LANDINGZONE" | display_short
+checkdir "Scratch directory" "$GC_SCRATCH" | display_short
+
+echo "==========================="
+timestamp "DEPLOYMENT" "START"
+
+gc_check_file_exists "$GC_LANDINGZONE/gc-sandbox.tar.gz"
+echo "Unpacking basic job configuration"
+tar xvfz "$GC_LANDINGZONE/gc-sandbox.tar.gz" -C "$GC_SCRATCH" _config.sh || fail 105
+gc_check_file_exists "$GC_SCRATCH/_config.sh"
+source "$GC_SCRATCH/_config.sh"
+GC_SEED_IDX="0"
+for GC_SEED_START in $SEEDS; do
+	eval "export SEED_$GC_SEED_IDX=$(expr "$GC_SEED_START" + "$GC_JOB_ID")"
+	GC_SEED_IDX="$(expr "$GC_SEED_IDX" + 1)"
+done
+
+# Monitor space usage
+echo $$ > $GC_MARKER
+GC_BACKGROUND_PIDS="$("$GC_LANDINGZONE/gc-monitor-diskspace" "$GC_LANDINGZONE" "$GC_LANDINGZONE/_gc_dm_lz.conf" "$GC_SCRATCH" "$GC_LANDINGZONE/_gc_dm_scratch.conf")"
+
+echo "Unpacking environment"
+tar xfz "$GC_LANDINGZONE/gc-sandbox.tar.gz" -C "$GC_SCRATCH" || fail 105
+gc_check_file_exists "$GC_LANDINGZONE/job_${GC_JOB_ID}.var"
+cat "$GC_LANDINGZONE/job_${GC_JOB_ID}.var" >> "$GC_SCRATCH/_config.sh"
+source "$GC_SCRATCH/_config.sh" # shellcheck source=/dev/null
+
+echo "Prepare variable substitution"
+gc_check_file_exists "$GC_SCRATCH/_gc_varmap.dat"
+echo "@DATE@: Variable substitution in task @GC_TASK_ID@" | var_replacer
+gc_check_file_exists "$GC_SCRATCH/_gc_replace.awk"
+cat "$GC_SCRATCH/_gc_replace.awk" | display_short
+
+# Job timeout (for debugging)
+if [ ${GC_JOBTIMEOUT:-1} -gt 0 ]; then
+(
+	sleep ${GC_JOBTIMEOUT} &&
+	echo "===! Timeout after ${GC_JOBTIMEOUT} sec !===" 1>&2 &&
+	gc_update_job_info 123 &&
+	kill -1 $$
+) &
+GC_BACKGROUND_PIDS="$! $GC_BACKGROUND_PIDS"
+echo "Started job timeout process"
+fi
+echo
+
+# Setup dependencies
+if [ -n "$GC_DEPFILES" ]; then
+	echo "==========================="
+	for DEPFILE in $GC_DEPFILES; do
+		gc_check_file_exists "$GC_SCRATCH/env.$DEPFILE.sh"
+		source "$GC_SCRATCH/env.$DEPFILE.sh" # shellcheck source=/dev/null
+	done
+fi
+
+# Notify monitoring about job start
+if [ -n "$GC_MONITORING" ]; then
+	echo "==========================="
+	my_move "$GC_SCRATCH" "$GC_LANDINGZONE" "$GC_MONITORING"
+	echo
+	for MON_APP in $GC_MONITORING; do
+		gc_check_file_exists "$GC_LANDINGZONE/$MON_APP"
+		source "$GC_LANDINGZONE/$MON_APP" "start" # shellcheck source=/dev/null
+	done
+fi
+
+timestamp "DEPLOYMENT" "DONE"
+echo "==========================="
+
+# Do variable substitutions
+cd "$GC_SCRATCH"
+for SFILE in $SUBST_FILES "$GC_SCRATCH/_config.sh" "$GC_SCRATCH/_gc_se_output.conf" "$GC_SCRATCH/_gc_se_input.conf"; do
+	echo "Substituting variables in file: $SFILE"
+	var_replacer < "$SFILE" | tee "$SFILE.tmp" | display_short
+	[ -f "$SFILE.tmp" ] && cat "$SFILE.tmp" > "$SFILE"
+	[ -f "$SFILE.tmp" ] && rm "$SFILE.tmp"
+done
+cd "$GC_LANDINGZONE"
+gc_check_file_exists "$GC_SCRATCH/_config.sh"
+source "$GC_SCRATCH/_config.sh"
+
+# Copy files from the SE
+gc_log_time "SE_IN" "$GC_LANDINGZONE/gc-storage-wrapper" "$GC_LANDINGZONE" "$GC_SCRATCH" "$GC_SCRATCH/_gc_se_input.conf"
+
+# If SRM path to dataset files given, copy them to working directory
+gc_transfer_data_in()
+{
+	echo "Copy dataset files via SRM"
+	for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
+		"$GC_LANDINGZONE/gc-storage-tool" copy "$DATASET_SRM_FILE" "file:///$GC_SCRATCH/$(basename $DATASET_SRM_FILE)"
+	done
+	echo
+}
+test -n "$DATASET_SRM_FILES" && gc_log_time "DATA_IN" gc_transfer_data_in
+
+echo
+echo "==========================="
+echo
+checkdir "Start directory" "$GC_LANDINGZONE"
+checkdir "Scratch directory" "$GC_SCRATCH"
+
+# Execute program
+echo "==========================="
+echo
+
+echo "==========================="
+timestamp "EXECUTION" "START"
+cd "$GC_SCRATCH"
+echo "${GC_RUNTIME/\$@/$GC_ARGS}" > $GC_LANDINGZONE/_runtime.sh
+export GC_RUNTIME="$(var_replacer < "$GC_LANDINGZONE/_runtime.sh")"
+checkvar GC_RUNTIME
+eval "$GC_RUNTIME" &
+GC_PROCESS_ID=$!
+echo "Process $GC_PROCESS_ID is running..."
+echo $GC_PROCESS_ID > $GC_MARKER
+wait $GC_PROCESS_ID
+GC_PROCESS_CODE=$?
+echo $$ > $GC_MARKER
+zip_files "$SB_OUTPUT_FILES"
+cd "$GC_LANDINGZONE"
+timestamp "EXECUTION" "DONE"
+echo "==========================="
+
+checkdir "Start directory" "$GC_LANDINGZONE" | display_short
+[ -d "$GC_SCRATCH" ] && checkdir "Scratch directory" "$GC_SCRATCH" | display_short
+
+if [ -d "$GC_SCRATCH" -a -n "$SB_OUTPUT_FILES" ]; then
+	echo "==========================="
+	# Move output into landingzone
+	my_move "$GC_SCRATCH" "$GC_LANDINGZONE" "$SB_OUTPUT_FILES"
+fi
+
+# Remove dataset files copied via SRM, if copied together with se output files to scratch directory:
+if [ -d "$GC_SCRATCH" -a -n "$DATASET_SRM_FILES" ]; then
+	echo "==========================="
+	cd "$GC_SCRATCH"
+	for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
+		if [ -f "$(basename $DATASET_SRM_FILE)" ] ; then
+			echo "Removing $(basename $DATASET_SRM_FILE)"
+			rm "$(basename $DATASET_SRM_FILE)"
+		fi
+	done
+	cd "$GC_LANDINGZONE"
+	checkdir "Scratch directory" "$GC_SCRATCH"
+fi
+
+# Copy files to the SE
+export GC_TRANSFER_LOG="$GC_LANDINGZONE/_gc_se_out.log"
+if [ $GC_PROCESS_CODE -eq 0 -a -n "$SE_OUTPUT_FILES" ]; then
+	gc_log_time "SE_OUT" "$GC_LANDINGZONE/gc-storage-wrapper" "$GC_LANDINGZONE" "$GC_SCRATCH" "$GC_SCRATCH/_gc_se_output.conf" 2>&1 > "$GC_TRANSFER_LOG"
+fi
+
+# Emulate grid wildcard support
+if [ -n "$GC_WC" ]; then
+	echo "==========================="
+	echo
+	echo "Fake grid wildcard support"
+	GC_WCFILES=$(for X in $GC_WC; do echo $X; done | sort | uniq)
+	[ -n "$GC_WCFILES" ] && tar czvf "GC_WC.tar.gz" $GC_WCFILES
+	echo
+fi
+
+echo "==========================="
+echo
+checkdir "Start directory" "$GC_LANDINGZONE"
+[ -d "$GC_SCRATCH" ] && checkdir "Scratch directory" "$GC_SCRATCH"
+
+# Notify monitoring about job stop
+export GC_WRAPTIME="$[ $(date +%s) - $STARTDATE ]"
+if [ -n "$GC_MONITORING" ]; then
+	echo "==========================="
+	echo
+	times > "$GC_LANDINGZONE/cputime"
+	GC_CPUTIMEPARSER='{gsub("s","m"); split($1,x,"m"); SUM+=x[1]*60+x[2]}END{printf "%.0f\n", SUM}'
+	export GC_CPUTIME="$(cat "$GC_LANDINGZONE/cputime" | awk "$GC_CPUTIMEPARSER")"
+
+	for MON_APP in $GC_MONITORING; do
+		gc_check_file_exists "$GC_LANDINGZONE/$MON_APP"
+		source "$GC_LANDINGZONE/$MON_APP" "stop"
+	done
+	echo
+fi
+
+cleanup
+gc_untrap
+kill -15 $GC_BACKGROUND_PIDS # kill running background jobs
+if [ ! -f $GC_FAIL_MARKER ]; then # only write job exit code if nothing failed
+	echo "Process $GC_PROCESS_ID exit code: $GC_PROCESS_CODE"
+	gc_update_job_info $GC_PROCESS_CODE
+fi
+
+echo "==========================="
+timestamp "WRAPPER" "DONE"
+echo "Job $GC_JOB_ID finished - $(date)"
+echo "TIME=$GC_WRAPTIME" >> $GC_LANDINGZONE/job.info
+[ -f "$GC_TRANSFER_LOG" ] && cat "$GC_TRANSFER_LOG" >> $GC_LANDINGZONE/job.info
+cat $GC_LANDINGZONE/job.info
+
+exit $GC_PROCESS_CODE

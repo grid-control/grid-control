@@ -18,7 +18,8 @@ from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ProcessCreatorViaStdin, unpack_wildcard_tar
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.jdl_writer import JDLWriter
-from grid_control.backends.wms import BackendError, BasicWMS, WMS
+from grid_control.backends.wms import BackendError, WMS
+from grid_control.backends.wms_basic import BasicWMS
 from grid_control.job_db import Job
 from grid_control.utils import ensure_dir_exists, remove_files, resolve_install_path, safe_write
 from grid_control.utils.activity import Activity
@@ -32,7 +33,7 @@ from python_compat import identity, ifilter, imap, lfilter, lmap, md5_hex, parse
 
 class GridWMS(BasicWMS):
 	config_section_list = BasicWMS.config_section_list + ['grid']
-	grid_status_map = {  # FIXME: mismatch between CheckJobs API and GliteWMSDirect usage!
+	grid_status_map = {
 		Job.ABORTED: ['aborted', 'cancelled', 'cleared', 'failed'],
 		Job.DONE: ['done'],
 		Job.QUEUED: ['scheduled', 'queued'],
@@ -56,7 +57,7 @@ class GridWMS(BasicWMS):
 		self._submit_args_dict = {}
 		self._output_exec = output_exec
 		self._ce = config.get('ce', '', on_change=None)
-		self._config_fn = config.get_path('config', '', on_change=None)
+		self._config_fn = config.get_fn('config', '', on_change=None)
 		self._sb_warn_size = config.get_int('warn sb size', 5, on_change=None)
 		self._job_dn = config.get_work_path('jobs')
 		self._jdl_writer = jdl_writer or JDLWriter()
@@ -65,6 +66,13 @@ class GridWMS(BasicWMS):
 		if 'Keyboard interrupt raised by user' in proc.stderr.read_log():
 			return True
 		return False
+
+	def _get_job_env(self, jobnum, task):
+		job_env_dict = BasicWMS._get_job_env(self, jobnum, task)
+		wildcard_sb_out_fn_list = lfilter(lambda fn: '*' in fn, task.get_sb_out_fn_list())
+		if wildcard_sb_out_fn_list:
+			job_env_dict['GC_WC'] = str.join(' ', wildcard_sb_out_fn_list)
+		return job_env_dict
 
 	def _get_jobs_output(self, gc_id_jobnum_list):
 		# Get output of jobs and yield output dirs
@@ -83,11 +91,15 @@ class GridWMS(BasicWMS):
 			raise BackendError('Temporary path "%s" could not be created.' % tmp_dn, BackendError)
 
 		map_gc_id2jobnum = dict(gc_id_jobnum_list)
-		jobs = self._write_wms_id_list(gc_id_jobnum_list)
+		try:
+			job_fd, job_fn = tempfile.mkstemp('.jobids')
+			safe_write(os.fdopen(job_fd, 'w'), str.join('\n', self._iter_wms_ids(gc_id_jobnum_list)))
+		except Exception:
+			raise BackendError('Could not write wms ids to %s.' % job_fn)
 
 		activity = Activity('retrieving %d job outputs' % len(gc_id_jobnum_list))
 		proc = LocalProcess(self._output_exec, '--noint',
-			'--logfile', '/dev/stderr', '-i', jobs, '--dir', tmp_dn)
+			'--logfile', '/dev/stderr', '-i', job_fn, '--dir', tmp_dn)
 
 		# yield output dirs
 		todo = map_gc_id2jobnum.values()
@@ -106,10 +118,10 @@ class GridWMS(BasicWMS):
 
 		if exit_code != 0:
 			if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout=0):
-				remove_files([jobs, root_dn])
+				remove_files([job_fn, root_dn])
 				raise StopIteration
 			else:
-				self._log.log_process(proc, files={'jobs': SafeFile(jobs).read()})
+				self._log.log_process(proc, files={'jobs': SafeFile(job_fn).read_close()})
 			self._log.error('Trying to recover from error ...')
 			for dn in os.listdir(root_dn):
 				yield (None, os.path.join(root_dn, dn))
@@ -118,57 +130,50 @@ class GridWMS(BasicWMS):
 		for jobnum in todo:
 			yield (jobnum, None)
 
-		remove_files([jobs, tmp_dn])
+		remove_files([job_fn, tmp_dn])
+
+	def _get_sandbox_output_fn_list(self, jobnum, task):
+		fn_list = BasicWMS._get_sandbox_output_fn_list(self, jobnum, task)
+		fn_list_new = lfilter(lambda fn: '*' not in fn, fn_list)
+		if len(fn_list) != len(fn_list_new):
+			fn_list_new.append('GC_WC.tar.gz')
+		return fn_list_new
 
 	def _get_site_list(self):
 		return None
 
-	def _make_jdl(self, jobnum, task):
-		job_config_fn = os.path.join(self._job_dn, 'job_%d.var' % jobnum)
-		sb_in_src_list = lmap(lambda d_s_t: d_s_t[1], self._get_in_transfer_info_list(task))
-		sb_out_target_list = lmap(lambda d_s_t: d_s_t[2], self._get_out_transfer_info_list(task))
-		wildcard_list = lfilter(lambda x: '*' in x, sb_out_target_list)
-		if len(wildcard_list):
-			self._write_job_config(job_config_fn, jobnum, task, {'GC_WC': str.join(' ', wildcard_list)})
-			sb_out_fn_list = lfilter(lambda x: x not in wildcard_list, sb_out_target_list) + ['GC_WC.tar.gz']
-		else:
-			self._write_job_config(job_config_fn, jobnum, task, {})
-			sb_out_fn_list = sb_out_target_list
+	def _make_jdl(self, exec_fn, arg_list, sb_in_fn_list, sb_out_fn_list, req_list):
 		# Warn about too large sandboxes
-		sb_in_size_list = lmap(os.path.getsize, sb_in_src_list)
-		if sb_in_size_list:
-			sb_in_size = sum(sb_in_size_list)
-			if (self._sb_warn_size > 0) and (sb_in_size > self._sb_warn_size * 1024 * 1024):
-				user_msg = 'Sandbox is very large (%d bytes) and can cause issues with the WMS!' % sb_in_size
-				user_msg += ' Do you want to continue?'
-				if not UserInputInterface().prompt_bool(user_msg, False):
-					sys.exit(os.EX_OK)
-				self._sb_warn_size = 0
-
-		reqs = self._broker_site.broker(task.get_requirement_list(jobnum), WMS.SITES)
+		sb_in_size = sum(lmap(os.path.getsize, sb_in_fn_list))
+		if (self._sb_warn_size > 0) and (sb_in_size > self._sb_warn_size * 1024 * 1024):
+			user_msg = 'Sandbox is very large (%d bytes) and can cause issues with the WMS!' % sb_in_size
+			if not UserInputInterface().prompt_bool(user_msg + ' Do you want to continue?', False):
+				sys.exit(os.EX_OK)
+			self._sb_warn_size = 0
 
 		def _format_str_list(str_list):
 			return '{ %s }' % str.join(', ', imap(lambda x: '"%s"' % x, str_list))
 
 		contents = {
-			'Executable': '"gc-run.sh"',
-			'Arguments': '"%d"' % jobnum,
+			'Executable': '"%s"' % os.path.basename(exec_fn),
+			'Arguments': '%s' % str.join(' ', imap(lambda x: '"%s"' % x, arg_list)),
 			'StdOutput': '"gc.stdout"',
 			'StdError': '"gc.stderr"',
-			'InputSandbox': _format_str_list(sb_in_src_list + [job_config_fn]),
+			'InputSandbox': _format_str_list(sb_in_fn_list),
 			'OutputSandbox': _format_str_list(sb_out_fn_list),
 			'VirtualOrganisation': '"%s"' % self._vo,
 			'Rank': '-other.GlueCEStateEstimatedResponseTime',
 			'RetryCount': 2
 		}
-		return self._jdl_writer.format(reqs, contents)
+		req_list = self._broker_site.broker(req_list, WMS.SITES)
+		return self._jdl_writer.format(req_list, contents)
 
-	def _submit_job(self, jobnum, task):
+	def _submit_jdl(self, job_desc, jdl_data):
 		# Submit job and yield (jobnum, WMS ID, other data)
-		jdl_fd, jdl_fn = tempfile.mkstemp('.jdl')
+		jdl_fn = os.path.join(self._dn_archive,
+			'%s.%s.jdl' % (job_desc.task_id, job_desc.job_name))
 		try:
-			jdl_line_list = self._make_jdl(jobnum, task)
-			safe_write(os.fdopen(jdl_fd, 'w'), jdl_line_list)
+			SafeFile(jdl_fn, 'w').write_close(jdl_data)
 		except Exception:
 			remove_files([jdl_fn])
 			raise BackendError('Could not write jdl data to %s.' % jdl_fn)
@@ -179,7 +184,6 @@ class GridWMS(BasicWMS):
 				submit_arg_list.extend(key_value)
 			submit_arg_list.append(jdl_fn)
 
-			activity = Activity('submitting job %d' % jobnum)
 			proc = LocalProcess(self._submit_exec, '--nomsg', '--noint',
 				'--logfile', '/dev/stderr', *submit_arg_list)
 
@@ -189,25 +193,17 @@ class GridWMS(BasicWMS):
 				wms_id = line
 			exit_code = proc.status(timeout=0, terminate=True)
 
-			activity.finish()
-
 			if (exit_code != 0) or (wms_id is None):
-				if self._explain_error(proc, exit_code):
-					pass
-				else:
-					self._log.log_process(proc, files={'jdl': SafeFile(jdl_fn).read()})
+				if not self._explain_error(proc, exit_code):
+					self._log.log_process(proc, files={'jdl': jdl_data})
 		finally:
 			remove_files([jdl_fn])
-		job_data = {'jdl': str.join('', jdl_line_list)}
-		return (jobnum, self._create_gc_id(wms_id), job_data)
+		return (self._create_gc_id(wms_id), {'jdl': jdl_data})
 
-	def _write_wms_id_list(self, gc_id_jobnum_list):
-		try:
-			job_fd, job_fn = tempfile.mkstemp('.jobids')
-			safe_write(os.fdopen(job_fd, 'w'), str.join('\n', self._iter_wms_ids(gc_id_jobnum_list)))
-		except Exception:
-			raise BackendError('Could not write wms ids to %s.' % job_fn)
-		return job_fn
+	def _submit_job(self, job_desc, exec_fn, arg_list, sb_in_fn_list, sb_out_fn_list, req_list):
+		jdl_data = str.join('',
+			self._make_jdl(exec_fn, arg_list, sb_in_fn_list, sb_out_fn_list, req_list))
+		return self._submit_jdl(job_desc, jdl_data)
 
 
 class GridCancelJobs(CancelJobsWithProcess):
@@ -251,8 +247,8 @@ class GridCheckJobs(CheckJobsWithProcess):
 		elif value:
 			job_info[key] = value
 
-	def _handle_error(self, proc):
-		self._filter_proc_log(proc, self._errormsg, discard_list=['Keyboard interrupt raised by user'])
+	def _handle_error(self, log, proc):
+		self._filter_proc_log(log, proc, self._errormsg, discard_list=['Keyboard interrupt raised by user'])
 
 	def _parse(self, proc):
 		job_info = {}
@@ -284,5 +280,5 @@ class GridProcessCreator(ProcessCreatorViaStdin):
 	def _arguments(self):
 		return [self._cmd] + self._args
 
-	def _stdin_message(self, wms_id_list):
+	def _stdin_msg(self, wms_id_list):
 		return str.join('\n', wms_id_list)

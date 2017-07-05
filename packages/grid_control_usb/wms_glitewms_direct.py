@@ -29,7 +29,7 @@ class GliteWMSDirectCheckJobs(CheckJobs):
 		self._status_fun = status_fun
 		self._status_map = expand_status_map(GliteWMS.grid_status_map)
 
-	def execute(self, wms_id_list):  # yields list of (wms_id, job_status, job_info)
+	def execute(self, log, wms_id_list):  # yields list of (wms_id, job_status, job_info)
 		exc = ExceptionCollector()
 		for wms_id in wms_id_list:
 			try:

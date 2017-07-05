@@ -17,11 +17,11 @@ from grid_control.backends.backend_tools import BackendExecutor, ProcessCreatorA
 from grid_control.utils import abort
 from grid_control.utils.activity import Activity
 from hpfwk import AbstractError
-from python_compat import identity, lmap
+from python_compat import identity, itemgetter, lmap
 
 
 class CancelJobs(BackendExecutor):
-	def execute(self, wms_id_list, wms_name):  # yields list of (wms_id,)
+	def execute(self, log, wms_id_list):  # yields list of (wms_id,)
 		raise AbstractError
 
 
@@ -30,19 +30,13 @@ class CancelAndPurgeJobs(CancelJobs):
 		CancelJobs.__init__(self, config)
 		(self._cancel_executor, self._purge_executor) = (cancel_executor, purge_executor)
 
-	def execute(self, wms_id_list, wms_name):  # yields list of (wms_id,)
-		marked_wms_id_list = lmap(lambda result: result[0],
-			self._cancel_executor.execute(wms_id_list, wms_name))
+	def execute(self, log, wms_id_list):  # yields list of (wms_id,)
+		marked_wms_id_list = lmap(itemgetter(0), self._cancel_executor.execute(log, wms_id_list))
 		time.sleep(5)
 		activity = Activity('Purging jobs')
-		for result in self._purge_executor.execute(marked_wms_id_list, wms_name):
+		for result in self._purge_executor.execute(log, marked_wms_id_list):
 			yield result
 		activity.finish()
-
-	def setup(self, log):
-		CancelJobs.setup(self, log)
-		self._cancel_executor.setup(log)
-		self._purge_executor.setup(log)
 
 
 class CancelJobsWithProcess(CancelJobs):
@@ -52,16 +46,16 @@ class CancelJobsWithProcess(CancelJobs):
 		self._errormsg = 'Job cancel command returned with exit code %(proc_status)s'
 		self._proc_factory = proc_factory
 
-	def execute(self, wms_id_list, wms_name):
+	def execute(self, log, wms_id_list):
 		proc = self._proc_factory.create_proc(wms_id_list)
 		for result in self._parse(wms_id_list, proc):
 			if not abort():
 				yield result
 		if proc.status(timeout=0, terminate=True) != 0:
-			self._handle_error(proc)
+			self._handle_error(log, proc)
 
-	def _handle_error(self, proc):
-		self._filter_proc_log(proc, self._errormsg)
+	def _handle_error(self, log, proc):
+		self._filter_proc_log(log, proc, self._errormsg)
 
 	def _parse(self, wms_id_list, proc):  # yield list of (wms_id,)
 		raise AbstractError
@@ -75,8 +69,8 @@ class CancelJobsWithProcessBlind(CancelJobsWithProcess):
 		if unknown_id is not None:
 			self._blacklist = [unknown_id]
 
-	def _handle_error(self, proc):
-		self._filter_proc_log(proc, self._errormsg, blacklist=self._blacklist, log_empty=False)
+	def _handle_error(self, log, proc):
+		self._filter_proc_log(log, proc, self._errormsg, blacklist=self._blacklist, log_empty=False)
 
 	def _parse(self, wms_id_list, proc):  # yield list of (wms_id,)
 		proc.status(self._timeout, terminate=True)

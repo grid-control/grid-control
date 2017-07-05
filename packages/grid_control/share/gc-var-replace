@@ -1,0 +1,59 @@
+#!/bin/sh
+# | Copyright 2017 Karlsruhe Institute of Technology
+# |
+# | Licensed under the Apache License, Version 2.0 (the "License");
+# | you may not use this file except in compliance with the License.
+# | You may obtain a copy of the License at
+# |
+# |     http://www.apache.org/licenses/LICENSE-2.0
+# |
+# | Unless required by applicable law or agreed to in writing, software
+# | distributed under the License is distributed on an "AS IS" BASIS,
+# | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# | See the License for the specific language governing permissions and
+# | limitations under the License.
+
+# Source: github.com/grid-control
+
+gcvr_main() {
+	REPLACEFILE="${GC_SCRATCH:-.}/_gc_replace.awk"
+	GC_DATE="$(date +%F)"
+	GC_TIMESTAMP="$(date +%s)"
+	GC_GUID="$(uuidgen 2> /dev/null)"
+	if [ -z "$GC_GUID" ]; then
+		FMGUID="%04x%04x-%04x-%04x-%04x-%04x%04x%04x"
+		RINT="int(rand()*2**16), int(rand()*2**16), int(rand()*2**16), int(rand()*2**16)"
+		GC_GUID="$(echo | awk 'BEGIN{srand($JOB_RANDOM)}{printf "$FMGUID", $RINT, $RINT}')"
+	fi
+
+	(
+		echo "BEGIN{srand($JOB_RANDOM)}"
+		echo "{"
+		# new style variable replacement
+		echo '	gsub("@RANDOM@", int(rand() * 900000000))'
+		[ -f "${GC_SCRATCH:-.}/_gc_varmap.dat" ] && cat "${GC_SCRATCH:-.}/_gc_varmap.dat" |
+		while read USER_VARNAME REAL_VARNAME; do
+			VARVALUE="${!REAL_VARNAME}"
+			VARVALUE_ESC="$(echo "$VARVALUE" | awk '{ gsub("\"", "\\\\\""); print }')"
+			[ -z "$VARVALUE" ] && echo "	gsub(\"^@IF@${USER_VARNAME}@.*\", \"\")"
+			[ -n "$VARVALUE" ] && echo "	gsub(\"^@IF@${USER_VARNAME}@\", \"\")"
+			echo '	gsub("^@IFEQ@'"${USER_VARNAME}"'@'"${VARVALUE_ESC}"'@", "")'
+			echo '	gsub("@'${USER_VARNAME}'@", "'"$VARVALUE_ESC"'")'
+		done
+		echo '	gsub("^@IF@.*", "")'
+		echo '	gsub("^@IFEQ.*", "")'
+		# old style variable replacement
+		if [ "$GC_SUBST_OLD_STYLE" != "false" ]; then
+			echo '	gsub("__RANDOM__", int(rand() * 900000000))'
+			[ -f "${GC_SCRATCH:-.}/_gc_varmap.dat" ] && cat "${GC_SCRATCH:-.}/_gc_varmap.dat" |
+			while read USER_VARNAME REAL_VARNAME; do
+				VARVALUE="${!REAL_VARNAME}"
+				VARVALUE_ESC="$(echo "$VARVALUE" | awk '{ gsub("\"", "\\\\\""); print }')"
+				echo '	gsub("__'${USER_VARNAME}'__", "'"$VARVALUE_ESC"'")'
+			done
+		fi
+		echo '	print'
+		echo '}'
+	) > "$REPLACEFILE"
+	awk -f "$REPLACEFILE" | awk -f "$REPLACEFILE"
+}

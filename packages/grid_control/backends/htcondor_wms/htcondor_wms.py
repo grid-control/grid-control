@@ -18,7 +18,8 @@
 import os, logging
 from grid_control.backends.htcondor_wms.htcondor_schedd import HTCScheddFactory
 from grid_control.backends.htcondor_wms.wmsid import HTCJobID
-from grid_control.backends.wms import BackendError, BasicWMS
+from grid_control.backends.wms import BackendError
+from grid_control.backends.wms_basic import BasicWMS
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from grid_control.utils import ensure_dir_exists
@@ -89,7 +90,7 @@ class HTCondor(BasicWMS):
 		self._initLogger()
 		BasicWMS.__init__(self, config, name)
 		# setup the connection to pools and their interfaces
-		self._sandboxDir  = config.get_path('sandbox path', config.get_work_path('sandbox.%s' % name), must_exist = False)
+		self._sandboxDir  = config.get_dn('sandbox path', config.get_work_path('sandbox.%s' % name), must_exist = False)
 		self._initPoolInterfaces(config)
 		self._jobSettings = {
 			"Universe" : config.get("universe", "vanilla"),

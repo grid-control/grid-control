@@ -1,0 +1,43 @@
+#!/bin/sh
+# | Copyright 2017 Karlsruhe Institute of Technology
+# |
+# | Licensed under the Apache License, Version 2.0 (the "License");
+# | you may not use this file except in compliance with the License.
+# | You may obtain a copy of the License at
+# |
+# |     http://www.apache.org/licenses/LICENSE-2.0
+# |
+# | Unless required by applicable law or agreed to in writing, software
+# | distributed under the License is distributed on an "AS IS" BASIS,
+# | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# | See the License for the specific language governing permissions and
+# | limitations under the License.
+
+# Source: github.com/grid-control
+
+test ! -f "$1" && echo "$0: config file missing" && exit 1
+. "$1" # read config
+
+# Setup local scratch directory
+if test -z "$GC_LOCALSCRATCH"; then
+	for GCLW_SDIR in $GCLW_SCRATCH_SEARCH; do
+		# search for local scratch directory - GCLW_SCRATCH_SEARCH is specified in the config file
+		if eval "test -d $GCLW_SDIR"; then
+			eval "export GC_LOCALSCRATCH=$GCLW_SDIR"
+			break
+		fi
+	done
+	test -z "$GC_LOCALSCRATCH" && export GC_LOCALSCRATCH="$PWD"
+fi
+
+# Run script
+if test -n "$GC_DELAY_OUTPUT"; then
+	# start script with output redirection
+	eval "$GCLW_EXEC" > "$GC_LOCALSCRATCH/gc.stdout.tmp" 2> "$GC_LOCALSCRATCH/gc.stderr.tmp"
+	EXITCODE="$?"
+	mv "$GC_LOCALSCRATCH/gc.stdout.tmp" "$GC_DELAY_OUTPUT"
+	mv "$GC_LOCALSCRATCH/gc.stderr.tmp" "$GC_DELAY_ERROR"
+	exit "$EXITCODE"
+else
+	eval "exec $GCLW_EXEC"
+fi

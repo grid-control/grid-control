@@ -1,5 +1,4 @@
-#!/bin/bash
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,15 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+from hpfwk import AbstractError, Plugin
 
-# (jobnum, sandbox, stdout, stderr) (local.sh) (...)
-export GC_SANDBOX="$2"
-GC_STDOUT="$3"
-GC_STDERR="$4"
-shift 4
-cd "$GC_SANDBOX" || exit 102
-(
-	nice "$@"
-) > "$GC_STDOUT" 2> "$GC_STDERR" &
-echo $!
+
+class Runtime(Plugin):
+	def translate_schedule(schedule):
+		raise AbstractError
+
+
+class LinuxRuntime(Runtime):
+	def translate_schedule(schedule):
+		pass

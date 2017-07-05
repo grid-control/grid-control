@@ -18,7 +18,7 @@ from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import resolve_install_path, wait
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import AbstractError, NestedException, clear_current_exception
-from python_compat import any, identity, ifilter, imap, irange, lmap, tarfile
+from python_compat import any, identity, iidfilter, imap, irange, lmap, tarfile
 
 
 class BackendError(NestedException):
@@ -43,32 +43,26 @@ class BackendDiscovery(ConfigurablePlugin):
 
 
 class BackendExecutor(ConfigurablePlugin):
-	def __init__(self, config):
-		ConfigurablePlugin.__init__(self, config)
-		self._log = None
-
-	def setup(self, log):
-		self._log = log
-
 	# log process helper function for backends
-	def _filter_proc_log(self, proc, message=None, blacklist=None, discard_list=None, log_empty=True):
+	def _filter_proc_log(self, log, proc, msg=None, blacklist=None, discard_list=None, log_empty=True):
 		if (not blacklist) and (not discard_list):
-			return self._log.log_process(proc)
+			return log.log_process(proc)
 		blacklist = lmap(str.lower, blacklist or [])
 		discard_list = lmap(str.lower, discard_list or [])
 
-		def _is_on_list(line, lst):
+		def _line_contains_list_item(line, lst):
 			return any(imap(line.__contains__, lst))
 
-		do_log = log_empty  # log if stderr is empty
-		for line in ifilter(identity, imap(str.lower, proc.stderr.read_log().splitlines())):
-			if _is_on_list(line, discard_list):  # line on discard list -> dont log
+		unexpected_msg = None
+		for line in iidfilter(imap(str.lower, proc.stderr.read_log().splitlines())):
+			if _line_contains_list_item(line, discard_list):  # line on discard list -> dont log
 				return
-			if not _is_on_list(line, blacklist):  # line not on blacklist -> do log
-				return self._log.log_process(proc, msg=message)
-			do_log = False  # don't log if all stderr lines are blacklisted
-		if do_log:
-			return self._log.log_process(proc, msg=message)
+			if _line_contains_list_item(line, blacklist):  # line on blacklist -> don't log if log_empty
+				unexpected_msg = unexpected_msg or False  # change None to False
+			else:
+				unexpected_msg = True  # unexpected message -> log (unless discard_list matches later)
+		if unexpected_msg or (log_empty and (unexpected_msg is None)):
+			return log.log_process(proc, msg=msg)
 
 
 class ProcessCreator(ConfigurablePlugin):
@@ -76,16 +70,17 @@ class ProcessCreator(ConfigurablePlugin):
 		raise AbstractError
 
 
+class BackendDiscoveryProcess(BackendDiscovery):
+	def __init__(self, config, exec_name):
+		BackendDiscovery.__init__(self, config)
+		self._timeout = config.get_time('discovery timeout', 30, on_change=None)
+		self._exec = resolve_install_path(exec_name)
+
+
 class ForwardingExecutor(BackendExecutor):
 	def __init__(self, config, executor):
 		BackendExecutor.__init__(self, config)
 		self._executor = executor
-
-	def get_status(self):  # FIXME: not part of the BackendExecutor interface!
-		return self._executor.get_status()
-
-	def setup(self, log):
-		self._executor.setup(log)
 
 
 class ProcessCreatorViaArguments(ProcessCreator):
@@ -99,14 +94,14 @@ class ProcessCreatorViaArguments(ProcessCreator):
 class ProcessCreatorViaStdin(ProcessCreator):
 	def create_proc(self, wms_id_list):
 		proc = LocalProcess(*self._arguments())
-		proc.stdin.write(self._stdin_message(wms_id_list))
+		proc.stdin.write(self._stdin_msg(wms_id_list))
 		proc.stdin.close()
 		return proc
 
 	def _arguments(self):
 		raise AbstractError
 
-	def _stdin_message(self, wms_id_list):
+	def _stdin_msg(self, wms_id_list):
 		raise AbstractError
 
 
@@ -115,18 +110,22 @@ class ChunkedExecutor(ForwardingExecutor):
 		ForwardingExecutor.__init__(self, config, executor)
 		self._chunk_size = config.get_int(join_config_locations(option_prefix, 'chunk size'),
 			def_chunk_size, on_change=None)
-		self._chunk_interval = config.get_int(join_config_locations(option_prefix, 'chunk interval'),
+		self._chunk_interval = config.get_time(join_config_locations(option_prefix, 'chunk interval'),
 			def_chunk_interval, on_change=None)
 
-	def execute(self, wms_id_list, *args, **kwargs):
-		do_wait = False
-		chunk_pos_iter = irange(0, len(wms_id_list), self._chunk_size)
-		for wms_id_chunk in imap(lambda x: wms_id_list[x:x + self._chunk_size], chunk_pos_iter):
-			if do_wait and not wait(self._chunk_interval):
-				break
-			do_wait = True
-			for result in self._executor.execute(wms_id_chunk, *args, **kwargs):
+	def execute(self, log, wms_id_list):
+		if not wms_id_list:
+			for result in self._executor.execute(log, wms_id_list):
 				yield result
+		else:
+			do_wait = False
+			chunk_pos_iter = irange(0, len(wms_id_list), self._chunk_size)
+			for wms_id_chunk in imap(lambda x: wms_id_list[x:x + self._chunk_size], chunk_pos_iter):
+				if do_wait and not wait(self._chunk_interval):
+					break
+				do_wait = True
+				for result in self._executor.execute(log, wms_id_chunk):
+					yield result
 
 
 class ProcessCreatorAppendArguments(ProcessCreatorViaArguments):
@@ -139,3 +138,8 @@ class ProcessCreatorAppendArguments(ProcessCreatorViaArguments):
 
 	def _arguments(self, wms_id_list):
 		return [self._cmd] + self._args + self._fmt(wms_id_list)
+
+
+class ChunkedStatusExecutor(ChunkedExecutor):
+	def get_status(self):
+		return self._executor.get_status()

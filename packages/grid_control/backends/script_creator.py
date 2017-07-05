@@ -1,5 +1,4 @@
-#!/bin/bash
-# | Copyright 2010-2017 Karlsruhe Institute of Technology
+# | Copyright 2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,20 +12,21 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# Source: github.com/grid-control
+import os, stat
+from grid_control.utils import create_tarball
+from python_compat import str2bytes
 
-# 110 - ROOT area not found
 
-source "$GC_LANDINGZONE/gc-run.lib" || exit 101 # shellcheck source=/dev/null
-
-echo "ROOT module starting"
-echo "---------------------------"
-
-export ROOTSYS=$GC_ROOTSYS
-export PATH="$PATH:$ROOTSYS/bin"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$ROOTSYS/lib:$ROOTSYS/lib/root:."
-echo -n "ROOT Version: "
-"$ROOTSYS/bin/root-config" --version || fail 110
-echo "---------------------------"
-
-eval "$@"
+def create_shell_script(fn, ft_list, exec_fn):
+	fp = open(fn, 'wb')
+	try:
+		fp.write(str2bytes("""#!/bin/sh
+cd $(dirname $0)
+tail -n+6 $0 | tar xz
+test "$1" != "unpack" && exec %s
+exit 0
+""" % exec_fn))
+		create_tarball(ft_list, fileobj=fp)
+	finally:
+		fp.close()
+	os.chmod(fn, stat.S_IRWXU)
