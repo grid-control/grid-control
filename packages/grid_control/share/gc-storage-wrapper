@@ -1,0 +1,280 @@
+#!/bin/sh
+# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# |
+# | Licensed under the Apache License, Version 2.0 (the "License");
+# | you may not use this file except in compliance with the License.
+# | You may obtain a copy of the License at
+# |
+# |     http://www.apache.org/licenses/LICENSE-2.0
+# |
+# | Unless required by applicable law or agreed to in writing, software
+# | distributed under the License is distributed on an "AS IS" BASIS,
+# | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# | See the License for the specific language governing permissions and
+# | limitations under the License.
+
+# Source: github.com/grid-control
+# Config file interface for generic storage tool
+
+export LC_ALL="C"
+GCSW_TRUE=0
+GCSW_FALSE=1
+GCSW_LAST_ERR=""
+
+gcsw_fail()
+{
+	GCSW_ERR_TAG="$1"
+	shift
+	test -n "$1" && printf '%s\n' "$*" >&2
+	GCSW_ERR_LAST="$GCSW_ERR_TAG|$GCSW_ERR_LAST"
+	return "$GCSW_FALSE"
+}
+
+gcsw_random_int() # return random two byte integer
+{
+	od -N 2 /dev/urandom -t d -A n
+}
+
+gcsw_select_random() # return random element from argument list
+{
+	if test $# -gt 0; then
+		GCSW_RANDOM_NUMBER="$(gcsw_random_int)"
+		shift $(expr ${GCSW_RANDOM_NUMBER:-0} % "$#")
+	fi
+	printf '%s' "$1"
+}
+
+gcsw_get_default_se() # filter se paths that contain hostnames specified in DEFAULT_SE environment variables
+{
+	GCSW_TOP_LEVEL_DOMAIN="$(hostname 2> /dev/null | sed 's/.*\.\(.*\)\.\(.*\)$/\1.\2/')"
+	for GCSW_SE_PATH in "$@"; do
+		export | grep "DEFAULT_SE" | sed -e "s/.*=//;s/\"//g;s/'//g" | while read GCSW_DEFAULT_SE; do
+			printf '%s' "$GCSW_SE_PATH" | grep "$GCSW_DEFAULT_SE"
+		done
+	done
+}
+
+gcsw_get_best_se() # se - either with some close SE in path or randomly selected
+{
+	if test -n "$@"; then
+		GCSW_SE_CLOSE_LIST="$(gcsw_get_default_se "$@")"
+		if test -n "$GCSW_SE_CLOSE_LIST"; then
+			gcsw_select_random $GCSW_SE_CLOSE_LIST
+		else
+			gcsw_select_random "$@"
+		fi
+	fi
+}
+
+gcsw_setup() # display setup and create new-style transfer files from environment variables
+{
+	if ! . "$1"; then
+		gcsw_fail "config_file_missing" "Unable to read common transfer config file"
+		return "$GCSW_FALSE"
+	fi
+	# display storage setup
+	if test -n "$SE_INPUT_PATH$SE_OUTPUT_PATH"; then
+		echo "User SE list:" >&2
+		for GCSW_SE_PATH in $SE_INPUT_PATH; do echo " < $GCSW_SE_PATH" >&2; done
+		for GCSW_SE_PATH in $SE_OUTPUT_PATH; do echo " > $GCSW_SE_PATH" >&2; done
+	fi
+	if test -n "$(gcsw_get_default_se $SE_INPUT_PATH)$(gcsw_get_default_se $SE_OUTPUT_PATH)"; then
+		echo "Close SE list:" >&2
+		for GCSW_SE_PATH in $(gcsw_get_default_se $SE_INPUT_PATH); do echo " < $GCSW_SE_PATH"; done | sort | uniq >&2
+		for GCSW_SE_PATH in $(gcsw_get_default_se $SE_OUTPUT_PATH); do echo " > $GCSW_SE_PATH"; done | sort | uniq >&2
+	fi
+
+	# create transfer files
+	if test -n "$SE_INPUT_PATH"; then
+		GCSW_SE_INPUT_TRANSFER_FILE="$2/_gc_se_input.conf"
+		(
+			printf 'GCSW_SRC_PATH_LIST="%s"\n' "$SE_INPUT_PATH"
+			printf 'GCSW_SRC_PATTERN="%s"\n' "$SE_INPUT_PATTERN"
+			printf 'GCSW_DST_PATH_LIST="%s"\n' "job-scratch://"
+			printf 'GCSW_DST_PATTERN="@X@"\n'
+			printf 'GCSW_FILE_LIST="%s"\n' "$SE_INPUT_FILES"
+			printf 'GCSW_TIMEOUT="%s"\n' "${SE_INPUT_TIMEOUT:-0}"
+			printf 'GCSW_MINSIZE=-1\n'
+			printf 'GCSW_LOG_PREFIX=\n'
+			printf 'GCSW_RETRY=3\n'
+		) > "$GCSW_SE_INPUT_TRANSFER_FILE"
+		echo "Created transfer file $GCSW_SE_INPUT_TRANSFER_FILE" >&2
+	fi
+	if test -n "$SE_OUTPUT_PATH"; then
+		GCSW_SE_OUTPUT_TRANSFER_FILE="$2/_gc_se_output.conf"
+		(
+			printf 'GCSW_SRC_PATH_LIST="%s"\n' "job-scratch://"
+			printf 'GCSW_SRC_PATTERN="@X@"\n'
+			printf 'GCSW_DST_PATH_LIST="%s"\n' "$SE_OUTPUT_PATH"
+			printf 'GCSW_DST_PATTERN="%s"\n' "$SE_OUTPUT_PATTERN"
+			printf 'GCSW_FILE_LIST="%s"\n' "$SE_OUTPUT_FILES"
+			printf 'GCSW_TIMEOUT="%s"\n' "${SE_OUTPUT_TIMEOUT:-0}"
+			printf 'GCSW_MINSIZE=%s\n' "${SE_MINFILESIZE:-0}"
+			printf 'GCSW_LOG_PREFIX=OUTPUT_\n'
+			printf 'GCSW_RETRY=3\n'
+		) > "$GCSW_SE_OUTPUT_TRANSFER_FILE"
+		echo "Created transfer file $GCSW_SE_OUTPUT_TRANSFER_FILE" >&2
+	fi
+}
+
+gcsw_select_path() # replace any kind of job specific protocol prefix
+{
+	gcsw_get_best_se "$1" | \
+	sed "s@job-scratch://@file://$GCSW_SCRATCH/@" | \
+	sed "s@job-lz://@file://$GCSW_LANDINGZONE/@"
+}
+
+gcsw_fmt_pattern()
+{
+	GCSW_FMT_PATTERN="$1"
+	GCSW_FMT_FILENAME="$2"
+	GCSW_FMT_BASE="$(printf '%s' "$GCSW_FMT_FILENAME" | sed 's@\..*@@')"
+	GCSW_FMT_BASENAME="$(basename "$GCSW_FMT_FILENAME")"
+	GCSW_FMT_EXT="$(printf '%s' "$GCSW_FMT_FILENAME" | sed 's@.*\.@@')"
+	printf '%s' "$GCSW_FMT_PATTERN" | \
+	sed "s%@X@%$GCSW_FMT_FILENAME%g;s%__X__%$GCSW_FMT_FILENAME%g;" | \
+	sed "s%@XBASE@%$GCSW_FMT_BASE%g;s%__XBASE__%$GCSW_FMT_BASE%g;" | \
+	sed "s%@XBASENAME@%$GCSW_FMT_BASENAME%g;s%__XBASE__%$GCSW_FMT_BASENAME%g;" | \
+	sed "s%@XEXT@%$GCSW_FMT_EXT%g;s%__XEXT__%$GCSW_FMT_EXT%g;"
+}
+
+gcsw_resolve_src_fnlist() # return file size and path relative to elements of GCSW_SRC_PATH_LIST
+{
+	GCSW_TRANSFER_FILE="$1"
+	. "$GCSW_TRANSFER_FILE" # read transfer configuration
+
+	for GCSW_FILENAME in $GCSW_FILES; do
+		GCSW_SRC_PATH="$(gcsw_select_path $GCSW_SRC_PATH_LIST)"
+		GCSW_SRC_URL="${GCSW_SRC_PATH%/}/$(gcsw_fmt_pattern "$GCSW_SRC_PATTERN" "$GCSW_FILENAME")"
+		GCSW_SRC_DN="$(dirname "$GCSW_SRC_URL")"
+		GCSW_SRC_USER_DN="${GCSW_SRC_DN#$GCSW_SRC_PATH}" # remove src path prefix from dn part
+
+		GCSW_LS_LOG_OUT="$GCSW_SCRATCH/._ls.stdout"
+		GCSW_LS_LOG_ERR="$GCSW_SCRATCH/._ls.stderr"
+		if basename "$GCSW_SRC_URL" | grep -q '*'; then # resolve wildcard
+			echo "$GCSW_STORAGE_TOOL" ls "$GCSW_SRC_DN" >&2
+			if ! "$GCSW_STORAGE_TOOL" ls "$GCSW_SRC_DN" > "$GCSW_LS_LOG_OUT"; then
+				cat "$GCSW_LS_LOG_OUT" >&2
+				rm -f "$GCSW_LS_LOG_OUT"
+				gcsw_fail "resolve_wildcard_failed" "Failed to resolve wildcard in $GCSW_SRC_URL"
+				return "$GCSW_FALSE"
+			fi
+		elif dirname "$GCSW_SRC_URL" | grep -q '*'; then # resolving dir wildcards not implemented
+			gcsw_fail "resolve_wildcard_invalid" "Unsupported wildcard in $GCSW_SRC_URL"
+			return "$GCSW_FALSE"
+		else # no wildcard - get file size
+			if ! "$GCSW_STORAGE_TOOL" ls "$GCSW_SRC_URL" > "$GCSW_LS_LOG_OUT"; then
+				cat "$GCSW_LS_LOG_OUT" >&2
+				rm -f "$GCSW_LS_LOG_OUT"
+				gcsw_fail "filesize_failed" "Failed to retrieve file size of $GCSW_SRC_URL"
+				return "$GCSW_FALSE"
+			fi
+		fi
+
+		GCSW_SRC_MATCH="$(basename "$GCSW_SRC_URL")"
+		while read GCSW_FSIZE GCSW_SRC_BASE; do
+			case "$GCSW_SRC_BASE" in
+				$GCSW_SRC_MATCH)
+					if test -n "$GCSW_SRC_USER_DN"; then
+						printf '%s %s\n' "$GCSW_FSIZE" "$GCSW_SRC_USER_DN/$GCSW_SRC_BASE"
+					else
+						printf '%s %s\n' "$GCSW_FSIZE" "$GCSW_SRC_BASE"
+					fi
+					;;
+			esac
+		done < "$GCSW_LS_LOG_OUT"
+		rm -f "$GCSW_LS_LOG_OUT"
+	done
+	return "$GCSW_TRUE"
+}
+
+gcsw_transfer_try_list()
+{
+	printf 'first\n'
+	GCSW_RETRY_COUNT="1"
+	while test "$GCSW_RETRY_COUNT" -le "${1:-0}"; do
+		printf 'retry%s\n' "$GCSW_RETRY_COUNT"
+		GCSW_RETRY_COUNT="$(expr "$GCSW_RETRY_COUNT" + 1)"
+	done
+}
+
+gcsw_transfer() # Copy serveral files with specified pattern
+{
+	GCSW_TRANSFER_CONFIGFILE="$1"
+	. "$GCSW_TRANSFER_CONFIGFILE" # read transfer configuration
+	echo "Copy $GCSW_FILES from ($GCSW_SRC_PATH_LIST) [$GCSW_SRC_PATTERN] to ($GCSW_DST_PATH_LIST) [$GCSW_DST_PATTERN]" >&2
+
+	GCSW_BADCOUNT=0
+	GCSW_TRANSFER_SRC_FILE="$GCSW_SCRATCH/._transfer_src.tmp"
+	if ! gcsw_resolve_src_fnlist "$GCSW_TRANSFER_CONFIGFILE" > "$GCSW_TRANSFER_SRC_FILE"; then
+		cat "$GCSW_TRANSFER_SRC_FILE" >&2
+		rm -f "$GCSW_TRANSFER_SRC_FILE"
+		gcsw_fail "resolve_src_failed" "Unable to resolve source files"
+		return "$GCSW_FALSE"
+	fi
+	echo "Matched files:" >&2
+	cat "$GCSW_TRANSFER_SRC_FILE" >&2
+	while read GCSW_FSIZE GCSW_SRC_FN; do
+		if test "$GCSW_FSIZE" -lt "$GCSW_MINSIZE"; then
+			gcsw_fail "filesize_check_failed" "$GCSW_SRC_FN failed file size check ($GCSW_FSIZE)"
+			GCSW_BADCOUNT="$(expr "$GCSW_BADCOUNT" + 1)"
+			continue
+		fi
+		GCSW_DST_FN="$(gcsw_fmt_pattern "$GCSW_DST_PATTERN" "$GCSW_SRC_FN")"
+		GCSW_TRANSFER_CMD="copy" # first try uses "copy" without overwrite
+		for GCSW_TRANSFER_TRY in $(gcsw_transfer_try_list "${GCSW_RETRY:-0}"); do
+			GCSW_SRC_PATH="$(gcsw_select_path $GCSW_SRC_PATH_LIST)"
+			GCSW_DST_PATH="$(gcsw_select_path $GCSW_DST_PATH_LIST)"
+			if "$GCSW_STORAGE_TOOL" "$GCSW_TRANSFER_CMD" "${GCSW_SRC_PATH%/}/$GCSW_SRC_FN ${GCSW_DST_PATH%/}/$GCSW_DST_FN" >&2; then
+				echo "$GCSW_SRC_FN - $GCSW_TRANSFER_TRY transfer successful" >&2
+				break
+			else
+				gcsw_fail "transfer_${GCSW_TRANSFER_TRY}_failed" "$GCSW_SRC_FN - $GCSW_TRANSFER_TRY transfer failed"
+				GCSW_BADCOUNT="$(expr $GCSW_BADCOUNT + 1)"
+			fi
+			GCSW_TRANSFER_CMD="copy_overwrite" # subsequent tries use "copy_overwrite"
+		done
+
+		# log transfer infos if a log prefix is given
+		if test -n "$GCSW_LOG_PREFIX"; then
+			GCSW_HASH_MD5="unknown"
+			GCSW_HASH_PATH="${GCSW_SRC_PATH%/}/$GCSW_SRC_FN"
+			case "$GCSW_HASH_PATH" in
+				"file://"*) GCSW_HASH_MD5="$(md5sum "${GCSW_HASH_PATH#file://}" | cut -d " " -f 1)";;
+			esac
+			printf "FILE$GCSW_FILE_IDX=\"$GCSW_HASH_MD5  $GCSW_SRC_FN  $GCSW_DST_FN  $GCSW_DST_PATH_LIST\"\n"
+			GCSW_TRANSFER_FILE_FMT="${GCSW_LOG_PREFIX}FILE_${GCSW_FILE_IDX:-0}_%s=%s\n"
+			printf "$GCSW_TRANSFER_FILE_FMT" "LOCAL" "\"$GCSW_SRC_FN\""
+			printf "$GCSW_TRANSFER_FILE_FMT" "DEST" "\"$GCSW_DST_FN\""
+			printf "$GCSW_TRANSFER_FILE_FMT" "PATH" "\"$GCSW_DST_PATH\""
+			printf "$GCSW_TRANSFER_FILE_FMT" "HASH" "$GCSW_HASH_MD5"
+			printf "$GCSW_TRANSFER_FILE_FMT" "SIZE" "$GCSW_FSIZE"
+			GCSW_FILE_IDX="$(expr ${GCSW_FILE_IDX:-0} + 1)"
+		fi
+	done < "$GCSW_TRANSFER_SRC_FILE"
+	rm -f "$GCSW_TRANSFER_SRC_FILE"
+	if test $GCSW_BADCOUNT -ne 0; then
+		gcsw_fail "transfer_queue_failed" "$GCSW_BADCOUNT errors occurred during SE access"
+		return "$GCSW_FALSE"
+	fi
+	return "$GCSW_TRUE"
+}
+
+gcsw_main()
+{
+	export GCSW_LANDINGZONE="$1"
+	export GCSW_SCRATCH="$2"
+	shift 2
+	export SC_TMP_DIR="$GCSW_SCRATCH"
+	while test -n "$1"; do
+		GCSW_ERR_TMP="$GCSW_ERR_LAST"
+		gcsw_transfer "$1"
+		test -n "$GCSW_ERR_TMP" && GCSW_ERR_LAST="$GCSW_ERR_LAST|$GCSW_ERR_TMP"
+		shift
+	done
+	test -z "$GCSW_ERR_LAST" && return "$GCSW_TRUE"
+	printf '%s' "gcsw_err_msg:${GCSW_ERR_LAST%|}" >&2
+	return "$GCSW_FALSE"
+}
+
+test -z "$GCSW_TESTING_MODE" && gcsw_main "$@"

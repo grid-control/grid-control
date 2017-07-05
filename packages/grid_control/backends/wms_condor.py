@@ -42,10 +42,10 @@ class CondorCheckJobs(CheckJobsWithProcess):
 				Job.WAITING: [0, 5, 7],  # unexpanded (never been run); DISABLED (on hold); suspended
 			})
 
-	def _handle_error(self, proc):
+	def _handle_error(self, log, proc):
 		if proc.status(timeout=0) and ('Failed to fetch ads' in proc.stderr.read_log()):
 			self._status = CheckStatus.ERROR
-		CheckJobsWithProcess._handle_error(self, proc)
+		CheckJobsWithProcess._handle_error(self, log, proc)
 
 	def _parse(self, proc):
 		job_info = {}
@@ -58,13 +58,14 @@ class CondorCheckJobs(CheckJobsWithProcess):
 			except Exception:
 				clear_current_exception()
 				continue
-			if key == 'JobStatus':
+			key = key.lower()
+			if key == 'jobstatus':
 				job_info[CheckInfo.RAW_STATUS] = int(value)
-			elif key == 'GlobalJobId':
+			elif key == 'globaljobid':
 				job_info[CheckInfo.WMSID] = value.split('#')[1]
 				job_info[key] = value.strip('"')
-			elif key == 'RemoteHost':
+			elif key == 'remotehost':
 				job_info[CheckInfo.WN] = value.strip('"')
-			elif 'date' in key.lower():
+			elif 'date' in key:
 				job_info[key] = value
 		yield job_info

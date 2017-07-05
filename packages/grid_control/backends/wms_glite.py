@@ -13,12 +13,13 @@
 # | limitations under the License.
 
 from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
-from grid_control.utils import deprecated, resolve_install_path
+from grid_control.utils import resolve_install_path
 
 
 class Glite(GridWMS):
+	alias_list = ['']
+
 	def __init__(self, config, name):
-		deprecated('Please use the GliteWMS backend for grid jobs!')
 		GridWMS.__init__(self, config, name,
 			submit_exec=resolve_install_path('glite-job-submit'),
 			output_exec=resolve_install_path('glite-job-output'),

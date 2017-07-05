@@ -14,6 +14,7 @@
 
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
+from grid_control.backends.aspect_submit import LocalSubmitWithProcess
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
@@ -25,8 +26,8 @@ class HostCancelJobs(CancelJobsWithProcessBlind):
 	def __init__(self, config):
 		CancelJobsWithProcessBlind.__init__(self, config, 'kill', ['-9'], unknown_id='No such process')
 
-	def _handle_error(self, proc):
-		self._filter_proc_log(proc, self._errormsg, blacklist=self._blacklist, log_empty=False)
+	def _handle_error(self, log, proc):
+		self._filter_proc_log(log, proc, self._errormsg, blacklist=self._blacklist, log_empty=False)
 
 
 class HostCheckJobs(CheckJobsWithProcess):
@@ -34,8 +35,8 @@ class HostCheckJobs(CheckJobsWithProcess):
 		CheckJobsWithProcess.__init__(self, config,
 			ProcessCreatorAppendArguments(config, 'ps', ['wwup']))
 
-	def _handle_error(self, proc):
-		self._filter_proc_log(proc, self._errormsg, blacklist=['Unknown Job Id'], log_empty=False)
+	def _handle_error(self, log, proc):
+		self._filter_proc_log(log, proc, self._errormsg, blacklist=['Unknown Job Id'], log_empty=False)
 
 	def _parse(self, proc):
 		status_iter = proc.stdout.iter(self._timeout)
@@ -53,21 +54,20 @@ class HostCheckJobs(CheckJobsWithProcess):
 		return Job.RUNNING
 
 
+class HostSubmit(LocalSubmitWithProcess):
+	def _get_submit_arguments(self, job_desc, exec_fn, req_list, stdout_fn, stderr_fn):
+		return [stdout_fn, stderr_fn, exec_fn]
+
+	def _parse_submit_output(self, wms_id_str):
+		return wms_id_str.strip()
+
+
 class Host(LocalWMS):
 	alias_list = ['Localhost']
 	config_section_list = LocalWMS.config_section_list + ['Localhost', 'Host']
 
 	def __init__(self, config, name):
-		LocalWMS.__init__(self, config, name,
-			submit_exec=get_path_share('gc-host.sh'),
+		LocalWMS.__init__(self, config, name, broker_list=[],
+			local_submit_executor=HostSubmit(config, get_path_share('gc-wrapper-host')),
 			check_executor=CheckJobsMissingState(config, HostCheckJobs(config)),
 			cancel_executor=HostCancelJobs(config))
-
-	def parse_submit_output(self, data):
-		return data.strip()
-
-	def _get_job_arguments(self, jobnum, sandbox):
-		return ''
-
-	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
-		return '%d "%s" "%s" "%s"' % (jobnum, sandbox, stdout, stderr)

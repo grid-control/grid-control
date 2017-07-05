@@ -52,7 +52,7 @@ class LoggedProcess(object):
 		self.stderr.extend(self.proc.childerr.readlines())
 		return str.join('', self.stderr)
 
-	def get_message(self):
+	def get_msg(self):
 		return self.get_output() + '\n' + self.get_error()
 
 	def get_output(self, wait=False):

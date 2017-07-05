@@ -1,5 +1,4 @@
-#!/bin/bash
-# | Copyright 2010-2015 Karlsruhe Institute of Technology
+# | Copyright 2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -13,20 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# Source: github.com/grid-control
+from hpfwk import AbstractError, Plugin
 
-# 110 - ROOT area not found
 
-source "$GC_LANDINGZONE/gc-run.lib" || exit 101 # shellcheck source=/dev/null
+class Runtime(Plugin):
+	def translate_schedule(schedule):
+		raise AbstractError
 
-echo "ROOT module starting"
-echo "---------------------------"
 
-export ROOTSYS=$GC_ROOTSYS
-export PATH="$PATH:$ROOTSYS/bin"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$ROOTSYS/lib:$ROOTSYS/lib/root:."
-echo -n "ROOT Version: "
-"$ROOTSYS/bin/root-config" --version || fail 110
-echo "---------------------------"
-
-eval "$@"
+class LinuxRuntime(Runtime):
+	def translate_schedule(schedule):
+		pass

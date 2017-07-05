@@ -12,38 +12,64 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import random
 from grid_control.gc_plugin import NamedPlugin
+from grid_control.utils import prune_processors
+from hpfwk import AbstractError
+from python_compat import imap
 
 
 class Broker(NamedPlugin):
 	config_section_list = NamedPlugin.config_section_list + ['broker']
 	config_tag_name = 'broker'
 
-	def __init__(self, config, name, broker_prefix, item_name, discover_fun):
+	def __init__(self, config, name, broker_prefix, **kwargs):
 		NamedPlugin.__init__(self, config, name)
-		(self._item_list_start, self._item_list_discovered, self._item_name) = (None, False, item_name)
-		self._num_entries = config.get_int('%s entries' % broker_prefix, 0, on_change=None)
-		self._randomize = config.get_bool('%s randomize' % broker_prefix, False, on_change=None)
 
-	def broker(self, reqs, req_enum):
-		result = self._broker(reqs, self._item_list_start)
-		if result is not None:
-			reqs.append((req_enum, result))
-		return reqs
+	def __repr__(self):
+		return self._repr_base()
 
-	def _broker(self, reqs, items):
-		if items and self._randomize:
-			return random.sample(items, self._num_entries or len(items))
-		elif items and self._num_entries:
-			return items[:self._num_entries]
-		return items
+	def enabled(self):
+		return True
 
-	def _discover(self, discover_fun, cached=True):
-		if not cached or (self._item_list_discovered is False):
-			self._item_list_discovered = discover_fun()
-			msg = 'an unknown number of'
-			if self._item_list_discovered is not None:
-				msg = str(len(self._item_list_discovered))
-			self._log.info('Broker discovered %s %s', msg, self._item_name)
-		return self._item_list_discovered
+	def process(self, req_list):
+		raise AbstractError
+
+
+class MultiBroker(Broker):
+	alias_list = ['multi']
+
+	def __init__(self, config, name, broker_list, broker_prefix, **kwargs):
+		Broker.__init__(self, config, name, broker_prefix)
+		tmp_broker_list = []
+		for broker in broker_list:
+			if isinstance(broker, MultiBroker):
+				tmp_broker_list.extend(broker.get_broker_list())
+			else:
+				tmp_broker_list.append(broker)
+		self._do_prune = config.get_bool('%s broker prune' % broker_prefix, True)
+		self._broker_list = prune_processors(self._do_prune, tmp_broker_list,
+			self._log, 'Removed %d inactive ' + broker_prefix + ' brokers!')
+
+	def __repr__(self):
+		return str.join(' => ', imap(repr, self._broker_list))
+
+	def enabled(self):
+		return True
+
+	def get_broker_list(self):
+		return self._broker_list
+
+	def process(self, req_list):
+		for broker in self._broker_list:
+			req_list = broker.process(req_list)
+		return list(req_list)
+
+
+class NullBroker(Broker):
+	alias_list = ['null']
+
+	def enabled(self):
+		return False
+
+	def process(self, req_list):
+		return req_list

@@ -19,7 +19,7 @@ from python_compat import tarfile
 
 
 class RetrieveJobs(BackendExecutor):
-	def execute(self, wms_id_list):  # yields list of (wms_id, local_output_dir)
+	def execute(self, log, wms_id_list):  # yields list of (wms_id, local_output_dir)
 		raise AbstractError
 
 
@@ -32,24 +32,20 @@ class RetrieveJobsEmulateWildcard(RetrieveJobs):
 		RetrieveJobs.__init__(self, config)
 		(self._executor, self._wildcard_file) = (executor, 'GC_WC.tar.gz')
 
-	def execute(self, wms_id_list):  # yields list of (wms_id, local_output_dir)
-		for (wms_id, local_output_dir) in self._executor.execute(self, wms_id_list):
+	def execute(self, log, wms_id_list):  # yields list of (wms_id, local_output_dir)
+		for (wms_id, local_output_dir) in self._executor.execute(log, wms_id_list):
 			if local_output_dir and os.path.exists(local_output_dir):
 				fn_wildcard_tar = os.path.join(local_output_dir, self._wildcard_file)
 				if os.path.exists(fn_wildcard_tar):
 					try:
 						tarfile.TarFile.open(fn_wildcard_tar, 'r:gz').extractall(local_output_dir)
 					except Exception:
-						self._log.error('Unable to unpack output files contained in %s', fn_wildcard_tar)
+						log.error('Unable to unpack output files contained in %s', fn_wildcard_tar)
 						clear_current_exception()
 						continue
 					try:
 						os.unlink(fn_wildcard_tar)
 					except Exception:
-						self._log.error('Unable to remove wildcard emulation file %s', fn_wildcard_tar)
+						log.error('Unable to remove wildcard emulation file %s', fn_wildcard_tar)
 						clear_current_exception()
 			yield (wms_id, local_output_dir)
-
-	def setup(self, log):
-		RetrieveJobs.setup(self, log)
-		self._executor.setup(log)

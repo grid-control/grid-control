@@ -40,13 +40,7 @@
 
     * grid_control.backends.backend_tools BackendDiscovery
 
-     * grid_control.backends.wms_gridengine GridEngineDiscoverNodes
-
-     * grid_control.backends.wms_gridengine GridEngineDiscoverQueues
-
-     * grid_control.backends.wms_pbs PBSDiscoverNodes
-
-     * grid_control.backends.wms_pbs PBSDiscoverQueues
+     * grid_control.backends.backend_tools BackendDiscoveryProcess
 
     * grid_control.backends.backend_tools BackendExecutor
 
@@ -63,10 +57,6 @@
         * grid_control.backends.wms_cream CREAMCancelJobs
 
         * grid_control.backends.wms_cream CREAMPurgeJobs
-
-        * grid_control.backends.wms_host HostCancelJobs
-
-        * grid_control.backends.wms_lsf LSFCancelJobs
 
        * grid_control.backends.wms_condor CondorCancelJobs
 
@@ -88,23 +78,11 @@
 
        * grid_control.backends.wms_grid GridCheckJobs
 
-       * grid_control.backends.wms_gridengine GridEngineCheckJobs
-
-       * grid_control.backends.wms_host HostCheckJobs
-
-       * grid_control.backends.wms_jms JMSCheckJobs
-
-       * grid_control.backends.wms_lsf LSFCheckJobs
-
-       * grid_control.backends.wms_pbs PBSCheckJobs
-
-       * grid_control.backends.wms_slurm SLURMCheckJobs
-
-      * grid_control.backends.wms_glitewms_direct GliteWMSDirectCheckJobs
-
      * grid_control.backends.backend_tools ForwardingExecutor
 
       * grid_control.backends.backend_tools ChunkedExecutor
+
+       * grid_control.backends.backend_tools ChunkedStatusExecutor
 
      * grid_control.backends.aspect_output RetrieveJobs
 
@@ -234,6 +212,8 @@
 
      * grid_control.tasks.task_base DefaultJobName default
 
+    * grid_control.backends.aspect_submit LocalSubmitWithProcess
+
     * grid_control.config.matcher_base Matcher
 
      * grid_control.config.matcher_base AlwaysMatcher always
@@ -276,17 +256,29 @@
 
      * grid_control.backends.broker_base Broker
 
-      * grid_control.backends.broker_basic CoverageBroker
+      * grid_control.backends.broker_basic FinalBroker final
 
-      * grid_control.backends.broker_basic FilterBroker
+      * grid_control.backends.wms_local LocalMemoryBroker memory
 
-       * grid_control.backends.broker_basic SimpleBroker
+      * grid_control.backends.broker_base MultiBroker multi
 
-      * grid_control.backends.broker_basic RandomBroker
+      * grid_control.backends.broker_base NullBroker null
 
-      * grid_control.backends.broker_basic StorageBroker
+      * grid_control.backends.broker_basic SingleBroker
 
-      * grid_control.backends.broker_basic UserBroker
+       * grid_control.backends.broker_basic CoverageBroker coverage
+
+       * grid_control.backends.broker_basic DiscoveryBroker discover
+
+       * grid_control.backends.broker_basic FilterBroker filter
+
+       * grid_control.backends.broker_basic LimitBroker limit
+
+       * grid_control.backends.broker_basic RandomBroker random
+
+       * grid_control.backends.broker_basic SimpleBroker simple
+
+       * grid_control.backends.broker_basic StorageBroker storage
 
      * grid_control.job_manager JobManager NullJobManager
 
@@ -324,9 +316,9 @@
 
      * grid_control.backends.storage StorageManager
 
-      * grid_control.backends.storage LocalSBStorageManager
+      * grid_control.backends.storage LocalSBStorageManager local
 
-      * grid_control.backends.storage SEStorageManager
+      * grid_control.backends.storage SEStorageManager SE
 
      * grid_control.tasks.task_base TaskModule
 
@@ -338,7 +330,7 @@
 
      * grid_control.backends.wms WMS NullWMS
 
-      * grid_control.backends.wms BasicWMS
+      * grid_control.backends.wms_basic BasicWMS
 
        * grid_control.backends.wms_arc ARC
 
@@ -354,35 +346,13 @@
 
         * grid_control.backends.wms_glitewms GliteWMS gwms
 
-         * grid_control.backends.wms_glitewms_direct GliteWMSDirect
-
        * grid_control.backends.htcondor_wms.htcondor_wms HTCondor
 
        * grid_control.backends.wms_local LocalWMS
 
-        * grid_control.backends.wms_host Host Localhost
-
-        * grid_control.backends.wms_jms JMS
-
-        * grid_control.backends.wms_lsf LSF
-
-        * grid_control.backends.wms_pbsge PBSGECommon
-
-         * grid_control.backends.wms_gridengine GridEngine SGE UGE OGE
-
-         * grid_control.backends.wms_pbs PBS
-
-        * grid_control.backends.wms_slurm SLURM
-
-      * grid_control.backends.wms Grid
-
       * grid_control.backends.wms_inactive InactiveWMS inactive
 
       * grid_control.backends.wms_local Local
-
-      * grid_control.backends.wms_multi MultiWMS
-
-       * grid_control.backends.wms_thread ThreadedMultiWMS
 
      * grid_control.workflow Workflow default_workflow
 
@@ -425,8 +395,6 @@
     * grid_control.backends.backend_tools ProcessCreator
 
      * grid_control.backends.backend_tools ProcessCreatorViaArguments
-
-      * grid_control.backends.wms_gridengine GridEngineCheckJobsProcessCreator
 
       * grid_control.backends.backend_tools ProcessCreatorAppendArguments
 
@@ -498,27 +466,23 @@
 
      * grid_control.output_processor FileInfoProcessor fileinfo
 
-   * grid_control.parameters.pconfig ParameterParser
+   * grid_control.parameters.config_param ParameterParser
 
-    * grid_control.parameters.pconfig ExprParameterParser expr eval
+    * grid_control.parameters.config_param ExprParameterParser expr eval
 
-    * grid_control.parameters.pconfig FormatParameterParser format
+    * grid_control.parameters.config_param FormatParameterParser format
 
-    * grid_control.parameters.pconfig GitParameterParser git
+    * grid_control.parameters.config_param GitParameterParser git
 
-    * grid_control.parameters.pconfig LinesParameterParser lines
+    * grid_control.parameters.config_param LinesParameterParser lines
 
-    * grid_control.parameters.pconfig RegexTransformParameterParser regex_transform
+    * grid_control.parameters.config_param ShellParameterParser shell default
 
-    * grid_control.parameters.pconfig ShellParameterParser shell default
+    * grid_control.parameters.config_param SplitParameterParser split
 
-    * grid_control.parameters.pconfig SplitParameterParser split
+    * grid_control.parameters.config_param SvnParameterParser svn
 
-    * grid_control.parameters.pconfig SvnParameterParser svn
-
-    * grid_control.parameters.pconfig TransformParameterParser transform
-
-    * grid_control.parameters.pconfig VerbatimParameterParser verbatim
+    * grid_control.parameters.config_param VerbatimParameterParser verbatim
 
    * grid_control.parameters.psource_base ParameterSource
 
@@ -570,6 +534,8 @@
 
     * grid_control.parameters.psource_lookup InternalAutoLookupParameterSource
 
+    * grid_control.parameters.psource_internal InternalReferenceParameterSource
+
     * grid_control.parameters.psource_basic KeyParameterSource key
 
     * grid_control.parameters.psource_base LimitedResyncParameterSource
@@ -606,17 +572,15 @@
 
      * grid_control.parameters.psource_internal InternalAutoParameterSource
 
-     * grid_control.parameters.psource_internal InternalReferenceParameterSource
-
      * grid_control.parameters.psource_internal InternalResolveParameterSource
 
     * grid_control.parameters.psource_basic RequirementParameterSource req
 
-   * grid_control.parameters.pconfig ParameterTupleParser
+   * grid_control.parameters.config_param ParameterTupleParser
 
-    * grid_control.parameters.pconfig BinningTupleParser binning
+    * grid_control.parameters.config_param BinningTupleParser binning
 
-    * grid_control.parameters.pconfig DefaultTupleParser tuple default
+    * grid_control.parameters.config_param DefaultTupleParser tuple default
 
    * grid_control.datasets.splitter_base PartitionReader
 
@@ -659,6 +623,10 @@
     * grid_control.utils.webservice_requests RequestsSession requests
 
     * grid_control.utils.webservice_urllib2 Urllib2Session urllib2
+
+   * grid_control.backends.runtime Runtime
+
+    * grid_control.backends.runtime LinuxRuntime
 
    * grid_control.output_processor TaskOutputProcessor
 

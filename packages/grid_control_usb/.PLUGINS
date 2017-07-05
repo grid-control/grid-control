@@ -1,0 +1,98 @@
+  * hpfwk.hpf_plugin Plugin
+
+   * grid_control.gc_plugin ConfigurablePlugin
+
+    * grid_control.backends.backend_tools BackendDiscovery
+
+     * grid_control.backends.backend_tools BackendDiscoveryProcess
+
+      * grid_control_usb.wms_gridengine GridEngineDiscoverNodes
+
+      * grid_control_usb.wms_gridengine GridEngineDiscoverQueues
+
+      * grid_control_usb.wms_pbs PBSDiscoverNodes
+
+      * grid_control_usb.wms_pbs PBSDiscoverQueues
+
+    * grid_control.backends.backend_tools BackendExecutor
+
+     * grid_control.backends.aspect_cancel CancelJobs
+
+      * grid_control.backends.aspect_cancel CancelJobsWithProcess
+
+       * grid_control.backends.aspect_cancel CancelJobsWithProcessBlind
+
+        * grid_control_usb.wms_host HostCancelJobs
+
+        * grid_control_usb.wms_lsf LSFCancelJobs
+
+     * grid_control.backends.aspect_status CheckJobs
+
+      * grid_control.backends.aspect_status CheckJobsWithProcess
+
+       * grid_control_usb.wms_gridengine GridEngineCheckJobs
+
+       * grid_control_usb.wms_host HostCheckJobs
+
+       * grid_control_usb.wms_jms JMSCheckJobs
+
+       * grid_control_usb.wms_lsf LSFCheckJobs
+
+       * grid_control_usb.wms_pbs PBSCheckJobs
+
+       * grid_control_usb.wms_slurm SLURMCheckJobs
+
+      * grid_control_usb.wms_glitewms_direct GliteWMSDirectCheckJobs
+
+    * grid_control.backends.aspect_submit LocalSubmitWithProcess
+
+     * grid_control_usb.wms_host HostSubmit
+
+     * grid_control_usb.wms_jms JMSSubmit
+
+     * grid_control_usb.wms_lsf LSFSubmit
+
+     * grid_control_usb.wms_pbsge PBSGESubmit
+
+      * grid_control_usb.wms_gridengine GridEngineSubmit
+
+      * grid_control_usb.wms_pbs PBSSubmit
+
+     * grid_control_usb.wms_slurm SLURMSubmit
+
+    * grid_control.gc_plugin NamedPlugin
+
+     * grid_control.backends.wms WMS NullWMS
+
+      * grid_control.backends.wms_basic BasicWMS
+
+       * grid_control.backends.wms_grid GridWMS
+
+        * grid_control.backends.wms_glitewms GliteWMS gwms
+
+         * grid_control_usb.wms_glitewms_direct GliteWMSDirect
+
+       * grid_control.backends.wms_local LocalWMS
+
+        * grid_control_usb.wms_gridengine GridEngine SGE UGE OGE
+
+        * grid_control_usb.wms_host Host Localhost
+
+        * grid_control_usb.wms_jms JMS
+
+        * grid_control_usb.wms_lsf LSF
+
+        * grid_control_usb.wms_pbs PBS
+
+        * grid_control_usb.wms_slurm SLURM
+
+      * grid_control_usb.wms_multi MultiWMS multi
+
+       * grid_control_usb.wms_thread ThreadedMultiWMS threaded
+
+    * grid_control.backends.backend_tools ProcessCreator
+
+     * grid_control.backends.backend_tools ProcessCreatorViaArguments
+
+      * grid_control_usb.wms_gridengine GridEngineCheckJobsProcessCreator
+

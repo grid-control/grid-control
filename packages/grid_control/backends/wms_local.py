@@ -12,33 +12,41 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, glob, time, shlex, shutil, tempfile
+import os, glob, time, shutil, tempfile
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobs
 from grid_control.backends.broker_base import Broker
-from grid_control.backends.wms import BackendError, BasicWMS, WMS
+from grid_control.backends.script_creator import create_shell_script
+from grid_control.backends.storage import StorageManager
+from grid_control.backends.wms import BackendError, WMS
+from grid_control.backends.wms_basic import BasicWMS
 from grid_control.utils import ensure_dir_exists, get_path_share, remove_files, resolve_install_path
 from grid_control.utils.activity import Activity
-from grid_control.utils.file_tools import VirtualFile
-from grid_control.utils.process_base import LocalProcess
+from grid_control.utils.file_tools import SafeFile, VirtualFile
 from grid_control.utils.thread_tools import GCLock, with_lock
-from hpfwk import AbstractError, ExceptionCollector, ignore_exception
-from python_compat import ifilter, imap, ismap, lchain, lfilter, lmap
+from hpfwk import ExceptionCollector
+from python_compat import ifilter, imap, lchain, lfilter
 
 
 class SandboxHelper(object):
-	def __init__(self, config):
-		self._cache = []
-		self._path = config.get_path('sandbox path', config.get_work_path('sandbox'), must_exist=False)
+	def __init__(self, config, wms_name):
+		(self._cache, self._wms_name) = ([], wms_name)
+		self._path = config.get_dn('sandbox path', config.get_work_path('sandbox'), must_exist=False)
 		ensure_dir_exists(self._path, 'sandbox base', BackendError)
+
+	def create_sandbox(self):
+		# TODO
+		pass
 
 	def get_path(self):
 		return self._path
 
-	def get_sandbox(self, gc_id):
+	def get_sandbox(self, wms_id):
+		marker_fn = self._get_marker_fn(wms_id)
+
 		# Speed up function by caching result of listdir
 		def _search_sandbox(source):
 			for path in imap(lambda sbox: os.path.join(self._path, sbox), source):
-				if os.path.exists(os.path.join(path, gc_id)):
+				if os.path.exists(os.path.join(path, marker_fn)):
 					return path
 		result = _search_sandbox(self._cache)
 		if result:
@@ -48,52 +56,38 @@ class SandboxHelper(object):
 			os.listdir(self._path))
 		return _search_sandbox(ifilter(lambda x: x not in old_cache, self._cache))
 
+	def mark_sandbox(self, wms_id, sandbox):  # tag sandbox directory
+		SafeFile(os.path.join(sandbox, self._get_marker_fn(wms_id)), 'w').write_close('')
+
+	def _get_marker_fn(self, wms_id):
+		return 'WMSID.%s.%s' % (self._wms_name, wms_id)
+
 
 class LocalWMS(BasicWMS):
 	config_section_list = BasicWMS.config_section_list + ['local']
 
-	def __init__(self, config, name, submit_exec, check_executor, cancel_executor,
-			nodes_finder=None, queues_finder=None):
-		config.set('broker', 'RandomBroker')
+	def __init__(self, config, name, broker_list,
+			local_submit_executor, check_executor, cancel_executor):
 		config.set_int('wait idle', 20)
 		config.set_int('wait work', 5)
-		self._submit_exec = submit_exec
-		self._sandbox_helper = SandboxHelper(config)
-		BasicWMS.__init__(self, config, name, check_executor=check_executor,
+		self._sandbox_helper = SandboxHelper(config, name)
+		self._delay = config.get_bool('delay output', False, on_change=None)
+		local_memory_broker = LocalMemoryBroker(config, name)
+		BasicWMS.__init__(self, config, name, broker_list + [local_memory_broker],
+			check_executor=check_executor,
 			cancel_executor=CancelAndPurgeJobs(config, cancel_executor,
 				LocalPurgeJobs(config, self._sandbox_helper)))
+		self._local_submit_executor = local_submit_executor
+		self._sm_sb_in = config.get_plugin('sb input manager', 'LocalSBStorageManager',
+			cls=StorageManager, bind_kwargs={'tags': [self]}, pargs=('sandbox', 'sandbox'))
 
-		def _get_nodes_list():
-			if nodes_finder:
-				return lmap(lambda x: x['name'], nodes_finder.discover())
+		self._scratch_path_list = config.get_list('scratch path', ['$TMPDIR', '/tmp'], on_change=None)
 
-		self._broker_site = config.get_plugin('site broker', 'UserBroker', cls=Broker,
-			bind_kwargs={'inherit': True, 'tags': [self]}, pargs=('sites', 'sites', _get_nodes_list))
-
-		def _get_queues_list():
-			if queues_finder:
-				result = {}
-				for entry in queues_finder.discover():
-					result[entry.pop('name')] = entry
-				return result
-
-		self._broker_queue = config.get_plugin('queue broker', 'UserBroker', cls=Broker,
-			bind_kwargs={'inherit': True, 'tags': [self]}, pargs=('queue', 'queues', _get_queues_list))
-
-		self._scratch_path = config.get_list('scratch path', ['TMPDIR', '/tmp'], on_change=True)
-		self._submit_opt_list = shlex.split(config.get('submit options', '', on_change=None))
-		self._memory = config.get_int('memory', -1, on_change=None)
-
-	def parse_submit_output(self, data):
-		raise AbstractError
-
-	def _check_req(self, reqs, req, test=lambda x: x > 0):
-		if req in reqs:
-			return test(reqs[req])
-		return False
-
-	def _get_job_arguments(self, jobnum, sandbox):
-		raise AbstractError
+	def _get_job_input_ft_list(self, jobnum, task):
+		input_ft_list = BasicWMS._get_job_input_ft_list(self, jobnum, task)
+		for idx, auth_fn in enumerate(self._token.get_auth_fn_list()):
+			input_ft_list.append((auth_fn, ('_proxy.dat.%d' % idx).replace('.0', '')))
+		return input_ft_list
 
 	def _get_jobs_output(self, gc_id_jobnum_list):
 		if not len(gc_id_jobnum_list):
@@ -101,77 +95,90 @@ class LocalWMS(BasicWMS):
 
 		activity = Activity('retrieving %d job outputs' % len(gc_id_jobnum_list))
 		for gc_id, jobnum in gc_id_jobnum_list:
-			path = self._sandbox_helper.get_sandbox(gc_id)
+			wms_id = self._split_gc_id(gc_id)[1]
+			path = self._sandbox_helper.get_sandbox(wms_id)
 			if path is None:
 				yield (jobnum, None)
 				continue
 
 			# Cleanup sandbox
-			output_fn_list = lchain(imap(lambda pat: glob.glob(os.path.join(path, pat)),
-				self._output_fn_list))
-			remove_files(ifilter(lambda x: x not in output_fn_list,
-				imap(lambda fn: os.path.join(path, fn), os.listdir(path))))
+			sb_out_fn = os.path.join(path, '_gc_sb_out.dat')
+			if os.path.exists(sb_out_fn):
+				output_fn_list = lchain(imap(lambda pat: glob.glob(os.path.join(path, pat.strip())),
+					SafeFile(sb_out_fn).read_close().splitlines()))
+				remove_files(ifilter(lambda x: x not in output_fn_list,
+					imap(lambda fn: os.path.join(path, fn), os.listdir(path))))
 
 			yield (jobnum, path)
 		activity.finish()
 
-	def _get_sandbox_file_list(self, task, sm_list):
-		files = BasicWMS._get_sandbox_file_list(self, task, sm_list)
-		for idx, auth_fn in enumerate(self._token.get_auth_fn_list()):
-			files.append(VirtualFile(('_proxy.dat.%d' % idx).replace('.0', ''), open(auth_fn, 'r').read()))
-		return files
+	def _submit_job(self, job_desc, exec_fn, arg_list, sb_in_fn_list, sb_out_fn_list, req_list):
+		req_list = self._broker.process(req_list)
 
-	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
-		raise AbstractError
-
-	def _get_submit_proc(self, jobnum, sandbox, job_name, reqs):
-		(stdout, stderr) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
-		submit_args = list(self._submit_opt_list)
-		submit_args.extend(shlex.split(self._get_submit_arguments(jobnum, job_name,
-			reqs, sandbox, stdout, stderr)))
-		submit_args.append(get_path_share('gc-local.sh'))
-		submit_args.extend(shlex.split(self._get_job_arguments(jobnum, sandbox)))
-		return LocalProcess(self._submit_exec, *submit_args)
-
-	def _submit_job(self, jobnum, task):
-		# Submit job and yield (jobnum, WMS ID, other data)
-		activity = Activity('submitting job %d' % jobnum)
-
+		# create sandbox
 		try:
-			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (task.get_description().task_id, jobnum),
+			sandbox = tempfile.mkdtemp('', '%s.%s.' % (job_desc.task_id, job_desc.job_name),
 				self._sandbox_helper.get_path())
 		except Exception:
 			raise BackendError('Unable to create sandbox directory "%s"!' % sandbox)
+
+		(exec_fn, stdout_fn, stderr_fn) = self._wrap_script_for_local(sandbox, job_desc,
+			exec_fn, arg_list, sb_in_fn_list, sb_out_fn_list)
+
+		wms_id = self._local_submit_executor.submit(job_desc.task_id, job_desc.job_name,
+			exec_fn, req_list, stdout_fn, stderr_fn)
+		if wms_id is not None:
+			gc_id = self._create_gc_id(wms_id)
+			if gc_id is None:
+				self._log.warning('Invalid WMS ID: %s', repr(wms_id))
+			else:
+				self._sandbox_helper.mark_sandbox(wms_id, sandbox)
+		return (gc_id, {'sandbox': sandbox})
+
+	def _wrap_script_for_local(self, sandbox, job_desc, exec_fn, arg_list,
+			sb_in_fn_list, sb_out_fn_list):
+		# copy sandbox files to sandbox directory
 		sb_prefix = sandbox.replace(self._sandbox_helper.get_path(), '').lstrip('/')
 
-		def _translate_target(desc, src, target):
-			return (desc, src, os.path.join(sb_prefix, target))
-		self._sm_sb_in.do_transfer(ismap(_translate_target, self._get_in_transfer_info_list(task)))
+		def _translate_target(fn):
+			return (fn, fn, os.path.join(sb_prefix, os.path.basename(fn)))
+		self._sm_sb_in.do_transfer(imap(_translate_target, sb_in_fn_list))
 
-		self._write_job_config(os.path.join(sandbox, '_jobconfig.sh'), jobnum, task, {
-			'GC_SANDBOX': sandbox, 'GC_SCRATCH_SEARCH': str.join(' ', self._scratch_path)})
-		reqs = self._broker_site.broker(task.get_requirement_list(jobnum), WMS.SITES)
-		reqs = dict(self._broker_queue.broker(reqs, WMS.QUEUES))
-		if (self._memory > 0) and (reqs.get(WMS.MEMORY, 0) < self._memory):
-			reqs[WMS.MEMORY] = self._memory  # local jobs need higher (more realistic) memory requirements
+		# create job wrapper for local jobs - searching sandbox, redirecting stdout/stderr
+		def _fmt_list(value):
+			return '\'%s\'' % str.join(' ', imap(lambda x: '"%s"' % x, value))
 
-		job_name = task.get_description(jobnum).job_name
-		proc = self._get_submit_proc(jobnum, sandbox, job_name, reqs)
-		exit_code = proc.status(timeout=20, terminate=True)
-		wms_id_str = proc.stdout.read(timeout=0).strip().strip('\n')
-		wms_id = ignore_exception(Exception, None, self.parse_submit_output, wms_id_str)
-		activity.finish()
-
-		if exit_code != 0:
-			self._log.warning('%s failed:', self._submit_exec)
-		elif wms_id is None:
-			self._log.warning('%s did not yield job id:\n%s', self._submit_exec, wms_id_str)
-		gc_id = self._create_gc_id(wms_id)
-		if gc_id is not None:
-			open(os.path.join(sandbox, gc_id), 'w')
+		cfg_lines = [
+			'GCLW_EXEC=%s\n' % _fmt_list(['./%s' % os.path.basename(exec_fn)] + arg_list),
+			'GCLW_SCRATCH_SEARCH=%s\n' % _fmt_list(self._scratch_path_list + ['$GC_SANDBOX']),
+		]
+		if self._delay:
+			cfg_lines.append('GCLW_OUTPUT_STREAM="%s"\n' % os.path.join(sandbox, 'gc.stdout'))
+			cfg_lines.append('GCLW_ERROR_STREAM="%s"\n' % os.path.join(sandbox, 'gc.stderr'))
+			stdout_fn = stderr_fn = '/dev/null'
 		else:
-			self._log.log_process(proc)
-		return (jobnum, gc_id, {'sandbox': sandbox})
+			(stdout_fn, stderr_fn) = (os.path.join(sandbox, 'gc.stdout'), os.path.join(sandbox, 'gc.stderr'))
+
+		ft_list = [
+			exec_fn,
+			get_path_share('gc-wrapper-local'),
+			VirtualFile('_gc_local.conf', cfg_lines),
+		]
+		wrapper_fn = os.path.join(sandbox,
+			'gc-local-boxed.%s.%s.sh' % (job_desc.task_id, job_desc.job_name))
+		create_shell_script(wrapper_fn, ft_list, './gc-wrapper-local ./_gc_local.conf')
+		return (wrapper_fn, stdout_fn, stderr_fn)
+
+
+class LocalMemoryBroker(Broker):
+	alias_list = ['memory']
+
+	def __init__(self, config, name, broker_prefix=None, **kwargs):
+		Broker.__init__(self, config, name, broker_prefix, **kwargs)
+		self._memory = config.get_int('memory', -1, on_change=None)
+
+	def process(self, req_list):
+		return req_list + [(WMS.MEMORY, self._memory)]
 
 
 class LocalPurgeJobs(CancelJobs):
@@ -181,20 +188,21 @@ class LocalPurgeJobs(CancelJobs):
 		CancelJobs.__init__(self, config)
 		self._sandbox_helper = sandbox_helper
 
-	def execute(self, wms_id_list, wms_name):  # yields list of purged (wms_id,)
+	def execute(self, log, wms_id_list):  # yields list of purged (wms_id,)
 		activity = Activity('waiting for jobs to finish')
 		time.sleep(5)
 		for wms_id in wms_id_list:
-			path = self._sandbox_helper.get_sandbox('WMSID.%s.%s' % (wms_name, wms_id))
+			path = self._sandbox_helper.get_sandbox(wms_id)
 			if path is None:
-				self._log.warning('Sandbox for job %r could not be found', wms_id)
+				log.warning('Sandbox for job %r could not be found', wms_id)
 				continue
-			with_lock(LocalPurgeJobs.purge_lock, _purge_directory, self._log, path, wms_id)
+			with_lock(LocalPurgeJobs.purge_lock, _purge_directory, log, path, wms_id)
 			yield (wms_id,)
 		activity.finish()
 
 
 class Local(WMS):
+	alias_list = ['']
 	config_section_list = WMS.config_section_list + ['local']
 
 	def __new__(cls, config, name):
@@ -205,7 +213,7 @@ class Local(WMS):
 				raise BackendError('Unable to load backend class %s' % repr(wms))
 			wms_config = config.change_view(view_class='TaggedConfigView', set_classes=[backend_cls])
 			return WMS.create_instance(wms, wms_config, name)
-		wms = config.get('wms', '')
+		wms = config.get('wms', '')  # support old style "backend = local" and "wms = pbs" configuration
 		if wms:
 			return _create_backend(wms)
 		exc = ExceptionCollector()

@@ -15,30 +15,30 @@
 import xml.dom.minidom
 from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess, CheckStatus  # pylint:disable=line-too-long
-from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreatorViaArguments
+from grid_control.backends.backend_tools import BackendDiscoveryProcess, ProcessCreatorViaArguments
+from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, WMS
-from grid_control.backends.wms_pbsge import PBSGECommon
+from grid_control.backends.wms_local import LocalWMS
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from grid_control.utils import get_local_username, resolve_install_path
 from grid_control.utils.parsing import parse_time
 from grid_control.utils.process_base import LocalProcess
-from python_compat import any, imap, izip, lmap, set, sorted
+from grid_control_usb.wms_pbsge import PBSGESubmit
+from python_compat import any, identity, imap, izip, lmap, set, sorted
 
 
-class GridEngineDiscoverNodes(BackendDiscovery):
+class GridEngineDiscoverNodes(BackendDiscoveryProcess):
 	def __init__(self, config):
-		BackendDiscovery.__init__(self, config)
-		self._config_timeout = config.get_time('discovery timeout', 30, on_change=None)
-		self._config_exec = resolve_install_path('qconf')
+		BackendDiscoveryProcess.__init__(self, config, 'qconf')
 
 	def discover(self):
 		nodes = set()
-		proc = LocalProcess(self._config_exec, '-shgrpl')
-		for group in proc.stdout.iter(timeout=self._config_timeout):
+		proc = LocalProcess(self._exec, '-shgrpl')
+		for group in proc.stdout.iter(timeout=self._timeout):
 			yield {'name': group.strip()}
-			proc_g = LocalProcess(self._config_exec, '-shgrp_resolved', group)
-			for host_list in proc_g.stdout.iter(timeout=self._config_timeout):
+			proc_g = LocalProcess(self._exec, '-shgrp_resolved', group)
+			for host_list in proc_g.stdout.iter(timeout=self._timeout):
 				nodes.update(host_list.split())
 			proc_g.status_raise(timeout=0)
 		for host in sorted(nodes):
@@ -46,25 +46,23 @@ class GridEngineDiscoverNodes(BackendDiscovery):
 		proc.status_raise(timeout=0)
 
 
-class GridEngineDiscoverQueues(BackendDiscovery):
+class GridEngineDiscoverQueues(BackendDiscoveryProcess):
 	def __init__(self, config):
-		BackendDiscovery.__init__(self, config)
-		self._config_timeout = config.get_time('discovery timeout', 30, on_change=None)
-		self._config_exec = resolve_install_path('qconf')
+		BackendDiscoveryProcess.__init__(self, config, 'qconf')
 
 	def discover(self):
-		tags = ['h_vmem', 'h_cpu', 's_rt']
-		reqs = dict(izip(tags, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
-		parser = dict(izip(tags, [int, parse_time, parse_time]))
+		attr_list = ['h_vmem', 'h_cpu', 's_rt']
+		attr_req_map = dict(izip(attr_list, [WMS.MEMORY, WMS.CPUTIME, WMS.WALLTIME]))
+		attr_parser = dict(izip(attr_list, [int, parse_time, parse_time]))
 
-		proc = LocalProcess(self._config_exec, '-sql')
-		for queue in imap(str.strip, proc.stdout.iter(timeout=self._config_timeout)):
-			proc_q = LocalProcess(self._config_exec, '-sq', queue)
+		proc = LocalProcess(self._exec, '-sql')
+		for queue in imap(str.strip, proc.stdout.iter(timeout=self._timeout)):
+			proc_q = LocalProcess(self._exec, '-sq', queue)
 			queue_dict = {'name': queue}
-			for line in proc_q.stdout.iter(timeout=self._config_timeout):
+			for line in proc_q.stdout.iter(timeout=self._timeout):
 				attr, value = lmap(str.strip, line.split(' ', 1))
-				if (attr in tags) and (value != 'INFINITY'):
-					queue_dict[reqs[attr]] = parser[attr](value)
+				if (attr in attr_list) and (value != 'INFINITY'):
+					queue_dict[attr_req_map[attr]] = attr_parser[attr](value)
 			proc_q.status_raise(timeout=0)
 			yield queue_dict
 		proc.status_raise(timeout=0)
@@ -121,45 +119,62 @@ class GridEngineCheckJobs(CheckJobsWithProcess):
 			yield job_info
 
 
-class GridEngine(PBSGECommon):  # pylint:disable=too-many-ancestors
+class GridEngine(LocalWMS):  # pylint:disable=too-many-ancestors
 	alias_list = ['SGE', 'UGE', 'OGE']
-	config_section_list = PBSGECommon.config_section_list + ['GridEngine'] + alias_list
+	config_section_list = LocalWMS.config_section_list + ['GridEngine'] + alias_list
 
 	def __init__(self, config, name):
 		cancel_executor = CancelJobsWithProcessBlind(config, 'qdel',
 			fmt=lambda wms_id_list: [str.join(',', wms_id_list)], unknown_id='Unknown Job Id')
-		PBSGECommon.__init__(self, config, name,
+		queue_broker = config.get_composited_plugin('queue broker', pargs=('queue',), cls=Broker,
+			bind_kwargs={'inherit': True, 'tags': [self]}, pkwargs={'req_type': WMS.QUEUES,
+				'discovery_fun': self._discover(GridEngineDiscoverQueues(config), 'queues')},
+			default='FilterBroker RandomBroker LimitBroker', default_compositor='MultiBroker')
+		nodes_broker = config.get_composited_plugin('nodes broker', pargs=('nodes',), cls=Broker,
+			bind_kwargs={'inherit': True, 'tags': [self]}, pkwargs={'req_type': WMS.WN,
+				'discovery_fun': self._discover(GridEngineDiscoverNodes(config), 'nodes')},
+			default='FilterBroker RandomBroker', default_compositor='MultiBroker')
+		LocalWMS.__init__(self, config, name,
+			broker_list=[queue_broker, nodes_broker],
+			local_submit_executor=GridEngineSubmit(config, 'qsub'),
 			cancel_executor=cancel_executor,
-			check_executor=CheckJobsMissingState(config, GridEngineCheckJobs(config)),
-			nodes_finder=GridEngineDiscoverNodes(config),
-			queues_finder=GridEngineDiscoverQueues(config))
-		self._project = config.get('project name', '', on_change=None)
-		self._config_exec = resolve_install_path('qconf')
+			check_executor=CheckJobsMissingState(config, GridEngineCheckJobs(config)))
 
-	def parse_submit_output(self, data):
-		# Your job 424992 ("test.sh") has been submitted
-		return data.split()[2].strip()
 
-	def _get_submit_arguments(self, jobnum, job_name, reqs, sandbox, stdout, stderr):
+class GridEngineSubmit(PBSGESubmit):
+	def __init__(self, config, submit_exec):
 		def _time_str(secs):
 			return '%02d:%02d:%02d' % (secs / 3600, (secs / 60) % 60, secs % 60)
 
-		req_map = {WMS.MEMORY: ('h_vmem', lambda m: '%dM' % m),
-			WMS.WALLTIME: ('s_rt', _time_str), WMS.CPUTIME: ('h_cpu', _time_str)}
-		# Restart jobs = no
-		params = ' -r n -notify'
+		PBSGESubmit.__init__(self, config, submit_exec, {
+			WMS.MEMORY: ('-l', lambda memory: 'h_vmem=%dM' % memory, identity),
+			WMS.WALLTIME: ('-l', lambda walltime: 's_rt=%s' % _time_str(walltime), identity),
+			WMS.CPUTIME: ('-l', lambda cputime: 'h_cpu=%s' % _time_str(cputime), identity)
+		})
+		self._project = config.get('project name', '', on_change=None)
+
+	def get_array_key_list(self):
+		return ['SGE_TASK_ID']
+
+	def _get_submit_arguments(self, job_desc, exec_fn, req_list, stdout_fn, stderr_fn):
+		arg_list = ['-r', 'n', '-notify']  # Restart jobs = no, send signal before killing
+		req_dict = dict(req_list)
 		if self._project:
-			params += ' -P %s' % self._project
+			arg_list.extend(['-P', self._project])
 		# Job requirements
-		(queue, nodes) = (reqs.get(WMS.QUEUES, [''])[0], reqs.get(WMS.SITES))
+		(queue, nodes) = ((req_dict.get(WMS.QUEUES) or [''])[0], req_dict.get(WMS.WN))
 		if not nodes and queue:
-			params += ' -q %s' % queue
+			arg_list.extend(['-q', queue])
 		elif nodes and queue:
-			params += ' -q %s' % str.join(',', imap(lambda node: '%s@%s' % (queue, node), nodes))
+			arg_list.extend(['-q', str.join(',', imap(lambda node: '%s@%s' % (queue, node), nodes))])
 		elif nodes:
 			raise ConfigError('Please also specify queue when selecting nodes!')
-		return params + PBSGECommon._get_common_submit_arguments(self, jobnum, job_name,
-			reqs, sandbox, stdout, stderr, req_map)
+		return arg_list + PBSGESubmit._get_submit_arguments(self, job_desc,
+			exec_fn, req_list, stdout_fn, stderr_fn)
+
+	def _parse_submit_output(self, wms_id_str):
+		# Your job 424992 ("test.sh") has been submitted
+		return wms_id_str.split()[2].strip()
 
 
 class GridEngineCheckJobsProcessCreator(ProcessCreatorViaArguments):

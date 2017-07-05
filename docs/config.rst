@@ -70,18 +70,27 @@ Workflow options
     Select the backend to use for job submission
 
     List of available plugins:
+     * Condor_
      * CreamWMS_ (alias: cream)
      * EuropeanDataGrid_ (alias: EDG, LCG)
+     * GliteWMSDirect_
      * GliteWMS_ (alias: gwms)
+     * Glite_
      * GridEngine_ (alias: SGE, UGE, OGE)
      * Host_ (alias: Localhost)
      * InactiveWMS_ (alias: inactive)
+     * JMS_
+     * LSF_
+     * Local_
+     * PBS_
+     * SLURM_
 
 * ``backend manager`` = <plugin> (Default: 'MultiWMS')
-    Specify compositor class to merge the different plugins given in ``backend``
+    Specifiy compositor class to merge the different plugins given in ``backend``
 
     List of available compositor plugins:
-     * MultiWMS_
+     * MultiWMS_ (alias: multi)
+     * ThreadedMultiWMS_ (alias: threaded)
 
 * ``task / module`` = <plugin[:name]>
     Select the task module to run
@@ -198,7 +207,7 @@ SimpleJobManager options
      * ScriptEventHandler_ (alias: scripts)
 
 * ``local event handler manager`` = <plugin> (Default: 'MultiLocalEventHandler')
-    Specify compositor class to merge the different plugins given in ``local event handler``
+    Specifiy compositor class to merge the different plugins given in ``local event handler``
 
     List of available compositor plugins:
      * MultiLocalEventHandler_ (alias: multi)
@@ -235,7 +244,7 @@ SimpleJobManager options
 backend options
 ---------------
 
-* ``<prefix> chunk interval`` = <integer> (Default: <depends on the process>)
+* ``<prefix> chunk interval`` = <duration hh[:mm[:ss]]> (Default: <depends on the process>)
     Specify the interval between (submit, check, ...) chunks
 
 * ``<prefix> chunk size`` = <integer> (Default: <depends on the process>)
@@ -251,7 +260,7 @@ backend options
      * VomsAccessToken_ (alias: voms, VomsProxy)
 
 * ``access token manager`` = <plugin> (Default: 'MultiAccessToken')
-    Specify compositor class to merge the different plugins given in ``access token``
+    Specifiy compositor class to merge the different plugins given in ``access token``
 
     List of available compositor plugins:
      * MultiAccessToken_ (alias: multi)
@@ -259,23 +268,34 @@ backend options
 * ``cancel timeout`` = <duration hh[:mm[:ss]]> (Default: 00:01:00)
     Specify timeout of the process that is used to cancel jobs
 
-* ``sb input manager`` = <plugin[:name]> (Default: 'LocalSBStorageManager')
-    Specify transfer manager plugin to transfer sandbox input files
+* ``enable chunk`` = <boolean> (Default: False)
+    Toggle chunked processing of jobs by the backend
+
+* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
+    Specify remote event handler plugins to track the task / job progress on the worker node
 
     List of available plugins:
-     * StorageManager
+     * DashboardRemote_ (alias: dashboard)
+
+* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
+    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+
+    List of available compositor plugins:
+     * MultiRemoteEventHandler_ (alias: multi)
 
 * ``se input manager`` = <plugin[:name]> (Default: 'SEStorageManager')
     Specify transfer manager plugin to transfer SE input files
 
     List of available plugins:
-     * StorageManager
+     * LocalSBStorageManager_ (alias: local)
+     * SEStorageManager_ (alias: SE)
 
 * ``se output manager`` = <plugin[:name]> (Default: 'SEStorageManager')
     Specify transfer manager plugin to transfer SE output files
 
     List of available plugins:
-     * StorageManager
+     * LocalSBStorageManager_ (alias: local)
+     * SEStorageManager_ (alias: SE)
 
 
 .. _UserTask:
@@ -346,9 +366,6 @@ UserTask options
 * ``scratch space used`` = <integer> (Default: 5000)
     Maximum amount of disk space (in MB) that the job is allowed to use in the scratch directory while running. If the landing zone itself is the scratch space, the scratch thresholds apply
 
-* ``se min size`` = <integer> (Default: -1)
-    TODO: DELETE
-
 * ``subst files`` = <list of values> (Default: '')
     List of files that will be subjected to variable substituion
 
@@ -379,7 +396,7 @@ CMSSW options
     List of files that should be taken from the CMSSW project area for running the job
 
 * ``area files matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specify matcher plugin that is used to match filter expressions
+    Specifiy matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -491,9 +508,6 @@ CMSSW options
 * ``scratch space used`` = <integer> (Default: 5000)
     Maximum amount of disk space (in MB) that the job is allowed to use in the scratch directory while running. If the landing zone itself is the scratch space, the scratch thresholds apply
 
-* ``se min size`` = <integer> (Default: -1)
-    TODO: DELETE
-
 * ``se project area / se runtime`` = <boolean> (Default: True)
     Toggle to specify how the CMSSW project area should be transferred to the worker node
 
@@ -530,7 +544,7 @@ CMSSWAdvanced options
     List of files that should be taken from the CMSSW project area for running the job
 
 * ``area files matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specify matcher plugin that is used to match filter expressions
+    Specifiy matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -606,7 +620,7 @@ CMSSWAdvanced options
     Allows to specify a dictionary with list of config files that will be sequentially processed by *cmsRun* calls. The dictionary key is the job dependent dataset nickname
 
 * ``nickname config matcher`` = <plugin> (Default: 'RegExMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -664,9 +678,6 @@ CMSSWAdvanced options
 * ``scratch space used`` = <integer> (Default: 5000)
     Maximum amount of disk space (in MB) that the job is allowed to use in the scratch directory while running. If the landing zone itself is the scratch space, the scratch thresholds apply
 
-* ``se min size`` = <integer> (Default: -1)
-    TODO: DELETE
-
 * ``se project area / se runtime`` = <boolean> (Default: True)
     Toggle to specify how the CMSSW project area should be transferred to the worker node
 
@@ -711,7 +722,7 @@ dataset options
      * ScanProvider_ (alias: scan)
 
 * ``<datasource> manager`` = <plugin> (Default: ':ThreadedMultiDatasetProvider:')
-    Specify compositor class to merge the different plugins given in ``<datasource>``
+    Specifiy compositor class to merge the different plugins given in ``<datasource>``
 
     List of available compositor plugins:
      * MultiDatasetProvider_ (alias: multi)
@@ -754,7 +765,7 @@ dataset options
      * TFCPartitionProcessor_ (alias: tfc)
 
 * ``<datasource> partition processor manager`` = <plugin> (Default: 'MultiPartitionProcessor')
-    Specify compositor class to merge the different plugins given in ``<datasource> partition processor``
+    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
 
     List of available compositor plugins:
      * MultiPartitionProcessor_ (alias: multi)
@@ -780,7 +791,7 @@ dataset options
      * UniqueDataProcessor_ (alias: unique)
 
 * ``<datasource> processor manager`` = <plugin> (Default: 'MultiDataProcessor')
-    Specify compositor class to merge the different plugins given in ``<datasource> processor``
+    Specifiy compositor class to merge the different plugins given in ``<datasource> processor``
 
     List of available compositor plugins:
      * MultiDataProcessor_ (alias: multi)
@@ -842,46 +853,6 @@ TaskExecutableWrapper options
 
 * ``[<prefix>] send executable`` = <boolean> (Default: True)
     Toggle to control if the specified executable should be send together with the job
-
-
-.. __get_lookup_args:
-_get_lookup_args options
-------------------------
-
-* ``<parameter>`` = <text>
-    Specify the output variable name where the lookup result is stored
-
-* ``default lookup`` = <text>
-    Specify the default lookup variable
-
-* ``<parameter> empty set`` = <boolean> (Default: False)
-    Toggle if empty lookup results should be interpreted as an empty set [] or alternatively as an empty string ''
-
-* ``<parameter> matcher`` = <text> (Default: <default matcher given by 'default matcher'>)
-    Specify matcher plugin that is used to match the lookup expressions
-
-    List of available matcher plugins:
-     * AlwaysMatcher_ (alias: always)
-     * BlackWhiteMatcher_ (alias: blackwhite)
-     * EndMatcher_ (alias: end)
-     * EqualMatcher_ (alias: equal)
-     * ExprMatcher_ (alias: expr, eval)
-     * RegExMatcher_ (alias: regex)
-     * ShellStyleMatcher_ (alias: shell)
-     * StartMatcher_ (alias: start)
-
-* ``default matcher`` = <text> (Default: 'equal')
-    Specify the default matcher plugin that is used to match the lookup expressions
-
-    List of available matcher plugins:
-     * AlwaysMatcher_ (alias: always)
-     * BlackWhiteMatcher_ (alias: blackwhite)
-     * EndMatcher_ (alias: end)
-     * EqualMatcher_ (alias: equal)
-     * ExprMatcher_ (alias: expr, eval)
-     * RegExMatcher_ (alias: regex)
-     * ShellStyleMatcher_ (alias: shell)
-     * StartMatcher_ (alias: start)
 
 
 .. _interactive:
@@ -970,46 +941,6 @@ logging options
 parameters options
 ------------------
 
-* ``<parameter expression>`` = <text> (Default: '')
-    Specify parameter value
-
-* ``<parameter expression> key delimeter`` = <text> (Default: ',')
-    Specify delimeter to split parameter names
-
-* ``<parameter expression> parse dict`` = <boolean> (Default: True)
-    Toggle parsing parameter value as dictionary when it contains '=>'
-
-* ``<parameter expression> type`` = <text> (Default: 'default')
-    Specify parameter tuple parser
-
-    List of available parameter tuple parser plugins:
-     * BinningTupleParser_ (alias: binning)
-     * DefaultTupleParser_ (alias: tuple, default)
-
-* ``<parameter>`` = <text> (Default: '')
-    Specify parameter value
-
-* ``<parameter> repeat`` = <text> (Default: '1')
-    Specify how often the parameter values should be repeated
-
-* ``<parameter> repeat idx <index>`` = <text> (Default: '1')
-    Specify how often the given parameter value should be repeated
-
-* ``<parameter> type`` = <text> (Default: 'default')
-    Specify parameter value parser
-
-    List of available parameter value parser plugins:
-     * ExprParameterParser_ (alias: expr, eval)
-     * FormatParameterParser_ (alias: format)
-     * GitParameterParser_ (alias: git)
-     * LinesParameterParser_ (alias: lines)
-     * RegexTransformParameterParser_ (alias: regex_transform)
-     * ShellParameterParser_ (alias: shell, default)
-     * SplitParameterParser_ (alias: split)
-     * SvnParameterParser_ (alias: svn)
-     * TransformParameterParser_ (alias: transform)
-     * VerbatimParameterParser_ (alias: verbatim)
-
 * ``parameters`` = <text> (Default: '')
     Specify the parameter expression that defines the parameter space. The syntax depends on the used parameter factory
 
@@ -1020,6 +951,17 @@ ActivityMonitor options
 
 * ``activity max length`` = <integer> (Default: 75)
     Specify maximum number of activities to display
+
+
+.. _LocalSubmitWithProcess:
+LocalSubmitWithProcess options
+------------------------------
+
+* ``submit options`` = <text> (Default: '')
+    Specify additional job submission options
+
+* ``submit timeout`` = <duration hh[:mm[:ss]]> (Default: 00:00:20)
+    Specify timeout of the process that is used to submit jobs
 
 
 .. _Matcher:
@@ -1052,25 +994,9 @@ TimedActivityMonitor options
     Specify maximum number of activities to display
 
 
-.. _GridEngineDiscoverNodes:
-GridEngineDiscoverNodes options
+.. _BackendDiscoveryProcess:
+BackendDiscoveryProcess options
 -------------------------------
-
-* ``discovery timeout`` = <duration hh[:mm[:ss]]> (Default: 00:00:30)
-    Specify timeout of the process that is used to discover backend featues
-
-
-.. _GridEngineDiscoverQueues:
-GridEngineDiscoverQueues options
---------------------------------
-
-* ``discovery timeout`` = <duration hh[:mm[:ss]]> (Default: 00:00:30)
-    Specify timeout of the process that is used to discover backend featues
-
-
-.. _PBSDiscoverNodes:
-PBSDiscoverNodes options
-------------------------
 
 * ``discovery timeout`` = <duration hh[:mm[:ss]]> (Default: 00:00:30)
     Specify timeout of the process that is used to discover backend featues
@@ -1128,7 +1054,7 @@ LocationDataProcessor options
     Specify dataset location filter. Dataset without locations have the filter whitelist applied
 
 * ``<datasource> location filter plugin`` = <plugin> (Default: 'StrictListFilter')
-    Specify plugin that is used to filter the list
+    Specifiy plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -1136,7 +1062,7 @@ LocationDataProcessor options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``<datasource> location filter matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specify matcher plugin that is used to match filter expressions
+    Specifiy matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1149,7 +1075,7 @@ LocationDataProcessor options
      * StartMatcher_ (alias: start)
 
 * ``<datasource> location filter order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
-    Specify the order of the filtered list
+    Specifiy the order of the filtered list
 
 
 .. _LumiDataProcessor:
@@ -1160,7 +1086,7 @@ LumiDataProcessor options
     Specify lumi filter for the dataset (as nickname dependent dictionary)
 
 * ``<datasource> lumi filter matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1234,7 +1160,7 @@ URLDataProcessor options
     Specify list of url / data sources to remove from the dataset
 
 * ``<datasource> ignore urls plugin`` = <plugin> (Default: 'WeakListFilter')
-    Specify plugin that is used to filter the list
+    Specifiy plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -1242,7 +1168,7 @@ URLDataProcessor options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``<datasource> ignore urls matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specify matcher plugin that is used to match filter expressions
+    Specifiy matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1255,7 +1181,7 @@ URLDataProcessor options
      * StartMatcher_ (alias: start)
 
 * ``<datasource> ignore urls order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
-    Specify the order of the filtered list
+    Specifiy the order of the filtered list
 
 
 .. _EntriesConsistencyDataProcessor:
@@ -1312,7 +1238,7 @@ CMSBaseProvider options
     Specify lumi filter for the dataset (as nickname dependent dictionary)
 
 * ``<datasource> lumi filter matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1346,7 +1272,7 @@ CMSBaseProvider options
     Toggle the inclusion of files marked as invalid dataset
 
 * ``phedex sites plugin`` = <plugin> (Default: 'StrictListFilter')
-    Specify plugin that is used to filter the list
+    Specifiy plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -1354,7 +1280,7 @@ CMSBaseProvider options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``phedex sites matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specify matcher plugin that is used to match filter expressions
+    Specifiy matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1367,7 +1293,7 @@ CMSBaseProvider options
      * StartMatcher_ (alias: start)
 
 * ``phedex sites order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
-    Specify the order of the filtered list
+    Specifiy the order of the filtered list
 
 
 .. _ConfigDataProvider:
@@ -1424,7 +1350,7 @@ DASProvider options
     Specify lumi filter for the dataset (as nickname dependent dictionary)
 
 * ``<datasource> lumi filter matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1461,7 +1387,7 @@ DASProvider options
     Toggle the inclusion of files marked as invalid dataset
 
 * ``phedex sites plugin`` = <plugin> (Default: 'StrictListFilter')
-    Specify plugin that is used to filter the list
+    Specifiy plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -1469,7 +1395,7 @@ DASProvider options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``phedex sites matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specify matcher plugin that is used to match filter expressions
+    Specifiy matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1482,7 +1408,7 @@ DASProvider options
      * StartMatcher_ (alias: start)
 
 * ``phedex sites order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
-    Specify the order of the filtered list
+    Specifiy the order of the filtered list
 
 
 .. _ThreadedMultiDatasetProvider:
@@ -1527,7 +1453,7 @@ EventBoundarySplitter options
     Set granularity of dataset splitter
 
 * ``<datasource> entries per job matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1556,7 +1482,7 @@ FileBoundarySplitter options
     Set granularity of dataset splitter
 
 * ``<datasource> files per job matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1577,7 +1503,7 @@ HybridSplitter options
     Set guideline for the granularity of the dataset splitter
 
 * ``<datasource> entries per job matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1598,7 +1524,7 @@ RunSplitter options
     Specify number of sequential runs that are processed per job
 
 * ``<datasource> run range matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1619,7 +1545,7 @@ UserMetadataSplitter options
     Specify the name of the metadata variable that is used to partition the dataset into equivalence classes
 
 * ``split metadata matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1654,7 +1580,7 @@ ANSIGUI options
      * UserLogGUIElement_ (alias: log)
 
 * ``gui element manager`` = <plugin> (Default: 'MultiGUIElement')
-    Specify compositor class to merge the different plugins given in ``gui element``
+    Specifiy compositor class to merge the different plugins given in ``gui element``
 
     List of available compositor plugins:
      * MultiGUIElement_ (alias: multi)
@@ -1700,7 +1626,7 @@ BasicConsoleGUI options
      * VariablesReport_ (alias: variables, vars)
 
 * ``report manager`` = <plugin> (Default: 'MultiReport')
-    Specify compositor class to merge the different plugins given in ``report``
+    Specifiy compositor class to merge the different plugins given in ``report``
 
     List of available compositor plugins:
      * MultiReport_ (alias: multi)
@@ -1787,7 +1713,7 @@ LFNFromPath options
 -------------------
 
 * ``lfn marker`` = <text> (Default: '/store/')
-    Specify the string that marks the beginning of the LFN
+    Specifiy the string that marks the beginning of the LFN
 
 
 .. _MatchDelimeter:
@@ -1818,7 +1744,7 @@ MatchOnFilename options
     Specify filename filter to select files for the dataset
 
 * ``filename filter matcher`` = <plugin> (Default: 'ShellStyleMatcher')
-    Specify matcher plugin that is used to match filter expressions
+    Specifiy matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1847,7 +1773,7 @@ MetadataFromTask options
 ------------------------
 
 * ``ignore task vars`` = <list of values> (Default: <list of common task vars>)
-    Specify the list of task variables that is not included in the dataset metadata
+    Specifiy the list of task variables that is not included in the dataset metadata
 
 
 .. _ObjectsFromCMSSW:
@@ -1914,6 +1840,75 @@ ConfigurableJobName options
     Specify the job name template for the job name given to the backend
 
 
+.. _PBSGESubmit:
+PBSGESubmit options
+-------------------
+
+* ``account`` = <text> (Default: '')
+    Specify fairshare account
+
+* ``shell`` = <text> (Default: '')
+    Specify the shell to use for job execution
+
+* ``software requirement map`` = <lookup specifier> (Default: '')
+    Specify a dictionary to map job requirements into submission options
+
+* ``software requirement map matcher`` = <plugin> (Default: 'StartMatcher')
+    Specifiy matcher plugin that is used to match the lookup expressions
+
+    List of available matcher plugins:
+     * AlwaysMatcher_ (alias: always)
+     * BlackWhiteMatcher_ (alias: blackwhite)
+     * EndMatcher_ (alias: end)
+     * EqualMatcher_ (alias: equal)
+     * ExprMatcher_ (alias: expr, eval)
+     * RegExMatcher_ (alias: regex)
+     * ShellStyleMatcher_ (alias: shell)
+     * StartMatcher_ (alias: start)
+
+* ``submit options`` = <text> (Default: '')
+    Specify additional job submission options
+
+* ``submit timeout`` = <duration hh[:mm[:ss]]> (Default: 00:00:20)
+    Specify timeout of the process that is used to submit jobs
+
+
+.. _GridEngineSubmit:
+GridEngineSubmit options
+------------------------
+
+* ``account`` = <text> (Default: '')
+    Specify fairshare account
+
+* ``project name`` = <text> (Default: '')
+    Specify project name for batch fairshare
+
+* ``shell`` = <text> (Default: '')
+    Specify the shell to use for job execution
+
+* ``software requirement map`` = <lookup specifier> (Default: '')
+    Specify a dictionary to map job requirements into submission options
+
+* ``software requirement map matcher`` = <plugin> (Default: 'StartMatcher')
+    Specifiy matcher plugin that is used to match the lookup expressions
+
+    List of available matcher plugins:
+     * AlwaysMatcher_ (alias: always)
+     * BlackWhiteMatcher_ (alias: blackwhite)
+     * EndMatcher_ (alias: end)
+     * EqualMatcher_ (alias: equal)
+     * ExprMatcher_ (alias: expr, eval)
+     * RegExMatcher_ (alias: regex)
+     * ShellStyleMatcher_ (alias: shell)
+     * StartMatcher_ (alias: start)
+
+* ``submit options`` = <text> (Default: '')
+    Specify additional job submission options
+
+* ``submit timeout`` = <duration hh[:mm[:ss]]> (Default: 00:00:20)
+    Specify timeout of the process that is used to submit jobs
+
+
 .. _BlackWhiteMatcher:
 BlackWhiteMatcher options
 -------------------------
@@ -1933,17 +1928,6 @@ BlackWhiteMatcher options
      * RegExMatcher_ (alias: regex)
      * ShellStyleMatcher_ (alias: shell)
      * StartMatcher_ (alias: start)
-
-
-.. _Broker:
-Broker options
---------------
-
-* ``<broker prefix> entries`` = <integer> (Default: 0)
-    Specify the number of broker results to store in the job requirements (0: no limit)
-
-* ``<broker prefix> randomize`` = <boolean> (Default: False)
-    Toggle the randomization of broker results
 
 
 .. _GUIElement:
@@ -2003,42 +1987,20 @@ AFSAccessToken options
     Specify the interval in which queries are performed when the time is running out
 
 
-.. _CoverageBroker:
-CoverageBroker options
-----------------------
+.. _LocalMemoryBroker:
+LocalMemoryBroker options
+-------------------------
 
-* ``<broker prefix>`` = <filter option> (Default: '')
-    Specify broker requirement
+* ``memory`` = <integer> (Default: unspecified (-1))
+    Requested memory in MB by the batch system
 
-* ``<broker prefix> plugin`` = <plugin> (Default: 'try_strict')
-    Specify plugin that is used to filter the list
 
-    List of available filters:
-     * MediumListFilter_ (alias: try_strict)
-     * StrictListFilter_ (alias: strict, require)
-     * WeakListFilter_ (alias: weak, prefer)
+.. _MultiBroker:
+MultiBroker options
+-------------------
 
-* ``<broker prefix> matcher`` = <plugin> (Default: 'blackwhite')
-    Specify matcher plugin that is used to match filter expressions
-
-    List of available matcher plugins:
-     * AlwaysMatcher_ (alias: always)
-     * BlackWhiteMatcher_ (alias: blackwhite)
-     * EndMatcher_ (alias: end)
-     * EqualMatcher_ (alias: equal)
-     * ExprMatcher_ (alias: expr, eval)
-     * RegExMatcher_ (alias: regex)
-     * ShellStyleMatcher_ (alias: shell)
-     * StartMatcher_ (alias: start)
-
-* ``<broker prefix> order`` = <enum: SOURCE|MATCHER> (Default: MATCHER)
-    Specify the order of the filtered list
-
-* ``<broker prefix> entries`` = <integer> (Default: 0)
-    Specify the number of broker results to store in the job requirements (0: no limit)
-
-* ``<broker prefix> randomize`` = <boolean> (Default: False)
-    Toggle the randomization of broker results
+* ``<broker prefix> broker prune`` = <boolean> (Default: True)
+    Toggle the removal of unused brokers from the broker pipeline
 
 
 .. _FilterBroker:
@@ -2048,16 +2010,16 @@ FilterBroker options
 * ``<broker prefix>`` = <filter option> (Default: '')
     Specify the filter expression to select entries given to the broker
 
-* ``<broker prefix> plugin`` = <plugin> (Default: 'try_strict')
-    Specify plugin that is used to filter the list
+* ``<broker prefix> plugin`` = <plugin> (Default: 'StrictListFilter')
+    Specifiy plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
      * StrictListFilter_ (alias: strict, require)
      * WeakListFilter_ (alias: weak, prefer)
 
-* ``<broker prefix> matcher`` = <plugin> (Default: 'blackwhite')
-    Specify matcher plugin that is used to match filter expressions
+* ``<broker prefix> matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
+    Specifiy matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -2069,11 +2031,21 @@ FilterBroker options
      * ShellStyleMatcher_ (alias: shell)
      * StartMatcher_ (alias: start)
 
-* ``<broker prefix> order`` = <enum: SOURCE|MATCHER> (Default: MATCHER)
-    Specify the order of the filtered list
+* ``<broker prefix> order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
+    Specifiy the order of the filtered list
 
-* ``<broker prefix> entries`` = <integer> (Default: 0)
+
+.. _LimitBroker:
+LimitBroker options
+-------------------
+
+* ``<broker prefix> entries`` = <integer> (Default: 1)
     Specify the number of broker results to store in the job requirements (0: no limit)
+
+
+.. _RandomBroker:
+RandomBroker options
+--------------------
 
 * ``<broker prefix> randomize`` = <boolean> (Default: False)
     Toggle the randomization of broker results
@@ -2083,17 +2055,11 @@ FilterBroker options
 StorageBroker options
 ---------------------
 
-* ``<broker prefix> entries`` = <integer> (Default: 0)
-    Specify the number of broker results to store in the job requirements (0: no limit)
-
-* ``<broker prefix> randomize`` = <boolean> (Default: False)
-    Toggle the randomization of broker results
-
 * ``<broker prefix> storage access`` = <lookup specifier> (Default: '')
     Specify the lookup dictionary that maps storage requirements into other kinds of requirements
 
 * ``<broker prefix> storage access matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -2104,20 +2070,6 @@ StorageBroker options
      * RegExMatcher_ (alias: regex)
      * ShellStyleMatcher_ (alias: shell)
      * StartMatcher_ (alias: start)
-
-
-.. _UserBroker:
-UserBroker options
-------------------
-
-* ``<broker prefix>`` = <list of values> (Default: '')
-    Specify broker requirement
-
-* ``<broker prefix> entries`` = <integer> (Default: 0)
-    Specify the number of broker results to store in the job requirements (0: no limit)
-
-* ``<broker prefix> randomize`` = <boolean> (Default: False)
-    Toggle the randomization of broker results
 
 
 .. _FrameGUIElement:
@@ -2220,7 +2172,7 @@ ReportGUIElement options
      * VariablesReport_ (alias: variables, vars)
 
 * ``report manager`` = <plugin> (Default: 'MultiReport')
-    Specify compositor class to merge the different plugins given in ``report``
+    Specifiy compositor class to merge the different plugins given in ``report``
 
     List of available compositor plugins:
      * MultiReport_ (alias: multi)
@@ -2273,25 +2225,25 @@ ScriptEventHandler options
     Specify script that is executed when grid-control is exited
 
 * ``on finish type`` = <enum: EXECUTABLE|COMMAND> (Default: 'executable')
-    Specify the type of command
+    Specifiy the type of command
 
 * ``on output`` = <command or path> (Default: '')
     Specify script that is executed when the job output is retrieved
 
 * ``on output type`` = <enum: EXECUTABLE|COMMAND> (Default: 'executable')
-    Specify the type of command
+    Specifiy the type of command
 
 * ``on status`` = <command or path> (Default: '')
     Specify script that is executed when the job status changes
 
 * ``on status type`` = <enum: EXECUTABLE|COMMAND> (Default: 'executable')
-    Specify the type of command
+    Specifiy the type of command
 
 * ``on submit`` = <command or path> (Default: '')
     Specify script that is executed when a job is submitted
 
 * ``on submit type`` = <enum: EXECUTABLE|COMMAND> (Default: 'executable')
-    Specify the type of command
+    Specifiy the type of command
 
 * ``script timeout`` = <duration hh[:mm[:ss]]> (Default: 00:00:20)
     Specify the maximal script runtime after which the script is aborted
@@ -2358,7 +2310,7 @@ BackendReport options
 LocalSBStorageManager options
 -----------------------------
 
-* ``<storage type> path`` = <path> (Default: <call:config.get_work_path('sandbox')>)
+* ``<storage channel> path`` = <path> (Default: <workdir>/sandbox)
     Specify the default transport URL(s) that are used to transfer files over this type of storage channel
 
 
@@ -2372,11 +2324,17 @@ SEStorageManager options
 * ``<storage channel> force`` = <boolean> (Default: True)
     Specify the files that are transferred over this storage channel
 
+* ``<storage channel> min size`` = <integer> (Default: disabled (-1))
+    output files below this file size (in MB) trigger a job failure
+
 * ``<storage channel> path / <storage type> path`` = <list of values> (Default: '')
     Specify the default transport URL(s) that are used to transfer files over this type of storage channel
 
 * ``<storage channel> pattern`` = <text> (Default: '@X@')
     Specify the pattern that is used to translate local to remote file names
+
+* ``<storage channel> retry`` = <integer> (Default: 3)
+    Specify number of transfer retries
 
 * ``<storage channel> timeout`` = <duration hh[:mm[:ss]]> (Default: 02:00:00)
     Specify the transfer timeout for files over this storage channel
@@ -2456,9 +2414,6 @@ ROOTTask options
 * ``scratch space used`` = <integer> (Default: 5000)
     Maximum amount of disk space (in MB) that the job is allowed to use in the scratch directory while running. If the landing zone itself is the scratch space, the scratch thresholds apply
 
-* ``se min size`` = <integer> (Default: -1)
-    TODO: DELETE
-
 * ``subst files`` = <list of values> (Default: '')
     List of files that will be subjected to variable substituion
 
@@ -2492,7 +2447,7 @@ InactiveWMS options
      * VomsAccessToken_ (alias: voms, VomsProxy)
 
 * ``access token manager`` = <plugin> (Default: 'MultiAccessToken')
-    Specify compositor class to merge the different plugins given in ``access token``
+    Specifiy compositor class to merge the different plugins given in ``access token``
 
     List of available compositor plugins:
      * MultiAccessToken_ (alias: multi)
@@ -2504,18 +2459,6 @@ InactiveWMS options
      * CMSSWDebugJobInfoProcessor_ (alias: cmssw_debug)
      * DebugJobInfoProcessor_ (alias: debug)
      * FileInfoProcessor_ (alias: fileinfo)
-
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
-
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
 
 * ``wait idle`` = <integer> (Default: 60)
     Wait for the specified duration if the job cycle was idle
@@ -2535,18 +2478,6 @@ Local options
      * CMSSWDebugJobInfoProcessor_ (alias: cmssw_debug)
      * DebugJobInfoProcessor_ (alias: debug)
      * FileInfoProcessor_ (alias: fileinfo)
-
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
-
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
 
 * ``sandbox path`` = <path> (Default: <workdir>/sandbox)
     Specify the sandbox path
@@ -2576,29 +2507,35 @@ MultiWMS options
      * DebugJobInfoProcessor_ (alias: debug)
      * FileInfoProcessor_ (alias: fileinfo)
 
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
-
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
-
 * ``wait idle`` = <integer> (Default: 60)
     Wait for the specified duration if the job cycle was idle
 
 * ``wait work`` = <integer> (Default: 10)
     Wait for the specified duration during the work steps of the job cycle
 
-* ``wms broker`` = <plugin[:name]> (Default: 'RandomBroker')
+* ``wms`` = <value> (Default depends on selected brokers)
+    Specify backend for job submission
+
+* ``wms broker`` = <list of plugin[:name] ...> (Broker prefix: wms) (Default: 'RandomBroker LimitBroker')
     Specify broker plugin to select the WMS for job submission.
 
     List of available plugins:
-     * Broker
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
+
+* ``wms broker manager`` = <plugin> (Default: 'MultiBroker')
+    Specifiy compositor class to merge the different broker plugins given in ``wms broker``
+
+    List of available broker compositor plugins:
+     * MultiBroker_ (alias: multi)
 
 
 .. _Condor:
@@ -2634,18 +2571,6 @@ Condor options
 * ``remote dest`` = <text> (Default: '@')
     Specify remote destination
 
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
-
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
-
 * ``remote type`` = <enum: LOCAL|SPOOL|SSH|GSISSH> (Default: LOCAL)
     Specify the type of remote destination
 
@@ -2662,7 +2587,16 @@ Condor options
     Specify broker plugin to select the site for job submission
 
     List of available plugins:
-     * Broker
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
 
 * ``task id`` = <text> (Default: <md5 hash>)
     Persistent condor task identifier that is generated at the start of the task
@@ -2695,23 +2629,20 @@ GridWMS options
      * DebugJobInfoProcessor_ (alias: debug)
      * FileInfoProcessor_ (alias: fileinfo)
 
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
-
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
-
 * ``site broker`` = <plugin[:name]> (Default: 'UserBroker')
     Specify broker plugin to select the site for job submission
 
     List of available plugins:
-     * Broker
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
 
 * ``vo`` = <text> (Default: <group from the access token>)
     Specify the VO used for job submission
@@ -2746,18 +2677,6 @@ HTCondor options
 
 * ``poolconfig`` = <list of values> (Default: '')
     Specify the list of pool config files
-
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
-
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
 
 * ``sandbox path`` = <path> (Default: <workdir>/sandbox)
     Specify the sandbox path
@@ -2796,23 +2715,20 @@ CreamWMS options
      * DebugJobInfoProcessor_ (alias: debug)
      * FileInfoProcessor_ (alias: fileinfo)
 
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
-
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
-
 * ``site broker`` = <plugin[:name]> (Default: 'UserBroker')
     Specify broker plugin to select the site for job submission
 
     List of available plugins:
-     * Broker
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
 
 * ``try delegate`` = <boolean> (Default: True)
     Toggle the attempt to do proxy delegation to the WMS
@@ -2857,23 +2773,20 @@ GliteWMS options
      * DebugJobInfoProcessor_ (alias: debug)
      * FileInfoProcessor_ (alias: fileinfo)
 
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
-
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
-
 * ``site broker`` = <plugin[:name]> (Default: 'UserBroker')
     Specify broker plugin to select the site for job submission
 
     List of available plugins:
-     * Broker
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
 
 * ``try delegate`` = <boolean> (Default: True)
     Toggle the attempt to do proxy delegation to the WMS
@@ -2894,12 +2807,9 @@ GliteWMS options
     Toggle between full and lazy WMS endpoint discovery
 
 
-.. _PBSGECommon:
-PBSGECommon options
--------------------
-
-* ``account`` = <text> (Default: '')
-    Specify fairshare account
+.. _GridEngine:
+GridEngine options
+------------------
 
 * ``delay output`` = <boolean> (Default: False)
     Toggle between direct output of stdout/stderr to the sandbox or indirect output to local tmp during job execution
@@ -2912,57 +2822,66 @@ PBSGECommon options
      * DebugJobInfoProcessor_ (alias: debug)
      * FileInfoProcessor_ (alias: fileinfo)
 
-* ``memory`` = <integer> (Default: unspecified (-1))
-    Requested memory in MB by the batch system
+* ``nodes`` = <value> (Default depends on selected brokers)
+    Specify worker nodes for job submission
 
-* ``queue broker`` = <plugin[:name]> (Default: 'UserBroker')
+* ``nodes broker`` = <list of plugin[:name] ...> (Broker prefix: nodes) (Default: 'FilterBroker RandomBroker')
     Specify broker plugin to select the queue for job submission
 
     List of available plugins:
-     * Broker
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
 
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
+* ``nodes broker manager`` = <plugin> (Default: 'MultiBroker')
+    Specifiy compositor class to merge the different broker plugins given in ``nodes broker``
+
+    List of available broker compositor plugins:
+     * MultiBroker_ (alias: multi)
+
+* ``queue`` = <value> (Default depends on selected brokers)
+    Specify queue for job submission
+
+* ``queue broker`` = <list of plugin[:name] ...> (Broker prefix: queue) (Default: 'FilterBroker RandomBroker LimitBroker')
+    Specify broker plugin to select the queue for job submission
 
     List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
 
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
+* ``queue broker manager`` = <plugin> (Default: 'MultiBroker')
+    Specifiy compositor class to merge the different broker plugins given in ``queue broker``
 
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
+    List of available broker compositor plugins:
+     * MultiBroker_ (alias: multi)
 
-* ``scratch path`` = <list of values> (Default: 'TMPDIR /tmp')
+* ``sb input manager`` = <plugin[:name]> (Default: 'LocalSBStorageManager')
+    Specify transfer manager plugin to transfer sandbox input files
+
+    List of available plugins:
+     * LocalSBStorageManager_ (alias: local)
+     * SEStorageManager_ (alias: SE)
+
+* ``scratch path`` = <list of values> (Default: '$TMPDIR /tmp')
     Specify the list of scratch environment variables and paths to search for the scratch directory
 
-* ``shell`` = <text> (Default: '')
-    Specify the shell to use for job execution
-
-* ``site broker`` = <plugin[:name]> (Default: 'UserBroker')
-    Specify broker plugin to select the site for job submission
-
-    List of available plugins:
-     * Broker
-
-* ``software requirement map`` = <lookup specifier> (Default: '')
-    Specify a dictionary to map job requirements into submission options
-
-* ``software requirement map matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
-
-    List of available matcher plugins:
-     * AlwaysMatcher_ (alias: always)
-     * BlackWhiteMatcher_ (alias: blackwhite)
-     * EndMatcher_ (alias: end)
-     * EqualMatcher_ (alias: equal)
-     * ExprMatcher_ (alias: expr, eval)
-     * RegExMatcher_ (alias: regex)
-     * ShellStyleMatcher_ (alias: shell)
-     * StartMatcher_ (alias: start)
-
-* ``submit options`` = <text> (Default: '')
-    Specify additional job submission options
+* ``user`` = <text> (Default: <local user name>)
+    Specify batch system user name
 
 * ``wait idle`` = <integer> (Default: 60)
     Wait for the specified duration if the job cycle was idle
@@ -2971,12 +2890,9 @@ PBSGECommon options
     Wait for the specified duration during the work steps of the job cycle
 
 
-.. _GridEngine:
-GridEngine options
-------------------
-
-* ``account`` = <text> (Default: '')
-    Specify fairshare account
+.. _JMS:
+JMS options
+-----------
 
 * ``delay output`` = <boolean> (Default: False)
     Toggle between direct output of stdout/stderr to the sandbox or indirect output to local tmp during job execution
@@ -2989,63 +2905,95 @@ GridEngine options
      * DebugJobInfoProcessor_ (alias: debug)
      * FileInfoProcessor_ (alias: fileinfo)
 
-* ``memory`` = <integer> (Default: unspecified (-1))
-    Requested memory in MB by the batch system
+* ``queue`` = <value> (Default depends on selected brokers)
+    Specify queue for job submission
 
-* ``project name`` = <text> (Default: '')
-    Specify project name for batch fairshare
-
-* ``queue broker`` = <plugin[:name]> (Default: 'UserBroker')
+* ``queue broker`` = <list of plugin[:name] ...> (Broker prefix: queue) (Default: 'FilterBroker RandomBroker LimitBroker')
     Specify broker plugin to select the queue for job submission
 
     List of available plugins:
-     * Broker
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
 
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
+* ``queue broker manager`` = <plugin> (Default: 'MultiBroker')
+    Specifiy compositor class to merge the different broker plugins given in ``queue broker``
+
+    List of available broker compositor plugins:
+     * MultiBroker_ (alias: multi)
+
+* ``sb input manager`` = <plugin[:name]> (Default: 'LocalSBStorageManager')
+    Specify transfer manager plugin to transfer sandbox input files
 
     List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
+     * LocalSBStorageManager_ (alias: local)
+     * SEStorageManager_ (alias: SE)
 
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
-
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
-
-* ``scratch path`` = <list of values> (Default: 'TMPDIR /tmp')
+* ``scratch path`` = <list of values> (Default: '$TMPDIR /tmp')
     Specify the list of scratch environment variables and paths to search for the scratch directory
 
-* ``shell`` = <text> (Default: '')
-    Specify the shell to use for job execution
+* ``wait idle`` = <integer> (Default: 60)
+    Wait for the specified duration if the job cycle was idle
 
-* ``site broker`` = <plugin[:name]> (Default: 'UserBroker')
-    Specify broker plugin to select the site for job submission
+* ``wait work`` = <integer> (Default: 10)
+    Wait for the specified duration during the work steps of the job cycle
+
+
+.. _LSF:
+LSF options
+-----------
+
+* ``delay output`` = <boolean> (Default: False)
+    Toggle between direct output of stdout/stderr to the sandbox or indirect output to local tmp during job execution
+
+* ``job parser`` = <plugin> (Default: 'JobInfoProcessor')
+    Specify plugin that checks the output sandbox of the job and returns with the job status
 
     List of available plugins:
-     * Broker
+     * CMSSWDebugJobInfoProcessor_ (alias: cmssw_debug)
+     * DebugJobInfoProcessor_ (alias: debug)
+     * FileInfoProcessor_ (alias: fileinfo)
 
-* ``software requirement map`` = <lookup specifier> (Default: '')
-    Specify a dictionary to map job requirements into submission options
+* ``queue`` = <value> (Default depends on selected brokers)
+    Specify queue for job submission
 
-* ``software requirement map matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+* ``queue broker`` = <list of plugin[:name] ...> (Broker prefix: queue) (Default: 'FilterBroker RandomBroker')
+    Specify broker plugin to select the queue for job submission
 
-    List of available matcher plugins:
-     * AlwaysMatcher_ (alias: always)
-     * BlackWhiteMatcher_ (alias: blackwhite)
-     * EndMatcher_ (alias: end)
-     * EqualMatcher_ (alias: equal)
-     * ExprMatcher_ (alias: expr, eval)
-     * RegExMatcher_ (alias: regex)
-     * ShellStyleMatcher_ (alias: shell)
-     * StartMatcher_ (alias: start)
+    List of available plugins:
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
 
-* ``submit options`` = <text> (Default: '')
-    Specify additional job submission options
+* ``queue broker manager`` = <plugin> (Default: 'MultiBroker')
+    Specifiy compositor class to merge the different broker plugins given in ``queue broker``
 
-* ``user`` = <text> (Default: <local user name>)
-    Specify batch system user name
+    List of available broker compositor plugins:
+     * MultiBroker_ (alias: multi)
+
+* ``sb input manager`` = <plugin[:name]> (Default: 'LocalSBStorageManager')
+    Specify transfer manager plugin to transfer sandbox input files
+
+    List of available plugins:
+     * LocalSBStorageManager_ (alias: local)
+     * SEStorageManager_ (alias: SE)
+
+* ``scratch path`` = <list of values> (Default: '$TMPDIR /tmp')
+    Specify the list of scratch environment variables and paths to search for the scratch directory
 
 * ``wait idle`` = <integer> (Default: 60)
     Wait for the specified duration if the job cycle was idle
@@ -3058,8 +3006,88 @@ GridEngine options
 PBS options
 -----------
 
-* ``account`` = <text> (Default: '')
-    Specify fairshare account
+* ``delay output`` = <boolean> (Default: False)
+    Toggle between direct output of stdout/stderr to the sandbox or indirect output to local tmp during job execution
+
+* ``job parser`` = <plugin> (Default: 'JobInfoProcessor')
+    Specify plugin that checks the output sandbox of the job and returns with the job status
+
+    List of available plugins:
+     * CMSSWDebugJobInfoProcessor_ (alias: cmssw_debug)
+     * DebugJobInfoProcessor_ (alias: debug)
+     * FileInfoProcessor_ (alias: fileinfo)
+
+* ``nodes`` = <value> (Default depends on selected brokers)
+    Specify worker nodes for job submission
+
+* ``nodes broker`` = <list of plugin[:name] ...> (Broker prefix: nodes) (Default: 'FilterBroker RandomBroker')
+    Specify broker plugin to select the queue for job submission
+
+    List of available plugins:
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
+
+* ``nodes broker manager`` = <plugin> (Default: 'MultiBroker')
+    Specifiy compositor class to merge the different broker plugins given in ``nodes broker``
+
+    List of available broker compositor plugins:
+     * MultiBroker_ (alias: multi)
+
+* ``queue`` = <value> (Default depends on selected brokers)
+    Specify queue for job submission
+
+* ``queue broker`` = <list of plugin[:name] ...> (Broker prefix: queue) (Default: 'FilterBroker RandomBroker LimitBroker')
+    Specify broker plugin to select the queue for job submission
+
+    List of available plugins:
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
+
+* ``queue broker manager`` = <plugin> (Default: 'MultiBroker')
+    Specifiy compositor class to merge the different broker plugins given in ``queue broker``
+
+    List of available broker compositor plugins:
+     * MultiBroker_ (alias: multi)
+
+* ``sb input manager`` = <plugin[:name]> (Default: 'LocalSBStorageManager')
+    Specify transfer manager plugin to transfer sandbox input files
+
+    List of available plugins:
+     * LocalSBStorageManager_ (alias: local)
+     * SEStorageManager_ (alias: SE)
+
+* ``scratch path`` = <list of values> (Default: '$TMPDIR /tmp')
+    Specify the list of scratch environment variables and paths to search for the scratch directory
+
+* ``server`` = <text> (Default: '')
+    Specify the PBS batch server
+
+* ``wait idle`` = <integer> (Default: 60)
+    Wait for the specified duration if the job cycle was idle
+
+* ``wait work`` = <integer> (Default: 10)
+    Wait for the specified duration during the work steps of the job cycle
+
+
+.. _SLURM:
+SLURM options
+-------------
 
 * ``delay output`` = <boolean> (Default: False)
     Toggle between direct output of stdout/stderr to the sandbox or indirect output to local tmp during job execution
@@ -3072,60 +3100,39 @@ PBS options
      * DebugJobInfoProcessor_ (alias: debug)
      * FileInfoProcessor_ (alias: fileinfo)
 
-* ``memory`` = <integer> (Default: unspecified (-1))
-    Requested memory in MB by the batch system
+* ``queue`` = <value> (Default depends on selected brokers)
+    Specify queue for job submission
 
-* ``queue broker`` = <plugin[:name]> (Default: 'UserBroker')
+* ``queue broker`` = <list of plugin[:name] ...> (Broker prefix: queue) (Default: 'FilterBroker RandomBroker LimitBroker')
     Specify broker plugin to select the queue for job submission
 
     List of available plugins:
-     * Broker
+     * CoverageBroker_ (alias: coverage)
+     * DiscoveryBroker_ (alias: discover)
+     * FilterBroker_ (alias: filter)
+     * FinalBroker_ (alias: final)
+     * LimitBroker_ (alias: limit)
+     * LocalMemoryBroker_ (alias: memory)
+     * NullBroker_ (alias: null)
+     * RandomBroker_ (alias: random)
+     * SimpleBroker_ (alias: simple)
+     * StorageBroker_ (alias: storage)
 
-* ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
-    Specify remote event handler plugins to track the task / job progress on the worker node
+* ``queue broker manager`` = <plugin> (Default: 'MultiBroker')
+    Specifiy compositor class to merge the different broker plugins given in ``queue broker``
+
+    List of available broker compositor plugins:
+     * MultiBroker_ (alias: multi)
+
+* ``sb input manager`` = <plugin[:name]> (Default: 'LocalSBStorageManager')
+    Specify transfer manager plugin to transfer sandbox input files
 
     List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
+     * LocalSBStorageManager_ (alias: local)
+     * SEStorageManager_ (alias: SE)
 
-* ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specify compositor class to merge the different plugins given in ``remote event handler``
-
-    List of available compositor plugins:
-     * MultiRemoteEventHandler_ (alias: multi)
-
-* ``scratch path`` = <list of values> (Default: 'TMPDIR /tmp')
+* ``scratch path`` = <list of values> (Default: '$TMPDIR /tmp')
     Specify the list of scratch environment variables and paths to search for the scratch directory
-
-* ``server`` = <text> (Default: '')
-    Specify the PBS batch server
-
-* ``shell`` = <text> (Default: '')
-    Specify the shell to use for job execution
-
-* ``site broker`` = <plugin[:name]> (Default: 'UserBroker')
-    Specify broker plugin to select the site for job submission
-
-    List of available plugins:
-     * Broker
-
-* ``software requirement map`` = <lookup specifier> (Default: '')
-    Specify a dictionary to map job requirements into submission options
-
-* ``software requirement map matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
-
-    List of available matcher plugins:
-     * AlwaysMatcher_ (alias: always)
-     * BlackWhiteMatcher_ (alias: blackwhite)
-     * EndMatcher_ (alias: end)
-     * EqualMatcher_ (alias: equal)
-     * ExprMatcher_ (alias: expr, eval)
-     * RegExMatcher_ (alias: regex)
-     * ShellStyleMatcher_ (alias: shell)
-     * StartMatcher_ (alias: start)
-
-* ``submit options`` = <text> (Default: '')
-    Specify additional job submission options
 
 * ``wait idle`` = <integer> (Default: 60)
     Wait for the specified duration if the job cycle was idle
@@ -3212,7 +3219,7 @@ LocationPartitionProcessor options
     Specify filter for dataset locations
 
 * ``<datasource> partition location filter plugin`` = <plugin> (Default: 'WeakListFilter')
-    Specify plugin that is used to filter the list
+    Specifiy plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -3220,7 +3227,7 @@ LocationPartitionProcessor options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``<datasource> partition location filter matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specify matcher plugin that is used to match filter expressions
+    Specifiy matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -3233,7 +3240,7 @@ LocationPartitionProcessor options
      * StartMatcher_ (alias: start)
 
 * ``<datasource> partition location filter order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
-    Specify the order of the filtered list
+    Specifiy the order of the filtered list
 
 * ``<datasource> partition location preference / partition location preference`` = <list of values> (Default: '')
     Specify dataset location preferences
@@ -3250,7 +3257,7 @@ LumiPartitionProcessor options
     Specify lumi filter for the dataset (as nickname dependent dictionary)
 
 * ``<datasource> lumi filter matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -3310,7 +3317,7 @@ TFCPartitionProcessor options
     Specify a dataset location dependent trivial file catalogue with file name prefixes
 
 * ``<datasource> partition tfc matcher`` = <plugin> (Default: 'StartMatcher')
-    Specify matcher plugin that is used to match the lookup expressions
+    Specifiy matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -3323,6 +3330,7 @@ TFCPartitionProcessor options
      * StartMatcher_ (alias: start)
 
 
+<<<<<<< HEAD
 .. _FormatParameterParser:
 FormatParameterParser options
 -----------------------------
@@ -3434,3 +3442,46 @@ DefaultTupleParser options
 
 * ``<parameter expression> delimeter`` = <text> (Default: ',')
     Specify delimeter to split tuples
+<<<<<<< HEAD
+=======
+
+
+Unused: '<name:broker_prefix> broker prune' {'user_text': 'Toggle the removal of unused brokers from the broker pipeline'}
+
+=======
+>>>>>>> BACKEND REFACTOR
+Unused: '<name:datasource_name> location merge mode' {'user_text': 'Specify how the location information should be processed by the dataset block merge procedure'}
+
+Unused: '<name:datasource_name> metadata merge mode' {'user_text': 'Specify how the metadata information should be processed by the dataset block merge procedure'}
+
+<<<<<<< HEAD
+Unused: '<name:storage_channel> min size' {'user_text': 'output files below this file size (in MB) trigger a job failure', 'default_map': {'-1': 'disabled (%(default_raw)s)'}}
+=======
+<<<<<<< HEAD
+Unused: 'enable chunk' {'user_text': 'Toggle chunked processing of jobs by the backend'}
+
+Unused: 'username' {'user_text': 'Specify the username protecting the web user interface', 'default_map': {'<call:get_local_username()>': '<local user name>'}}
+>>>>>>> BACKEND REFACTOR
+
+Unused: '<name:storage_channel> path:LocalSBStorageManager' {'user_text': 'Specify the default transport URL(s) that are used to transfer files over this type of storage channel', 'default_map': {"<call:config.get_work_path('sandbox')>": '<workdir>/sandbox'}}
+
+Unused: '<name:storage_channel> retry' {'user_text': 'Specify number of transfer retries'}
+
+Unused: 'enable chunk' {'user_text': 'Toggle chunked processing of jobs by the backend'}
+
+Unused: 'memory:LocalMemoryBroker' {'user_text': 'Requested memory in MB by the batch system', 'default_map': {'-1': 'unspecified (%(default_raw)s)'}}
+
+Unused: 'nodes broker' {'disable_dupe_check': True, 'user_text': 'Specify broker plugin to select the queue for job submission', 'broker_desc': 'Specify worker nodes for job submission'}
+
+<<<<<<< HEAD
+Unused: 'submit timeout' {'user_text': 'Specify timeout of the process that is used to submit jobs'}
+=======
+Unused: '<name:storage_channel> retry' {'user_text': 'Specify number of transfer retries'}
+=======
+Unused: 'memory:LocalWMS' {'user_text': 'Requested memory in MB by the batch system', 'default_map': {'-1': 'unspecified (%(default_raw)s)'}}
+
+Unused: '<name:storage_type> path' {'user_text': 'Specify the default transport URL(s) that are used to transfer files over this type of storage channel'}
+>>>>>>> BACKEND REFACTOR
+>>>>>>> BACKEND REFACTOR
+
+>>>>>>> 8ebb9966... BACKEND REFACTOR

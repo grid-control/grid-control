@@ -33,9 +33,6 @@ class GridAccessToken(TimedAccessToken):
 	def get_group(self):
 		return self._get_proxy_info('vo')
 
-	def get_proxy_fn(self):
-		return self._proxy_fn
-
 	def get_user_name(self):
 		return self._get_proxy_info('identity').split('CN=')[1].strip()
 

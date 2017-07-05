@@ -15,7 +15,7 @@
 import os, re, time, tempfile
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
-from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments, unpack_wildcard_tar  # pylint:disable=line-too-long
+from grid_control.backends.backend_tools import ProcessCreatorAppendArguments, unpack_wildcard_tar
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
@@ -76,12 +76,13 @@ class CreamWMS(GridWMS):
 	alias_list = ['cream']
 
 	def __init__(self, config, name):
-		cancel_executor = CancelAndPurgeJobs(config, CREAMCancelJobs(config), CREAMPurgeJobs(config))
+		config.set_bool('enable chunk', True)
+		self._purge_executor = CREAMPurgeJobs(config)
 		GridWMS.__init__(self, config, name,
 			submit_exec=resolve_install_path('glite-ce-job-submit'),
 			output_exec=resolve_install_path('glite-ce-job-output'),
 			check_executor=CREAMCheckJobs(config),
-			cancel_executor=ChunkedExecutor(config, 'cancel', cancel_executor))
+			cancel_executor=CancelAndPurgeJobs(config, CREAMCancelJobs(config), self._purge_executor))
 
 		self._delegate_exec = resolve_install_path('glite-ce-delegate-proxy')
 		self._use_delegate = config.get_bool('try delegate', True, on_change=None)
@@ -180,7 +181,7 @@ class CreamWMS(GridWMS):
 		# return unretrievable jobs
 		for jobnum in jobnum_list_todo:
 			yield (jobnum, None)
-		self._purge_done_jobs(wms_id_list_done)
+		self._purge_executor.execute(self._log, wms_id_list_done)
 		remove_files([tmp_dn])
 
 	def _make_jdl(self, jobnum, task):

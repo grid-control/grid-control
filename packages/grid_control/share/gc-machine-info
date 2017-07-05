@@ -1,5 +1,5 @@
-#!/bin/bash
-# | Copyright 2010-2015 Karlsruhe Institute of Technology
+#!/bin/sh
+# | Copyright 2009-2016 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -15,18 +15,7 @@
 
 # Source: github.com/grid-control
 
-# 110 - ROOT area not found
-
-source "$GC_LANDINGZONE/gc-run.lib" || exit 101 # shellcheck source=/dev/null
-
-echo "ROOT module starting"
-echo "---------------------------"
-
-export ROOTSYS=$GC_ROOTSYS
-export PATH="$PATH:$ROOTSYS/bin"
-export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:$ROOTSYS/lib:$ROOTSYS/lib/root:."
-echo -n "ROOT Version: "
-"$ROOTSYS/bin/root-config" --version || fail 110
-echo "---------------------------"
-
-eval "$@"
+echo "grid-control - Version ${GC_VERSION:-\"unknown\"}"
+echo "Job ${GC_JOB_ID:-\"unknown\"} started - $(date)"
+echo "running on: $(hostname -f 2>&1) $(uname -a 2>&1)"
+lsb_release -a 2> /dev/null

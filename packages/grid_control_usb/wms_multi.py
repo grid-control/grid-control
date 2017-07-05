@@ -19,7 +19,8 @@ from python_compat import ifilter, lmap, sorted
 
 
 class MultiWMS(WMS):
-	alias_list = ['']
+	alias_list = ['multi']
+	config_section_list = WMS.config_section_list + ['MultiWMS']
 
 	# Distribute to WMS according to job id prefix
 	def __init__(self, config, name, backend_list):
@@ -40,9 +41,10 @@ class MultiWMS(WMS):
 			self._timing.wait_between_steps = max(self._timing.wait_between_steps,
 				wms_timing.wait_between_steps)
 
-		self._broker_wms = config.get_plugin('wms broker', 'RandomBroker',
-			cls=Broker, bind_kwargs={'inherit': True, 'tags': [self]},
-			pargs=('wms', 'wms', self._map_backend_name2backend.keys))
+		self._broker_wms = config.get_composited_plugin('wms broker',
+			'RandomBroker LimitBroker', 'MultiBroker', on_change=None,
+			cls=Broker, bind_kwargs={'inherit': True, 'tags': [self]}, pargs=('wms',),
+			pkwargs={'req_type': WMS.BACKEND, 'discovery_fun': self._map_backend_name2backend.keys})
 
 	def can_submit(self, needed_time, can_currently_submit):
 		can_currently_submit = self._default_backend.can_submit(needed_time, can_currently_submit)

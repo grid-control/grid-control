@@ -1,0 +1,91 @@
+#!/bin/sh
+# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# |
+# | Licensed under the Apache License, Version 2.0 (the "License");
+# | you may not use this file except in compliance with the License.
+# | You may obtain a copy of the License at
+# |
+# |     http://www.apache.org/licenses/LICENSE-2.0
+# |
+# | Unless required by applicable law or agreed to in writing, software
+# | distributed under the License is distributed on an "AS IS" BASIS,
+# | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# | See the License for the specific language governing permissions and
+# | limitations under the License.
+
+# Source: github.com/grid-control
+
+gmds_get_pwd_nolink() # get path without any symlinks
+{
+	if test -d "$1"; then
+	(
+		cd "$1"
+		pwd -P
+	)
+	fi
+}
+
+gmds_get_disk_used() # Get used space in mb
+{
+	TMPVAR="$(du -m -s $1 | awk '{gsub("M", "", $1); print $1}')"
+	printf '%s' "${TMPVAR:-100000000}"
+}
+
+gmds_get_disk_free() # Get free space in mb
+{
+	TMPVAR="$(df -m -P $1 | awk 'END{print $4}')"
+	printf '%s' "${TMPVAR:-0}"
+}
+
+gmds_monitor_limits() # Check for disk usage: <env var limit prefix> <dir>
+{
+	GMDS_DESC="$1"
+	GMDS_PATH="$2"
+	GMDS_DISK_FREE_LIMIT="$3"
+	GMDS_DISK_USED_LIMIT="$4"
+	while test -f "$GC_MARKER"; do
+		GMDS_DISK_FREE="$(gmds_get_disk_free "$GMDS_PATH")"
+		if test "$GMDS_DISK_FREE" -lt "$GMDS_DISK_FREE_LIMIT"; then
+			echo "Lower space limit reached on $GMDS_DESC ($GMDS_DISK_FREE < $GMDS_DISK_FREE_LIMIT)" >&2
+			gc_update_job_info 120
+			kill -SIGTERM $$
+		fi
+		GMDS_DISK_USED="$(gmds_get_disk_used "$GMDS_PATH")"
+		if test "$GMDS_DISK_USED" -gt "$GMDS_DISK_USED_LIMIT"; then
+			echo "Upper space limit reached on $GMDS_DESC ($GMDS_DISK_USED > $GMDS_DISK_USED_LIMIT)" >&2
+			gc_update_job_info 121
+			kill -SIGTERM $$
+		fi
+		GMDS_COUNTER="0"
+		while test "$GMDS_COUNTER" -lt 20; do
+			GMDS_COUNTER="$(expr "$GMDS_COUNTER" + 1)"
+			sleep 1
+			test ! -f "$GC_MARKER" && return
+		done
+	done
+}
+
+gmds_main() # Start monitoring disk space in directories - returns PIDs of background processes
+{
+	SHUTDOWN_MARKER_FILE="$1"
+	CONFIG_SCRATCH="$1"
+	CONFIG_LANDINGZONE="$1"
+	# Monitor space usage
+	echo $$ > $GC_MARKER
+	LIMIT_LL="${1}_LL"
+	LIMIT_UL="${1}_UL"
+	if [ -n "$(gmds_get_pwd_nolink "$GC_SCRATCH" | grep $(gmds_get_pwd_nolink "$GC_LANDINGZONE"))" ]; then
+		echo "\$GC_SCRATCH is a subdirectory of \$GC_LANDINGZONE" >&2
+		# Landing zone: Used space < 5Gb && Free space > 1Gb (using limits on the scratch directory)
+		gmds_monitor_limits "SCRATCH" "$GC_LANDINGZONE" &
+		printf '%s\n' "$!"
+	else
+		gmds_monitor_limits "LANDINGZONE" "$GC_LANDINGZONE" &
+		printf '%s\n' "$!"
+		gmds_monitor_limits "SCRATCH" "$GC_SCRATCH" &
+		printf '%s\n' "$!"
+	fi
+	echo "Started monitoring processes" >&2
+}
+
+test -z "$GMDS_TESTING_MODE" && gmds_main "$@"

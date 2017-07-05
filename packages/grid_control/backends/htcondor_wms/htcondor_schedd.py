@@ -375,7 +375,7 @@ class HTCScheddLocal(HTCScheddCLIBase):
 	def _getJDLData(self, task, jobnum_list, queryArguments):
 		jdlData = self._getBaseJDLData(task, queryArguments)
 		jdlData.extend([
-			'Executable              = %s' % self.parentPool._get_in_transfer_info_list(task)[0][1],
+			'Executable              = %s' % self.parentPool._get_sandbox_input_fn_list(task)[0][1],
 			])
 		try:
 			for authFile in parentPool.proxy.get_auth_fn_list():
@@ -396,12 +396,12 @@ class HTCScheddLocal(HTCScheddCLIBase):
 			'Error                   = %s' % os.path.join(jobStageDir, 'gc.stderr'),
 			# HACK: ignore executable (In[0]), stdout (Out[0]) and stderr (Out[1])
 			'transfer_input_files    = %s' % ','.join(
-				[ src for descr, src, trg in self.parentPool._get_in_transfer_info_list(task)[1:]]
+				[ src for descr, src, trg in self.parentPool._get_sandbox_input_fn_list(task)[1:]]
 				+
 				[ self.parentPool.getJobCfgPath(jobnum)[0] ]
 				),
 			'transfer_output_files   = %s' % ','.join(
-				[ src for descr, src, trg in self.parentPool._get_out_transfer_info_list(task)[2:] ]
+				[ src for descr, src, trg in self.parentPool._get_sandbox_output_fn_list(task)[2:] ]
 				),
 			'+rawID                   = "%s"' % HTCJobID(
 													gcJobNum  = jobnum,
@@ -554,7 +554,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 				[ schd for descr, gc, schd in taskFiles[1:] + jobFileMap[jobnum] ]
 				),
 			'transfer_output_files   = %s' % ','.join(
-				[ src for descr, src, trg in self.parentPool._get_out_transfer_info_list(task)[2:] ]
+				[ src for descr, src, trg in self.parentPool._get_sandbox_output_fn_list(task)[2:] ]
 				),
 			'+rawID                   = "%s"' % HTCJobID(
 													gcJobNum  = jobnum,
@@ -580,7 +580,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		taskFiles = []
 		def mapSBFiles(desrc, path, base):
 			return (descr, path, os.path.join(self.getStagingDir(task_id = task.task_id), base) )
-		taskFiles.extend(ismap(mapSBFiles, self.parentPool._get_in_transfer_info_list(task)))
+		taskFiles.extend(ismap(mapSBFiles, self.parentPool._get_sandbox_input_fn_list(task)))
 		proxyFile = ()
 		try:
 			for authFile in parentPool.proxy.getauthFiles():
