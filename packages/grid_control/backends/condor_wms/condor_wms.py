@@ -56,7 +56,11 @@ class Condor(BasicWMS):
 		if debugLogFN:
 			self.debug = open(debugLogFN, 'a')
 		######
-		self.taskID = config.get('task id', md5(str(time.time())).hexdigest(), persistent = True) # FIXME!
+		try:
+			random_task_id = md5(str(time.time())).hexdigest()
+		except TypeError:
+			random_task_id = md5(str(time.time()).encode()).hexdigest()
+		self.taskID = config.get('task id', random_task_id, persistent = True) # FIXME!
 		self.debugOut("""
 
 		#############################
