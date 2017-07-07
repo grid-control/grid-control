@@ -381,6 +381,7 @@ class Condor(BasicWMS):
 		jdlData = [
 			'Universe   = ' + self.settings["jdl"]["Universe"],
 			'Executable = ' + gcExec,
+			'transfer_executable = false',
 			'notify_user = ' + self.settings["jdl"]["NotifyEmail"],
 			'Log = ' + os.path.join(self.getWorkdirPath(), "GC_Condor.%s.log") % self.taskID,
 			'should_transfer_files = YES',
