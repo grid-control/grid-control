@@ -131,7 +131,7 @@ class CPWebserver(GUI):
 		cherrypy.server.socket_port = 12345
 		cherrypy.tree.mount(self, '/', {'/': basic_auth})
 		cherrypy.engine.start()
-		self._workflow.process(wait=self._process_queue)
+		self._workflow.process(wait_fun=self._process_queue)
 		cherrypy.engine.exit()
 		cherrypy.server.stop()
 
