@@ -13,14 +13,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+# Source: github.com/grid-control
 
 # 110 - project area setup failed
 # 111 - CMSSW environment unpacking failed
 # 112 - CMSSW environment setup failed
 # 113 - Problem while hashing config file
 
-source $GC_LANDINGZONE/gc-run.lib || exit 101
+source "$GC_LANDINGZONE/gc-run.lib" || exit 101
 
 echo "CMSSW module starting"
 echo
@@ -28,20 +28,20 @@ echo "---------------------------"
 timestamp "CMSSW_STARTUP" "START"
 echo "==========================="
 
-echo "NEventsProcessed=${MAX_EVENTS:-0}" > ${GC_DASHBOARDINFO:-/dev/null}
+echo "NEventsProcessed=${MAX_EVENTS:-0}" > "${GC_DASHBOARDINFO:-/dev/null}"
 
 checkvar "VO_CMS_SW_DIR"
-checkfile "$VO_CMS_SW_DIR/cmsset_default.sh"
+gc_check_file_exists "$VO_CMS_SW_DIR/cmsset_default.sh"
 
-saved_SCRAM_VERSION="$SCRAM_VERSION"
-saved_SCRAM_ARCH="$SCRAM_ARCH"
+SAVED_SCRAM_VERSION="$SCRAM_VERSION"
+SAVED_SCRAM_ARCH="$SCRAM_ARCH"
 source "$VO_CMS_SW_DIR/cmsset_default.sh"
-SCRAM_VERSION="$saved_SCRAM_VERSION"
-export SCRAM_ARCH="$saved_SCRAM_ARCH"
+SCRAM_VERSION="$SAVED_SCRAM_VERSION"
+export SCRAM_ARCH="$SAVED_SCRAM_ARCH"
 declare +x SCRAM_VERSION
 
-SCRAM="`which \"\$SCRAM_VERSION\"`"
-checkbin "$SCRAM"
+SCRAM="$(which "$SCRAM_VERSION")"
+gc_check_bin "$SCRAM" || fail 103
 
 echo "Installed CMSSW versions:"
 $SCRAM list -c CMSSW | sort | awk '{printf $2" "}'
@@ -53,30 +53,30 @@ if ! $SCRAM project CMSSW $SCRAM_PROJECTVERSION; then
 fi
 
 checkdir "SCRAM project area" "$SCRAM_PROJECTVERSION"
-cd "$SCRAM_PROJECTVERSION"
+cd "$SCRAM_PROJECTVERSION" || fail 102
 
 if [ "$HAS_RUNTIME" = "yes" ]; then
 
 	if [ "$SE_RUNTIME" = "yes" ]; then
 		echo "Rename CMSSW environment package: ${GC_TASK_ID}.tar.gz"
-		mv `_find ${GC_TASK_ID}.tar.gz` runtime.tar.gz || fail 101
+		mv $(_find ${GC_TASK_ID}.tar.gz) cmssw-project-area.tar.gz || fail 101
 		export SE_INPUT_FILES="${SE_INPUT_FILES/${GC_TASK_ID}.tar.gz/}"
 	fi
 
 	echo "Unpacking CMSSW environment"
-	tar xvfz "`_find runtime.tar.gz`" || fail 111
+	tar xvfz "$(_find cmssw-project-area.tar.gz)" || fail 111
 fi
 
 echo "Setup CMSSW environment"
-eval `$SCRAM runtime -sh` || fail 112
+eval $($SCRAM runtime -sh) || fail 112
 checkvar "CMSSW_BASE"
 checkvar "CMSSW_RELEASE_BASE"
-checkbin "cmsRun"
-checkbin "edmConfigHash"
+gc_check_bin "cmsRun" || fail 103
+gc_check_bin "edmConfigHash" || fail 103
 
 # patch python path data
 if [ -n "$CMSSW_OLD_RELEASETOP" ]; then
-	for INITFILE in `find -iname __init__.py`; do
+	for INITFILE in $(find -iname __init__.py); do
 		echo "Fixing CMSSW path in file: $INITFILE"
 		sed -i -e "s@$CMSSW_OLD_RELEASETOP@$CMSSW_RELEASE_BASE@" $INITFILE
 	done
@@ -85,14 +85,14 @@ echo
 
 echo "---------------------------"
 echo
-export GC_WORKDIR="`pwd`/workdir"
+export GC_WORKDIR="$(pwd)/workdir"
 export CMSSW_SEARCH_PATH="$CMSSW_SEARCH_PATH:$GC_WORKDIR"
-mkdir -p "$GC_WORKDIR"; cd "$GC_WORKDIR"
+mkdir -p "$GC_WORKDIR"; cd "$GC_WORKDIR" || fail 102
 my_move "$GC_SCRATCH" "$GC_WORKDIR" "$SB_INPUT_FILES $SE_INPUT_FILES $CMSSW_PROLOG_SB_IN_FILES $CMSSW_EPILOG_SB_IN_FILES"
 
-# If dataset files copied via SRM available, then move them too
+# If dataset files copied via SRM are available, then move them too
 for DATASET_SRM_FILE in $DATASET_SRM_FILES; do
-        my_move "$GC_SCRATCH" "$GC_WORKDIR" "$(basename $DATASET_SRM_FILE)"
+	my_move "$GC_SCRATCH" "$GC_WORKDIR" "$(basename $DATASET_SRM_FILE)"
 done
 echo
 echo "==========================="
@@ -122,19 +122,19 @@ checkdir "CMSSW working directory" "$GC_WORKDIR"
 if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 	echo "---------------------------"
 	echo
-	cd "$GC_WORKDIR"
+	cd "$GC_WORKDIR" || fail 102
 	for CFG_NAME in $CMSSW_CONFIG; do
 		CFG_BASENAME="$(basename $CFG_NAME)"
 		_CMSRUN_COUNT=1
 		timestamp "CMSSW_CMSRUN${_CMSRUN_COUNT}" "START"
 		echo "Config file: $CFG_NAME"
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-		checkfile "$CFG_NAME"
+		gc_check_file_exists "$CFG_NAME"
 		DBSDIR="$GC_WORKDIR/cmssw.dbs/$CFG_BASENAME"
 		mkdir -p "$DBSDIR"
 
 		echo "Substituting variables..."
-		cat "$CFG_NAME" | var_replacer "$CFG_BASENAME" > "$DBSDIR/config"
+		cat "$CFG_NAME" | var_replacer > "$DBSDIR/config"
 
 		echo "Calculating config file hash..."
 		(
@@ -187,7 +187,7 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 		fi
 	done
 	echo -e "CMSSW output on stdout and stderr:\n" | gzip > "00000.rawlog.gz"
-	[ "$GZIP_OUT" = "yes" ] && zcat -f *.rawlog.gz | gzip -9 > "cmssw.log.gz"
+	[ "$GZIP_OUT" = "yes" ] && zcat -f ./*.rawlog.gz | gzip -9 > "cmssw.log.gz"
 
 	# Calculate hash of output files for DBS
 	echo "Calculating output file hash..."

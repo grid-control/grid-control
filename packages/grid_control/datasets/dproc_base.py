@@ -34,6 +34,9 @@ class DataProcessor(ConfigurablePlugin):
 			self._log_debug = self._log
 		self._disabled = False
 
+	def __repr__(self):
+		return self._repr_base()
+
 	def disable_stream_singletons(self):
 		pass
 
@@ -72,6 +75,8 @@ class DataProcessor(ConfigurablePlugin):
 
 
 class MultiDataProcessor(DataProcessor):
+	alias_list = ['multi']
+
 	def __init__(self, config, processor_list, datasource_name):
 		DataProcessor.__init__(self, config, datasource_name)
 		self._do_prune = config.get_bool(self._get_dproc_opt('processor prune'), True)
@@ -79,7 +84,7 @@ class MultiDataProcessor(DataProcessor):
 			self._log, 'Removed %d inactive dataset processors!')
 
 	def __repr__(self):
-		return str.join('->', imap(repr, self._processor_list))
+		return str.join(' => ', imap(repr, self._processor_list))
 
 	def disable_stream_singletons(self):
 		for processor in self._processor_list:
@@ -101,9 +106,6 @@ class NullDataProcessor(DataProcessor):
 
 	def __init__(self, config=None, datasource_name=None):
 		DataProcessor.__init__(self, config, datasource_name)
-
-	def __repr__(self):
-		return '%s()' % self.__class__.__name__
 
 	def process_block(self, block):
 		return block

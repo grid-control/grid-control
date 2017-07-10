@@ -16,12 +16,14 @@ import os, time, fnmatch
 from grid_control.job_db import Job, JobDB, JobError
 from grid_control.utils import DictFormat, ensure_dir_exists
 from grid_control.utils.activity import Activity
-from grid_control.utils.file_objects import SafeFile
+from grid_control.utils.file_tools import SafeFile, with_file
 from hpfwk import clear_current_exception
 from python_compat import irange, sorted
 
 
 class TextFileJobDB(JobDB):
+	alias_list = ['textdb']
+
 	def __init__(self, config, job_limit=-1, job_selector=None):
 		JobDB.__init__(self, config, job_limit, job_selector)
 		self._path_db = config.get_work_path('jobs')
@@ -34,9 +36,8 @@ class TextFileJobDB(JobDB):
 			self._job_limit = max(self._job_map) + 1
 
 	def commit(self, jobnum, job_obj):
-		fp = SafeFile(os.path.join(self._path_db, 'job_%d.txt' % jobnum), 'w')
-		fp.writelines(self._fmt.format(self._serialize_job_obj(job_obj)))
-		fp.close()
+		with_file(SafeFile(os.path.join(self._path_db, 'job_%d.txt' % jobnum), 'w'),
+			lambda fp: fp.writelines(self._fmt.format(self._serialize_job_obj(job_obj))))
 		self._job_map[jobnum] = job_obj
 
 	def get_job(self, jobnum):
@@ -75,7 +76,7 @@ class TextFileJobDB(JobDB):
 			for key in irange(1, job.attempt + 1):
 				if ('history_' + str(key)).strip() in data:
 					job.history[key] = data['history_' + str(key)]
-			job.dict = data
+			job.set_dict(data)
 		except Exception:
 			raise JobError('Unable to parse data in %s:\n%r' % (name, data))
 		return job
@@ -103,11 +104,7 @@ class TextFileJobDB(JobDB):
 				break
 			try:
 				job_fn_full = os.path.join(self._path_db, job_fn)
-				fp = open(job_fn_full)
-				try:
-					data = self._fmt.parse(fp)
-				finally:
-					fp.close()
+				data = self._fmt.parse(SafeFile(job_fn_full).iter_close())
 				job_obj = self._create_job_obj(job_fn_full, data)
 			except Exception:
 				raise JobError('Unable to process job file %r' % job_fn_full)
@@ -117,13 +114,9 @@ class TextFileJobDB(JobDB):
 		return job_map
 
 	def _serialize_job_obj(self, job_obj):
-		data = dict(job_obj.dict)
-		data['status'] = Job.enum2str(job_obj.state)
-		data['attempt'] = job_obj.attempt
-		data['submitted'] = job_obj.submitted
-		data['changed'] = job_obj.changed
+		data = job_obj.get_dict_full()
 		for key, value in job_obj.history.items():
 			data['history_' + str(key)] = value
 		if job_obj.gc_id is not None:
-			data['id'] = job_obj.dict.get('legacy_gc_id') or job_obj.gc_id  # store legacy gc_id
+			data['id'] = job_obj.get('legacy_gc_id') or job_obj.gc_id  # store legacy gc_id
 		return data

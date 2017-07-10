@@ -17,7 +17,7 @@ import sys, gzip, base64, logging
 from gc_scripts import ConsoleTable, Job, JobSelector, Plugin, ScriptOptions, gc_create_config, get_script_object_cmdline  # pylint:disable=line-too-long
 from grid_control.backends import WMS
 from grid_control.datasets import DataProvider, DataSplitter
-from grid_control.utils.file_objects import ZipFile
+from grid_control.utils.file_tools import GZipTextFile, SafeFile, with_file
 from python_compat import BytesBuffer, imap, lmap, lzip, set, sorted
 
 
@@ -119,8 +119,6 @@ def get_partition_reader(options):
 
 def jobs_force_state(opts, job_db):
 	new_job_state = Job.str2enum(opts.job_force_state)
-	if new_job_state is None:
-		raise Exception('Invalid state: %s' % opts.job_force_state)
 	new_job_state_str = Job.enum2str(new_job_state)
 	for jobnum in job_db.iter_jobs():
 		job_obj = job_db.get_job_persistent(jobnum)
@@ -155,17 +153,16 @@ def jobs_show_jdl(job_db):
 
 
 def logfile_decode(fn):
+	def _decode_stream(fp):
+		for line in fp.readlines():
+			if line.startswith('(B64) '):
+				buffer_obj = BytesBuffer(base64.b64decode(line.replace('(B64) ', '')))
+				line = gzip.GzipFile(fileobj=buffer_obj).read().decode('ascii')
+			logging.getLogger('script').info(line.rstrip())
 	if fn.endswith('.gz'):
-		fp = ZipFile(fn, 'r')
+		with_file(GZipTextFile(fn, 'r'), _decode_stream)
 	else:
-		fp = open(fn, 'r')
-
-	for line in fp.readlines():
-		if line.startswith('(B64) '):
-			buffer_obj = BytesBuffer(base64.b64decode(line.replace('(B64) ', '')))
-			line = gzip.GzipFile(fileobj=buffer_obj).read().decode('ascii')
-		logging.getLogger('script').info(line.rstrip())
-	fp.close()
+		with_file(SafeFile(fn), _decode_stream)
 
 
 def partition_display(opts, partition_iter):

@@ -32,23 +32,25 @@
 
     * grid_control.datasets.scanner_base InfoScanner
 
-     * grid_control_cms.scanner_cmssw FilterEDMFiles
+     * grid_control_cms.scanner_cmssw FilterEDMFiles edm
 
-     * grid_control_cms.scanner_cmssw LFNFromPath
+     * grid_control_cms.scanner_cmssw LFNFromPath lfn
 
-     * grid_control_cms.scanner_cmssw MetadataFromCMSSW
+     * grid_control_cms.scanner_cmssw MetadataFromCMSSW cmssw_metadata
 
-     * grid_control_cms.scanner_cmssw ObjectsFromCMSSW
+     * grid_control_cms.scanner_cmssw ObjectsFromCMSSW cmssw_obj
 
-     * grid_control_cms.scanner_cmssw SEListFromPath
+     * grid_control_cms.scanner_cmssw SEListFromPath storage
 
     * grid_control.gc_plugin NamedPlugin
 
-     * grid_control.monitoring EventHandler
+     * grid_control.event_base LocalEventHandler NullLocalEventHandler null
 
-      * grid_control.monitoring Monitoring
+      * grid_control_cms.event_dashboard DashboardLocal dashboard
 
-       * grid_control_cms.event_dashboard DashBoard
+     * grid_control.event_base RemoteEventHandler NullRemoteEventHandler null
+
+      * grid_control_cms.event_dashboard DashboardRemote dashboard
 
      * grid_control.tasks.task_base TaskModule
 
@@ -68,7 +70,7 @@
 
      * grid_control_cms.pproc_cms LFNPartitionProcessor lfnprefix
 
-     * grid_control_cms.lumi_proc LumiPartitionProcessor
+     * grid_control_cms.lumi_proc LumiPartitionProcessor lumi
 
    * grid_control.datasets.provider_scan GCProviderSetup GCProviderSetup_TaskModule
 
@@ -76,9 +78,9 @@
 
    * grid_control.output_processor OutputProcessor
 
-    * grid_control.output_processor JobInfoProcessor
+    * grid_control.output_processor JobInfoProcessor jobinfo
 
-     * grid_control.output_processor DebugJobInfoProcessor
+     * grid_control.output_processor DebugJobInfoProcessor debug
 
-      * grid_control_cms.task_cmssw CMSSWDebugJobInfoProcessor
+      * grid_control_cms.task_cmssw CMSSWDebugJobInfoProcessor cmssw_debug
 

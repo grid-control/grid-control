@@ -15,7 +15,7 @@
 import time, logging
 from grid_control.utils.data_structures import make_enum
 from hpfwk import AbstractError, NestedException, Plugin
-from python_compat import md5_hex, set
+from python_compat import set
 
 
 ParameterInfo = make_enum(['ACTIVE', 'HASH', 'REQS', 'FILES'])  # pylint:disable=invalid-name
@@ -50,6 +50,16 @@ class ParameterSource(Plugin):
 		return cls(*args, **kwargs)
 	create_psrc = classmethod(create_psrc)
 
+	def create_psrc_safe(cls, cls_name, pconfig, repository, *args, **kwargs):
+		try:
+			psrc_type = ParameterSource.get_class(cls_name)
+			cls_name = psrc_type.__name__  # update class name for error message
+			return psrc_type.create_psrc(pconfig, repository, *args, **kwargs)
+		except Exception:
+			error_msg = 'Error while creating %r with arguments %r and keywords %r'
+			raise ParameterError(error_msg % (cls_name, args, kwargs))
+	create_psrc_safe = classmethod(create_psrc_safe)
+
 	def fill_parameter_content(self, pnum, result):
 		raise AbstractError
 
@@ -69,6 +79,9 @@ class ParameterSource(Plugin):
 	def get_psrc_hash(self):
 		raise AbstractError
 
+	def get_resync_request(self):
+		return []
+
 	def get_used_psrc_list(self):
 		return [self]
 
@@ -85,14 +98,16 @@ class LimitedResyncParameterSource(ParameterSource):
 		ParameterSource.__init__(self)
 		(self._resync_interval, self._resync_force, self._resync_last) = (-1, False, time.time())
 
-	def get_psrc_hash(self):
-		if self._resync_enabled():
-			return md5_hex(repr(time.time()))
-		return self._get_psrc_hash()
+	def get_resync_request(self):
+		t_last_resync = abs(time.time() - self._resync_last)
+		resync_needed = self._resync_interval >= 0 and (t_last_resync >= self._resync_interval)
+		if self._resync_force or resync_needed:
+			return [self]
+		return []
 
 	def resync_psrc(self):
 		result = None
-		if self._resync_enabled():
+		if self.get_resync_request():
 			result = self._resync_psrc()
 			self._resync_force = False
 			self._resync_last = time.time()
@@ -103,14 +118,6 @@ class LimitedResyncParameterSource(ParameterSource):
 			self._resync_interval = interval
 		if force is not None:
 			self._resync_force = force
-
-	def _get_psrc_hash(self):
-		raise AbstractError
-
-	def _resync_enabled(self):
-		t_last_resync = abs(time.time() - self._resync_last)
-		resync_needed = self._resync_interval >= 0 and (t_last_resync >= self._resync_interval)
-		return self._resync_force or resync_needed
 
 	def _resync_psrc(self):
 		pass

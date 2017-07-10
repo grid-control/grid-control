@@ -35,6 +35,8 @@ class StatsDataProcessor(DataProcessor):
 
 
 class SimpleStatsDataProcessor(StatsDataProcessor):
+	alias_list = ['stats']
+
 	def __init__(self, config, datasource_name, log, msg):
 		StatsDataProcessor.__init__(self, config, datasource_name)
 		(self._log, self._msg) = (log, msg)

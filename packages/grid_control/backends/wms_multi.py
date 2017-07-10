@@ -19,6 +19,8 @@ from python_compat import ifilter, lmap, sorted
 
 
 class MultiWMS(WMS):
+	alias_list = ['']
+
 	# Distribute to WMS according to job id prefix
 	def __init__(self, config, name, backend_list):
 		WMS.__init__(self, config, name)
@@ -58,9 +60,9 @@ class MultiWMS(WMS):
 		return self._forward_call(tmp, self._find_backend,
 			lambda backend, args: backend.check_jobs(lmap(lambda x: x[0], args)))
 
-	def deploy_task(self, task, monitor, transfer_se, transfer_sb):
+	def deploy_task(self, task, transfer_se, transfer_sb):
 		for backend in self._map_backend_name2backend.values():
-			backend.deploy_task(task, monitor, transfer_se, transfer_sb)
+			backend.deploy_task(task, transfer_se, transfer_sb)
 
 	def get_access_token(self, gc_id):
 		backend_name = self._split_gc_id(gc_id)[0].lower()

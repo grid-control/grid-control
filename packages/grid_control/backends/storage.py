@@ -23,42 +23,32 @@ from hpfwk import NestedException
 from python_compat import imap, set
 
 
-# All functions use url_* functions from gc-run.lib (just like the job did...)
-
-
 class StorageError(NestedException):
 	pass
 
 
 def se_copy(src, dst, force=True, tmp=''):
-	cmd = 'url_copy_single'
-	if force:
-		cmd = 'url_copy_single_force'
-	return se_runcmd('print_and_eval "%s"' % cmd, {'GC_KEEPTMP': tmp}, src, dst)
+	env_dict = dict(os.environ)
+	env_dict.update({'SC_KEEPTMP': tmp, 'SC_DEBUG': '1'})
+	if not force:
+		return _se_runcmd('copy', src, dst, env_dict=env_dict)
+	return _se_runcmd('copy_overwrite', src, dst, env_dict=env_dict)
 
 
 def se_exists(target):
-	return se_runcmd('print_and_eval "url_exists"', {}, target)
+	return _se_runcmd('exists', target)
 
 
 def se_ls(target):
-	return se_runcmd('url_ls', {}, target)
+	return _se_runcmd('ls', target)
 
 
 def se_mkdir(target):
-	return se_runcmd('print_and_eval "url_mkdir"', {}, target)
+	return _se_runcmd('mkdir', target)
 
 
 def se_rm(target):
-	return se_runcmd('print_and_eval "url_rm"', {}, target)
-
-
-def se_runcmd(cmd, env_dict, *urls):
-	lib_fn = get_path_share('gc-run.lib')
-	se_path_iter = imap(lambda x: '"%s"' % _ensure_se_prefix(x).replace('dir://', 'file://'), urls)
-	env_str = str.join(' ', imap(lambda x: 'export %s="%s";' % (x, env_dict[x]), env_dict))
-	exec_str = '. %s || exit 99; %s %s %s' % (lib_fn, env_str, cmd, str.join(' ', se_path_iter))
-	return LocalProcess('/bin/bash', '-c', exec_str)
+	return _se_runcmd('rm', target)
 
 
 class StorageManager(NamedPlugin):
@@ -101,11 +91,6 @@ class SEStorageManager(StorageManager):
 	def __init__(self, config, name, storage_type, storage_channel, storage_var_prefix):
 		StorageManager.__init__(self, config, name, storage_type, storage_channel, storage_var_prefix)
 
-		def _norm_se_path(se_path):
-			if se_path[0] == '/':
-				return 'dir:///%s' % se_path.lstrip('/')
-			return se_path
-
 		self._storage_paths = config.get_list(['%s path' % storage_type, '%s path' % storage_channel],
 			default=[], on_valid=NoVarCheck(config), parse_item=_norm_se_path)
 		self._storage_files = config.get_list('%s files' % storage_channel, [])
@@ -130,7 +115,7 @@ class SEStorageManager(StorageManager):
 					self._log.info('Copy %s to SE %d finished', desc, idx + 1)
 				else:
 					self._log.info('Copy %s to SE %d failed', desc, idx + 1)
-					self._log.critical(proc.stderr.read(timeout=0))
+					self._log.log_process(proc)
 					self._log.critical('Unable to copy %s! You can try to copy it manually.', desc)
 					msg = 'Is %s (%s) available on SE %s?' % (desc, source, se_path)
 					if not UserInputInterface().prompt_bool(msg, False):
@@ -154,3 +139,16 @@ def _ensure_se_prefix(fn):
 	if '://' in fn:
 		return fn
 	return 'file:////%s' % os.path.abspath(fn).lstrip('/')
+
+
+def _norm_se_path(se_path):
+	if se_path[0] == '/':
+		return 'dir:///%s' % se_path.lstrip('/')
+	return se_path
+
+
+def _se_runcmd(cmd, *urls, **kwargs):
+	def _clean_se_path(url):
+		return url.replace('dir://', 'file://')
+	url_iter = imap(_clean_se_path, imap(_norm_se_path, urls))
+	return LocalProcess(get_path_share('gc-storage-tool'), cmd, *url_iter, **kwargs)

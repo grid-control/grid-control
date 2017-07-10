@@ -59,4 +59,4 @@ def customise_for_gc(process):
 
 process = customise_for_gc(process)
 
-# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+# Source: github.com/grid-control

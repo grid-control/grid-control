@@ -25,13 +25,13 @@ def _lfn2pfn(node, lfn, prot='srmv2'):
 
 
 def _lookup_pfn(options):
-	if '<hypernews name>' in options.opts.lfn:
+	if '<hypernews_name>' in options.opts.lfn:
 		token = Plugin.get_class('AccessToken').create_instance('VomsProxy', gc_create_config(), 'token')
 		site_db = SiteDB()
 		hn_name = site_db.dn_to_username(dn=token.get_fq_user_name())
 		if not hn_name:
 			raise Exception('Unable to map grid certificate to hypernews name!')
-		options.opts.lfn = options.opts.lfn.replace('<hypernews name>', hn_name)
+		options.opts.lfn = options.opts.lfn.replace('<hypernews_name>', hn_name)
 
 	tmp = _lfn2pfn(node=options.opts.se, prot=options.opts.se_prot, lfn=options.opts.lfn)
 	for entry in tmp:

@@ -15,7 +15,7 @@
 from grid_control.backends import WMS
 from grid_control.utils import DictFormat, split_blackwhite_list
 from hpfwk import APIError
-from python_compat import identity, ifilter, imap, lmap
+from python_compat import iidfilter, imap, lmap
 
 
 class JDLWriter(object):
@@ -64,7 +64,7 @@ class JDLWriter(object):
 				pass  # Handle number of cpus in prepare
 			else:
 				raise APIError('Unknown requirement type %r or argument %r' % (WMS.enum2str(req_type), arg))
-		result['Requirements'] = str.join(' && ', ifilter(identity, req_string_list))
+		result['Requirements'] = str.join(' && ', iidfilter(req_string_list))
 
 	def _format_reqs_sites(self, sites):
 		def _fmt_sites(site):

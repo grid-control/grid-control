@@ -27,7 +27,7 @@ class RestClient(object):
 	def __init__(self, cert=None, url=None, default_headers=None,
 			process_result=None, process_data=None, session=None):
 		self._log = logging.getLogger('webservice')
-		(self._cert, self._url, self._headers) = (cert, url, default_headers)
+		(self._cert, self._url, self._headers, self._session) = (cert, url, default_headers, session)
 		self._process_result = process_result or identity
 		self._process_data = process_data or resolve_fun('urllib.parse:urlencode', 'urllib:urlencode')
 		if not session:
@@ -93,9 +93,9 @@ class JSONRestClient(RestClient):
 
 
 class GridJSONRestClient(JSONRestClient):
-	def __init__(self, url=None, cert_error_msg='', cert_error_cls=Exception, cert=None):
+	def __init__(self, cert=None, url=None, cert_error_msg='', cert_error_cls=Exception):
 		(self._cert_error_msg, self._cert_error_cls) = (cert_error_msg, cert_error_cls)
-		JSONRestClient.__init__(self, url=url, cert=cert)
+		JSONRestClient.__init__(self, cert, url)
 		if not self._cert:
 			self._cert = ignore_exception(Exception, None, self._get_grid_cert)
 		if not self._cert:

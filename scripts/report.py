@@ -23,9 +23,8 @@ def _main():
 		help='List available report classes')
 	parser.add_bool(None, 'T', 'use-task', default=False,
 		help='Forward task information to report')
-	parser.add_text(None, 'R', 'report', default='GUIReport')
+	parser.add_text(None, 'R', 'report', default='modern')
 	parser.add_text(None, 'J', 'job-selector', default=None)
-	parser.add_text(None, ' ', 'string', default='')
 	options = parser.script_parse()
 
 	if options.opts.report_list:
@@ -36,11 +35,10 @@ def _main():
 
 	script_obj = get_script_object(config_file=options.args[0],
 		job_selector_str=options.opts.job_selector, require_task=options.opts.use_task)
-	jobnum_list = script_obj.job_db.get_job_list()
 	report = script_obj.new_config.get_composited_plugin('transient report',
 		options.opts.report, 'MultiReport', cls='Report',
-		pargs=(script_obj.job_db, script_obj.task, jobnum_list, options.opts.string))
-	report.show_report(script_obj.job_db)
+		pargs=(script_obj.job_db, script_obj.task))
+	report.show_report(script_obj.job_db, script_obj.job_db.get_job_list())
 
 
 if __name__ == '__main__':

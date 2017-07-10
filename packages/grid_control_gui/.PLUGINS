@@ -1,36 +1,30 @@
   * hpfwk.hpf_plugin Plugin
 
-   * grid_control.stream_base ActivityStream
-
-    * grid_control_gui.stream_gui MultiActivityStream multi
-
-     * grid_control_gui.stream_gui SimpleActivityStream simple default
-
    * grid_control.gc_plugin ConfigurablePlugin
 
-    * grid_control.gui GUI
+    * grid_control.stream_base ActivityMonitor
 
-     * grid_control_gui.gui_ansi ANSIGUI
+     * grid_control_gui.stream_gui MultiActivityMonitor multi_stream
 
-     * grid_control_gui.gui_cherrypy CPWebserver
+    * grid_control.gui GUI NullGUI null
+
+     * grid_control_gui.gui_ansi ANSIGUI ansi
+
+     * grid_control_gui.gui_basic BasicConsoleGUI console
+
+     * grid_control_gui.gui_cherrypy CPWebserver cherrypy
 
     * grid_control.gc_plugin NamedPlugin
 
-     * grid_control.monitoring EventHandler
-
-      * grid_control.monitoring Monitoring
-
-       * grid_control_gui.event_jabber JabberAlarm jabber
-
      * grid_control_gui.ge_base GUIElement
 
-      * grid_control_gui.ge_base BufferGUIElement
+      * grid_control_gui.ge_basic BufferGUIElement
 
        * grid_control_gui.ge_basic AfterImageGUIElement
 
         * grid_control_gui.ge_basic ActivityGUIElement activity
 
-       * grid_control_gui.ge_base BasicGUIElement
+       * grid_control_gui.ge_basic BasicGUIElement
 
         * grid_control_gui.ge_basic ReportGUIElement report
 
@@ -40,39 +34,63 @@
 
       * grid_control_gui.gui_ansi FrameGUIElement
 
-      * grid_control_gui.ge_base MultiGUIElement
+      * grid_control_gui.ge_base MultiGUIElement multi
 
-   * grid_control.report Report
+     * grid_control.event_base LocalEventHandler NullLocalEventHandler null
 
-    * grid_control_gui.report_wms BackendReport backend
+      * grid_control_gui.event_jabber JabberAlarm jabber
 
-    * grid_control.report ConsoleReport
+     * grid_control.report Report
 
-     * grid_control_gui.report_textbar BarReport bar
+      * grid_control.report ConsoleReport
 
-     * grid_control.report BasicHeaderReport basicheader
+       * grid_control_gui.report_bar BarReport bar
 
-      * grid_control_gui.report_gui HeaderReport header
+       * grid_control_gui.report_basic BasicReport basicreport
 
-     * grid_control_gui.report_gui CategoryBaseReport
+        * grid_control_gui.report_gui ANSIReport ansireport
 
-      * grid_control_gui.report_gui AdaptiveBaseReport
+       * grid_control_gui.report_colorbar ColorBarReport cbar
 
-       * grid_control_gui.report_gui GUIReport modern
+       * grid_control.report HeaderReport
 
-      * grid_control_gui.report_gui ModuleReport module
+        * grid_control_gui.report_gui ANSIHeaderReport ansiheader
 
-     * grid_control_gui.report_colorbar ColorBarReport cbar
+        * grid_control_gui.report_basic BasicHeaderReport basicheader
 
-     * grid_control_gui.report_WIP SimpleStateReport state
+        * grid_control_gui.report_lean LeanHeaderReport leanheader
 
-     * grid_control_gui.report_time TimeReport time
+       * grid_control_gui.report_lean LeanReport leanreport
 
-    * grid_control.report LocationReport location
+       * grid_control_gui.report_gui ModernReport modern
 
-     * grid_control_gui.report_wms LocationHistoryReport history
+       * grid_control_gui.report_time TimeReport time
 
-    * grid_control_gui.report_plot PlotReport plot
+      * grid_control.report ImageReport
 
-    * grid_control_gui.report_vars VariablesReport variables vars
+       * grid_control_gui.report_map MapReport map
+
+       * grid_control_gui.report_plot PlotReport plot
+
+       * grid_control_gui.report_graph PluginReport plugin
+
+      * grid_control.report MultiReport multi
+
+       * grid_control_gui.report_gui ANSITheme ansi
+
+       * grid_control_gui.report_basic BasicTheme basic
+
+       * grid_control_gui.report_lean LeanTheme lean
+
+      * grid_control.report TableReport
+
+       * grid_control_gui.report_wms BackendReport backend
+
+       * grid_control.report LocationReport location
+
+        * grid_control_gui.report_wms LocationHistoryReport history
+
+       * grid_control_gui.report_vars ModuleReport module
+
+       * grid_control_gui.report_vars VariablesReport variables vars
 

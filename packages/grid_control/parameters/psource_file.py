@@ -1,4 +1,4 @@
-# | Copyright 2012-2016 Karlsruhe Institute of Technology
+# | Copyright 2012-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,10 +14,10 @@
 
 import csv
 from grid_control.parameters.psource_base import ParameterError, ParameterInfo, ParameterMetadata, ParameterSource  # pylint:disable=line-too-long
-from grid_control.parameters.psource_basic import InternalParameterSource
+from grid_control.parameters.psource_internal import InternalParameterSource
 from grid_control.utils.activity import ProgressActivity
-from grid_control.utils.file_objects import ZipFile
-from grid_control.utils.parsing import parse_json, str_dict
+from grid_control.utils.file_tools import GZipTextFile
+from grid_control.utils.parsing import parse_json, str_dict_linear
 from python_compat import ifilter, imap, izip, json, lfilter, lidfilter, lmap, sorted
 
 
@@ -38,13 +38,13 @@ class CSVParameterSource(InternalParameterSource):  # Reader for CSV files
 		for psp in psp_list:
 			psp.pop(None, None)
 			if None in psp.values():
-				raise ParameterError('Malformed entry in csv file %r: {%s}' % (fn, str_dict(psp)))
+				raise ParameterError('Malformed entry in csv file %r: {%s}' % (fn, str_dict_linear(psp)))
 
 		def _cleanup_dict(mapping):  # strip all key value entries and filter empty parameters
 			tmp = tuple(imap(lambda item: lmap(str.strip, item), mapping.items()))
 			return dict(lfilter(lambda k_v: k_v[0] != '', tmp))
-		keys = sorted(imap(ParameterMetadata, lidfilter(csv_header)), key=lambda k: k.value)
-		InternalParameterSource.__init__(self, lmap(_cleanup_dict, psp_list), keys)
+		output_vn_list = sorted(imap(ParameterMetadata, lidfilter(csv_header)), key=lambda k: k.value)
+		InternalParameterSource.__init__(self, lmap(_cleanup_dict, psp_list), output_vn_list)
 
 	def __repr__(self):
 		if self._format == 'sniffed':
@@ -62,12 +62,12 @@ class GCDumpParameterSource(ParameterSource):
 	# get_psrc_hash is not implemented to keep it from being used by users
 	def __init__(self, fn):
 		ParameterSource.__init__(self)
-		fp = ZipFile(fn, 'r')
+		fp = GZipTextFile(fn, 'r')
 		try:
 			header = fp.readline().lstrip('#').strip()
-			self._keys = []
+			self._output_vn_list = []
 			if header:
-				self._keys = parse_json(header)
+				self._output_vn_list = parse_json(header)
 
 			def _parse_line(line):
 				if not line.startswith('#'):
@@ -81,18 +81,18 @@ class GCDumpParameterSource(ParameterSource):
 
 	def fill_parameter_content(self, pnum, result):
 		result[ParameterInfo.ACTIVE] = not self._values[pnum][0]
-		for (key, value) in izip(self._keys, self._values[pnum][2]):
+		for (output_vn, value) in izip(self._output_vn_list, self._values[pnum][2]):
 			if value is not None:
-				result[key] = value
+				result[output_vn] = value
 
 	def fill_parameter_metadata(self, result):
-		result.extend(imap(ParameterMetadata, self._keys))
+		result.extend(imap(ParameterMetadata, self._output_vn_list))
 
 	def get_parameter_len(self):
 		return len(self._values)
 
 	def write(cls, fn, psrc_len, psrc_metadata, psp_iter):  # write parameter part of parameter adapter
-		fp = ZipFile(fn, 'w')
+		fp = GZipTextFile(fn, 'w')
 		try:
 			vn_list = sorted(lmap(lambda p: p.value, ifilter(lambda p: not p.untracked, psrc_metadata)))
 			fp.write('# %s\n' % json.dumps(vn_list))

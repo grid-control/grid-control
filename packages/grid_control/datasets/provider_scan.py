@@ -16,7 +16,8 @@ import os, sys
 from grid_control.config import TriggerResync, create_config, join_config_locations
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.scanner_base import InfoScanner
-from grid_control.utils import filter_dict, intersect_first_dict, replace_with_dict, split_opt
+from grid_control.utils import replace_with_dict, split_opt
+from grid_control.utils.algos import filter_dict, intersect_first_dict
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import Plugin, PluginError, clear_current_exception
@@ -209,8 +210,6 @@ class GCProvider(ScanProviderBase):
 			ds_config.set('source job selector', selector)
 		ext_config = create_config(dataset_expr)
 		ext_task_name = ext_config.change_view(set_sections=['global']).get(['module', 'task'])
-		if 'ParaMod' in ext_task_name:  # handle old config files
-			ext_task_name = ext_config.change_view(set_sections=['ParaMod']).get('module')
 		ext_task_cls = Plugin.get_class(ext_task_name)
 		for ext_task_cls in Plugin.get_class(ext_task_name).iter_class_bases():
 			try:

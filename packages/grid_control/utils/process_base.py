@@ -39,7 +39,7 @@ class Process(object):
 		self._buffer_stdin = GCQueue()
 		self._buffer_stdout = GCQueue()
 		self._buffer_stderr = GCQueue()
-		self._env = kwargs.pop('environment', None) or dict(os.environ)
+		self._env_dict = kwargs.pop('env_dict', None) or dict(os.environ)
 		# Stream setup
 		self._do_log = kwargs.pop('logging', True) or None
 		self.stdout = ProcessReadStream(self._buffer_stdout, self._do_log,
@@ -176,7 +176,7 @@ class LocalProcess(Process):
 		(self._status, self._runtime, self._pid) = (None, None, None)
 		Process.__init__(self, cmd, *args, **kwargs)
 		if terminal is not None:
-			self._env['TERM'] = terminal
+			self._env_dict['TERM'] = terminal
 
 	def kill(self, sig=signal.SIGTERM):
 		if not self._event_finished.is_set():
@@ -296,7 +296,7 @@ class LocalProcess(Process):
 		fd_map = {0: fd_child_stdin, 1: fd_child_stdout, 2: fd_child_stderr}
 		if pid == 0:  # We are in the child process - redirect streams and exec external program
 			from grid_control.utils.process_child import run_command
-			run_command(self._cmd, [self._cmd] + self._args, fd_map, self._env)
+			run_command(self._cmd, [self._cmd] + self._args, fd_map, self._env_dict)
 
 		else:  # Still in the parent process - setup threads to communicate with external program
 			os.close(fd_child_terminal)

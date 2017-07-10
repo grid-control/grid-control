@@ -32,7 +32,7 @@ class InactiveWMS(WMS):
 	def check_jobs(self, gc_id_list):
 		self._log.warning('Discarded check of %d jobs', len(gc_id_list))
 
-	def deploy_task(self, task, monitor, transfer_se, transfer_sb):
+	def deploy_task(self, task, transfer_se, transfer_sb):
 		return
 
 	def get_access_token(self, gc_id):

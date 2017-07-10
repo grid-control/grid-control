@@ -19,7 +19,7 @@ from grid_control.config.cview_base import SimpleConfigView
 from grid_control.config.matcher_base import DictLookup, ListFilter, ListOrder, Matcher
 from grid_control.utils import resolve_path, resolve_paths
 from grid_control.utils.data_structures import make_enum
-from grid_control.utils.parsing import parse_bool, parse_dict, parse_list, parse_time, str_dict_cfg, str_time_short  # pylint:disable=line-too-long
+from grid_control.utils.parsing import parse_bool, parse_dict_cfg, parse_list, parse_time, str_dict_cfg, str_time_short  # pylint:disable=line-too-long
 from grid_control.utils.thread_tools import GCEvent
 from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import APIError, ExceptionCollector, Plugin, clear_current_exception
@@ -64,7 +64,7 @@ class TypedConfigInterface(ConfigInterface):
 		# Default key is accessed via key == None (None is never in keys!)
 		return self._get_internal('dictionary',
 			obj2str=lambda value: str_dict_cfg(value, parser, strfun),
-			str2obj=lambda value: parse_dict(value, parser),
+			str2obj=lambda value: parse_dict_cfg(value, parser),
 			def2obj=lambda value: (value, sorted(ifilter(lambda key: key is not None, value.keys()))),
 			option=option, default_obj=default, **kwargs)
 
@@ -134,26 +134,28 @@ class TypedConfigInterface(ConfigInterface):
 		except Exception:
 			raise ConfigError(error_msg)
 
-	def set_bool(self, option, value, opttype='=', source=None, unique=False):
+	def set_bool(self, option, value, opttype='=', source=None):
 		# Setting boolean config options
-		return self._set_internal('bool', bool.__str__, option, value, opttype, source, unique)
+		return self._set_internal('bool', bool.__str__, option, value, opttype, source)
 
-	def set_int(self, option, value, opttype='=', source=None, unique=False):
+	def set_int(self, option, value, opttype='=', source=None):
 		# Setting integer config options - using strict integer (de-)serialization
-		return self._set_internal('int', int.__str__, option, value, opttype, source, unique)
+		return self._set_internal('int', int.__str__, option, value, opttype, source)
 
-	def set_time(self, option, value, opttype='=', source=None, unique=False):
+	def set_time(self, option, value, opttype='=', source=None):
 		# Set time in seconds - input base is hours
-		return self._set_internal('time', str_time_short, option, value, opttype, source, unique)
+		return self._set_internal('time', str_time_short, option, value, opttype, source)
 
 	def _get_plugin_factory_list(self, option, default=unspecified,
 			cls=Plugin, require_plugin=True, single_plugin=False,
 			desc='plugin factories', bind_args=None, bind_kwargs=None, **kwargs):
+		bind_kwargs = dict(bind_kwargs or {})
+		bind_kwargs.setdefault('config', self)
 		if isinstance(cls, str):
 			cls = Plugin.get_class(cls)
 
 		def _bind_plugins(value):
-			obj_list = list(cls.bind(value, config=self, *(bind_args or []), **(bind_kwargs or {})))
+			obj_list = list(cls.bind(value, *(bind_args or []), **bind_kwargs))
 			if single_plugin and len(obj_list) > 1:
 				raise ConfigError('This option only allows to specify a single plugin!')
 			if require_plugin and not obj_list:
@@ -162,6 +164,11 @@ class TypedConfigInterface(ConfigInterface):
 		return self._get_internal(desc,
 			obj2str=lambda value: str.join('\n', imap(lambda obj: obj.get_bind_value(), value)),
 			str2obj=_bind_plugins, def2obj=_bind_plugins, option=option, default_obj=default, **kwargs)
+
+	get_fn = get_path
+	get_fn_list = get_path_list
+	get_dn = get_path
+	get_dn_list = get_path_list
 
 
 class SimpleConfigInterface(TypedConfigInterface):
@@ -214,33 +221,39 @@ class SimpleConfigInterface(TypedConfigInterface):
 
 	def get_filter(self, option, default=unspecified,
 			negate=False, filter_parser=str, filter_str=str.__str__,
-			default_matcher='start', default_filter='strict', default_order=ListOrder.source, **kwargs):
+			default_matcher='StartMatcher', default_filter='StrictListFilter',
+			default_order=ListOrder.source, on_change=unspecified, **kwargs):
 		matcher_opt = join_config_locations(option, 'matcher')
-		matcher_obj = self.get_plugin(matcher_opt, default_matcher,
-			cls=Matcher, pargs=(matcher_opt,), pkwargs=kwargs)
-		filter_expr = self.get(option, default, str2obj=filter_parser, obj2str=filter_str, **kwargs)
-		filter_order_opt = join_config_locations(option, 'order')
-		filter_order = self.get_enum(filter_order_opt, ListOrder, default_order, **kwargs)
+		matcher_obj = self.get_plugin(matcher_opt, default_matcher, cls=Matcher,
+			pargs=(matcher_opt,), pkwargs=kwargs, on_change=on_change)
+		filter_expr = self.get(option, default,
+			str2obj=filter_parser, obj2str=filter_str, on_change=on_change, **kwargs)
+		filter_order = self.get_enum(join_config_locations(option, 'order'), ListOrder,
+			default_order, on_change=on_change, **kwargs)
 		return self.get_plugin(join_config_locations(option, 'plugin'), default_filter, cls=ListFilter,
-			pargs=(filter_expr, matcher_obj, filter_order, negate), **kwargs)
+			pargs=(filter_expr, matcher_obj, filter_order, negate), on_change=on_change, **kwargs)
 
-	def get_lookup(self, option, default=unspecified,
-			default_matcher='start', single=True, include_default=False, **kwargs):
+	def get_lookup(self, option, default=unspecified, default_matcher='StartMatcher',
+			single=True, include_default=False, on_change=unspecified, **kwargs):
 		matcher_args = {}
 		if 'on_change' in kwargs:
 			matcher_args['on_change'] = kwargs['on_change']
 		matcher_opt = join_config_locations(option, 'matcher')
 		matcher_obj = self.get_plugin(matcher_opt, default_matcher,
-			cls=Matcher, pargs=(matcher_opt,), **matcher_args)
-		(source_dict, source_order) = self.get_dict(option, default, **kwargs)
+			cls=Matcher, pargs=(matcher_opt,), on_change=on_change, **matcher_args)
+		(source_dict, source_order) = self.get_dict(option, default, on_change=on_change, **kwargs)
 		return DictLookup(source_dict, source_order, matcher_obj, single, include_default)
 
-	def get_matcher(self, option, default=unspecified, default_matcher='start', negate=False,
-			filter_parser=str, filter_str=str.__str__, **kwargs):
+	def get_matcher(self, option, default=unspecified, default_matcher='StartMatcher',
+			negate=False, filter_parser=None, filter_str=str.__str__, on_change=unspecified, **kwargs):
 		matcher_opt = join_config_locations(option, 'matcher')
 		matcher_obj = self.get_plugin(matcher_opt, default_matcher,
-			cls=Matcher, pargs=(matcher_opt,), pkwargs=kwargs)
-		filter_expr = self.get(option, default, str2obj=filter_parser, obj2str=filter_str, **kwargs)
+			cls=Matcher, pargs=(matcher_opt,), pkwargs=kwargs, on_change=on_change)
+
+		def _filter_parser(value):
+			return str.join(' ', value.split())
+		filter_expr = self.get(option, default, str2obj=filter_parser or _filter_parser,
+			obj2str=filter_str, **kwargs)
 		return matcher_obj.create_matcher(filter_expr)
 
 	def get_state(self, statename, detail='', default=False):
@@ -266,8 +279,8 @@ class SimpleConfigInterface(TypedConfigInterface):
 			self._interactive_enabled and default, on_change=None)
 		return icfg and not user_option_exists
 
-	def set_choice(self, option, value, opttype='=', source=None, obj2str=str.__str__, unique=False):
-		return self._set_internal('choice', obj2str, option, value, opttype, source, unique)
+	def set_choice(self, option, value, opttype='=', source=None, obj2str=str.__str__):
+		return self._set_internal('choice', obj2str, option, value, opttype, source)
 
 	def set_state(self, value, statename, detail=''):
 		# Set state - bool stored in hidden "state" section

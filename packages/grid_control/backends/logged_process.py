@@ -15,7 +15,7 @@
 import os, time, errno, signal, logging, python_compat_popen2
 from grid_control.gc_exceptions import GCError
 from grid_control.utils import DictFormat, abort
-from grid_control.utils.file_objects import VirtualFile
+from grid_control.utils.file_tools import VirtualFile
 from hpfwk import clear_current_exception, get_current_exception
 from python_compat import tarfile
 

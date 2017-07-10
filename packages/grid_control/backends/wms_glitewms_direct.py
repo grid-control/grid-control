@@ -17,7 +17,8 @@ from grid_control.backends.aspect_status import CheckInfo, CheckJobs, expand_sta
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_glitewms import GliteWMS
 from grid_control.job_db import Job
-from grid_control.utils import abort, filter_dict
+from grid_control.utils import abort
+from grid_control.utils.algos import filter_dict
 from hpfwk import ExceptionCollector, clear_current_exception
 from python_compat import imap, lmap, lzip
 

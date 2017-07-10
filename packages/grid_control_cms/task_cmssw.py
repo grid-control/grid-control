@@ -14,11 +14,13 @@
 
 import os
 from grid_control.backends import WMS
-from grid_control.config import ConfigError
+from grid_control.config import ConfigError, Matcher, TriggerInit
 from grid_control.output_processor import DebugJobInfoProcessor
 from grid_control.tasks.task_data import DataTask
 from grid_control.tasks.task_utils import TaskExecutableWrapper
-from grid_control.utils import DictFormat, Result, clean_path, create_tarball, get_path_share, match_files  # pylint:disable=line-too-long
+from grid_control.utils import Result, clean_path, create_tarball, get_path_share
+from grid_control.utils.file_tools import SafeFile
+from grid_control.utils.persistency import load_dict
 from grid_control.utils.table import ConsoleTable
 from grid_control.utils.user_interface import UserInputInterface
 from python_compat import ifilter, imap, set, sorted, unspecified
@@ -29,6 +31,7 @@ class SCRAMTask(DataTask):
 
 	def __init__(self, config, name):
 		DataTask.__init__(self, config, name)
+		config.set('area files matcher mode', 'ShellStyleMatcher')
 
 		# SCRAM settings
 		scram_arch_default = unspecified
@@ -45,10 +48,13 @@ class SCRAMTask(DataTask):
 				raise ConfigError('Cannot specify both %r and %r' % ('scram project', 'project area'))
 
 		else:  # scram setup used from project area
-			self._project_area = config.get_path('project area')
-			self._project_area_selector_list = config.get_list('area files', ['-.*', '-config', 'bin',
-				'lib', 'python', 'module', '*/data', '*.xml', '*.sql', '*.db', '*.cf[if]', '*.py',
-				'-*/.git', '-*/.svn', '-*/CVS', '-*/work.*']) + ['*.pcm']  # FIXME
+			self._project_area = config.get_dn('project area')
+			self._always_matcher = Matcher.create_instance('AlwaysMatcher', config, [''])
+			self._project_area_base_fn = config.get_bool('area files basename', True,
+				on_change=TriggerInit('sandbox'))
+			self._project_area_matcher = config.get_matcher('area files',
+				'-.* -config bin lib python module data *.xml *.sql *.db *.cfi *.cff *.py -CVS -work.* *.pcm',
+				default_matcher='BlackWhiteMatcher', on_change=TriggerInit('sandbox'))
 			self._log.info('Project area found in: %s', self._project_area)
 
 			# try to determine scram settings from environment settings
@@ -79,48 +85,46 @@ class SCRAMTask(DataTask):
 	def get_dependency_list(self):
 		return DataTask.get_dependency_list(self) + ['cmssw']
 
+	def get_job_dict(self, jobnum):
+		job_env_dict = DataTask.get_job_dict(self, jobnum)
+		job_env_dict['SCRAM_VERSION'] = self._scram_version
+		job_env_dict['SCRAM_ARCH'] = self._scram_arch
+		job_env_dict['SCRAM_PROJECTNAME'] = self._scram_project
+		job_env_dict['SCRAM_PROJECTVERSION'] = self._scram_project_version
+		return job_env_dict
+
 	def get_requirement_list(self, jobnum):
 		# Get job requirements
 		return DataTask.get_requirement_list(self, jobnum) + self._scram_req_list
 
-	def get_task_dict(self):
-		data = DataTask.get_task_dict(self)
-		data['SCRAM_VERSION'] = self._scram_version
-		data['SCRAM_ARCH'] = self._scram_arch
-		data['SCRAM_PROJECTNAME'] = self._scram_project
-		data['SCRAM_PROJECTVERSION'] = self._scram_project_version
-		return data
-
 	def _parse_scram_file(self, fn):
 		try:
-			fp = open(fn, 'r')
-			try:
-				return DictFormat().parse(fp, key_parser={None: str})
-			finally:
-				fp.close()
+			return load_dict(fn, '=')
 		except Exception:
 			raise ConfigError('Project area file %s cannot be parsed!' % fn)
 
 
 class CMSSWDebugJobInfoProcessor(DebugJobInfoProcessor):
+	alias_list = ['cmssw_debug']
+
 	def __init__(self):
 		DebugJobInfoProcessor.__init__(self)
 		self._display_files.append('cmssw.log.gz')
 
 
 class CMSSW(SCRAMTask):
+	alias_list = ['']
 	config_section_list = SCRAMTask.config_section_list + ['CMSSW']
 
 	def __init__(self, config, name):
 		config.set('se input timeout', '0:30')
+		config.set('application', 'cmsRun', section='dashboard')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
-		config.set('dataset processor', 'LumiDataProcessor', '+=', unique=True)
+		config.set('dataset processor', 'LumiDataProcessor', '+=')
+		config.set('partition processor', 'BasicPartitionProcessor', '-=')
 		config.set('partition processor',
-			'TFCPartitionProcessor LocationPartitionProcessor MetaPartitionProcessor ' +
-			'LFNPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor')
-		dash_config = config.change_view(view_class='SimpleConfigView', set_sections=['dashboard'])
-		dash_config.set('application', 'cmsRun')
+			'LFNPartitionProcessor LumiPartitionProcessor CMSSWPartitionProcessor', '+=')
 
 		self._needed_vn_set = set()
 		SCRAMTask.__init__(self, config, name)
@@ -141,7 +145,7 @@ class CMSSW(SCRAMTask):
 			scram_arch_env_path = os.path.join(self._project_area, '.SCRAM', self._scram_arch, 'Environment')
 			self._old_release_top = self._parse_scram_file(scram_arch_env_path).get('RELEASETOP')
 
-		self._update_map_error_code2message(
+		self._update_map_error_code2msg(
 			get_path_share('gc-run.cmssw.sh', pkg='grid_control_cms'))
 
 		self._project_area_tarball_on_se = config.get_bool(['se runtime', 'se project area'], True)
@@ -150,7 +154,7 @@ class CMSSW(SCRAMTask):
 		# Prolog / Epilog script support - warn about old syntax
 		self.prolog = TaskExecutableWrapper(config, 'prolog', '')
 		self.epilog = TaskExecutableWrapper(config, 'epilog', '')
-		if config.get_path_list('executable', []) != []:
+		if config.get_fn_list('executable', []) != []:
 			raise ConfigError('Prefix executable and argument options with either prolog or epilog!')
 		self.arguments = config.get('arguments', '')
 
@@ -160,11 +164,11 @@ class CMSSW(SCRAMTask):
 			self._events_per_job = config.get('events per job', '0')
 			# this can be a variable like @USER_EVENTS@!
 			self._needed_vn_set.add('MAX_EVENTS')
-		fragment = config.get_path('instrumentation fragment',
+		fragment = config.get_fn('instrumentation fragment',
 			get_path_share('fragmentForCMSSW.py', pkg='grid_control_cms'))
 		self._config_fn_list = self._process_config_file_list(config,
-			list(self._iter_config_files(config)), fragment,
-			auto_prepare=config.get_bool('instrumentation', True),
+			config.get_fn_list('config file', self._get_config_file_default()),
+			fragment, auto_prepare=config.get_bool('instrumentation', True),
 			must_prepare=self._has_dataset)
 
 		# Create project area tarball
@@ -178,29 +182,44 @@ class CMSSW(SCRAMTask):
 				return
 			# Generate CMSSW tarball
 			if self._project_area:
-				create_tarball(self._project_area_tarball,
-					match_files(self._project_area, self._project_area_selector_list))
+				create_tarball(_match_files(self._project_area,
+					self._project_area_matcher, self._always_matcher.create_matcher(''),
+					self._project_area_base_fn), name=self._project_area_tarball)
 			if self._project_area_tarball_on_se:
 				config.set_state(True, 'init', detail='storage')
 
 	def get_command(self):
 		return './gc-run.cmssw.sh $@'
 
-	def get_description(self, jobnum):  # (task name, job name, type)
-		result = SCRAMTask.get_description(self, jobnum)
-		if not result.jobType:
-			result.jobType = 'analysis'
-		return result
-
 	def get_job_arguments(self, jobnum):
 		return SCRAMTask.get_job_arguments(self, jobnum) + ' ' + self.arguments
 
 	def get_job_dict(self, jobnum):
 		# Get job dependent environment variables
-		data = SCRAMTask.get_job_dict(self, jobnum)
+		job_env_dict = SCRAMTask.get_job_dict(self, jobnum)
 		if not self._has_dataset:
-			data['MAX_EVENTS'] = self._events_per_job
-		return data
+			job_env_dict['MAX_EVENTS'] = self._events_per_job
+		job_env_dict.update(dict(self._cmssw_search_dict))
+		if self._do_gzip_std_output:
+			job_env_dict['GZIP_OUT'] = 'yes'
+		if self._project_area_tarball_on_se:
+			job_env_dict['SE_RUNTIME'] = 'yes'
+		if self._project_area:
+			job_env_dict['HAS_RUNTIME'] = 'yes'
+		job_env_dict['CMSSW_EXEC'] = 'cmsRun'
+		job_env_dict['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self._config_fn_list))
+		job_env_dict['CMSSW_OLD_RELEASETOP'] = self._old_release_top
+		if self.prolog.is_active():
+			job_env_dict['CMSSW_PROLOG_EXEC'] = self.prolog.get_command()
+			job_env_dict['CMSSW_PROLOG_SB_IN_FILES'] = str.join(' ',
+				imap(lambda x: x.path_rel, self.prolog.get_sb_in_fpi_list()))
+			job_env_dict['CMSSW_PROLOG_ARGS'] = self.prolog.get_arguments()
+		if self.epilog.is_active():
+			job_env_dict['CMSSW_EPILOG_EXEC'] = self.epilog.get_command()
+			job_env_dict['CMSSW_EPILOG_SB_IN_FILES'] = str.join(' ',
+				imap(lambda x: x.path_rel, self.epilog.get_sb_in_fpi_list()))
+			job_env_dict['CMSSW_EPILOG_ARGS'] = self.epilog.get_arguments()
+		return job_env_dict
 
 	def get_sb_in_fpi_list(self):
 		# Get files for input sandbox
@@ -223,33 +242,8 @@ class CMSSW(SCRAMTask):
 		# Get files to be transfered via SE (description, source, target)
 		files = SCRAMTask.get_se_in_fn_list(self)
 		if self._project_area and self._project_area_tarball_on_se:
-			return files + [('CMSSW tarball', self._project_area_tarball, self.task_id + '.tar.gz')]
+			return files + [('CMSSW tarball', self._project_area_tarball, self._task_id + '.tar.gz')]
 		return files
-
-	def get_task_dict(self):
-		# Get environment variables for gc_config.sh
-		data = SCRAMTask.get_task_dict(self)
-		data.update(dict(self._cmssw_search_dict))
-		if self._do_gzip_std_output:
-			data['GZIP_OUT'] = 'yes'
-		if self._project_area_tarball_on_se:
-			data['SE_RUNTIME'] = 'yes'
-		if self._project_area:
-			data['HAS_RUNTIME'] = 'yes'
-		data['CMSSW_EXEC'] = 'cmsRun'
-		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, self._config_fn_list))
-		data['CMSSW_OLD_RELEASETOP'] = self._old_release_top
-		if self.prolog.is_active():
-			data['CMSSW_PROLOG_EXEC'] = self.prolog.get_command()
-			data['CMSSW_PROLOG_SB_IN_FILES'] = str.join(' ',
-				imap(lambda x: x.path_rel, self.prolog.get_sb_in_fpi_list()))
-			data['CMSSW_PROLOG_ARGS'] = self.prolog.get_arguments()
-		if self.epilog.is_active():
-			data['CMSSW_EPILOG_EXEC'] = self.epilog.get_command()
-			data['CMSSW_EPILOG_SB_IN_FILES'] = str.join(' ',
-				imap(lambda x: x.path_rel, self.epilog.get_sb_in_fpi_list()))
-			data['CMSSW_EPILOG_ARGS'] = self.epilog.get_arguments()
-		return data
 
 	def _config_find_uninitialized(self, config, config_file_list, auto_prepare, must_prepare):
 		common_path = os.path.dirname(os.path.commonprefix(config_file_list))
@@ -279,32 +273,18 @@ class CMSSW(SCRAMTask):
 		return config_file_list_todo
 
 	def _config_is_instrumented(self, fn):
-		fp = open(fn, 'r')
-		try:
-			cfg = fp.read()
-		finally:
-			fp.close()
+		cfg = SafeFile(fn).read_close()
 		for tag in self._needed_vn_set:
 			if (not '__%s__' % tag in cfg) and (not '@%s@' % tag in cfg):
 				return False
 		return True
 
 	def _config_store_backup(self, source, target, fragment_path=None):
-		fp = open(source, 'r')
-		try:
-			content = fp.read()
-		finally:
-			fp.close()
-		fp = open(target, 'w')
-		try:
-			fp.write(content)
-			if fragment_path:
-				self._log.info('Instrumenting... %s', os.path.basename(source))
-				fragment_fp = open(fragment_path, 'r')
-				fp.write(fragment_fp.read())
-				fragment_fp.close()
-		finally:
-			fp.close()
+		content = SafeFile(source).read_close()
+		if fragment_path:
+			self._log.info('Instrumenting... %s', os.path.basename(source))
+			content += SafeFile(fragment_path).read_close()
+		SafeFile(target, 'w').write_close(content)
 
 	def _create_datasource(self, config, name, psrc_repository, psrc_list):
 		psrc_data = SCRAMTask._create_datasource(self, config, name, psrc_repository, psrc_list)
@@ -331,20 +311,16 @@ class CMSSW(SCRAMTask):
 			self._log.info('')
 		return result
 
+	def _get_config_file_default(self):
+		if self.prolog.is_active() or self.epilog.is_active():
+			return []
+		return unspecified
+
 	def _get_var_name_list(self):
 		result = SCRAMTask._get_var_name_list(self)
 		if not self._has_dataset:
 			result.append('MAX_EVENTS')
 		return result
-
-	def _iter_config_files(self, config):
-		config_file_default = unspecified
-		if self.prolog.is_active() or self.epilog.is_active():
-			config_file_default = []
-		for config_file in config.get_path_list('config file', config_file_default, must_exist=False):
-			if not os.path.exists(config_file):
-				raise ConfigError('Config file %r not found.' % config_file)
-			yield config_file
 
 	def _process_config_file_list(self, config, config_file_list,
 			fragment_path, auto_prepare, must_prepare):
@@ -371,3 +347,31 @@ class CMSSW(SCRAMTask):
 				self._log.warning('Config file %r was not instrumented!', cfg)
 			result.append(cfg_new)
 		return result
+
+
+def _match_files(dn_root, matcher, selected_dir_matcher, base_fn, dn_rel=''):
+	# Return (source fn, target fn) - source == None => update activity
+	yield (None, dn_rel)
+	for fn in os.listdir(os.path.join(dn_root, dn_rel)):
+		fn_rel = os.path.join(dn_rel, fn)
+		fn_abs = os.path.join(dn_root, fn_rel)
+		if base_fn:
+			match = matcher.match(fn)
+		else:
+			match = matcher.match(fn_rel)
+		if match < 0:
+			continue
+		elif os.path.islink(fn_abs):  # Not excluded symlinks
+			yield (fn_abs, fn_rel)
+		elif os.path.isdir(fn_abs):  # Recurse into directories
+			dir_matcher = matcher
+			if match > 0:  # directory was manually selected - add everything
+				dir_matcher = selected_dir_matcher
+			yield_base_dir = True
+			for result in _match_files(dn_root, dir_matcher, selected_dir_matcher, base_fn, fn_rel):
+				if yield_base_dir:
+					yield (fn_abs, fn_rel)
+					yield_base_dir = False
+				yield result
+		elif match > 0:  # Add matches
+			yield (fn_abs, fn_rel)

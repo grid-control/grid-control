@@ -13,6 +13,7 @@
 # | limitations under the License.
 
 import os
+from grid_control.utils.file_tools import SafeFile
 from python_compat import imap, json, lmap, sort_inplace
 
 
@@ -92,9 +93,7 @@ def parse_lumi_filter(lumi_str):
 				token.append('')
 			try:
 				json_fn = os.path.normpath(os.path.expandvars(os.path.expanduser(token[0].strip())))
-				json_fp = open(json_fn)
-				run_lumi_range_list.extend(parse_lumi_from_json(json_fp.read(), token[1]))
-				json_fp.close()
+				run_lumi_range_list.extend(parse_lumi_from_json(SafeFile(json_fn).read_close(), token[1]))
 			except Exception:
 				raise ConfigError('Could not process lumi filter file: %r (filter: %r)' % tuple(token))
 		else:

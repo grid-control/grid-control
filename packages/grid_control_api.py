@@ -15,13 +15,14 @@
 import os, sys, time, atexit, signal, logging
 from grid_control.config import create_config
 from grid_control.gc_exceptions import gc_excepthook
+from grid_control.gui import GUI, GUIException
 from grid_control.logging_setup import GCStreamHandler, logging_setup, parse_logging_args
-from grid_control.utils import abort, deprecated, ensure_dir_exists, exit_with_usage, get_path_share, get_version  # pylint:disable=line-too-long
+from grid_control.utils import abort, deprecated, ensure_dir_exists, get_path_share, get_version
 from grid_control.utils.activity import Activity
 from grid_control.utils.cmd_options import Options
-from grid_control.utils.file_objects import SafeFile
+from grid_control.utils.file_tools import SafeFile, with_file
 from grid_control.utils.thread_tools import start_daemon
-from hpfwk import DebugInterface, Plugin, init_hpf_plugins
+from hpfwk import DebugInterface, Plugin, ignore_exception, init_hpf_plugins
 from python_compat import StringBuffer
 
 
@@ -35,67 +36,22 @@ def gc_create_config(cmd_line_args=None, **kwargs):
 
 
 def gc_create_workflow(config, do_freeze=True, **kwargs):
-	# create workflow from config and do initial processing steps
-	# set up signal handler for interrupts and debug session or stack dump requests
-	signal.signal(signal.SIGURG, handle_debug_interrupt)
-	signal.signal(signal.SIGINT, handle_abort_interrupt)
-	start_daemon('debug watchdog', _debug_watchdog)
-
-	# Configure logging settings
-	logging_setup(config.change_view(set_sections=['logging']))
-
-	global_config = config.change_view(set_sections=['global'])
-	_setup_work_path(global_config)
-	for package_paths in global_config.get_path_list('package paths', [], on_change=None):
-		init_hpf_plugins(package_paths)
-
-	# Query config settings before config is frozen
-	help_cfg = global_config.get_state('display', detail='config')
-	help_scfg = global_config.get_state('display', detail='minimal config')
-
-	action_config = config.change_view(set_sections=['action'])
-	action_delete = action_config.get('delete', '', on_change=None)
-	action_reset = action_config.get('reset', '', on_change=None)
-
-	# Create workflow and freeze config settings
-	workflow = global_config.get_plugin('workflow', 'Workflow:global', cls='Workflow', pkwargs=kwargs)
-	if do_freeze:
-		config.factory.freeze(write_config=config.get_state('init', detail='config'))
-
-	# Give config help
-	if help_cfg or help_scfg:
-		config.write(sys.stdout, print_default=help_cfg, print_unused=False,
-			print_minimal=help_scfg, print_source=help_cfg)
-		sys.exit(os.EX_OK)
-
-	# Check if user requested deletion / reset of jobs
-	if action_delete:
-		workflow.job_manager.delete(workflow.task, workflow.wms, action_delete)
-		sys.exit(os.EX_OK)
-	if action_reset:
-		workflow.job_manager.reset(workflow.task, workflow.wms, action_reset)
-		sys.exit(os.EX_OK)
-
-	return workflow
+	return _gc_create_workflow(config, do_freeze, **kwargs)[0]
 
 
 def gc_run(args=None, intro=True):
 	# display the 'grid-control' logo and version
 	if intro and not os.environ.get('GC_DISABLE_INTRO'):
-		sys.stdout.write(SafeFile(get_path_share('logo.txt'), 'r').read())
+		sys.stdout.write(SafeFile(get_path_share('logo.txt'), 'r').read_close())
 		sys.stdout.write('Revision: %s\n' % get_version())
 	pyver = (sys.version_info[0], sys.version_info[1])
 	if pyver < (2, 3):
 		deprecated('This python version (%d.%d) is not supported anymore!' % pyver)
 	atexit.register(lambda: sys.stdout.write('\n'))
-	Activity.root = Activity('Running grid-control', name='root')  # top level activity instance
 
 	# main try... except block to catch exceptions and show error message
 	try:
-		config = gc_create_config(args or sys.argv[1:], use_default_files=True)
-		workflow = gc_create_workflow(config)
-		if not abort():
-			sys.exit(workflow.run())
+		return _gc_run(args)
 	except SystemExit:  # avoid getting caught for Python < 2.5
 		abort(True)
 		raise
@@ -115,15 +71,9 @@ def handle_abort_interrupt(signum, frame, stream=sys.stdout):
 
 
 def handle_debug_interrupt(sig=None, frame=None):
-	def _interrupt_debug_console(duration):
-		def _signal_debug_console():
-			time.sleep(duration)
-			os.kill(os.getpid(), signal.SIGURG)
-		start_daemon('debug console trigger', _signal_debug_console)
-
 	buffer = StringBuffer()
 	GCStreamHandler.push_std_stream(buffer, buffer)
-	DebugInterface(frame, interrupt_fun=_interrupt_debug_console).start_console(
+	DebugInterface(frame, interrupt_fun=_trigger_debug_signal).start_console(
 		env_dict={'output': buffer.getvalue})
 	GCStreamHandler.pop_std_stream()
 
@@ -147,7 +97,7 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 				debug_trace_kwargs[key_value.split('=')[0]] = key_value.split('=')[1]
 			DebugInterface().set_trace(**debug_trace_kwargs)
 
-		def set_config_from_opt(section, option, value):
+		def _set_config_from_opt(section, option, value):
 			if value is not None:
 				self._add_entry(container, section, option, str(value), '<cmdline>')  # pylint:disable=no-member
 		cmd_line_config_map = {
@@ -160,29 +110,91 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 		}
 		for section in cmd_line_config_map:
 			for (option, value) in cmd_line_config_map[section].items():
-				set_config_from_opt(section, option, value)
+				_set_config_from_opt(section, option, value)
 		for (logger_name, logger_level) in parse_logging_args(opts.logging):
-			set_config_from_opt('logging', logger_name + ' level', logger_level)
+			_set_config_from_opt('logging', logger_name + ' level', logger_level)
 		if opts.action is not None:
-			set_config_from_opt('workflow', 'action', opts.action.replace(',', ' '))
+			_set_config_from_opt('workflow', 'action', opts.action.replace(',', ' '))
 		if opts.continuous:
-			set_config_from_opt('workflow', 'duration', -1)
+			_set_config_from_opt('workflow', 'duration', -1)
 		if opts.override:
 			Plugin.create_instance('StringConfigFiller', opts.override).fill(container)
 
 
 def _debug_watchdog():
+	def _check_write_stack_log():
+		if os.path.exists('gc_debug_stack.log'):
+			with_file(SafeFile('gc_debug_stack.log', 'w'),
+				lambda fp: DebugInterface(stream=fp).show_stack(thread_id='all'))
 	while True:
-		try:
-			if os.path.exists('gc_debug_stack.log'):
-				fp = open('gc_debug_stack.log', 'w')
-				try:
-					DebugInterface(stream=fp).show_stack(thread_id='all')
-				finally:
-					fp.close()
-		except Exception:
-			pass
+		ignore_exception(Exception, None, _check_write_stack_log)
 		time.sleep(60)
+
+
+def _gc_create_workflow(config, do_freeze=True, **kwargs):
+	# create workflow from config and do initial processing steps
+	# set up signal handler for interrupts and debug session or stack dump requests
+	signal.signal(signal.SIGURG, handle_debug_interrupt)
+	signal.signal(signal.SIGINT, handle_abort_interrupt)
+	start_daemon('debug watchdog', _debug_watchdog)
+
+	# Configure logging settings
+	logging_setup(config.change_view(set_sections=['logging']))
+
+	global_config = config.change_view(set_sections=['global'])
+	_setup_work_path(global_config)
+	for package_paths in global_config.get_dn_list('package paths', [], on_change=None):
+		init_hpf_plugins(package_paths)
+
+	# Query config settings before config is frozen
+	help_cfg = global_config.get_state('display', detail='config')
+	help_scfg = global_config.get_state('display', detail='minimal config')
+
+	action_config = config.change_view(set_sections=['action'])
+	action_delete = action_config.get('delete', '', on_change=None)
+	action_reset = action_config.get('reset', '', on_change=None)
+
+	# Create workflow and freeze config settings
+	workflow = global_config.get_plugin('workflow', 'Workflow:global', cls='Workflow', pkwargs=kwargs)
+	gui = config.get_plugin('gui', 'BasicConsoleGUI', cls=GUI, on_change=None, pargs=(workflow,))
+	if do_freeze:
+		config.factory.freeze(write_config=config.get_state('init', detail='config'))
+
+	# Give config help
+	if help_cfg or help_scfg:
+		config.write(sys.stdout, print_default=help_cfg, print_unused=False,
+			print_minimal=help_scfg, print_source=help_cfg)
+		sys.exit(os.EX_OK)
+
+	# Check if user requested deletion / reset of jobs
+	if action_delete:
+		workflow.job_manager.delete(workflow.task, workflow.backend, action_delete)
+		sys.exit(os.EX_OK)
+	if action_reset:
+		workflow.job_manager.reset(workflow.task, workflow.backend, action_reset)
+		sys.exit(os.EX_OK)
+
+	return (workflow, gui)
+
+
+def _gc_run(args):
+	config = gc_create_config(args or sys.argv[1:], use_default_files=True)
+	(workflow, gui) = _gc_create_workflow(config)
+	if not abort():
+		DebugInterface.callback_list.append((gui.end_interface, gui.start_interface))
+		try:
+			try:
+				gui.start_interface()
+			except Exception:
+				ex_value = GUIException('GUI init exception')
+				ignore_exception(Exception, None, gui.end_interface)
+				raise ex_value
+			try:
+				workflow.run()
+			finally:
+				gui.end_interface()
+		finally:
+			DebugInterface.callback_list.remove((gui.end_interface, gui.start_interface))
 
 
 def _parse_cmd_line(cmd_line_args):
@@ -219,13 +231,12 @@ def _parse_cmd_line(cmd_line_args):
 	opts.continuous = opts.continuous or None  # either True or None
 	# Display help
 	if opts.help:
-		exit_with_usage(parser.usage(),
-			SafeFile(get_path_share('help.txt'), 'r').read(), show_help=False)
+		parser.exit_with_usage(msg=SafeFile(get_path_share('help.txt')).read_close(), show_help=False)
 	# Require single config file argument
 	if len(args) == 0:
-		exit_with_usage(parser.usage(), 'Config file not specified!')
+		parser.exit_with_usage(msg='Config file not specified!')
 	elif len(args) > 1:
-		exit_with_usage(parser.usage(), 'Invalid command line arguments: %r' % cmd_line_args)
+		parser.exit_with_usage(msg='Invalid command line arguments: %r' % cmd_line_args)
 	# Warn about deprecated report options
 	if opts.old_report:
 		deprecated('Please use the more versatile report tool in the scripts directory!')
@@ -245,3 +256,10 @@ def _setup_work_path(config):
 		if config.get_choice_yes_no('workdir create', True,
 				interactive_msg=work_dn_create_msg % config.get_work_path()):
 			ensure_dir_exists(config.get_work_path(), 'work directory')
+
+
+def _trigger_debug_signal(duration):
+	def _signal_debug_console():
+		time.sleep(duration)
+		os.kill(os.getpid(), signal.SIGURG)
+	start_daemon('debug console trigger', _signal_debug_console)

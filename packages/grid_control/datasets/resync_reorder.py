@@ -21,9 +21,9 @@ from grid_control.utils.data_structures import make_enum
 from python_compat import itemgetter, lmap, next, sort_inplace
 
 
-# prio: "disable" overrides "complete", etc.
+# enum order matters here! (prio: "disable" overrides "complete", etc.)
 ResyncMode = make_enum(['disable', 'complete', 'changed', 'ignore'])  # pylint:disable=invalid-name
-ResyncMode.noChanged = [ResyncMode.disable, ResyncMode.complete, ResyncMode.ignore]
+ResyncMode.no_changed = [ResyncMode.disable, ResyncMode.complete, ResyncMode.ignore]
 ResyncOrder = make_enum(['append', 'preserve', 'fillgap', 'reorder'])  # pylint:disable=invalid-name
 
 
@@ -31,8 +31,8 @@ class BlockResyncState(object):
 	def __init__(self, block_list_old, block_list_new):
 		activity = Activity('Performing resynchronization of dataset')
 		block_resync_tuple = DataProvider.resync_blocks(block_list_old, block_list_new)
-		(self.block_list_added, self.block_list_missing, self.block_list_matching) = block_resync_tuple
-		for block_missing in self.block_list_missing:  # Files in matching blocks are already sorted
+		(self.block_list_added, self._block_list_missing, self._block_list_matching) = block_resync_tuple
+		for block_missing in self._block_list_missing:  # Files in matching blocks are already sorted
 			sort_inplace(block_missing[DataProvider.FileList], key=itemgetter(DataProvider.URL))
 		activity.finish()
 
@@ -42,11 +42,11 @@ class BlockResyncState(object):
 		def _get_block_key(block):
 			return (block[DataProvider.Dataset], block[DataProvider.BlockName])
 		partition_key = (partition[DataSplitter.Dataset], partition[DataSplitter.BlockName])
-		block_missing = _fast_search(self.block_list_missing, _get_block_key, partition_key)
+		block_missing = _fast_search(self._block_list_missing, _get_block_key, partition_key)
 		if block_missing:
 			return (block_missing, None, block_missing[DataProvider.FileList], [])
 		# compare with old block
-		return _fast_search(self.block_list_matching, lambda x: _get_block_key(x[0]), partition_key)
+		return _fast_search(self._block_list_matching, lambda x: _get_block_key(x[0]), partition_key)
 
 
 class DefaultPartitionResyncHandler(PartitionResyncHandler):
@@ -54,7 +54,7 @@ class DefaultPartitionResyncHandler(PartitionResyncHandler):
 		PartitionResyncHandler.__init__(self, config)
 		# behaviour in case of event size changes
 		self._mode_removed = config.get_enum('resync mode removed', ResyncMode, ResyncMode.complete,
-			subset=ResyncMode.noChanged)
+			subset=ResyncMode.no_changed)
 		self._mode_expanded = config.get_enum('resync mode expand', ResyncMode, ResyncMode.changed)
 		self._mode_shrunken = config.get_enum('resync mode shrink', ResyncMode, ResyncMode.changed)
 		self._mode_added = config.get_enum('resync mode added', ResyncMode, ResyncMode.complete,
@@ -63,19 +63,28 @@ class DefaultPartitionResyncHandler(PartitionResyncHandler):
 		self._metadata_option = {}
 		for metadata_name in config.get_list('resync metadata', [], on_change=None):
 			self._metadata_option[metadata_name] = config.get_enum('resync mode %s' % metadata_name,
-				ResyncMode, ResyncMode.complete, subset=ResyncMode.noChanged)
+				ResyncMode, ResyncMode.complete, subset=ResyncMode.no_changed)
 		# behaviour in case of job changes
 		#  - disable changed jobs, preserve job number of changed jobs or reorder
 		self._order = config.get_enum('resync jobs', ResyncOrder, ResyncOrder.append)
 
 	def resync(self, splitter, reader, block_list_old, block_list_new):
-		resync_result = Result(pnum_list_redo=[], pnum_list_disable=[])
 		block_resync_state = BlockResyncState(block_list_old, block_list_new)
 		# User overview and setup starts here
 		resync_info_iter = self._iter_resync_infos(splitter, reader, block_resync_state)
-		resync_result.partition_iter = self._iter_partitions(resync_info_iter,
-			resync_result.pnum_list_redo, resync_result.pnum_list_disable)
-		return resync_result
+
+		# Use reordering if setup - log interventions (disable, redo) according to proc_mode
+		if self._order == ResyncOrder.fillgap:
+			(partition_list_updated, partition_list_added) = _sort_resync_info_list(resync_info_iter)
+			resync_info_iter = _iter_resync_infos_valid(partition_list_updated, iter(partition_list_added))
+		elif self._order == ResyncOrder.reorder:
+			(partition_list_updated, partition_list_added) = _sort_resync_info_list(resync_info_iter)
+			tsi = TwoSidedIterator(partition_list_updated + partition_list_added)
+			resync_info_iter = _iter_resync_infos_valid(tsi.forward(), tsi.backward())
+		elif self._order == ResyncOrder.append:
+			resync_info_iter = _iter_resync_infos_appendchange(resync_info_iter)
+
+		return _get_resync_result(resync_info_iter)
 
 	def _expand_outside(self, splitter, fi_idx, partition_num, size_list,
 			fi_old, fi_new, block_new, partition_list_added):
@@ -252,25 +261,6 @@ class DefaultPartitionResyncHandler(PartitionResyncHandler):
 			proc_mode = min(proc_mode, self._metadata_option.get(meta, ResyncMode.ignore))
 		return proc_mode
 
-	def _iter_partitions(self, resync_info_iter, pnum_list_redo, pnum_list_disable):
-		# Use reordering if setup - log interventions (disable, redo) according to proc_mode
-		if self._order == ResyncOrder.fillgap:
-			(partition_list_updated, partition_list_added) = _sort_resync_info_list(resync_info_iter)
-			resync_info_iter = _iter_fixed_resync_infos(partition_list_updated, iter(partition_list_added))
-		elif self._order == ResyncOrder.reorder:
-			(partition_list_updated, partition_list_added) = _sort_resync_info_list(resync_info_iter)
-			# partition_list_added.reverse()
-			tsi = TwoSidedIterator(partition_list_updated + partition_list_added)
-			resync_info_iter = _iter_fixed_resync_infos(tsi.forward(), tsi.backward())
-
-		for (partition_num, partition, proc_mode) in resync_info_iter:
-			if partition_num:
-				if proc_mode == ResyncMode.complete:
-					pnum_list_redo.append(partition_num)
-				elif proc_mode == ResyncMode.disable:
-					pnum_list_disable.append(partition_num)
-			yield partition
-
 	def _iter_resync_infos(self, splitter, reader, block_resync_state):
 		# Process partitions and yield (partition_num, partition, proc_mode) tuples
 		partition_list_added_all = []
@@ -279,14 +269,14 @@ class DefaultPartitionResyncHandler(PartitionResyncHandler):
 			(partition_modified, proc_mode, partition_list_added) = self._resync_existing_partitions(
 				splitter, block_resync_state, partition_num, partition)
 			partition_list_added_all.extend(partition_list_added)
-			yield (partition_num, partition_modified, proc_mode)
+			yield (partition_num, partition, partition_modified, proc_mode)
 		# Yield collected extensions of existing partitions
 		for partition_added in partition_list_added_all:
-			yield (None, partition_added, ResyncMode.ignore)
+			yield (None, None, partition_added, None)
 		# Yield completely new partitions
 		if self._mode_added == ResyncMode.complete:
 			for partition_added in splitter.split_partitions(block_resync_state.block_list_added):
-				yield (None, partition_added, ResyncMode.ignore)
+				yield (None, None, partition_added, None)
 
 	def _remove_complete_file(self, fi_idx, partition_mod, size_list, fi_old):
 		partition_mod[DataSplitter.NEntries] -= fi_old[DataProvider.NEntries]
@@ -307,14 +297,6 @@ class DefaultPartitionResyncHandler(PartitionResyncHandler):
 		file_resync_state = block_resync_state.get_block_change_info(partition_modified)
 		(proc_mode, partition_list_added) = self._resync_partition(splitter, partition_modified,
 			partition_num, file_resync_state, doexpand_outside=True)
-
-		if (self._order == ResyncOrder.append) and (proc_mode == ResyncMode.complete):
-			# add modified partition to list of new partitions
-			partition_list_added.append(partition_modified)  # TODO: insert...
-			# replace current partition with a fresh copy that is marked as invalid
-			partition_modified = copy.copy(partition)
-			partition_modified[DataSplitter.Invalid] = True
-			proc_mode = ResyncMode.disable
 		return (partition_modified, proc_mode, partition_list_added)
 
 	def _resync_files(self, splitter, partition_mod, partition_num, size_list,
@@ -389,6 +371,17 @@ class DefaultPartitionResyncHandler(PartitionResyncHandler):
 		return min(proc_mode, file_proc_mode)
 
 
+def _convert_resync_info_iter(resync_info_iter, pnum_list_redo, pnum_list_disable):
+	# Iter partitions and fill pnum lists for existing partitions according to processing mode
+	for (partition_num, _, partition, proc_mode) in resync_info_iter:
+		if partition_num:  # already existing partition
+			if proc_mode == ResyncMode.complete:
+				pnum_list_redo.append(partition_num)
+			elif proc_mode == ResyncMode.disable:
+				pnum_list_disable.append(partition_num)
+		yield partition
+
+
 def _fast_search(collection, key_fun, key):
 	(idx, idx_high) = (0, len(collection))
 	while idx < idx_high:
@@ -411,30 +404,51 @@ def _get_partition_size_list(partition, block_old):
 	return lmap(_get_entries_for_url, partition[DataSplitter.FileList])
 
 
-def _iter_fixed_resync_infos(resync_info_iter, resync_info_iter_alt):
+def _get_resync_result(resync_info_iter):
+	resync_result = Result(pnum_list_redo=[], pnum_list_disable=[])
+	resync_result.partition_iter = _convert_resync_info_iter(resync_info_iter,
+		resync_result.pnum_list_redo, resync_result.pnum_list_disable)
+	return resync_result
+
+
+def _iter_resync_infos_appendchange(resync_info_iter):
+	partition_list_changed = []
+	for (partition_num, old_partition, partition, proc_mode) in resync_info_iter:
+		if proc_mode == ResyncMode.complete:
+			# add modified partition to list of changed partitions
+			partition_list_changed.append(partition)
+			# replace current partition with a fresh copy that is marked as invalid
+			partition = copy.copy(old_partition)
+			partition[DataSplitter.Invalid] = True
+			proc_mode = ResyncMode.disable
+		yield (partition_num, None, partition, proc_mode)
+	for partition in partition_list_changed:
+		yield (None, None, partition, None)
+
+
+def _iter_resync_infos_valid(resync_info_iter, resync_info_iter_alt):
 	# yield valid resync infos from resync_info_iter and resync_info_iter_alt
 	# invalid or disabled resync_infos from resync_info_iter are replaced by
 	# valid resync_infos from resync_info_iter_alt
-	for (partition_num, partition, proc_mode) in resync_info_iter:
+	for (partition_num, _, partition, proc_mode) in resync_info_iter:
 		if (proc_mode == ResyncMode.disable) or partition.get(DataSplitter.Invalid, False):
 			resync_info_added = next(resync_info_iter_alt, None)
-			while resync_info_added and resync_info_added[1].get(DataSplitter.Invalid, False):
+			while resync_info_added and resync_info_added[2].get(DataSplitter.Invalid, False):
 				resync_info_added = next(resync_info_iter_alt, None)
 			if resync_info_added:
-				yield (partition_num, resync_info_added[1], ResyncMode.complete)  # Overwrite invalid partitions
-				continue
-		yield (partition_num, partition, proc_mode)
+				yield (partition_num, None, resync_info_added[2], ResyncMode.complete)
+				continue  # Overwrite invalid partitions
+		yield (partition_num, None, partition, proc_mode)
 	for resync_info_added in resync_info_iter_alt:  # deplete resync_info_iter_alt at the end
-		# ResyncMode.ignore -> do nothing special for the new partitions
-		yield (None, resync_info_added[1], ResyncMode.ignore)
+		yield (None, None, resync_info_added[2], None)
 
 
-def _sort_resync_info_list(partition_iter):
-	# Sort resynced partitions into updated and added lists
+def _sort_resync_info_list(resync_info_iter):
+	# Sort resynced partitions into updated and added lists (and discard old partition info)
 	(partition_list_updated, partition_list_added) = ([], [])
-	for (partition_num, partition, proc_mode) in partition_iter:
+	for (partition_num, _, partition, proc_mode) in resync_info_iter:
 		if partition_num is None:  # Separate existing and new partitions
-			partition_list_added.append((None, partition, None))
+			partition_list_added.append((None, None, partition, None))
 		else:
-			partition_list_updated.append((partition_num, partition, proc_mode))
+			partition_list_updated.append((partition_num, None, partition, proc_mode))
 	return (partition_list_updated, partition_list_added)

@@ -13,7 +13,8 @@
 # | limitations under the License.
 
 from grid_control.backends.access import AccessToken
+from grid_control.backends.backend_tools import BackendError
 from grid_control.backends.wms import WMS
 
 
-__all__ = ['AccessToken', 'WMS']
+__all__ = ['AccessToken', 'BackendError', 'WMS']

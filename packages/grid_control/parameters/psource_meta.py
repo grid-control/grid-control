@@ -12,9 +12,10 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import operator
 from grid_control.parameters.psource_base import NullParameterSource, ParameterError, ParameterSource  # pylint:disable=line-too-long
 from hpfwk import AbstractError, Plugin
-from python_compat import all, ichain, imap, irange, izip, lchain, lfilter, lmap, md5_hex, reduce, set  # pylint:disable=line-too-long
+from python_compat import all, ichain, ifilter, imap, irange, izip, lchain, lfilter, lmap, lrange, md5_hex, reduce, set, sorted  # pylint:disable=line-too-long
 
 
 class ForwardingParameterSource(ParameterSource):
@@ -31,11 +32,17 @@ class ForwardingParameterSource(ParameterSource):
 	def fill_parameter_metadata(self, result):
 		self._psrc.fill_parameter_metadata(result)
 
+	def get_parameter_deps(self):
+		return self._psrc.get_parameter_deps()
+
 	def get_parameter_len(self):
 		return self._psrc.get_parameter_len()
 
 	def get_psrc_hash(self):
 		return self._psrc.get_psrc_hash()
+
+	def get_resync_request(self):
+		return self._psrc.get_resync_request()
 
 	def get_used_psrc_list(self):
 		return [self] + self._psrc.get_used_psrc_list()
@@ -49,16 +56,18 @@ class ForwardingParameterSource(ParameterSource):
 
 class MultiParameterSource(ParameterSource):  # Meta processing of parameter psrc_list
 	def __new__(cls, *psrc_list):
-		psrc_list = _strip_null_sources(psrc_list)
-		if len(psrc_list) == 1:
-			return psrc_list[0]
+		(repeat, psrc_list) = _separate_repeat(_strip_null_sources(psrc_list))
+		if repeat != 1:
+			return RepeatParameterSource(cls(*psrc_list), repeat)
 		elif not psrc_list:
 			return NullParameterSource()
+		elif len(psrc_list) == 1:
+			return psrc_list[0]
 		return ParameterSource.__new__(cls)
 
 	def __init__(self, *psrc_list):
 		ParameterSource.__init__(self)
-		self._psrc_list = _strip_null_sources(psrc_list)
+		self._psrc_list = list(_sort_deps(_strip_null_sources(psrc_list)))
 		self._psrc_max_list = lmap(lambda psrc: psrc.get_parameter_len(), self._psrc_list)
 		self._psrc_max = self._init_psrc_max()
 
@@ -79,10 +88,13 @@ class MultiParameterSource(ParameterSource):  # Meta processing of parameter psr
 					raise ParameterError('Collisions of parameter %s between %s and %s' % (
 						metadata.value, psrc, map_vn2psrc[vn]))
 				map_vn2psrc[vn] = psrc
-				result.append(metadata)
+			psrc.fill_parameter_metadata(result)
 
 	def get_nested_psrc_list(self):
 		return list(self._psrc_list)
+
+	def get_parameter_deps(self):
+		return lchain(imap(lambda psrc: psrc.get_parameter_deps(), self._psrc_list))
 
 	def get_parameter_len(self):
 		return self._psrc_max
@@ -90,6 +102,9 @@ class MultiParameterSource(ParameterSource):  # Meta processing of parameter psr
 	def get_psrc_hash(self):
 		child_psrc_hash = str(lmap(lambda psrc: psrc.get_psrc_hash(), self._psrc_list))
 		return md5_hex(self.__class__.__name__ + child_psrc_hash)
+
+	def get_resync_request(self):
+		return lchain(imap(lambda psrc: psrc.get_resync_request(), self._psrc_list))
 
 	def get_used_psrc_list(self):
 		return [self] + lchain(imap(lambda psrc: psrc.get_used_psrc_list(), self._psrc_list))
@@ -112,9 +127,8 @@ class MultiParameterSource(ParameterSource):  # Meta processing of parameter psr
 		return (result_redo, result_disable, psrc_max_old != self._psrc_max)
 
 	def show_psrc(self):
-		result = ParameterSource.show_psrc(self)
-		result.extend(imap(lambda x: '\t' + x, ichain(imap(lambda ps: ps.show_psrc(), self._psrc_list))))
-		return result
+		return ParameterSource.show_psrc(self) + lmap(lambda x: '\t' + x,
+			ichain(imap(lambda ps: ps.show_psrc(), self._psrc_list)))
 
 	def _init_psrc_max(self):
 		raise AbstractError
@@ -178,14 +192,26 @@ class SubSpaceParameterSource(ForwardingParameterSource):
 
 	def __init__(self, name, factory, repository):
 		(self._name, self._factory_name) = (name, factory.__class__.__name__)
-		ForwardingParameterSource.__init__(self, factory.get_psrc(repository))
+		try:
+			if 'subspace:%s' % name in repository:
+				raise ParameterError('Recusive parameter space detected! %s' % repr(repository))
+			repository['subspace:%s' % name] = self
+			ForwardingParameterSource.__init__(self, factory.get_psrc(repository))
+		finally:
+			repository.pop('subspace:%s' % name, None)
 
 	def __repr__(self):
 		if self._factory_name == 'SimpleParameterFactory':
 			return 'pspace(%r)' % self._name
 		return 'pspace(%r, %r)' % (self._name, self._factory_name)
 
-	def create_psrc(cls, pconfig, repository, name='subspace', factory='SimpleParameterFactory'):  # pylint:disable=arguments-differ
+	def create_psrc(cls, pconfig, repository, *args):  # pylint:disable=arguments-differ
+		name = 'subspace'
+		factory = 'SimpleParameterFactory'
+		if len(args) == 1:
+			name = args[0]
+		elif len(args) == 2:
+			(factory, name) = (args[0], args[1])
 		try:
 			config = pconfig.get_config(view_class='SimpleConfigView', add_sections=[name])
 			pfactory = Plugin.get_class('ParameterFactory').create_instance(factory, config)
@@ -235,7 +261,39 @@ class TruncateParameterSource(ForwardingParameterSource):
 		return (result_redo, result_disable, False)  # size can never change on-the-fly
 
 	def show_psrc(self):
-		return ['%s: truncate = %s' % (self.__class__.__name__, self._max_len)]
+		return ['%s: truncate = %s' % (self.__class__.__name__, self._max_len)] + \
+			lmap(lambda x: '\t' + x, self._psrc.show_psrc())
+
+
+class BaseCombineParameterSource(MultiParameterSource):
+	def __new__(cls, *args):  # pylint:disable=arguments-differ
+		return ParameterSource.__new__(cls)
+
+	def __init__(self, combine_fun, psrc1, psrc2, var1, var2=None):
+		(self._combine_fun, self._var1, self._var2) = (combine_fun, var1, var2 or var1)
+		self._psrc_pnum_pair_list = []
+		MultiParameterSource.__init__(self, psrc1, psrc2)
+
+	def fill_parameter_content(self, pnum, result):
+		if pnum is None:
+			pnum = -1
+		(pnum1, pnum2) = self._psrc_pnum_pair_list[pnum]
+		self._psrc_list[0].fill_parameter_content(pnum1, result)
+		self._psrc_list[1].fill_parameter_content(pnum2, result)
+
+	def _init_psrc_max(self):
+		self._psrc_pnum_pair_list = []
+		psrc1_values = _get_map_value2pnum(self._psrc_list[0], self._var1)
+		psrc2_values = _get_map_value2pnum(self._psrc_list[1], self._var2)
+		for value in sorted(psrc1_values):
+			self._psrc_pnum_pair_list.extend(self._combine_fun(
+				psrc1_values[value], psrc2_values.get(value, [])))
+		return len(self._psrc_pnum_pair_list)
+
+	def _translate_pnum(self, psrc_idx, pnum):
+		for (pnum_result, pnum12_tuple) in enumerate(self._psrc_pnum_pair_list):
+			if pnum == pnum12_tuple[psrc_idx]:
+				yield pnum_result
 
 
 class BaseZipParameterSource(MultiParameterSource):
@@ -272,7 +330,8 @@ class ChainParameterSource(MultiParameterSource):
 
 	def __init__(self, *psrc_list):
 		psrc_list_new = []
-		for psrc in _strip_null_sources(psrc_list):  # wrap infinite parameter sources in truncate(..., 1)
+		for psrc in _strip_null_sources(_simplify_nested_sources(ChainParameterSource, psrc_list)):
+			# wrap infinite parameter sources in truncate(..., 1)
 			if psrc.get_parameter_len() is None:
 				psrc_list_new.append(TruncateParameterSource(psrc, 1))
 			else:
@@ -315,10 +374,12 @@ class CrossParameterSource(MultiParameterSource):
 	alias_list = ['cross']
 
 	def __new__(cls, *psrc_list):
+		def _select_extensive_psrc(psrc):
+			return (not isinstance(psrc, int)) and (psrc.get_parameter_len() is not None)
 		psrc_list = _strip_null_sources(psrc_list)
-		if len(lfilter(lambda p: p.get_parameter_len() is not None, psrc_list)) < 2:
+		if len(lfilter(_select_extensive_psrc, psrc_list)) < 2:
 			return ZipLongParameterSource(*psrc_list)
-		return ParameterSource.__new__(cls)
+		return MultiParameterSource.__new__(cls, *psrc_list)
 
 	def __init__(self, *psrc_list):
 		MultiParameterSource.__init__(self, *_simplify_nested_sources(CrossParameterSource, psrc_list))
@@ -394,6 +455,24 @@ class RepeatParameterSource(MultiParameterSource):
 		return lmap(lambda i: pnum + i * self._psrc_child_max, irange(self._times))
 
 
+class CombineParameterSource(BaseCombineParameterSource):
+	alias_list = ['combine']
+
+	def __init__(self, psrc1, psrc2, var1, var2=None):
+		def _product(pnum1_list, pnum2_list):
+			for pnum1 in pnum1_list:
+				for pnum2 in pnum2_list:
+					yield (pnum1, pnum2)
+		BaseCombineParameterSource.__init__(self, _product, psrc1, psrc2, var1, var2)
+
+
+class LinkParameterSource(BaseCombineParameterSource):
+	alias_list = ['link']
+
+	def __init__(self, psrc1, psrc2, var1, var2=None):
+		BaseCombineParameterSource.__init__(self, izip, psrc1, psrc2, var1, var2)
+
+
 class ZipLongParameterSource(BaseZipParameterSource):
 	alias_list = ['zip']
 
@@ -435,6 +514,25 @@ def _combine_resync_result(resync_result_a, resync_result_b, sc_fun=bool.__or__)
 	return (redo_a, disable_a, sc_fun(size_change_a, size_change_b))
 
 
+def _get_map_value2pnum(psrc, var):
+	def _get_value(pnum):
+		psp = {}
+		psrc.fill_parameter_content(pnum, psp)
+		return psp.get(var)
+	result = {}
+	if psrc.get_parameter_len() is None:
+		result[_get_value(None)] = [-1]
+	else:
+		for pnum in irange(psrc.get_parameter_len()):
+			result.setdefault(_get_value(pnum), []).append(pnum)
+	return result
+
+
+def _separate_repeat(psrc_list):
+	repeat = reduce(operator.mul, ifilter(lambda p: not isinstance(p, ParameterSource), psrc_list), 1)
+	return (repeat, lfilter(lambda p: isinstance(p, ParameterSource), psrc_list))
+
+
 def _simplify_nested_sources(cls, psrc_list):
 	for psrc in psrc_list:
 		if isinstance(psrc, cls):
@@ -444,5 +542,29 @@ def _simplify_nested_sources(cls, psrc_list):
 			yield psrc
 
 
+def _sort_deps(psrc_list):
+	metadata_dict = {}
+	metadata_set_all = set()
+	for psrc in psrc_list:
+		tmp = []
+		psrc.fill_parameter_metadata(tmp)
+		metadata_dict[psrc] = lmap(str, tmp)
+		metadata_set_all.update(metadata_dict[psrc])
+
+	psrc_idx_list = lrange(len(psrc_list))
+	metadata_list_known = []
+	while psrc_idx_list:
+		psrc_idx = psrc_idx_list.pop(0)
+		psrc = psrc_list[psrc_idx]
+		for dep in psrc.get_parameter_deps():
+			dep = str(dep)
+			if (dep in metadata_set_all) and (dep not in metadata_list_known):
+				psrc_idx_list.append(psrc_idx)  # back to the queue
+				break
+		if psrc_idx not in psrc_idx_list:
+			yield psrc
+			metadata_list_known.extend(metadata_dict[psrc])
+
+
 def _strip_null_sources(psrc_list):
-	return lfilter(lambda p: not isinstance(p, NullParameterSource), psrc_list)
+	return lfilter(lambda p: (p != 1) and not isinstance(p, NullParameterSource), psrc_list)

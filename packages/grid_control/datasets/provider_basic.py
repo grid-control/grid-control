@@ -1,4 +1,4 @@
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2009-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 from grid_control.config import ConfigError
 from grid_control.datasets.provider_base import DataProvider, DatasetError
 from grid_control.utils import split_opt
+from grid_control.utils.file_tools import SafeFile
 from grid_control.utils.parsing import parse_json, parse_list
 from python_compat import lmap, rsplit
 
@@ -138,18 +139,13 @@ class ListProvider(DataProvider):
 				return self._filter in '/%s#' % DataProvider.get_block_id(block)
 			return True
 		try:
-			fp = open(self._filename, 'r')
+			fp = SafeFile(self._filename)
 		except Exception:
 			raise DatasetError('Unable to open dataset file %s' % repr(self._filename))
-		try:
-			for block in self._create_blocks(fp):
-				if _filter_block(block):
-					self._raise_on_abort()
-					yield block
-			fp.close()
-		except Exception:
-			fp.close()
-			raise
+		for block in self._create_blocks(fp.iter_close()):
+			if _filter_block(block):
+				self._raise_on_abort()
+				yield block
 
 
 def _try_apply(value, fun, desc):

@@ -15,39 +15,38 @@
 import math, time
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
-from grid_control.report import LocationReport, Report
+from grid_control.report import LocationReport, TableReport
 from grid_control.utils.parsing import parse_str, str_time_short
-from grid_control.utils.table import ConsoleTable
 from python_compat import imap, itemgetter, lmap, lzip, sorted
 
 
 class LocationHistoryReport(LocationReport):
 	alias_list = ['history']
 
-	def _add_details(self, reports, job_obj):
-		history = job_obj.history.items()
+	def _fill_report_dict_list(self, reports, job_obj):
+		history = list(job_obj.history.items())
 		history.reverse()
-		for attempt, dest in history:
-			if dest != 'N/A':
-				reports.append({1: attempt, 2: ' -> ' + dest})
+		for attempt, site_queue_str in history:
+			if site_queue_str != 'N/A':
+				reports.append({1: attempt, 2: ' -> ' + site_queue_str})
 
 
-class BackendReport(Report):
+class BackendReport(TableReport):
 	alias_list = ['backend']
 
-	def __init__(self, job_db, task, jobs=None, config_str=''):
-		Report.__init__(self, job_db, task, jobs, config_str)
+	def __init__(self, config, name, job_db, task=None):
+		TableReport.__init__(self, config, name, job_db, task)
 		self._level_map = {'wms': 2, 'endpoint': 3, 'site': 4, 'queue': 5}
-		self._use_history = ('history' in config_str)
-		config_str = config_str.replace('history', '') or 'wms'
-		self._idx_list = lmap(lambda x: self._level_map[x.lower()], config_str.split())
+		self._use_history = config.get_bool('report history', False, on_change=None)
+		hierarchy_list = config.get_list('report hierarchy', ['wms'], on_change=None)
+		self._idx_list = lmap(lambda x: self._level_map[x.lower()], hierarchy_list)
 		self._idx_list.reverse()
 		if not self._idx_list:
 			raise ConfigError('Backend report was not configured!')
 		self._state_map = [(None, 'WAITING'), (Job.RUNNING, 'RUNNING'),
 			(Job.FAILED, 'FAILED'), (Job.SUCCESS, 'SUCCESS')]
 
-	def show_report(self, job_db):
+	def show_report(self, job_db, jobnum_list):
 		state_map = dict(self._state_map)
 
 		def _transform(data, label, level):
@@ -66,11 +65,11 @@ class BackendReport(Report):
 						yield result
 				if idx != len(data) - 1:
 					yield '-'
-		stats = self._get_hierachical_stats_dict(job_db)
+		stats = self._get_hierachical_stats_dict(job_db, jobnum_list)
 		displace_states_list = lmap(itemgetter(1), self._state_map)
 		header = [('', 'Category')] + lzip(displace_states_list, displace_states_list)
-		ConsoleTable.create(header, _transform(stats, [], len(self._idx_list)),
-			fmt_string='l' + 'c' * len(state_map), fmt={'': lambda x: str.join(' ', x)})
+		self._show_table(header, _transform(stats, [], len(self._idx_list)),
+			align_str='l' + 'c' * len(state_map), fmt_dict={'': lambda x: str.join(' ', x)})
 
 	def _get_entry(self, state_map, data, label):
 		(result_l1, result_l2, result_l3) = ({}, {}, {})
@@ -103,8 +102,8 @@ class BackendReport(Report):
 			stddev = math.sqrt(tmp_m2[state] / tmp_m0[state] - mean * mean)
 			yield (state, tmp_m0[state], mean, stddev, tmp_mi[state], tmp_ma[state])
 
-	def _get_hierachical_stats_dict(self, job_db):
-		overview = self._get_report_info_list(job_db)
+	def _get_hierachical_stats_dict(self, job_db, jobnum_list):
+		overview = self._get_report_info_list(job_db, jobnum_list)
 
 		def _fill_dict(result, items, idx_list=None, indent=0):
 			if not idx_list:
@@ -132,10 +131,10 @@ class BackendReport(Report):
 		_fill_dict(display_dict, overview, self._idx_list)
 		return display_dict
 
-	def _get_report_info_list(self, job_db):
+	def _get_report_info_list(self, job_db, jobnum_list):
 		result = []
 		t_now = time.time()
-		for jobnum in self._jobs:
+		for jobnum in jobnum_list:
 			job_obj = job_db.get_job_transient(jobnum)
 			runtime = parse_str(job_obj.get('runtime'), int, 0)
 			for attempt in job_obj.history:
@@ -152,11 +151,11 @@ class BackendReport(Report):
 				state = job_obj.state
 				if attempt != job_obj.attempt:
 					state = Job.FAILED
-				dest = job_obj.history[attempt]
-				if dest == 'N/A':
-					dest_info = [dest]
+				site_queue_str = job_obj.history[attempt]
+				if site_queue_str == 'N/A':
+					dest_info = [site_queue_str]
 				else:
-					dest_info = dest.split('/')
+					dest_info = site_queue_str.split('/')
 				wms_name = job_obj.gc_id.split('.')[1]
 				endpoint = 'N/A'
 				if 'http:' in job_obj.gc_id:

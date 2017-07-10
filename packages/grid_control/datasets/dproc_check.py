@@ -23,7 +23,7 @@ DatasetUniqueMode = make_enum(['warn', 'abort', 'skip', 'ignore', 'record'])  # 
 DatasetCheckMode = make_enum(['warn', 'abort', 'ignore'])  # pylint: disable=invalid-name
 
 
-class DataChecker(DataProcessor):
+class BaseConsistencyProcessor(DataProcessor):
 	def _handle_error(self, msg, mode):
 		if mode == DatasetCheckMode.warn:
 			self._log.warning(msg)
@@ -31,11 +31,11 @@ class DataChecker(DataProcessor):
 			raise DatasetError(msg)
 
 
-class EntriesConsistencyDataProcessor(DataChecker):
+class EntriesConsistencyDataProcessor(BaseConsistencyProcessor):
 	alias_list = ['consistency']
 
 	def __init__(self, config, datasource_name):
-		DataChecker.__init__(self, config, datasource_name)
+		BaseConsistencyProcessor.__init__(self, config, datasource_name)
 		self._mode = config.get_enum(self._get_dproc_opt('check entry consistency'),
 			DatasetCheckMode, DatasetCheckMode.abort)
 
@@ -52,11 +52,11 @@ class EntriesConsistencyDataProcessor(DataChecker):
 		return self._mode != DatasetCheckMode.ignore
 
 
-class NickNameConsistencyProcessor(DataChecker):
+class NickNameConsistencyProcessor(BaseConsistencyProcessor):
 	alias_list = ['nickconsistency']
 
 	def __init__(self, config, datasource_name):
-		DataChecker.__init__(self, config, datasource_name)
+		BaseConsistencyProcessor.__init__(self, config, datasource_name)
 		# Ensure the same nickname is used consistently in all blocks of a dataset
 		self._check_consistency = config.get_enum(self._get_dproc_opt('check nickname consistency'),
 			DatasetCheckMode, DatasetCheckMode.abort)
@@ -84,11 +84,11 @@ class NickNameConsistencyProcessor(DataChecker):
 		return DatasetCheckMode.ignore not in (self._check_consistency, self._check_collision)
 
 
-class UniqueDataProcessor(DataChecker):
+class UniqueDataProcessor(BaseConsistencyProcessor):
 	alias_list = ['unique']
 
 	def __init__(self, config, datasource_name):
-		DataChecker.__init__(self, config, datasource_name)
+		BaseConsistencyProcessor.__init__(self, config, datasource_name)
 		self._check_url = config.get_enum(self._get_dproc_opt('check unique url'),
 			DatasetUniqueMode, DatasetUniqueMode.abort)
 		self._check_block = config.get_enum(self._get_dproc_opt('check unique block'),

@@ -41,10 +41,10 @@ class CMSBaseProvider(DataProvider):
 		# LumiDataProcessor instantiated in DataProcessor.__ini__ will set lumi metadata as well
 		self._lumi_query = dataset_config.get_bool(
 			['lumi metadata', '%s lumi metadata' % datasource_name], default=not self._lumi_filter.empty())
-		config.set('phedex sites matcher mode', 'shell', '?=')
+		config.set('phedex sites matcher mode', 'ShellStyleMatcher', '?=')
 		# PhEDex blacklist: 'T1_*_Disk nodes allow user jobs - other T1's dont!
 		self._phedex_filter = dataset_config.get_filter('phedex sites', '-* T1_*_Disk T2_* T3_*',
-			default_matcher='blackwhite', default_filter='strict')
+			default_matcher='BlackWhiteMatcher', default_filter='StrictListFilter')
 		self._only_complete = dataset_config.get_bool('only complete sites', True)
 		self._only_valid = dataset_config.get_bool('only valid', True)
 		self._location_format = dataset_config.get_enum('location format',
@@ -111,6 +111,21 @@ class CMSBaseProvider(DataProvider):
 		block[DataProvider.FileList] = fi_list
 		activity_fi.finish()
 
+	def _filter_cms_blockinfo_list(self, dataset_path, do_query_sites):
+		iter_dataset_block_name_selist = self._iter_cms_blocks(dataset_path, do_query_sites)
+		n_blocks = 0
+		selected_blocks = False
+		for (dataset_block_name, selist) in iter_dataset_block_name_selist:
+			n_blocks += 1
+			block_name = str.split(dataset_block_name, '#')[1]
+			if (self._dataset_block_selector != 'all') and (block_name != self._dataset_block_selector):
+				continue
+			selected_blocks = True
+			yield (dataset_block_name, selist)
+		if (n_blocks > 0) and not selected_blocks:
+			raise DatasetError('Dataset %r contains %d blocks, but none were selected by %r' % (
+				dataset_path, n_blocks, self._dataset_block_selector))
+
 	def _get_cms_dataset_list(self, dataset_path):
 		raise AbstractError
 
@@ -121,14 +136,16 @@ class CMSBaseProvider(DataProvider):
 		dataset_name_list = self.get_dataset_name_list()
 		progress_ds = ProgressActivity('Getting dataset', len(dataset_name_list))
 		for dataset_idx, dataset_path in enumerate(dataset_name_list):
-			progress_ds.update_progress(dataset_idx, message='Getting dataset %s' % dataset_path)
+			progress_ds.update_progress(dataset_idx, msg='Getting dataset %s' % dataset_path)
 			counter = 0
-			cms_block_iter = self._iter_cms_blocks_filtered(dataset_path, do_query_sites=not use_phedex)
-			for (block_path, replica_infos) in cms_block_iter:
+			blockinfo_list = list(self._filter_cms_blockinfo_list(dataset_path, not use_phedex))
+			progress_block = ProgressActivity('Getting block information', len(blockinfo_list))
+			for (block_path, replica_infos) in blockinfo_list:
 				result = {}
 				result[DataProvider.Dataset] = block_path.split('#')[0]
 				result[DataProvider.BlockName] = block_path.split('#')[1]
-				activity_block = Activity('Getting block %s' % result[DataProvider.BlockName])
+				progress_block.update_progress(counter,
+					msg='Getting block information for ' + result[DataProvider.BlockName])
 
 				if use_phedex:  # Start parallel phedex query
 					replicas_dict = {}
@@ -144,7 +161,7 @@ class CMSBaseProvider(DataProvider):
 				if len(result[DataProvider.FileList]):
 					counter += 1
 					yield result
-				activity_block.finish()
+			progress_block.finish()
 
 			if counter == 0:
 				raise DatasetError('Dataset %s does not contain any valid blocks!' % dataset_path)
@@ -162,21 +179,6 @@ class CMSBaseProvider(DataProvider):
 
 	def _iter_cms_blocks(self, dataset_path, do_query_sites):
 		raise AbstractError
-
-	def _iter_cms_blocks_filtered(self, dataset_path, do_query_sites):
-		iter_dataset_block_name_selist = self._iter_cms_blocks(dataset_path, do_query_sites)
-		n_blocks = 0
-		selected_blocks = False
-		for (dataset_block_name, selist) in iter_dataset_block_name_selist:
-			n_blocks += 1
-			block_name = str.split(dataset_block_name, '#')[1]
-			if (self._dataset_block_selector != 'all') and (block_name != self._dataset_block_selector):
-				continue
-			selected_blocks = True
-			yield (dataset_block_name, selist)
-		if (n_blocks > 0) and not selected_blocks:
-			raise DatasetError('Dataset %r contains %d blocks, but none were selected by %r' % (
-				dataset_path, n_blocks, self._dataset_block_selector))
 
 	def _iter_cms_files(self, block_path, query_only_valid, query_lumi):
 		raise AbstractError

@@ -13,33 +13,30 @@
 # | limitations under the License.
 
 import os, stat, time
-from grid_control.monitoring import Monitoring
-from hpfwk import clear_current_exception
+from grid_control.event_base import LocalEventHandler
+from grid_control.utils.file_tools import SafeFile
+from hpfwk import clear_current_exception, ignore_exception
 
 
-class JabberAlarm(Monitoring):
+class JabberAlarm(LocalEventHandler):
 	alias_list = ['jabber']
-	config_section_list = Monitoring.config_section_list + ['jabber']
+	config_section_list = LocalEventHandler.config_section_list + ['jabber']
 
 	def __init__(self, config, name, task):
-		Monitoring.__init__(self, config, name, task)
+		LocalEventHandler.__init__(self, config, name, task)
 		self._source_jid = config.get('source jid', on_change=None)
 		self._target_jid = config.get('target jid', on_change=None)
-		password_fn = config.get_path('source password file')
+		password_fn = config.get_fn('source password file')
 		os.chmod(password_fn, stat.S_IRUSR)
 		# password in variable name removes it from debug log!
-		self._source_password = open(password_fn).read().strip()
+		self._source_password = SafeFile(password_fn).read_close().strip()
 		try:  # xmpp contains many deprecated constructs
 			import warnings
 			warnings.simplefilter('ignore', DeprecationWarning)
 		except Exception:
 			clear_current_exception()
-		self._xmpp = None
-		try:
-			import xmpp
-			self._xmpp = xmpp
-		except Exception:
-			clear_current_exception()
+		self._xmpp = ignore_exception(Exception, None, __import__, 'xmpp')
+		if self._xmpp is None:
 			try:
 				import grid_control_gui.xmpp
 				self._xmpp = grid_control_gui.xmpp
@@ -47,16 +44,17 @@ class JabberAlarm(Monitoring):
 				raise Exception('Unable to load jabber library!')
 
 	def on_task_finish(self, job_len):
-		jid = self._xmpp.protocol.JID(self._source_jid)
-		xmpp_client = self._xmpp.Client(jid.getDomain(), debug=[])
-		con = xmpp_client.connect()
-		if not con:
-			self._log.warning('Could not connect to jabber server!')
-			return
-		auth = xmpp_client.auth(jid.getNode(), self._source_password, resource=jid.getResource())
-		if not auth:
-			self._log.warning('Could not authenticate to jabber server!')
-			return
-		text = 'Task %s finished!' % self._task.task_id
-		xmpp_client.send(self._xmpp.protocol.Message(self._target_jid, text))
-		time.sleep(1)  # Stay connected until delivered
+		try:
+			jid = self._xmpp.protocol.JID(self._source_jid)
+			xmpp_client = self._xmpp.Client(jid.getDomain(), debug=[])
+			con = ignore_exception(Exception, None, xmpp_client.connect)
+			if not con:
+				return self._log.warning('Could not connect to jabber server!')
+			auth = xmpp_client.auth(jid.getNode(), self._source_password, resource=jid.getResource())
+			if not auth:
+				return self._log.warning('Could not authenticate to jabber server!')
+			text = 'Task %s finished!' % self._task.get_description().task_name
+			xmpp_client.send(self._xmpp.protocol.Message(self._target_jid, text))
+			time.sleep(1)  # Stay connected until delivered
+		except Exception:
+			self._log.exception('Error while sending message to jabber server')

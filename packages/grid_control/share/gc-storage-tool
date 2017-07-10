@@ -1,0 +1,889 @@
+#!/bin/sh
+# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# |
+# | Licensed under the Apache License, Version 2.0 (the "License");
+# | you may not use this file except in compliance with the License.
+# | You may obtain a copy of the License at
+# |
+# |     http://www.apache.org/licenses/LICENSE-2.0
+# |
+# | Unless required by applicable law or agreed to in writing, software
+# | distributed under the License is distributed on an "AS IS" BASIS,
+# | WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# | See the License for the specific language governing permissions and
+# | limitations under the License.
+
+# Source: github.com/grid-control
+# storage-control
+#   Standalone tool providing generic interface to storage backends (used by grid-control)
+
+set +f # enable path expansion
+export LC_ALL="C"
+SC_TRUE=0
+SC_FALSE=1
+SC_ERR_LAST=""
+
+sc_debug_helper()
+{
+	test -z "$SC_DEBUG" && return "$SC_TRUE"
+	OUTPUT="$(date +%s.%N 2> /dev/null):$$:$0:"
+	# protect array access in eval string for posix shells
+	BASH_LINE_ITER='$(seq ${#BASH_LINENO[*]} -1 0)'
+	for i in $(eval "$BASH_LINE_ITER" 2> /dev/null); do
+		BASH_FUN_LINENO="$(eval '${BASH_LINENO[$i]}')"
+		[ -n "$BASH_FUN_LINENO" ] && OUTPUT="$OUTPUT$BASH_FUN_LINENO "
+		BASH_FUN_SRC="$(eval '${BASH_SOURCE[$i]}')"
+		[ -n "$BASH_FUN_SRC" ] && OUTPUT="$OUTPUT$(basename $BASH_FUN_SRC):"
+		BASH_FUN_NAME="$(eval '${FUNCNAME[$i]}')"
+		[ -n "$BASH_FUN_NAME" ] && OUTPUT="$OUTPUT$BASH_FUN_NAME:"
+	done
+	CMD="$1"
+	shift
+	echo "$OUTPUT$LINENO - $CMD($@)" >&2
+}
+
+sc_ok()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	test -n "$1" && printf '%s\n' "$1" >&2
+	SC_ERR_LAST=""
+	return "$SC_TRUE"
+}
+
+sc_fail()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_ERR_TAG="$1"
+	shift
+	test -n "$1" && printf '%s\n' "$*" >&2
+	SC_ERR_LAST="$SC_ERR_TAG|$SC_ERR_LAST"
+	return "$SC_FALSE"
+}
+
+sc_noerr_get_tmp_fn()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_NEW_TMP_FN="$(head -c 20 /dev/urandom | md5sum | cut -d ' ' -f 1)"
+	printf '%s/._%s' "${SC_TMP_DIR:-.}" "$SC_NEW_TMP_FN"
+}
+
+sc_check_file_exists()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_CHECK_EXIST_MSG="Checking for file $1"
+	if test -f "$1"; then
+		sc_ok "$SC_CHECK_EXIST_MSG - OK"
+		return "$SC_TRUE"
+	fi
+	sc_fail "file_missing" "$SC_CHECK_EXIST_MSG - FAILED"
+	return "$SC_FALSE"
+}
+
+sc_check_bin_exists()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_CHECK_BIN_EXISTS_MSG="Checking for binary $1"
+	if command -v "$1" > /dev/null; then
+		sc_ok "$SC_CHECK_BIN_EXISTS_MSG - OK ($(type "$1"))"
+		return "$SC_TRUE"
+	fi
+	sc_check_file_exists "$1"
+	sc_fail "file_not_exec" "$SC_CHECK_BIN_EXISTS_MSG ($(type "$1")) - FAILED"
+	return "$SC_FALSE"
+}
+
+sc_call() # <cmd> <url>
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_CMD="$1"
+	sc_check_bin_exists "$SC_CMD" || return "$SC_FALSE"
+	shift
+	"$SC_CMD" "$@"
+	SC_CALL_EXIT="$?"
+	if test "$SC_CALL_EXIT" -eq 0; then
+		sc_ok
+		return "$SC_TRUE"
+	fi
+	sc_fail "call_failed_${SC_CALL_EXIT}" "Calling $SC_CMD $@ resulted in exit code $SC_CALL_EXIT"
+	return "$SC_FALSE"
+}
+
+sc_s3_curl_query()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_S3_QUERY_TYPE="$1"
+	SC_S3_BUCKET="$(printf '%s' ${2#s3://} | cut -d '/' -f 1)"
+	SC_S3_PATH="$(printf '%s' ${2#s3://}/ | cut -d '/' -f 2- | sed 's@/$@@')"
+	SC_S3_SIGNATURE_ADD="$3"
+	shift 3
+	if test -z "$S3_KEY_ID"; then
+		sc_fail "s3_id_missing" "S3 authentication ID is missing"
+		return "$SC_FALSE"
+	fi
+	if test -z "$S3_KEY_SECRET"; then
+		sc_fail "s3_secret_missing" "S3 authentication secret is missing"
+		return "$SC_FALSE"
+	fi
+	SC_S3_DATE=$(date +"%a, %d %b %Y %T %z")
+	SC_S3_CONTENT_TYPE='application/octet-stream'
+	SC_S3_RESOURCE=$(printf '%s' "/${SC_S3_BUCKET}/${SC_S3_PATH}" | cut -d '?' -f 1)
+	SC_S3_REQUEST="$SC_S3_QUERY_TYPE\n\n$SC_S3_CONTENT_TYPE\n$SC_S3_DATE\n$SC_S3_SIGNATURE_ADD$SC_S3_RESOURCE"
+	SC_S3_SIGNATURE=$(printf "$SC_S3_REQUEST" | openssl sha1 -hmac "$S3_KEY_SECRET" -binary | base64)
+	curl --fail --request "$SC_S3_QUERY_TYPE" \
+		--header "Host: $SC_S3_BUCKET.s3.amazonaws.com" \
+		--header "Date: $SC_S3_DATE" \
+		--header "Content-Type: $SC_S3_CONTENT_TYPE" \
+		--header "Authorization: AWS $S3_KEY_ID:$SC_S3_SIGNATURE" \
+		"https://$SC_S3_BUCKET.s3.amazonaws.com/$SC_S3_PATH" $@
+}
+
+sc_s3_curl_put() # s3://<bucket>/<s3_path> <local_path>
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_S3_ACL="x-amz-acl:public-read"
+	sc_s3_curl_query "PUT" "$1" "$SC_S3_ACL\n" --upload-file "$2" --header "$SC_S3_ACL"
+}
+
+sc_copy_connector()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_CC_TMP_FILE="$SC_KEEPTMP"
+	if test -z "$SC_KEEPTMP"; then
+		SC_CC_TMP_FILE="file://${SC_SCRATCH:-/tmp}/$(sc_noerr_get_tmp_fn)"
+	fi
+	if sc_copy "$1" "$SC_CC_TMP_FILE"; then
+		if sc_copy "$SC_CC_TMP_FILE" "$2"; then
+			if test -z "$SC_KEEPTMP"; then
+				if sc_rm "$SC_CC_TMP_FILE"; then
+					sc_ok "Temporary file $SC_CC_TMP_FILE removed"
+					return "$SC_TRUE"
+				fi
+				sc_fail "copy_tmp_cleanup_fail" "Unable to remove temporary file $SC_CC_TMP_FILE"
+			else
+				sc_ok
+				return "$SC_TRUE"
+			fi
+		else
+			test -z "$SC_KEEPTMP" && sc_rm "$SC_CC_TMP_FILE"
+			sc_fail "copy_tmp_upload_fail" "Unable to upload temporary file $SC_CC_TMP_FILE"
+		fi
+	else
+		test -z "$SC_KEEPTMP" && sc_rm "$SC_CC_TMP_FILE"
+		sc_fail "copy_tmp_download_fail" "Unable to download temporary file $SC_CC_TMP_FILE"
+	fi
+	return "$SC_FALSE"
+}
+
+sc_call_eos() # call eos command ($2) using eos://<instance>/<path> url ($1)
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_EOS_MGT_URL="root://$(printf '%s' ${1#eos://} | cut -d '/' -f 1)"
+	SC_EOS_URL="/$(printf '%s' ${1#eos://} | cut -d '/' -f 2-)"
+	shift
+	sc_call "eos" "$SC_EOS_MGT_URL" "$@" "$SC_EOS_URL"
+}
+
+sc_call_xrdfs() # call xrdfs command ($2) using root://<instance>/<path> url ($1)
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_XRD_HOST="$(printf '%s' ${1#root://} | cut -d '/' -f 1)"
+	SC_XRD_URL="/$(printf '%s' ${1#root://} | cut -d '/' -f 2-)"
+	shift
+	sc_call "xrdfs" "$SC_XRD_HOST" "$@" "$SC_XRD_URL"
+}
+
+sc_call_lfc() # call lfc-* command ($2) using lfc://<lfc host>/<path> url ($1)
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_LFC_URL="$1"
+	SC_LFC_HOST="$LFC_HOST"
+	export LFC_HOST="$(printf '%s' ${SC_LFC_URL#lfc://} | cut -d '/' -f 1)"
+	SC_CMD="$2"
+	shift 2
+	sc_call "$SC_CMD" "$@" "/$(printf '%s' ${SC_LFC_URL#lfc://} | cut -d '/' -f 2-)"
+	SC_EXIT="$?"
+	export LFC_HOST="$SC_LFC_HOST"
+	return "$SC_EXIT"
+}
+
+sc_parse_sftp_url()
+{
+	SC_SFTP_HOST="$(printf '%s' "${1#sftp://}" | cut -d '/' -f 1)"
+	SC_SFTP_PORT="$(printf '%s' "$SC_SFTP_HOST": | cut -d ':' -f 2)"
+	SC_SFTP_PATH="$(printf '%s' "${1#sftp://}" | cut -d '/' -f 2-)"
+	eval "${2}_HOST=\${SC_SFTP_HOST}"
+	eval "${2}_PORT=\${SC_SFTP_PORT:-22}"
+	eval "${2}_PATH=\${SC_SFTP_PATH}"
+}
+
+sc_call_sftp() # run sftp session with commands $@ using sftp://<host>:<port>/<path> url ($1)
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	# parse url
+	sc_parse_sftp_url "$1" "SC_CALL_SFTP"
+	shift
+	SC_SFTP_CMD_FILE="$(sc_noerr_get_tmp_fn)"
+	printf '%s' "$* $(basename "$SC_CALL_SFTP_PATH")" > "$SC_SFTP_CMD_FILE"
+	SC_SFTP_LOG="$(sc_noerr_get_tmp_fn)"
+	if sc_call "/usr/bin/sftp" -b "$SC_SFTP_CMD_FILE" -q -o BatchMode=yes -o Port="$SC_CALL_SFTP_PORT" "$SC_CALL_SFTP_HOST:$(dirname "$SC_CALL_SFTP_PATH")" > "$SC_SFTP_LOG"; then
+		grep -v '^sftp>' "$SC_SFTP_LOG"
+		rm -f "$SC_SFTP_LOG" "$SC_SFTP_CMD_FILE"
+		sc_ok
+		return "$SC_TRUE"
+	fi
+	cat "$SC_SFTP_LOG" >&2
+	rm -f "$SC_SFTP_LOG" "$SC_SFTP_CMD_FILE"
+	sc_fail "sftp_failed" "Error while executing sftp command \"$@\" on \"$SC_SFTP_HOST:$SC_SFTP_PATH\""
+	return "$SC_FALSE"
+}
+
+sc_call_scp_download()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	sc_parse_sftp_url "$1" "SC_SCP_DL"
+	if sc_call "/usr/bin/scp" -q -o BatchMode=yes -o Port="$SC_SCP_DL_PORT" "$SC_SCP_DL_HOST:$SC_SCP_DL_PATH" "${2#file://}"; then
+		sc_ok
+		return "$SC_TRUE"
+	fi
+	sc_fail "scp_dl_failed" "Download $SC_SCP_DL_HOST:$SC_SCP_DL_PATH -> ${2#file://} failed"
+	return "$SC_FALSE"
+}
+
+sc_call_scp_upload()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	sc_parse_sftp_url "$2" "SC_SCP_UL"
+	if sc_call "/usr/bin/scp" -q -o BatchMode=yes -o Port="$SC_SCP_UL_PORT" "${1#file://}" "$SC_SCP_UL_HOST:$SC_SCP_UL_PATH"; then
+		sc_ok
+		return "$SC_TRUE"
+	fi
+	sc_fail "scp_ul_failed" "Upload ${2#file://} -> $SC_SCP_DL_HOST:$SC_SCP_DL_PATH failed"
+	return "$SC_FALSE"
+}
+
+sc_call_castor() # call castor command ($2) using rfio://<stage host>/<path> url ($1)
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_CASTOR_URL="$1"
+	SC_STAGE_HOST="$STAGE_HOST"
+	export STAGE_HOST="$(printf '%s' ${SC_CASTOR_URL#rfio://} | cut -d '/' -f 1)"
+	SC_CMD="$2"
+	shift 2
+	sc_call "$SC_RM_CMD" "$@" "/$(printf '%s' ${SC_CASTOR_URL#rfio://} | cut -d '/' -f 2-)"
+	SC_EXIT="$?"
+	export STAGE_HOST="$SC_STAGE_HOST"
+	return "$SC_EXIT"
+}
+
+sc_call_srmls() # filters "warning"
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	LS_SRM_TMP_FILE="$(sc_noerr_get_tmp_fn)"
+	if sc_call "$@" > "$LS_SRM_TMP_FILE"; then
+		grep -v "WARNING" "$LS_SRM_TMP_FILE"
+		rm -f "$LS_SRM_TMP_FILE"
+		return "$SC_TRUE"
+	fi
+	rm -f "$LS_SRM_TMP_FILE"
+	return "$SC_FALSE"
+}
+
+sc_try_copy() # try to copy - and delete target (last argument) if not successful
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	if "$@"; then
+		return "$SC_TRUE"
+	fi
+	shift $(expr $# - 1)
+	sc_rm "$1"
+	sc_fail "copy_failed"
+	return "$SC_FALSE"
+}
+
+sc_copy_overwrite()  # copy from source ($1) to target ($2), overwriting target if it exists
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	if sc_exists "$2"; then
+		sc_rm "$2" || sc_fail "rm_existing_failed" || return "$SC_FALSE"
+	fi
+	sc_copy "$1" "$2" || return "$SC_FALSE"
+	return "$SC_TRUE"
+}
+
+sc_parse_ls() # Retrieve list of basenames from ls call result
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_LOCAL_TMP_FILE="$(sc_noerr_get_tmp_fn)"
+	SC_DIR_FIELD="$1"
+	SC_SIZE_FIELD="$2"
+	shift 2
+	if "$@" > "$SC_LOCAL_TMP_FILE"; then
+		# (get last column of the result with awk)
+		awk "{print \$$SC_DIR_FIELD\" \"\$$SC_SIZE_FIELD\" \"\$NF}" "$SC_LOCAL_TMP_FILE" | grep -v '^\.$' | grep -v '^\.\.$' | while read FILESTAT FILESIZE FILENAME; do
+			test -z "$FILESTAT" && continue
+			test -z "$FILESIZE" && continue
+			test -z "$FILENAME" && continue
+			if printf '%s' "$FILESTAT" | grep -q 'd'; then
+				FILESIZE="-1"
+			fi
+			printf '%s %s\n' "$FILESIZE $(basename "$FILENAME")"
+		done
+		rm -f "$SC_LOCAL_TMP_FILE"
+		return "$SC_TRUE"
+	fi
+	printf '%s' "$@ failed " >&2
+	rm -f "$SC_LOCAL_TMP_FILE"
+	return "$SC_FALSE"
+}
+
+sc_parse_ls_dav() # Parse webdav PROPFIND reply
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_LOCAL_TMP_FILE="$(sc_noerr_get_tmp_fn)"
+	if sc_call "$@" > "$SC_LOCAL_TMP_FILE"; then
+		printf '%s' "$@ OK $?" >&2
+		grep "D:href" "$SC_LOCAL_TMP_FILE" | grep -v '!' | sed '1d' | sed 's@<D:href>\(.*\)/</D:href>@\1@' | while read RESULT; do
+			printf '%s' $(basename $RESULT)
+		done
+#		rm -f "$SC_LOCAL_TMP_FILE"
+		return "$SC_TRUE"
+	fi
+	printf '%s' "$@ failed $?" >&2
+#	rm -f "$SC_LOCAL_TMP_FILE"
+	return "$SC_FALSE"
+}
+
+sc_ls_s3()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	SC_LOCAL_TMP_FILE="$(sc_noerr_get_tmp_fn)"
+	BUCKET="$(printf '%s' ${1#s3://} | cut -d '/' -f 1)"
+	S3_LS_PATH="$(printf '%s' ${1#s3://}/ | cut -d '/' -f 2- | sed 's@/$@@')"
+	if sc_s3_curl_query "GET" "$BUCKET/" "" --output "$SC_LOCAL_TMP_FILE"; then
+		if grep -q '<Error>' "$SC_LOCAL_TMP_FILE"; then
+			sc_fail "s3_ls_query_error" "Error while listing bucket content"
+			cat "$SC_LOCAL_TMP_FILE" >&2
+			printf '%s' >&2
+			return "$SC_FALSE"
+		fi
+		sed 's@<Key>@\n@g' "$SC_LOCAL_TMP_FILE" | sed 's@</Key>.*<Size>@ @' | sed 's@</Size>.*@@' | sed '1,2d' | while read FILENAME FILESIZE; do
+			case "$FILENAME" in
+				"$S3_LS_PATH"*)
+					FILENAME="$(printf '%s' "$FILENAME" | sed "s@^$S3_LS_PATH/@@" | sed 's@/^@@')"
+					printf '%s' "$FILENAME" | grep -q '/' && FILESIZE="-1"
+					FILENAME="$(printf '%s' "$FILENAME" | cut -d '/' -f 1)"
+					test -n "$FILENAME" && printf '%s' "$FILESIZE $FILENAME"
+				;;
+			esac
+		done | sort | uniq
+		rm -f "$SC_LOCAL_TMP_FILE"
+		return "$SC_TRUE"
+	fi
+	rm -f "$SC_LOCAL_TMP_FILE"
+	sc_fail "s3_ls_query_failed" "Unable to list bucket content"
+	return "$SC_FALSE"
+}
+
+sc_copy()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	GFAL_COPY_ARGS="--abort-on-failure"
+	case "$2" in # prepare target dir
+		"file://"*)
+			mkdir -p $(dirname ${2#file://}) || sc_fail "target_dir_failed" "Unable to create target directory";;
+	esac
+
+	case "$1" in
+# FILE DOWNLOAD ########################
+		"arc://"*)
+			case "$2" in
+				"file://"*)
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_fail "arc_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"dcap://"* | "gsidcap://"*)
+			case "$2" in
+				"file://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_try_copy sc_call "dccp" "$1" "$2" || \
+					sc_fail "dcap_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"eos://"* | "root://"*)
+			case "$2" in
+				"file://"*)
+					sc_try_copy sc_call "xrdcp" "root://${1#eos://}" "${2#file://}" || \
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "root://${1#eos://}" "$2" || \
+					sc_fail "eos_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"ftp://"* | "ftps://")
+			case "$2" in
+				"file://"*)
+					sc_try_copy sc_call "curl" "$1" --ssl -o "${2#file://}" || \
+					sc_try_copy sc_call "wget" "$1" -O "${2#file://}" || \
+					sc_fail "ftp_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"gsiftp://"*)
+			case "$2" in
+				"file://"*)
+					sc_try_copy sc_call "globus-url-copy" "$1" "$2" || \
+					sc_try_copy sc_call "gfal-copy" "$1" "$2" || \
+					sc_try_copy sc_call "lcg-cp" "$1" "$2" || \
+					sc_try_copy sc_call "srmcp" "$1" "$2" || \
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_fail "gsiftp_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"http://"* | "https://"*)
+			case "$2" in
+				"file://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_try_copy sc_call "curl" "$1" --ssl -o "${2#file://}" || \
+					sc_try_copy sc_call "wget" "$1" -O "${2#file://}" || \
+					sc_fail "http_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"lfc://"*)
+			case "$2" in
+				"file://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_call_lfc "lcg-cp" "$1" "$2" || \
+					sc_fail "lfc_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"lfn://"*)
+			case "$2" in
+				"file://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_try_copy sc_call "lcg-cp" "$1" "$2" || \
+					sc_fail "lfn_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"rfio://"*)
+			case "$2" in
+				"file://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_call_castor "rfcp" "$1" "${2#file://}" || \
+					sc_fail "rfio_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"s3://"*)
+			case "$2" in
+				"file://"*)
+					sc_s3_curl_query "GET" "$1" "" -o "${2#file://}" || \
+					sc_fail "s3_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"sftp://"*)
+			case "$2" in
+				"file://"*)
+					sc_call_scp_download "$1" "$2" || \
+					sc_fail "sftp_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"srm://"*)
+			case "$2" in
+				"file://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_try_copy sc_call "lcg-cp" -b -T srmv2 -v -n 1 "$1" "$2" || \
+					sc_try_copy sc_call "srmcp" -2 -debug=true -streams_num=1 "$1" "$2" || \
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_fail "srm_local_copy_failed";;
+				*)
+					sc_copy_connector "$1" "$2";;
+			esac;;
+		"file://"*)
+			if test ! -f "${1#file://}"; then
+				sc_fail "source_file_missing"
+				return "$SC_FALSE"
+			fi
+
+# FILE UPLOAD ##########################
+			case "$2" in
+				"arc://"*)
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_fail "local_arc_copy_failed";;
+				"dcap://"* | "gsidcap://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_try_copy sc_call "dccp" "$1" "$2" || \
+					sc_fail "local_dcap_copy_failed";;
+				"eos://"* | "root://"*)
+					sc_try_copy sc_call "xrdcp" "${1#file://}" "root://${2#eos://}" || \
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "root://${2#eos://}" || \
+					sc_fail "local_eos_copy_failed";;
+				"ftp://"* | "ftps://")
+					sc_try_copy sc_call "curl" --upload-file "${1#file://}" --ssl "$2" || \
+					sc_try_copy sc_call "wput" "${1#file://}" "$2" || \
+					sc_fail "local_ftp_copy_failed";;
+				"gsiftp://"*)
+					sc_try_copy sc_call "globus-url-copy" "$1" "$2" || \
+					sc_try_copy sc_call "gfal-copy" "$1" "$2" || \
+					sc_try_copy sc_call "lcg-cp" "$1" "$2" || \
+					sc_try_copy sc_call "srmcp" "$1" "$2" || \
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_fail "local_gsiftp_copy_failed";;
+				"http://"* | "https://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_try_copy sc_call "curl" --upload-file "${1#file://}" --ssl "$2" || \
+					sc_try_copy sc_call "wput" "${1#file://}" "$2" || \
+					sc_fail "local_http_copy_failed";;
+				"lfc://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_call_lfc "lcg-cr" "$1" "$2" || \
+					sc_fail "local_lfc_copy_failed";;
+				"lfn://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_try_copy sc_call "lcg-cr" "$1" "$2" || \
+					sc_fail "local_lfn_copy_failed";;
+				"rfio://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_call_castor "rfcp" "${1#file://}" "$2" || \
+					sc_fail "local_rfio_copy_failed";;
+				"s3://"*)
+					sc_s3_curl_put "$2" "${1#file://}" || \
+					sc_fail "local_s3_copy_failed";;
+				"sftp://"*)
+					sc_call_scp_upload "$1" "$2" || \
+					sc_call_scp "$1" "$2" || \
+					sc_fail "local_sftp_copy_failed";;
+				"srm://"*)
+					sc_try_copy sc_call "gfal-copy" "$GFAL_COPY_ARGS" "$1" "$2" || \
+					sc_try_copy sc_call "lcg-cp" -b -U srmv2 -v -n 1 "$1" "$2" || \
+					sc_try_copy sc_call "srmcp" -2 -debug=true -streams_num=1 "$1" "$2" || \
+					sc_try_copy sc_call "arccp" "$1" "$2" || \
+					sc_fail "local_srm_copy_failed";;
+				"file://"*)
+					sc_try_copy sc_call "cp" "${1#file://}" "${2#file://}" || \
+					sc_fail "local_local_copy_failed";;
+				*)
+					sc_fail "copy_target_not_supported";;
+			esac;;
+		*)
+			sc_fail "copy_source_not_supported";;
+	esac
+}
+
+sc_ls() # List basenames on storage element
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	case "$1" in
+		"arc://"*)
+			sc_parse_ls sc_call "arcls" "$1" || \
+			sc_fail "arc_ls_failed";;
+		"dcap://"* | "gsidcap://"*)
+			sc_parse_ls sc_call "gfal-ls" "$1" || \
+			sc_fail "dcap_ls_failed";;
+		"eos://"*)
+			sc_parse_ls sc_call_eos "$1" ls || \
+			sc_parse_ls sc_call_xrdfs "$1" ls || \
+			sc_fail "eos_ls_failed";;
+		"file://"* | "/"*)
+			sc_parse_ls 1 5 sc_call "ls" -l "${1#file://}" || \
+			sc_fail "file_ls_failed";;
+		"ftp://"* | "ftps://")
+			sc_parse_ls 1 5 sc_call "curl" "$1" --ssl || \
+			sc_fail "ftp_ls_failed";;
+		"gsiftp://"*)
+			sc_parse_ls sc_call "gfal-ls" "$1" || \
+			sc_parse_ls sc_call "glite-gridftp-ls" "$1" || \
+			sc_parse_ls sc_call "edg-gridftp-ls" "$1" || \
+			sc_parse_ls sc_call "lcg-ls" "sfn://${1#gsiftp://}" || \
+			sc_parse_ls sc_call "arcls" "$1" || \
+			sc_fail "gsiftp_ls_failed";;
+		"http://"* | "https://"*)
+			sc_parse_ls sc_call "gfal-ls" "$1" || \
+			sc_parse_ls sc_call "arcls" "$1" || \
+			sc_parse_ls_dav "curl" --header "Depth: 1" --request PROPFIND "$1" || \
+			sc_parse_ls_dav "wget" --header "Depth: 1" --method PROPFIND -O - "$1" || \
+			sc_fail "http_ls_failed";;
+		"lfc://"*)
+			sc_parse_ls sc_call "gfal-ls" "$1" || \
+			sc_parse_ls sc_call_lfc "$1" "lfc-ls" || \
+			sc_fail "lfc_ls_failed";;
+		"lfn://"*)
+			sc_parse_ls sc_call "gfal-ls" "$1" || \
+			sc_parse_ls sc_call "lfc-ls" "$1" || \
+			sc_fail "lfn_ls_failed";;
+		"rfio://"*)
+			sc_parse_ls sc_call "gfal-ls" "$1" || \
+			sc_parse_ls sc_call_castor "$1" "nsls" || \
+			sc_fail "rfio_ls_failed";;
+		"root://"*)
+			sc_parse_ls sc_call_xrdfs "$1" ls || \
+			sc_parse_ls sc_call "arcls" "$1" || \
+			sc_fail "root_ls_failed";;
+		"s3://"*)
+			sc_ls_s3 "$1" || \
+			sc_fail "s3_ls_failed";;
+		"sftp://"*)
+			sc_parse_ls 1 5 sc_call_sftp "$1" ls -l || \
+			sc_fail "sftp_ls_failed";;
+		"srm://"*)
+			sc_parse_ls sc_call "gfal-ls" "$1" || \
+			sc_parse_ls sc_call "lcg-ls" -l -T slsv2 -b "$1" || \
+			sc_parse_ls sc_call_srmls "srmls" -2 "$1" || \
+			sc_parse_ls sc_call "arcls" -2 "$1" || \
+			sc_fail "srm_ls_failed";;
+		*)
+			sc_fail "ls_not_supported";;
+	esac
+}
+
+sc_mkdir() # Create directory on storage element - ignore existing dirs and create missing parents
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	case "$1" in
+		"arc://"*)
+			sc_call "arcmkdir" -p "$1" || \
+			sc_fail "arc_mkdir_failed";;
+		"dcap://"* | "gsidcap://"*)
+			sc_call "gfal-mkdir" -p "$1" || \
+			sc_fail "dcap_mkdir_failed";;
+		"eos://"*)
+			sc_call_eos "$1" mkdir -p || \
+			sc_call_xrdfs "${1#eos://}" mkdir -p || \
+			sc_fail "eos_mkdir_failed";;
+		"file://"* | "/"*)
+			sc_call "mkdir" -p "${1#file://}" || \
+			sc_fail "file_mkdir_failed";;
+		"ftp://"* | "ftps://")
+			sc_call "curl" "$1" --ssl --ftp-create-dirs || \
+			sc_fail "ftp_mkdir_failed";;
+		"gsiftp://"*)
+			sc_call "gfal-mkdir" -p "$1" || \
+			sc_call "glite-gridftp-mkdir" -p "$1" || \
+			sc_call "edg-gridftp-mkdir" -p "$1" || \
+			sc_call "arcmkdir" -p "$1" || \
+			sc_fail "gsiftp_mkdir_failed";;
+		"http://"* | "https://"*)
+			sc_call "gfal-mkdir" -p "$1" || \
+			sc_call "arcmkdir" -p "$1" || \
+			sc_call "curl" --request MKCOL "$1" || \
+			sc_call "wget" --method MKCOL -O - "$1" || \
+			sc_fail "http_mkdir_failed";;
+		"lfc://"*)
+			sc_call "gfal-mkdir" -p "$1" || \
+			sc_call_lfc "$1" "lfc-mkdir" || \
+			sc_fail "lfc_mkdir_failed";;
+		"lfn://"*)
+			sc_call "gfal-mkdir" -p "$1" || \
+			sc_call "lfc-mkdir" -p "$1" || \
+			sc_fail "lfn_mkdir_failed";;
+		"rfio://"*)
+			sc_call "gfal-mkdir" -p "$1" || \
+			sc_call_castor "$1" "nsmkdir" -p || \
+			sc_fail "rfio_mkdir_failed";;
+		"s3://"*)
+			sc_s3_curl_put "${1%/}/" /dev/null || \
+			sc_fail "sftp_mkdir_failed";;
+		"sftp://"*)
+			sc_exists "$1" || \
+			sc_call_sftp "$1" mkdir || \
+			sc_fail "sftp_mkdir_failed";;
+		"srm://"*)
+			sc_call "gfal-mkdir" -p "$1" || \
+			sc_call "srmmkdir" -2 "$1" || \
+			sc_call "arcmkdir" -p "$1" || \
+			sc_fail "srm_mkdir_failed";;
+		*)
+			sc_fail "mkdir_not_supported";;
+	esac
+}
+
+sc_exists() # Check existence of file on storage element
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	case "$1" in
+		"arc://"*)
+			sc_ls "$1" > /dev/null || \
+			sc_fail "exists_failed";;
+		"dcap://"* | "gsidcap://"*)
+			sc_call "gfal-stat" "$1" || \
+			sc_ls "$1" > /dev/null || \
+			sc_fail "dcap_exists_failed";;
+		"eos://"*)
+			sc_call_eos "$1" stat || \
+			sc_call_xrdfs "${1#eos://}" stat || \
+			sc_ls "$1" > /dev/null || \
+			sc_fail "eos_exists_failed";;
+		"file://"* | "/"*)
+			sc_call "test" -f "${1#file://}" || \
+			sc_fail "file_exists_failed";;
+		"ftp://"* | "ftps://")
+			sc_call "curl" "$1" --ssl --head > /dev/null || \
+			sc_fail "ftp_exists_failed";;
+		"gsiftp://"*)
+			sc_call "gfal-stat" "$1" || \
+			sc_call "glite-gridftp-exists" "$1" || \
+			sc_call "edg-gridftp-exists" "$1" || \
+			sc_ls "$1" > /dev/null || \
+			sc_fail "gsiftp_exists_failed";;
+		"http://"* | "https://"*)
+			sc_call "gfal-stat" -p "$1" || \
+			sc_call "curl" --head "$1" || \
+			sc_call "wget" --spider -q "$1" || \
+			sc_ls "$1" > /dev/null || \
+			sc_fail "http_exists_failed";;
+		"lfc://"*)
+			sc_call "gfal-stat" "$1" || \
+			sc_call_lfc "$1" "lfc-getacl" || \
+			sc_ls "$1" > /dev/null || \
+			sc_fail "lfc_exists_failed";;
+		"lfn://"*)
+			sc_call "gfal-stat" "$1" || \
+			sc_call "lfc-getacl" "$1" || \
+			sc_ls "$1" > /dev/null || \
+			sc_fail "lfn_exists_failed";;
+		"rfio://"*)
+			sc_call "gfal-stat" "$1" || \
+			sc_call_castor "$1" "nsstat" || \
+			sc_ls "$1" > /dev/null || \
+			sc_fail "rfio_exists_failed";;
+		"s3://"*)
+			test -n $(sc_ls "$1" 2> /dev/null) || \
+			sc_fail "s3_exists_failed";;
+		"sftp://"*)
+			sc_call_sftp "$1" ls > /dev/null || \
+			sc_fail "sftp_exists_failed";;
+		"srm://"*)
+			sc_call "gfal-stat" -p "$1" || \
+			sc_call "srm-check-permissions" -2 "$1" || \
+			sc_ls "$1" > /dev/null || \
+			sc_fail "srm_exists_failed";;
+		*)
+			sc_fail "exists_not_supported";;
+	esac
+}
+
+sc_rm() # Remove file from storage element - ignore missing files
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	case "$1" in
+		"arc://"*)
+			sc_call "arcrm" "$1" || \
+			sc_fail "arc_rm_failed";;
+		"dcap://"* | "gsidcap://"*)
+			sc_call "gfal-rm" "$1" || \
+			sc_fail "dcap_rm_failed";;
+		"eos://"*)
+			sc_exists "$1" || \
+			sc_call_eos "$1" rm || \
+			sc_call_xrdfs "${1#eos://}" rm || \
+			sc_fail "eos_rm_failed";;
+		"file://"* | "/"*)
+			sc_call "rm" -f "${1#file://}" || \
+			sc_fail "file_rm_failed";;
+		"ftp://"* | "ftps://")
+			sc_call "curl" "$1" --ssl -Q DELE "$(basename $1)" || \
+			sc_fail "ftp_rm_failed";;
+		"gsiftp://"*)
+			sc_exists "$1" || \
+			sc_call "gfal-rm" "$1" || \
+			sc_call "glite-gridftp-rm" "$1" || \
+			sc_call "edg-gridftp-rm" "$1" || \
+			sc_call "lcg-del" "sfn://${1#gsiftp://}" || \
+			sc_call "arcrm" "$1" || \
+			sc_fail "gsiftp_rm_failed";;
+		"http://"* | "https://"*)
+			sc_exists "$1" || \
+			sc_call "gfal-rm" "$1" || \
+			sc_call "arcrm" "$1" || \
+			sc_call "curl" --request DELETE "$1" || \
+			sc_call "wget" --method DELETE -O - "$1" || \
+			sc_fail "http_rm_failed";;
+		"lfc://"*)
+			sc_exists "$1" || \
+			sc_call "gfal-rm" "$1" || \
+			sc_call "arcrm" "$1" || \
+			sc_call_lfc "lfc-rm" "$1" || \
+			sc_fail "lfc_rm_failed";;
+		"lfn://"*)
+			sc_exists "$1" || \
+			sc_call "gfal-rm" "$1" || \
+			sc_call "lfc-rm" "$1" || \
+			sc_fail "lfn_rm_failed";;
+		"rfio://"*)
+			sc_exists "$1" || \
+			sc_call "gfal-rm" "$1" || \
+			sc_call_castor "$1" "nsrm" || \
+			sc_fail "rfio_rm_failed";;
+		"root://"*)
+			sc_exists "$1" || \
+			sc_call_xrdfs "$1" rm || \
+			sc_call "arcrm" "$1" || \
+			sc_fail "rfio_rm_failed";;
+		"s3://"*)
+			sc_s3_curl_query "DELETE" "$1" "" || \
+			sc_fail "s3_rm_failed";;
+		"sftp://"*)
+			sc_call_sftp "$1" rm || \
+			sc_fail "sftp_rm_failed";;
+		"srm://"*)
+			sc_exists "$1" || \
+			sc_call "gfal-rm" "$1" || \
+			sc_call "lcg-del" -l -T srmv2 -b "$1" || \
+			sc_call "srmrm" -2 "$1" || \
+			sc_call "arcrm" "$1" || \
+			sc_fail "srm_rm_failed";;
+		*)
+			sc_fail "rm_not_supported";;
+	esac
+}
+
+sc_multi()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	CMD="$1"
+	shift
+	while test -n "$1"; do
+		SC_ERR_TMP="$SC_ERR_LAST"
+		"$CMD" "$1"
+		test -n "$SC_ERR_TMP" && SC_ERR_LAST="$SC_ERR_LAST|$SC_ERR_TMP"
+		shift
+	done
+}
+
+sc_main()
+{
+	sc_debug_helper "$FUNCNAME" "$@"
+	CMD="$1"
+	shift
+	test -z "$1" && CMD=""
+	case "$CMD" in
+		"copy") sc_copy $@;;
+		"copy_overwrite") sc_copy_overwrite $@;;
+		"exists") sc_multi sc_exists "$@";;
+		"ls") sc_multi sc_ls "$@";;
+		"mkdir") sc_multi sc_mkdir "$@";;
+		"rm") sc_multi sc_rm "$@";;
+		*)
+			printf '%s' "Syntax: $0 <copy | copy_overwrite | exists | ls | mkdir | rm> [OPTIONS]"
+			exit 1
+			;;
+	esac
+	test -z "$SC_ERR_LAST" && return "$SC_TRUE"
+	printf '%s' "sc_err_msg:${SC_ERR_LAST%|}" >&2
+	return "$SC_FALSE"
+}
+
+test -z "$SC_TESTING_MODE" && sc_main "$@"

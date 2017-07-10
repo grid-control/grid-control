@@ -23,7 +23,7 @@ def parse_bool(value):
 		return False
 
 
-def parse_dict(entries, parser_value=identity, parser_key=identity):
+def parse_dict_cfg(entries, parser_value=identity, parser_key=identity):
 	(result, result_parsed, order) = ({}, {}, [])
 	key = None
 	for entry in entries.splitlines():
@@ -171,16 +171,6 @@ def split_with_stack(tokens, process_token, exception_msg, exception_type=Except
 		raise exception_type(exception_msg % msg_pos)
 
 
-def str_dict(mapping, keys_order=None):
-	keys_sorted = sorted(mapping.keys(), key=repr)
-	if keys_order is None:
-		keys_order = keys_sorted
-	else:
-		keys_order = list(keys_order)
-	keys_order.extend(lfilter(lambda x: x not in keys_order, keys_sorted))
-	return str.join(', ', imap(lambda k: '%s = %s' % (k, repr(mapping.get(k))), keys_order))
-
-
 def str_dict_cfg(value, parser=identity, strfun=str):
 	def _getmax(src):
 		return max(lmap(lambda x: len(str(x)), src) + [0])
@@ -191,6 +181,16 @@ def str_dict_cfg(value, parser=identity, strfun=str):
 		result = strfun(srcdict[None])
 	fmt = '\n\t%%%ds => %%%ds' % (_getmax(srckeys), _getmax(srcdict.values()))
 	return result + str.join('', imap(lambda k: fmt % (k, strfun(srcdict[k])), srckeys))
+
+
+def str_dict_linear(mapping, keys_order=None):
+	keys_sorted = sorted(mapping.keys(), key=repr)
+	if keys_order is None:
+		keys_order = keys_sorted
+	else:
+		keys_order = list(keys_order)
+	keys_order.extend(lfilter(lambda x: x not in keys_order, keys_sorted))
+	return str.join(', ', imap(lambda k: '%s = %s' % (k, repr(mapping.get(k))), keys_order))
 
 
 def str_guid(guid):

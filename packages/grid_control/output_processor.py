@@ -15,11 +15,12 @@
 import os, gzip, logging
 from grid_control.utils import DictFormat
 from grid_control.utils.data_structures import make_enum
+from grid_control.utils.file_tools import SafeFile
 from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception, get_current_exception
 from python_compat import bytes2str, ifilter, izip
 
 
-JobResult = make_enum(['JOBNUM', 'EXITCODE', 'RAW'])  # pylint:disable=invalid-name
+JobResult = make_enum(['JOBNUM', 'MESSAGE', 'EXITCODE', 'RAW'])  # pylint:disable=invalid-name
 FileInfo = make_enum(['Hash', 'NameLocal', 'NameDest', 'Path', 'Size'])  # pylint:disable=invalid-name
 
 
@@ -38,6 +39,8 @@ class TaskOutputProcessor(Plugin):
 
 
 class JobInfoProcessor(OutputProcessor):
+	alias_list = ['jobinfo']
+
 	def __init__(self):
 		OutputProcessor.__init__(self)
 		self._df = DictFormat()
@@ -48,7 +51,7 @@ class JobInfoProcessor(OutputProcessor):
 			if not os.path.exists(fn):
 				raise JobResultError('Job result file %r does not exist' % fn)
 			try:
-				info_content = open(fn, 'r').read()
+				info_content = SafeFile(fn).read_close()
 			except Exception:
 				raise JobResultError('Unable to read job result file %r' % fn)
 			if not info_content:
@@ -57,7 +60,9 @@ class JobInfoProcessor(OutputProcessor):
 			try:
 				jobnum = data.pop('JOBID')
 				exit_code = data.pop('EXITCODE')
-				return {JobResult.JOBNUM: jobnum, JobResult.EXITCODE: exit_code, JobResult.RAW: data}
+				message = data.pop('MESSAGE', None)
+				return {JobResult.JOBNUM: jobnum, JobResult.EXITCODE: exit_code,
+					JobResult.MESSAGE: message, JobResult.RAW: data}
 			except Exception:
 				raise JobResultError('Job result file %r is incomplete' % fn)
 		except Exception:
@@ -65,11 +70,15 @@ class JobInfoProcessor(OutputProcessor):
 
 
 class SandboxProcessor(TaskOutputProcessor):
+	alias_list = ['null']
+
 	def process(self, dn, task):
 		return True
 
 
 class DebugJobInfoProcessor(JobInfoProcessor):
+	alias_list = ['debug']
+
 	def __init__(self):
 		JobInfoProcessor.__init__(self)
 		self._log = logging.getLogger('jobs.output')
@@ -85,11 +94,10 @@ class DebugJobInfoProcessor(JobInfoProcessor):
 						if fn.endswith('.gz'):
 							fp = gzip.open(full_fn)
 							content = bytes2str(fp.read())
+							fp.close()
 						else:
-							fp = open(full_fn)
-							content = fp.read()
+							content = SafeFile(full_fn).read_close()
 						self._log.error(fn + '\n' + content + '-' * 50)
-						fp.close()
 					except Exception:
 						self._log.exception('Unable to display %s', fn)
 						clear_current_exception()
@@ -101,6 +109,8 @@ class DebugJobInfoProcessor(JobInfoProcessor):
 
 
 class FileInfoProcessor(JobInfoProcessor):
+	alias_list = ['fileinfo']
+
 	def process(self, dn):
 		job_info_dict = None
 		try:
@@ -119,12 +129,13 @@ class FileInfoProcessor(JobInfoProcessor):
 			# parse old job info data format for files
 			old_fmt_header = [FileInfo.Hash, FileInfo.NameLocal, FileInfo.NameDest, FileInfo.Path]
 			for (file_key, file_data) in get_items_with_key('FILE'):
-				file_idx = file_key.replace('FILE', '').rjust(1, '0')
+				file_idx = file_key.replace('FILE', '') or '0'
 				result[int(file_idx)] = dict(izip(old_fmt_header, file_data.strip('"').split('  ')))
 			# parse new job info data format
 			for (file_key, file_data) in get_items_with_key('OUTPUT_FILE'):
 				(file_idx, file_prop) = file_key.replace('OUTPUT_FILE_', '').split('_')
 				if isinstance(file_data, str):
 					file_data = file_data.strip('"')
+				file_prop = file_prop.lower().replace('dest', 'namedest').replace('local', 'namelocal')
 				result.setdefault(int(file_idx), {})[FileInfo.str2enum(file_prop)] = file_data
 			return list(result.values())

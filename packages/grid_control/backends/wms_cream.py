@@ -12,11 +12,10 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, re, tempfile, time
+import os, re, time, tempfile
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
-from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments
-from grid_control.backends.backend_tools import unpack_wildcard_tar
+from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments, unpack_wildcard_tar  # pylint:disable=line-too-long
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
@@ -77,9 +76,7 @@ class CreamWMS(GridWMS):
 	alias_list = ['cream']
 
 	def __init__(self, config, name):
-		cancel_executor = CancelAndPurgeJobs(
-				config, CREAMCancelJobs(config), CREAMPurgeJobs(config)
-		)
+		cancel_executor = CancelAndPurgeJobs(config, CREAMCancelJobs(config), CREAMPurgeJobs(config))
 		GridWMS.__init__(self, config, name,
 			submit_exec=resolve_install_path('glite-ce-job-submit'),
 			output_exec=resolve_install_path('glite-ce-job-output'),
@@ -95,35 +92,6 @@ class CreamWMS(GridWMS):
 
 		if self._use_delegate is False:
 			self._submit_args_dict['-a'] = ' '
-
-	def submit_jobs(self, jobnum_list, task):
-		if not self._begin_bulk_submission():  # Trying to delegate proxy failed
-			self._log.error('Unable to delegate proxy! Continue with automatic delegation...')
-			self._submit_args_dict.update({'-a': ' '})
-			self._use_delegate = False
-		for result in GridWMS.submit_jobs(self, jobnum_list, task):
-			yield result
-
-	def _begin_bulk_submission(self):
-		self._submit_args_dict.update({'-D': None})
-		if self._use_delegate is False:
-			self._submit_args_dict.update({'-a': ' '})
-			return True
-		delegate_id = 'GCD' + md5_hex(str(time.time()))[:10]
-		activity = Activity('creating delegate proxy for job submission')
-		delegate_arg_list = ['-e', self._ce[:self._ce.rfind("/")]]
-		if self._config_fn:
-			delegate_arg_list.extend(['--config', self._config_fn])
-		proc = LocalProcess(self._delegate_exec, '-d', delegate_id,
-			'--logfile', '/dev/stderr', *delegate_arg_list)
-		output = proc.get_output(timeout=10, raise_errors=False)
-		if ('succesfully delegated to endpoint' in output) and (delegate_id in output):
-			self._submit_args_dict.update({'-D': delegate_id})
-		activity.finish()
-
-		if proc.status(timeout=0, terminate=True) != 0:
-			self._log.log_process(proc)
-		return self._submit_args_dict.get('-D') is not None
 
 	def get_jobs_output_chunk(self, tmp_dn, gc_id_jobnum_list, wms_id_list_done):
 		map_gc_id2jobnum = dict(gc_id_jobnum_list)
@@ -154,6 +122,35 @@ class CreamWMS(GridWMS):
 				yield (None, os.path.join(tmp_dn, dn))
 		remove_files([log])
 
+	def submit_jobs(self, jobnum_list, task):
+		if not self._begin_bulk_submission():  # Trying to delegate proxy failed
+			self._log.error('Unable to delegate proxy! Continue with automatic delegation...')
+			self._submit_args_dict.update({'-a': ' '})
+			self._use_delegate = False
+		for result in GridWMS.submit_jobs(self, jobnum_list, task):
+			yield result
+
+	def _begin_bulk_submission(self):
+		self._submit_args_dict.update({'-D': None})
+		if self._use_delegate is False:
+			self._submit_args_dict.update({'-a': ' '})
+			return True
+		delegate_id = 'GCD' + md5_hex(str(time.time()))[:10]
+		activity = Activity('creating delegate proxy for job submission')
+		delegate_arg_list = ['-e', self._ce[:self._ce.rfind("/")]]
+		if self._config_fn:
+			delegate_arg_list.extend(['--config', self._config_fn])
+		proc = LocalProcess(self._delegate_exec, '-d', delegate_id,
+			'--logfile', '/dev/stderr', *delegate_arg_list)
+		output = proc.get_output(timeout=10, raise_errors=False)
+		if ('succesfully delegated to endpoint' in output) and (delegate_id in output):
+			self._submit_args_dict.update({'-D': delegate_id})
+		activity.finish()
+
+		if proc.status(timeout=0, terminate=True) != 0:
+			self._log.log_process(proc)
+		return self._submit_args_dict.get('-D') is not None
+
 	def _get_jobs_output(self, gc_id_jobnum_list):
 		# Get output of jobs and yield output dirs
 		if len(gc_id_jobnum_list) == 0:
@@ -174,9 +171,7 @@ class CreamWMS(GridWMS):
 		activity = Activity('retrieving %d job outputs' % len(gc_id_jobnum_list))
 		chunk_pos_iter = irange(0, len(gc_id_jobnum_list), self._chunk_size)
 		for ids in imap(lambda x: gc_id_jobnum_list[x:x + self._chunk_size], chunk_pos_iter):
-			for (current_jobnum, output_dn) in self.get_jobs_output_chunk(
-					tmp_dn, ids, wms_id_list_done
-			):
+			for (current_jobnum, output_dn) in self.get_jobs_output_chunk(tmp_dn, ids, wms_id_list_done):
 				unpack_wildcard_tar(self._log, output_dn)
 				jobnum_list_todo.remove(current_jobnum)
 				yield (current_jobnum, output_dn)

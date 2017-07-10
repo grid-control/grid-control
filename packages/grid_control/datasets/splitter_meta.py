@@ -14,7 +14,7 @@
 
 from grid_control.datasets.provider_base import DataProvider
 from grid_control.datasets.splitter_basic import FileLevelSplitter
-from grid_control.utils import safe_index
+from grid_control.utils.algos import safe_index
 from hpfwk import AbstractError
 from python_compat import imap, lmap, sort_inplace
 

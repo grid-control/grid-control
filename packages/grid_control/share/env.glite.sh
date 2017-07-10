@@ -13,7 +13,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+# Source: github.com/grid-control
 
 echo "Searching for GRID environment..."
 
@@ -29,7 +29,7 @@ gc_find_grid() {
 
 	if [ -f "$2" ]; then
 		echo "       Found script $2"
-		source "$2" # shellcheck source=/dev/null
+		. "$2" # shellcheck source=/dev/null
 	else
 		echo "       Script '$2' does not exist!"
 		return 1
@@ -47,7 +47,7 @@ gc_find_grid() {
 			echo "export $VAR=''"
 		fi
 	done > "$VO_REVERT"
-	source "$VO_REVERT" # shellcheck source=/dev/null
+	. "$VO_REVERT" # shellcheck source=/dev/null
 	rm "$VO_KEEPER" "$VO_REVERT"
 	return 0
 }

@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, logging
+import os, sys, copy, difflib, logging
 from hpfwk.hpf_exceptions import ExceptionCollector, NestedException, clear_current_exception
 from hpfwk.hpf_logging import init_hpf_logging
 
@@ -48,7 +48,7 @@ def create_plugin_file(package, selector):
 		if None in data:
 			cls = data.pop(None)
 			cls_name_str = str.join(' ', cls.get_class_name_list())
-			fp.write('%s * %s %s\n' % (' ' * level, cls.__module__, cls_name_str))
+			fp.write('%s * %s %s\n' % (' ' * level, cls.__module__, cls_name_str.strip()))
 			fp.write('\n')
 		key_order = []
 		for cls in data:
@@ -136,8 +136,8 @@ def init_hpf_plugins(base_dn):
 
 class InstanceFactory(object):
 	# Wrapper class to fix plugin arguments
-	def __init__(self, get_bind_value, cls, *args, **kwargs):
-		(self._bind_value, self._cls, self._args, self._kwargs) = (get_bind_value, cls, args, kwargs)
+	def __init__(self, bind_value, cls, *args, **kwargs):
+		(self._bind_value, self._cls, self._args, self._kwargs) = (bind_value, cls, args, kwargs)
 
 	def __eq__(self, other):  # Used to check for changes compared to old
 		return self.get_bind_value() == other.get_bind_value()
@@ -184,7 +184,8 @@ class Plugin(object):
 
 	def bind(cls, value, **kwargs):
 		for entry in value.split():
-			yield InstanceFactory(entry, cls.get_class(entry))
+			cls_new = cls.get_class(entry)
+			yield InstanceFactory(cls_new.get_bind_class_name(entry), cls_new)
 	bind = classmethod(bind)
 
 	def create_instance(cls, cls_name, *args, **kwargs):
@@ -192,6 +193,12 @@ class Plugin(object):
 		factory = InstanceFactory(cls_name, cls.get_class(cls_name), *args, **kwargs)
 		return factory.create_instance_bound()  # For uniform error output
 	create_instance = classmethod(create_instance)
+
+	def get_bind_class_name(cls, bind_value):
+		if '.' in bind_value:
+			return '%s.%s' % (cls.__module__, cls.__name__)
+		return cls.__name__
+	get_bind_class_name = classmethod(get_bind_class_name)
 
 	def get_class(cls, cls_name):
 		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
@@ -213,7 +220,7 @@ class Plugin(object):
 	get_class_children = classmethod(get_class_children)
 
 	def get_class_info_list(cls):
-		return Plugin._map_cls_name2child_info_list.get(cls.__name__.lower(), [])
+		return copy.deepcopy(Plugin._map_cls_name2child_info_list.get(cls.__name__.lower(), []))
 	get_class_info_list = classmethod(get_class_info_list)
 
 	def get_class_name_list(cls):
@@ -288,6 +295,12 @@ class Plugin(object):
 				msg += '\tsearched plugin names:\n\t\t%s\n' % str.join('\n\t\t', cls_list_processed)
 			if cls_list_bad_parents:
 				msg += '\tfound incompatible plugins:\n\t\t%s\n' % str.join('\n\t\t', cls_list_bad_parents)
+			cls_list_possible = []
+			for cls_info in cls.get_class_info_list():
+				cls_list_possible.extend(cls_info.keys())
+			cls_list_close = difflib.get_close_matches(cls_name.lower(), cls_list_possible)
+			if cls_list_close:
+				msg += '\tfound similar plugin names:\n\t\t%s\n' % str.join('\n\t\t', cls_list_close)
 			exc.raise_any(PluginError(msg))
 			raise PluginError(msg)
 	_get_class_checked = classmethod(_get_class_checked)
@@ -298,7 +311,8 @@ class Plugin(object):
 		if short_cls_name:
 			cls_name_len_list = []
 			for cls_name in self.get_class_name_list():
-				cls_name_len_list.append((len(cls_name), cls_name))
+				if cls_name:
+					cls_name_len_list.append((len(cls_name), cls_name))
 			cls_name_len_list.sort()
 			return '<%s%s>' % (cls_name_len_list[0][1], args or '')
 		return '<%s%s>' % (self.__class__.__name__, args or '')

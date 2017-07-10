@@ -14,10 +14,11 @@
 
 import os, shlex
 from grid_control.config import ConfigError
-from grid_control.utils import accumulate, clean_path
-from grid_control.utils.parsing import parse_dict, split_advanced, split_brackets
+from grid_control.utils import clean_path
+from grid_control.utils.algos import accumulate
+from grid_control.utils.parsing import parse_dict_cfg, split_advanced, split_brackets
 from grid_control.utils.process_base import LocalProcess
-from hpfwk import AbstractError, Plugin
+from hpfwk import AbstractError, Plugin, rethrow
 from python_compat import imap, irange, lmap, lzip, unspecified
 
 
@@ -110,10 +111,7 @@ class ParameterConfig(object):
 		return self._map_varexpr_suffix2opt.get((varexpr, suffix), opt_default)
 
 	def _get_varexpr(self, vn):
-		try:
-			return self._map_vn2varexpr[vn.lower()]
-		except Exception:
-			raise ConfigError('Variable %s is undefined' % vn)
+		return _var_rethrow(vn, 'Undefined variable', self._map_vn2varexpr.__getitem__, vn.lower())
 
 	def _handle_dict(self, vn, value, parse_value):
 		if '=>' in value:
@@ -127,40 +125,29 @@ class ParameterConfig(object):
 
 	def _parse_dict(self, vn, dict_str, value_parser):
 		keytuple_delimeter = self.get(self._get_varexpr(vn), 'key delimeter', ',')
-		return parse_dict(dict_str, value_parser, lambda k: parse_tuple(k, keytuple_delimeter))
+		return parse_dict_cfg(dict_str, value_parser, lambda k: parse_tuple(k, keytuple_delimeter))
 
 	def _parse_parameter(self, vn, value, parameter_type):
-		try:
-			parameter_parser = ParameterParser.create_instance(parameter_type)
-		except Exception:
-			raise ConfigError('[Variable: %s] Invalid parameter type: %s' % (vn, parameter_type))
-		try:
-			return parameter_parser.parse_value(self, self._get_varexpr(vn), vn, value)
-		except Exception:
-			raise ConfigError('[Variable: %s] Invalid parameter value: %s (type: %s)' % (vn,
-				value, parameter_type))
+		parameter_parser = _var_rethrow(vn, 'Invalid parameter type: %s' % parameter_type,
+			ParameterParser.create_instance, parameter_type)
+		return _var_rethrow(vn, 'Invalid parameter value: %s (type: %s)' % (value, parameter_type),
+			parameter_parser.parse_value, self, self._get_varexpr(vn), vn, value)
 
 	def _parse_parameter_tuple(self, vn, outer_value, outer_type, inner_type, outer_idx):
-		try:
-			tuple_parser = ParameterTupleParser.create_instance(outer_type)
-		except Exception:
-			raise ConfigError('[Variable: %s] Invalid tuple type: %s' % (vn, outer_type))
-		try:
-			tuple_list = tuple_parser.parse_tuples(self, self._get_varexpr(vn), vn, outer_value)
-		except Exception:
-			raise ConfigError('[Variable: %s] Invalid tuple value: %s (type: %s)' % (vn,
-				outer_value, outer_type))
-
+		tuple_parser = _var_rethrow(vn, 'Invalid tuple type: %s' % outer_type,
+			ParameterTupleParser.create_instance, outer_type)
+		tuple_list = _var_rethrow(vn, 'Invalid tuple value: %s (type: %s)' % (outer_value, outer_type),
+			tuple_parser.parse_tuples, self, self._get_varexpr(vn), vn, outer_value)
 		result = []
 		for tuple_entry in tuple_list:
-			try:
-				tmp = self._parse_parameter(vn, tuple_entry[outer_idx], inner_type)
-			except Exception:
-				raise ConfigError('[Variable: %s] Unable to parse %r' % (vn, tuple_entry))
+			value = _var_rethrow(vn, 'Unable to access parameter index %d: %r' % (outer_idx, tuple_entry),
+				tuple_entry.__getitem__, outer_idx)
+			tmp = _var_rethrow(vn, 'Unable to parse %s' % repr(tuple_entry),
+				self._parse_parameter, vn, value, inner_type)
 			if isinstance(tmp, list):
 				if len(tmp) != 1:
-					error_msg = '[Variable: %s] Tuple entry (%s) expands to multiple variable entries (%s)!'
-					raise ConfigError(error_msg % (vn, tuple_entry[outer_idx], tmp))
+					raise VarError(vn, 'Tuple entry (%s) expands to multiple variable entries (%s)!' % (
+						tuple_entry[outer_idx], tmp))
 				result.append(tmp[0])
 			else:
 				result.append(tmp)
@@ -169,7 +156,7 @@ class ParameterConfig(object):
 	def _process_parameter_list(self, vn, values):
 		# ensure common parameter format and apply repeat settings
 		if isinstance(values, tuple):  # special case - eg. used for type 'format'
-			return values  # this is not a list of parameter values, but a set of parameter settings!
+			return values  # constructor arguments for ParameterSource
 		result = list(values)
 		for idx, value in enumerate(values):
 			value_repeat = int(self.get(vn, 'repeat idx %d' % idx, '1'))
@@ -179,6 +166,11 @@ class ParameterConfig(object):
 				result.extend((value_repeat - 1) * [value])
 		parameter_repeat = int(self.get(vn, 'repeat', '1'))
 		return parameter_repeat * result
+
+
+class VarError(ConfigError):
+	def __init__(self, vn, msg):
+		ConfigError.__init__(self, '[Variable: %s] %s' % (vn, msg))
 
 
 class ParameterParser(Plugin):
@@ -196,7 +188,7 @@ class ExprParameterParser(ParameterParser):
 
 	def parse_value(self, pconfig, varexpr, vn, value):
 		result = eval(value)  # pylint:disable=eval-used
-		if isinstance(result, (list, type(range(1)))):  # pylint:disable=bad-builtin
+		if isinstance(result, (list, type(irange(1)))):
 			return list(result)
 		return [result]
 
@@ -205,9 +197,9 @@ class FormatParameterParser(ParameterParser):
 	alias_list = ['format']
 
 	def parse_value(self, pconfig, varexpr, vn, value):
-		fsource = pconfig.get(varexpr, 'source')
-		fdefault = pconfig.get(varexpr, 'default', '')
-		return ('format', vn, value, fsource, fdefault)  # special format!
+		source = pconfig.get(varexpr, 'source')
+		default = pconfig.get(varexpr, 'default', '')
+		return ('FormatterParameterSource', vn, value, source, default)  # class init tuple
 
 
 class GitParameterParser(ParameterParser):
@@ -231,6 +223,16 @@ class LinesParameterParser(ParameterParser):
 
 	def parse_value(self, pconfig, varexpr, vn, value):
 		return value.splitlines()
+
+
+class RegexTransformParameterParser(ParameterParser):
+	alias_list = ['regex_transform']
+
+	def parse_value(self, pconfig, varexpr, vn, value):
+		default = pconfig.get(varexpr, 'default', '')
+		setup_dict = parse_dict_cfg(pconfig.get(varexpr, 'transform', ''))
+		return ('RegexTransformParameterSource', vn, value,
+			setup_dict[0], setup_dict[1], default)  # class init tuple
 
 
 class ShellParameterParser(ParameterParser):
@@ -262,6 +264,14 @@ class SvnParameterParser(ParameterParser):
 		if ('exported' in version) or ('unversioned' in version):
 			version = None
 		return version or 'undefined'
+
+
+class TransformParameterParser(ParameterParser):
+	alias_list = ['transform']
+
+	def parse_value(self, pconfig, varexpr, vn, value):
+		default = pconfig.get(varexpr, 'default', '')
+		return ('TransformParameterSource', vn, value, default)  # class init tuple
 
 
 class VerbatimParameterParser(ParameterParser):
@@ -303,3 +313,7 @@ def _parse_parameter_option_list(option_list):
 			else:
 				map_vn2varexpr[varexpr] = varexpr
 	return (map_vn2varexpr, map_varexpr_suffix2opt)
+
+
+def _var_rethrow(vn, msg, fun, *args, **kwargs):
+	return rethrow(VarError(vn, msg), fun, *args, **kwargs)

@@ -13,12 +13,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, logging
-from gc_scripts import Activity, ClassSelector, ConsoleTable, FileInfo, FileInfoProcessor, JobClass, ScriptOptions, get_cmssw_info, get_script_object_cmdline, iter_jobnum_output_dn, utils  # pylint:disable=line-too-long
+import os, sys, signal, logging
+from gc_scripts import Activity, ClassSelector, ConsoleTable, FileInfo, FileInfoProcessor, JobClass, ScriptOptions, get_cmssw_info, get_script_object_cmdline, handle_abort_interrupt, iter_jobnum_output_dn  # pylint:disable=line-too-long
 from grid_control.datasets import DataSplitter
+from grid_control.utils import wrap_list
+from grid_control.utils.file_tools import SafeFile, with_file
 from grid_control_cms.lumi_tools import format_lumi, merge_lumi_list, parse_lumi_filter
-from hpfwk import clear_current_exception
-from python_compat import imap, irange, lmap, set, sorted
+from hpfwk import NestedException, clear_current_exception, rethrow
+from python_compat import imap, irange, lmap, partial, set, sorted
 
 
 LOG = logging.getLogger('script')
@@ -26,10 +28,8 @@ LOG = logging.getLogger('script')
 
 def convert_lumi_expr(opts, args):
 	# Lumi filter manuipulation
-	try:
-		run_lumi_range_list = parse_lumi_filter(str.join(' ', args))
-	except Exception:
-		raise Exception('Could not parse: %s' % str.join(' ', args))
+	run_lumi_range_list = rethrow(NestedException('Could not parse: %s' % str.join(' ', args)),
+		parse_lumi_filter, str.join(' ', args))
 
 	if opts.gc:
 		write_lumi_gc(run_lumi_range_list)
@@ -39,25 +39,25 @@ def convert_lumi_expr(opts, args):
 		write_lumi_ext(run_lumi_range_list)
 
 
-def iter_jobs(opts, work_dn, jobnum_list, splitter):
+def iter_jobs(opts, work_dn, jobnum_list, reader):
 	fip = FileInfoProcessor()
 	for (jobnum, output_dn) in iter_jobnum_output_dn(os.path.join(work_dn, 'output'), jobnum_list):
 		if opts.parameterized:
 			fi = fip.process(output_dn)
 			sample = fi[0][FileInfo.NameDest].split('.')[0]
 			sample = sample.replace(opts.replace % jobnum, '_')
-		elif splitter is not None:
-			partition = splitter.get_partition(jobnum)
+		elif reader is not None:
+			partition = reader.get_partition_checked(jobnum)
 			sample = partition.get(DataSplitter.Nickname, partition.get(DataSplitter.Dataset, ''))
 		else:
 			sample = 'sample'
 		yield (jobnum, sample.replace('/', '_').replace('__', '_').strip('_'))
 
 
-def lumi_calc(opts, work_dn, jobnum_list, splitter):
+def lumi_calc(opts, work_dn, jobnum_list, reader):
 	# Lumi filter calculations
 	(map_sample2run_info_dict, map_sample2input_events, map_sample2output_events) = process_jobs(opts,
-		work_dn, jobnum_list, splitter)
+		work_dn, jobnum_list, reader)
 
 	activity = Activity('Simplifying lumi sections')
 	map_sample2run_lumi_range = {}
@@ -74,7 +74,7 @@ def lumi_calc(opts, work_dn, jobnum_list, splitter):
 			if map_sample2output_events.get(sample):
 				LOG.info('')
 			display_dict_list = lmap(lambda pfn: {0: pfn, 1: map_sample2output_events[sample][pfn]},
-				map_sample2output_events[sample])
+				map_sample2output_events.get(sample, {}))
 			if display_dict_list:
 				display_dict_list.append('=')
 			display_dict_list += [{0: 'Processed in total', 1: map_sample2input_events.get(sample)}]
@@ -82,7 +82,7 @@ def lumi_calc(opts, work_dn, jobnum_list, splitter):
 				title='Sample: %s' % sample)
 		if opts.job_json:
 			json_fn = os.path.join(opts.output_dir or work_dn, 'processed_%s.json' % sample)
-			write_lumi_json(lumi_list, open(json_fn, 'w'))
+			with_file(SafeFile(json_fn, 'w'), partial(write_lumi_json, lumi_list))
 			LOG.info('Saved processed lumi sections in %s', json_fn)
 		if opts.job_gc:
 			LOG.info('\nList of processed lumisections\n' + '-' * 30)
@@ -114,20 +114,18 @@ def process_fwjr(sample, fwjr_xml_dom,
 		map_sample2input_events[sample] += int(_get_element_data(input_file_node, 'EventsRead'))
 
 
-def process_jobs(opts, work_dn, jobnum_list, splitter):
+def process_jobs(opts, work_dn, jobnum_list, reader):
 	(map_sample2run_info_dict, map_sample2input_events, map_sample2output_events) = ({}, {}, {})
-	for (jobnum, sample) in iter_jobs(opts, work_dn, jobnum_list, splitter):
+	for (jobnum, sample) in iter_jobs(opts, work_dn, jobnum_list, reader):
 		# Read framework report files to get number of events
 		try:
 			output_dn = os.path.join(work_dn, 'output', 'job_' + str(jobnum))
 			for fwjr_xml_dom in get_cmssw_info(os.path.join(output_dn, 'cmssw.dbs.tar.gz')):
 				process_fwjr(sample, fwjr_xml_dom, map_sample2run_info_dict,
 					map_sample2input_events, map_sample2output_events)
-		except KeyboardInterrupt:
-			sys.exit(os.EX_OK)
 		except Exception:
+			LOG.exception('Error while parsing framework output of job %s!', jobnum)
 			clear_current_exception()
-			LOG.error('Error while parsing framework output of job %s!', jobnum)
 			continue
 	return (map_sample2run_info_dict, map_sample2input_events, map_sample2output_events)
 
@@ -148,7 +146,7 @@ def write_lumi_ext(run_lumi_range_list, stream=None):
 
 
 def write_lumi_gc(run_lumi_range_list, stream=None):
-	write_any('%s\n' % utils.wrap_list(format_lumi(run_lumi_range_list), 60, ',\n'), stream)
+	write_any('%s\n' % wrap_list(format_lumi(run_lumi_range_list), 60, ',\n'), stream)
 
 
 def write_lumi_json(run_lumi_range_list, stream=None):
@@ -168,6 +166,8 @@ def _iter_run_dict(run_dict, run_lumi_range_list, fmt_name):
 
 
 def _main():
+	signal.signal(signal.SIGINT, handle_abort_interrupt)
+
 	parser = ScriptOptions()
 	parser.section('expr', 'Manipulate lumi filter expressions', '%s <lumi filter expression>')
 	parser.add_bool('expr', 'G', 'gc', default=False,
@@ -203,13 +203,13 @@ def _main():
 			options.parser.exit_with_usage(options.parser.usage('calc'))
 		script_obj = get_script_object_cmdline(options.args, only_success=True)
 		work_dn = script_obj.config.get_work_path()
-		splitter = None
+		reader = None
 		try:
-			splitter = DataSplitter.load_partitions(os.path.join(work_dn, 'datamap.tar'))
+			reader = DataSplitter.load_partitions(os.path.join(work_dn, 'datamap.tar'))
 		except Exception:
 			clear_current_exception()
 		jobnum_list = sorted(script_obj.job_db.get_job_list(ClassSelector(JobClass.SUCCESS)))
-		return lumi_calc(options.opts, work_dn, jobnum_list, splitter)
+		return lumi_calc(options.opts, work_dn, jobnum_list, reader)
 
 
 def _write_run_dict(run_dict, stream):

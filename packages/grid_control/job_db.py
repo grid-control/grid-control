@@ -31,35 +31,50 @@ class Job(object):
 		self.gc_id = None
 		self.submitted = 0
 		self.changed = 0
-		self.dict = {}
+		self._dict = {}
 
 	def assign_id(self, gc_id):
 		self.gc_id = gc_id
 		self.attempt = self.attempt + 1
 		self.submitted = time.time()
 
+	def clear_old_state(self):
+		self._dict.clear()
+
 	def get(self, key, default=None):
-		return self.dict.get(key, default)
+		return self._dict.get(key, default)
 
 	def get_dict(self):
 		return {'id': self.gc_id, 'status': Job.enum2str(self.state),
 			'attempt': self.attempt, 'submitted': self.submitted, 'changed': self.changed}
 
+	def get_dict_full(self):
+		result = dict(self._dict)
+		result.update(self.get_dict())
+		return result
+
+	def get_job_location(self):
+		job_location_str = (self._dict.get('site') or '') + '/' + (self._dict.get('queue') or '')
+		return job_location_str.strip('/') or 'N/A'
+
 	def set(self, key, value):
-		self.dict[key] = value
+		self._dict[key.lower()] = value
+
+	def set_dict(self, value):
+		self._dict = value
 
 	def update(self, state):
 		self.state = state
 		self.changed = time.time()
-		self.history[self.attempt] = self.dict.get('dest', 'N/A')
+		self.history[self.attempt] = self.get_job_location()
 
 make_enum(['INIT', 'SUBMITTED', 'DISABLED', 'READY', 'WAITING', 'QUEUED', 'ABORTED',
-		'RUNNING', 'CANCEL', 'UNKNOWN', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS'], Job)
+		'RUNNING', 'CANCEL', 'UNKNOWN', 'CANCELLED', 'DONE', 'FAILED', 'SUCCESS', 'IGNORED'], Job)
 
 
 class JobClassHolder(object):
 	def __init__(self, *state_list):
-		self.state_list = state_list
+		self.state_list = tuple(state_list)
 
 	def lookup_job_class_name(cls, state_list):
 		for prop_name in dir(cls):
@@ -74,8 +89,7 @@ class JobDB(ConfigurablePlugin):
 	def __init__(self, config, job_limit=-1, job_selector=None):
 		ConfigurablePlugin.__init__(self, config)
 		self._log = logging.getLogger('jobs.db')
-		(self._job_limit, self._always_selector) = (job_limit, job_selector)
-		(self._default_job_obj, self._path_work) = (Job(), config.get_work_path())
+		(self._job_limit, self._always_selector, self._default_job_obj) = (job_limit, job_selector, Job())
 
 	def __len__(self):
 		return self._job_limit
@@ -97,9 +111,6 @@ class JobDB(ConfigurablePlugin):
 
 	def get_job_transient(self, jobnum):
 		raise AbstractError
-
-	def get_work_path(self):  # TODO: only used by report class
-		return self._path_work
 
 	def iter_jobs(self, job_selector=None, subset=None):
 		if subset is None:

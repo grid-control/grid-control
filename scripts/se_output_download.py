@@ -13,13 +13,17 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, time, random, logging
-from gc_scripts import ConsoleTable, FileInfo, FileInfoProcessor, Job, Plugin, ScriptOptions, get_script_object_cmdline, str_file_size  # pylint:disable=line-too-long
+import os, sys, time, random, signal, logging
+from gc_scripts import ConsoleTable, FileInfo, FileInfoProcessor, Job, ScriptOptions, get_script_object, handle_abort_interrupt, str_file_size  # pylint:disable=line-too-long
+from grid_control.backends import AccessToken
 from grid_control.backends.storage import se_copy, se_exists, se_mkdir, se_rm
+from grid_control.logging_setup import ProcessArchiveHandler
+from grid_control.utils import wait
+from grid_control.utils.activity import Activity, ProgressActivity
 from grid_control.utils.data_structures import make_enum
-from grid_control.utils.thread_tools import GCEvent, start_daemon
-from hpfwk import clear_current_exception, get_thread_state
-from python_compat import all, any, imap, lfilter, md5, sorted
+from grid_control.utils.thread_tools import GCEvent, GCLock, GCThreadPool, start_daemon
+from hpfwk import clear_current_exception, ignore_exception
+from python_compat import all, any, imap, md5, resolve_fun, sorted
 
 
 try:
@@ -28,11 +32,15 @@ except Exception:
 	clear_current_exception()
 	ANSI = None  # pylint:disable=invalid-name
 try:
-	from grid_control_gui.report_textbar import BasicProgressBar
+	from grid_control_gui.report_bar import ProgressBarActivity
 except Exception:
 	clear_current_exception()
-	BasicProgressBar = None  # pylint:disable=invalid-name
+	ProgressBarActivity = ProgressActivity  # pylint:disable=invalid-name
 
+log = logging.getLogger('se_output_download')  # pylint:disable=invalid-name
+logging.getLogger('logging.process').disabled = True
+
+get_thread_state = resolve_fun('threading:Thread.is_alive', 'threading:Thread.isAlive')  # pylint:disable=invalid-name
 
 JobDownloadStatus = make_enum(['JOB_OK', 'JOB_ALREADY', 'JOB_NO_OUTPUT',  # pylint:disable=invalid-name
 	'JOB_PROCESSING', 'JOB_FAILED', 'JOB_RETRY', 'JOB_INCOMPLETE'])
@@ -40,156 +48,201 @@ FileDownloadStatus = make_enum(['FILE_OK', 'FILE_EXISTS', 'FILE_TIMEOUT',  # pyl
 	'FILE_SE_BLACKLIST', 'FILE_HASH_FAILED', 'FILE_TRANSFER_FAILED', 'FILE_MKDIR_FAILED'])
 
 
+def accepted_se(opts, fi):
+	return any(imap(fi[FileInfo.Path].__contains__, opts.select_se)) or not opts.select_se
+
+
 def check_token(token):
 	if time.time() - check_token.last_check > 10:
 		check_token.last_check = time.time()
 		if not token.can_submit(20 * 60, True):
-			sys.stdout.flush()
-			sys.stderr.write('\n\nPlease renew access token!\n')
+			log.critical('\nPlease renew access token')
 			sys.exit(os.EX_UNAVAILABLE)
-check_token.last_check = 0
+check_token.last_check = 0  # <global-state>
 
 
-def check_hash(opts, local_se_path, fi_idx, fi, job_download_display):
-	# Verify => compute md5hash
-	if opts.verify_md5:
-		try:
-			local_hash = md5sum(local_se_path.replace('file://', ''))
-		except KeyboardInterrupt:
-			raise
-		except Exception:
-			clear_current_exception()
-			local_hash = None
-		job_download_display.check_hash(fi_idx, local_hash)
-		if fi[FileInfo.Hash] != local_hash:
-			return FileDownloadStatus.FILE_HASH_FAILED
-	else:
-		job_download_display.check_hash(fi_idx)
-	return FileDownloadStatus.FILE_OK
-
-
-def cleanup_files(opts, fi_list, download_failed, job_download_display):
-	job_download_display.cleanup_files()
+def delete_files(opts, jobnum, fi_list, download_failed, show_se_skip=False):
 	for (fi_idx, fi) in enumerate(fi_list):
 		def _delete(file_se_path, where, what):
-			if se_exists(file_se_path).status(timeout=10) == 0:
-				job_download_display.cleanup_files(fi_idx,
-					'Deleting file %s from %s...' % (fi[FileInfo.NameDest], where))
-				delete_se_path(file_se_path, what)
+			if se_exists(file_se_path).status(timeout=10, terminate=True) == 0:
+				activity = Activity('Deleting file %s from %s' % (fi[FileInfo.NameDest], where))
+				rm_proc = se_rm(file_se_path)
+				if rm_proc.status(timeout=60, terminate=True) == 0:
+					log.info(log_intro(jobnum, fi_idx) + 'Deleted file %s', file_se_path)
+				else:
+					log.log_process(rm_proc, msg=log_intro(jobnum, fi_idx) + 'Unable to remove %s' % what)
+				activity.finish()
 
-		(source_se_path, target_se_path, local_se_path) = get_fi_path_tuple(opts, fi)
-		# Remove downloaded files in case of failure
-		if (download_failed and opts.rm_local_fail) or (not download_failed and opts.rm_local_ok):
-			_delete(target_se_path, 'target', 'target file')
-		# Remove SE files in case of failure
-		if (download_failed and opts.rm_se_fail) or (not download_failed and opts.rm_se_ok):
-			_delete(source_se_path, 'source', 'source file')
-		# Always clean up local tmp files
-		if target_se_path != local_se_path:
-			_delete(local_se_path, 'local', 'local tmp file')
-	job_download_display.cleanup_files(-1)
-
-
-def delete_se_path(se_path, msg):
-	rm_proc = se_rm(se_path)
-	if rm_proc.status(timeout=60) != 0:
-		logging.critical('\t\tUnable to remove %s!', msg)
-		logging.critical('%s\n%s\n', rm_proc.stdout.read(timeout=0), rm_proc.stderr.read(timeout=0))
-
-
-def display_download_result(download_result_dict, jobnum_list):
-	def _iter_download_results(cls):
-		for stat in sorted(download_result_dict, key=download_result_dict.get):
-			if download_result_dict[stat] and (stat in cls.enum_value_list):
-				yield {0: cls.enum2str(stat), 1: download_result_dict[stat]}
-		yield '='
-		yield {0: 'Total', 1: len(jobnum_list)}
-
-	if download_result_dict:
-		ConsoleTable.create([(0, 'Status'), (1, '')],
-			_iter_download_results(JobDownloadStatus), title='Job status overview')
-		ConsoleTable.create([(0, 'Status'), (1, '')],
-			_iter_download_results(FileDownloadStatus), title='File status overview')
+		if accepted_se(opts, fi):
+			(source_se_path, target_se_path, local_se_path) = get_fi_path_tuple(opts, fi)
+			# Remove downloaded files in case of failure
+			if (download_failed and opts.rm_local_fail) or (not download_failed and opts.rm_local_ok):
+				_delete(target_se_path, 'target', 'target file')
+			# Remove SE files in case of failure
+			if (download_failed and opts.rm_se_fail) or (not download_failed and opts.rm_se_ok):
+				_delete(source_se_path, 'source', 'source file')
+			# Always clean up local tmp files
+			if target_se_path != local_se_path:
+				_delete(local_se_path, 'local', 'local tmp file')
+		elif show_se_skip:
+			log.info(log_intro(jobnum, fi_idx) + 'Skipping file on blacklisted SE')
 
 
-def download_multithreaded(opts, work_dn, _inc_download_result, job_db, token, jobnum_list):
-	(thread_display_list, error_msg_list, jobnum_list_todo) = ([], [], list(jobnum_list))
-	jobnum_list_todo.reverse()
-
-	sys.stdout.write(ANSI.pos_save + ANSI.set_scroll(3 * opts.threads) + ANSI.pos_load)
-	while True:
-		# remove finished transfers
-		thread_display_list = lfilter(lambda thread_display: get_thread_state(thread_display[0]),
-			thread_display_list)
-		# add new transfers
-		while len(thread_display_list) < opts.threads and len(jobnum_list_todo):
-			jobnum = jobnum_list_todo.pop()
-			job_download_display = ThreadedJobDownloadDisplay(opts, jobnum, error_msg_list)
-			download_thread = start_daemon('Download %s' % jobnum, process_job_files,
-				opts, work_dn, _inc_download_result, job_db, token, jobnum, job_download_display)
-			thread_display_list.append((download_thread, job_download_display))
-		# display transfers
-		sys.stdout.write(ANSI.erase + ANSI.move(0))
-		for (_, job_download_display) in thread_display_list:
-			sys.stdout.write(job_download_display.get_display_str() + '\n')
-		sys.stdout.write(ANSI.move(3 * opts.threads + 1))
-		sys.stdout.flush()
-		if len(thread_display_list) == 0:
-			break
-		check_token(token)
-		time.sleep(0.1)
+def delete_job(opts, work_dn, status_mon, job_db, job_obj, jobnum):
+	activity = Activity('Deleting output files')
+	try:
+		if (job_obj.get('deleted') == 'True') and not opts.mark_ignore_rm:
+			return status_mon.register_job_result(jobnum, 'Files are already deleted',
+				JobDownloadStatus.JOB_ALREADY)
+		if (job_obj.get('download') != 'True') and not opts.mark_ignore_dl:
+			return status_mon.register_job_result(jobnum, 'Files are not yet downloaded',
+				JobDownloadStatus.JOB_INCOMPLETE)
+		fi_list = FileInfoProcessor().process(os.path.join(work_dn, 'output', 'job_%d' % jobnum)) or []
+		if not fi_list:
+			return status_mon.register_job_result(jobnum, 'Job has no output files',
+				JobDownloadStatus.JOB_NO_OUTPUT)
+		job_successful = job_obj.state != Job.SUCCESS
+		delete_files(opts, jobnum, fi_list, download_failed=job_successful, show_se_skip=True)
+		set_job_prop(job_db, jobnum, job_obj, 'deleted', 'True')
+		status_mon.register_job_result(jobnum, 'All files deleted', JobDownloadStatus.JOB_OK)
+	finally:
+		activity.finish()
 
 
-def download_single_file(opts, job_download_display, jobnum, fi_idx, fi):
+def download_job(opts, work_dn, status_mon, job_db, job_obj, jobnum):
+	if job_obj.get('download') == 'True' and not opts.mark_ignore_dl:
+		return status_mon.register_job_result(jobnum, 'All files already downloaded',
+			JobDownloadStatus.JOB_ALREADY)
+
+	# Read the file hash entries from job info file
+	fi_list = FileInfoProcessor().process(os.path.join(work_dn, 'output', 'job_%d' % jobnum)) or []
+	is_download_failed = False
+	if not fi_list:
+		if opts.mark_empty_fail:
+			is_download_failed = True
+		else:
+			return status_mon.register_job_result(jobnum, 'Job has no output files',
+				JobDownloadStatus.JOB_NO_OUTPUT)
+
+	download_result_list = []
+	progress = ProgressActivity('Processing output files', len(fi_list))
+	for (fi_idx, fi) in enumerate(fi_list):
+		progress.update_progress(fi_idx, msg='Processing output file %r' % fi[FileInfo.NameDest])
+		download_result_list.append(download_single_file(opts, jobnum, fi_idx, fi, status_mon))
+	progress.finish()
+
+	is_download_failed = is_download_failed or any(imap(download_result_list.__contains__, [
+		FileDownloadStatus.FILE_TIMEOUT, FileDownloadStatus.FILE_HASH_FAILED,
+		FileDownloadStatus.FILE_TRANSFER_FAILED, FileDownloadStatus.FILE_MKDIR_FAILED]))
+	is_download_success = all(imap([FileDownloadStatus.FILE_OK,
+		FileDownloadStatus.FILE_EXISTS].__contains__, download_result_list))
+
+	# Ignore the first opts.retry number of failed jobs
+	retry_count = int(job_obj.get('download attempt', 0))
+	if fi_list and is_download_failed and opts.retry and (retry_count < int(opts.retry)):
+		set_job_prop(job_db, jobnum, job_obj, 'download attempt', str(retry_count + 1))
+		return status_mon.register_job_result(jobnum, 'Download attempt #%d failed' % retry_count + 1,
+			JobDownloadStatus.RETRY)
+
+	delete_files(opts, jobnum, fi_list, is_download_failed)
+
+	if is_download_failed:
+		if opts.mark_fail:
+			# Mark job as failed to trigger resubmission
+			job_obj.state = Job.FAILED
+			job_db.commit(jobnum, job_obj)
+		status_mon.register_job_result(jobnum, 'Download failed', JobDownloadStatus.JOB_FAILED)
+	elif is_download_success:
+		if opts.mark_dl:
+			# Mark as downloaded
+			set_job_prop(job_db, jobnum, job_obj, 'download', 'True')
+		status_mon.register_job_result(jobnum, 'Download successful', JobDownloadStatus.JOB_OK)
+	else:
+		# eg. because of SE blacklist
+		status_mon.register_job_result(jobnum, 'Download incomplete', JobDownloadStatus.JOB_INCOMPLETE)
+
+
+def download_monitor(jobnum, fi_idx, fi, local_se_path, copy_ended_event, copy_timeout_event):
+	def _get_file_size():
+		local_fn = local_se_path.replace('file://', '')
+		if os.path.exists(local_fn):
+			return os.path.getsize(local_fn)
+
+	def _update_progress(progress, cur_file_size, old_file_size, start_time, old_time):
+		if cur_file_size is not None:
+			progress.update_progress(cur_file_size,
+				msg='%7s - %7s avg. - %7s inst.' % (str_file_size(cur_file_size),
+					rate(cur_file_size, 0, start_time),
+					rate(cur_file_size, old_file_size or 0, old_time)))
+
+	(cur_file_size, old_file_size) = (None, None)
+	(start_time, old_time, last_transfer_time) = (time.time(), time.time(), time.time())
+	progress = ProgressBarActivity('<download stalling>', fi[FileInfo.Size])
+
+	while not copy_ended_event.wait(0.1):  # Loop until monitor lock is available
+		(cur_file_size, cur_time) = (_get_file_size(), time.time())
+		if cur_time - last_transfer_time > 5 * 60:
+			copy_timeout_event.set()  # Trigger timeout when size is unchanged for > 5min
+		elif cur_file_size is None:
+			start_time = cur_time
+		else:
+			if cur_file_size != old_file_size:
+				last_transfer_time = cur_time
+			if (cur_file_size != old_file_size) or (cur_time - old_time > 1):
+				# update progress when size changes - or more than 1 sec elapsed
+				_update_progress(progress, cur_file_size, old_file_size, start_time, old_time)
+				(old_file_size, old_time) = (cur_file_size, cur_time)
+	_update_progress(progress, cur_file_size, old_file_size, start_time, old_time)
+	log.info(log_intro(jobnum, fi_idx) + progress.get_msg().rstrip('.'))
+	progress.finish()
+
+
+def download_single_file(opts, jobnum, fi_idx, fi, status_mon):
 	(source_se_path, target_se_path, local_se_path) = get_fi_path_tuple(opts, fi)
+	show_file_info(jobnum, fi_idx, fi)
 
 	# Copy files to local folder
-	if opts.select_se:
-		if not any(imap(lambda se_name: se_name in fi[FileInfo.Path], opts.select_se)):
-			job_download_display.error_file(fi_idx, 'skipping file on blacklisted SE!')
-			return FileDownloadStatus.FILE_SE_BLACKLIST
-	if opts.skip_existing and (se_exists(target_se_path).status(timeout=10) == 0):
-		job_download_display.error_file(fi_idx, 'skipping already existing file!')
-		return FileDownloadStatus.FILE_EXISTS
+	if not accepted_se(opts, fi):
+		return status_mon.register_file_result(jobnum, fi_idx, 'skipping file on blacklisted SE',
+			FileDownloadStatus.FILE_SE_BLACKLIST)
+	activity_check = Activity('Checking file existance')
 	try:
-		if se_exists(os.path.dirname(target_se_path)).status(timeout=10) != 0:
-			se_mkdir(os.path.dirname(target_se_path)).status(timeout=10)
-	except Exception:
-		clear_current_exception()
-		job_download_display.error_file(fi_idx, 'error while creating target directory!')
-		return FileDownloadStatus.FILE_MKDIR_FAILED
+		if opts.skip_existing and (se_exists(target_se_path).status(timeout=10, terminate=True) == 0):
+			return status_mon.register_file_result(jobnum, fi_idx, 'skipping already existing file',
+				FileDownloadStatus.FILE_EXISTS)
+	finally:
+		activity_check.finish()
+	if se_exists(os.path.dirname(target_se_path)).status(timeout=10, terminate=True) != 0:
+		activity = Activity('Creating target directory')
+		try:
+			mkdir_proc = se_mkdir(os.path.dirname(target_se_path))
+			if mkdir_proc.status(timeout=10, terminate=True) != 0:
+				return status_mon.register_file_result(jobnum, fi_idx, 'unable to create target dir',
+					FileDownloadStatus.FILE_MKDIR_FAILED, proc=mkdir_proc)
+		finally:
+			activity.finish()
 
 	if 'file://' in target_se_path:
 		local_se_path = target_se_path
-	download_result = download_single_file_monitored(jobnum, job_download_display,
-			fi_idx, source_se_path, target_se_path, local_se_path)
-	if download_result is not None:
-		return download_result
-
-	return check_hash(opts, local_se_path, fi_idx, fi, job_download_display)
-
-
-def download_single_file_monitored(jobnum, job_download_display,
-		fi_idx, source_se_path, target_se_path, local_fn):
 	copy_timeout_event = GCEvent()
 	copy_ended_event = GCEvent()
-	monitor_thread = start_daemon('Download monitor %s' % jobnum, monitor_transfer_progress,
-		job_download_display, fi_idx, local_fn, copy_ended_event, copy_timeout_event)
+	monitor_thread = start_daemon('Download monitor %s' % jobnum, download_monitor,
+		jobnum, fi_idx, fi, local_se_path, copy_ended_event, copy_timeout_event)
 
-	cp_proc = se_copy(source_se_path, target_se_path, tmp=local_fn)
-	while (cp_proc.status(timeout=0) is None) and not copy_timeout_event.wait(timeout=0.05):
+	cp_proc = se_copy(source_se_path, target_se_path, tmp=local_se_path)
+	while (cp_proc.status(timeout=0) is None) and not copy_timeout_event.wait(timeout=0.1):
 		pass
-	time.sleep(2)
 	copy_ended_event.set()
 	monitor_thread.join()
 
 	if copy_timeout_event.is_set():
 		cp_proc.terminate(timeout=1)
-		job_download_display.error_file(fi_idx, 'Transfer timeout')
-		return FileDownloadStatus.FILE_TIMEOUT
-	elif cp_proc.status(timeout=0) != 0:
-		job_download_display.error_file(fi_idx, 'Transfer error %s' % cp_proc.status(timeout=0))
-		return FileDownloadStatus.FILE_TRANSFER_FAILED
+		return status_mon.register_file_result(jobnum, fi_idx, 'Transfer timeout',
+			FileDownloadStatus.FILE_TIMEOUT)
+	elif cp_proc.status(timeout=0, terminate=True) != 0:
+		return status_mon.register_file_result(jobnum, fi_idx, 'Transfer error',
+			FileDownloadStatus.FILE_TIMEOUT, proc=cp_proc)
+	return hash_verify(opts, status_mon, local_se_path, jobnum, fi_idx, fi)
 
 
 def get_fi_path_tuple(opts, fi):
@@ -203,11 +256,65 @@ def get_se_host(se_path):
 	return se_path.split('://')[-1].split('/')[0].split(':')[0]
 
 
-def loop_download(opts, args):
+def hash_calc(filename):
+	md5_obj = md5()
+	blocksize = 4 * 1024 * 1024  # use 4M blocksize:
+	fp = open(filename, 'rb')
+	pos = 0
+	progress = ProgressBarActivity('Calculating checksum', os.path.getsize(filename))
+	while True:
+		buffer_str = fp.read(blocksize)
+		md5_obj.update(buffer_str)
+		pos += blocksize
+		progress.update_progress(pos)
+		if len(buffer_str) != blocksize:
+			break
+	progress.finish()
+	return md5_obj.hexdigest()
+
+
+def hash_verify(opts, status_mon, local_se_path, jobnum, fi_idx, fi):
+	if not opts.verify_md5:
+		return status_mon.register_file_result(jobnum, fi_idx, 'Download successful',
+			FileDownloadStatus.FILE_OK)
+	# Verify => compute md5hash
+	remote_hash = fi[FileInfo.Hash]
+	activity = Activity('Verifying checksum')
+	try:
+		local_hash = ignore_exception(Exception, None, hash_calc, local_se_path.replace('file://', ''))
+		if local_hash is None:
+			return status_mon.register_file_result(jobnum, fi_idx, 'Unable to calculate checksum',
+				FileDownloadStatus.FILE_HASH_FAILED)
+	finally:
+		activity.finish()
+	hash_match = fi[FileInfo.Hash] == local_hash
+	match_map = {True: 'MATCH', False: 'FAIL'}
+	if ANSI is not None:
+		match_map = {True: ANSI.reset + ANSI.color_green + 'MATCH' + ANSI.reset,
+			False: ANSI.reset + ANSI.color_red + 'FAIL' + ANSI.reset}
+	msg = '\tLocal  hash: %s\n' % local_hash + \
+		log_intro(jobnum, fi_idx) + '\tRemote hash: %s\n' % remote_hash + \
+		log_intro(jobnum, fi_idx) + 'Checksum comparison: ' + match_map[hash_match]
+	if hash_match:
+		return status_mon.register_file_result(jobnum, fi_idx, msg, FileDownloadStatus.FILE_OK)
+	return status_mon.register_file_result(jobnum, fi_idx, msg, FileDownloadStatus.FILE_HASH_FAILED)
+
+
+def log_intro(jobnum, fi_idx=None):
+	result = ['Job %5d' % jobnum]
+	if fi_idx is not None:
+		result.append('File %2d' % fi_idx)
+	return str.join(' | ', result) + ' | '
+
+
+def process_all(opts, args):
 	# Init everything in each loop to pick up changes
-	script_obj = get_script_object_cmdline(args, only_success=True)
-	token = Plugin.get_class('AccessToken').create_instance(opts.token, script_obj.new_config, 'token')
+	script_obj = get_script_object(args[0], opts.job_selector, only_success=False)
+	token = AccessToken.create_instance(opts.token, script_obj.new_config, 'token')
 	work_dn = script_obj.config.get_work_path()
+	if process_all.first:
+		logging.getLogger().addHandler(ProcessArchiveHandler(os.path.join(work_dn, 'error.tar')))
+		process_all.first = False
 
 	# Create SE output dir
 	if not opts.output:
@@ -215,273 +322,132 @@ def loop_download(opts, args):
 	if '://' not in opts.output:
 		opts.output = 'file:///%s' % os.path.abspath(opts.output)
 
-	download_result_dict = {}
-
-	def _inc_download_result(dstat):
-		download_result_dict[dstat] = download_result_dict.get(dstat, 0) + 1
-
 	job_db = script_obj.job_db
 	jobnum_list = job_db.get_job_list()
+	status_mon = StatusMonitor(len(jobnum_list))
 	if opts.shuffle:
 		random.shuffle(jobnum_list)
 	else:
 		jobnum_list.sort()
 
 	if opts.threads:
-		download_multithreaded(opts, work_dn, _inc_download_result, job_db, token, jobnum_list)
-	else:
+		activity = Activity('Processing jobs')
+		pool = GCThreadPool(opts.threads)
 		for jobnum in jobnum_list:
-			check_token(token)
-			display = JobDownloadDisplay(opts, jobnum)
-			process_job_files(opts, work_dn, _inc_download_result, job_db, token, jobnum, display)
+			pool.start_daemon('Processing job %d' % jobnum, process_job,
+				opts, work_dn, status_mon, job_db, token, jobnum)
+		pool.wait_and_drop()
+		activity.finish()
+	else:
+		progress = ProgressActivity('Processing job', max(jobnum_list) + 1)
+		for jobnum in jobnum_list:
+			progress.update_progress(jobnum)
+			process_job(opts, work_dn, status_mon, job_db, token, jobnum)
+		progress.finish()
 
 	# Print overview
-	display_download_result(download_result_dict, jobnum_list)
-	# return True if download is finished
-	num_success = sum(imap(lambda jds: download_result_dict.get(jds, 0), [
-		JobDownloadStatus.JOB_OK, JobDownloadStatus.JOB_ALREADY, JobDownloadStatus.JOB_INCOMPLETE]))
-	return num_success == len(jobnum_list)
+	if not opts.hide_results:
+		status_mon.show_results()
+	return status_mon.is_finished()
+process_all.first = True  # <global-state>
 
 
-def md5sum(filename):
-	md5_obj = md5()
-	blocksize = 4096 * 1024  # use 4M blocksize:
-	fp = open(filename, 'r')
-	while True:
-		buffer_str = fp.read(blocksize)
-		md5_obj.update(buffer_str)
-		if len(buffer_str) != blocksize:
-			break
-	return md5_obj.hexdigest()
-
-
-def monitor_transfer_progress(job_download_display, fi_idx, local_se_path,
-		copy_ended_event, copy_timeout_event):
-	local_fn = local_se_path.replace('file://', '')
-	(file_size_cur, file_size_old) = (0, 0)
-	(start_time, old_time, last_transfer_time) = (time.time(), time.time(), time.time())
-	job_download_display.monitor_transfer_progress(fi_idx)
-	while not copy_ended_event.wait(0.1):  # Loop until monitor lock is available
-		if file_size_cur != file_size_old:
-			last_transfer_time = time.time()
-		if time.time() - last_transfer_time > 5 * 60:  # No size change in the last 5min!
-			job_download_display.error_file(fi_idx, 'Transfer timeout!')
-			copy_timeout_event.set()
-			break
-		if os.path.exists(local_fn):
-			file_size_cur = os.path.getsize(local_fn)
-			job_download_display.monitor_transfer_progress(fi_idx,
-				file_size_cur, file_size_old, start_time, old_time)
-			(file_size_old, old_time) = (file_size_cur, time.time())
-		else:
-			start_time = time.time()
-	job_download_display.monitor_transfer_progress(fi_idx,
-		file_size_cur, file_size_old, start_time, None)
-
-
-def process_job_files(opts, work_dn, _inc_download_result,
-		job_db, token, jobnum, job_download_display):
+def process_job(opts, work_dn, status_mon, job_db, token, jobnum):
+	check_token(token)
 	job_obj = job_db.get_job(jobnum)
 	# Only run over finished and not yet downloaded jobs
-	if job_obj.state != Job.SUCCESS:
-		job_download_display.error('Job has not yet finished successfully!')
-		return _inc_download_result(JobDownloadStatus.JOB_PROCESSING)
-	if job_obj.get('download') == 'True' and not opts.mark_ignore_dl:
-		job_download_display.error('All files already downloaded!')
-		return _inc_download_result(JobDownloadStatus.JOB_ALREADY)
-
-	# Read the file hash entries from job info file
-	fi_list = FileInfoProcessor().process(os.path.join(work_dn, 'output', 'job_%d' % jobnum)) or []
-	job_download_display.process_job_files_begin(fi_list)
-	download_failed = False
-	if not fi_list:
-		if opts.mark_empty_fail:
-			download_failed = True
-		else:
-			return _inc_download_result(JobDownloadStatus.JOB_NO_OUTPUT)
-
-	download_result_list = []
-	for (fi_idx, fi) in enumerate(fi_list):
-		download_result = download_single_file(opts, job_download_display, jobnum, fi_idx, fi)
-		_inc_download_result(download_result)
-		download_result_list.append(download_result)
-
-	download_failed = any(imap(lambda fds: fds in download_result_list, [
-		FileDownloadStatus.FILE_TIMEOUT, FileDownloadStatus.FILE_HASH_FAILED,
-		FileDownloadStatus.FILE_TRANSFER_FAILED, FileDownloadStatus.FILE_MKDIR_FAILED]))
-	download_success = all(imap(lambda fds: fds in [FileDownloadStatus.FILE_OK,
-		FileDownloadStatus.FILE_EXISTS], download_result_list))
-
-	# Ignore the first opts.retry number of failed jobs
-	retry_count = int(job_obj.get('download attempt', 0))
-	if fi_list and download_failed and opts.retry and (retry_count < int(opts.retry)):
-		job_download_display.error('Download attempt #%d failed!' % (retry_count + 1))
-		job_obj.set('download attempt', str(retry_count + 1))
-		job_db.commit(jobnum, job_obj)
-		return _inc_download_result(JobDownloadStatus.RETRY)
-
-	cleanup_files(opts, fi_list, download_failed, job_download_display)
-
-	if download_failed:
-		_inc_download_result(JobDownloadStatus.JOB_FAILED)
-		if opts.mark_fail:
-			# Mark job as failed to trigger resubmission
-			job_obj.state = Job.FAILED
-	elif download_success:
-		_inc_download_result(JobDownloadStatus.JOB_OK)
-		if opts.mark_dl:
-			# Mark as downloaded
-			job_obj.set('download', 'True')
-	else:  # eg. because of SE blacklist
-		_inc_download_result(JobDownloadStatus.JOB_INCOMPLETE)
-
-	# Save new job status infos
-	job_db.commit(jobnum, job_obj)
-	job_download_display.process_job_files_end()
+	if (job_obj.state != Job.SUCCESS) and opts.job_success:
+		return status_mon.register_job_result(jobnum, 'Job has not yet finished successfully',
+			JobDownloadStatus.JOB_PROCESSING)
+	if opts.delete:
+		delete_job(opts, work_dn, status_mon, job_db, job_obj, jobnum)
+	else:
+		download_job(opts, work_dn, status_mon, job_db, job_obj, jobnum)
 	time.sleep(float(opts.slowdown))
 
 
-class Display(object):
-	def _match_result(self, result):
-		if ANSI is None:
-			if not result:
-				return 'FAIL'
-			return 'MATCH'
-		if not result:
-			return ANSI.fmt('FAIL', [ANSI.color_red])
-		return ANSI.fmt('MATCH', [ANSI.color_green])
-
-	def _rate(self, cur_size, ref_size, ref_time):
-		return str_file_size(((cur_size - ref_size) / max(1., time.time() - ref_time))) + '/s'
+def rate(cur_size, ref_size, ref_time):
+	return str_file_size(((cur_size - ref_size) / max(1., time.time() - ref_time))) + '/s'
 
 
-class JobDownloadDisplay(Display):
-	def __init__(self, opts, jobnum):
-		(self._jobnum, self._fi_list) = (jobnum, [])
-		(self._show_host, self._show_bar) = (opts.show_host, opts.show_bar)
-		self._bar = None
-
-	def check_hash(self, fi_idx, local_hash=None):
-		remote_hash = self._fi_list[fi_idx][FileInfo.Hash]
-		if local_hash:
-			match_str = self._match_result(remote_hash == local_hash)
-			self._write(' |    Local  hash: %s [%s]\n' % (local_hash, match_str))
-		self._write(' |    Remote hash: %s\n' % remote_hash)
-
-	def cleanup_files(self, fi_idx=None, msg=''):
-		self._write(' - %s\r' % msg)
-
-	def error(self, msg):
-		self._write('Job %d: %s\n' % (self._jobnum, msg.strip()))
-
-	def error_file(self, fi_idx, msg):
-		self._write(' + File %d: %s\n' % (fi_idx, msg.strip()))
-
-	def monitor_transfer_progress(self, fi_idx, cur_size=None, old_size=0, start_time=0, old_time=0):
-		if cur_size is None:
-			return self._write(' + File %d: %s\n' % (fi_idx, self._build_transfer_intro_str(fi_idx)))
-		elif old_time is None:
-			self._bar = None
-			return self._write('\n')
-		self._write(' | => %s\r' % self._build_transfer_info_str(fi_idx,
-			cur_size, old_size, start_time, old_time))
-
-	def process_job_files_begin(self, fi_list):
-		self._fi_list = fi_list
-		self._write('Job %d: (%s file%s)\n' % (self._jobnum, len(fi_list), ('s', '')[len(fi_list) == 1]))
-
-	def process_job_files_end(self):
-		self._write('\n')
-
-	def _build_transfer_info_str(self, fi_idx, cur_size, old_size, start_time, old_time):
-		fi = self._fi_list[fi_idx]
-		output_str = ''
-		if self._show_host:
-			output_str += '[%s] ' % get_se_host(fi[FileInfo.Path])
-		if old_time:
-			if self._bar:
-				self._bar.update(cur_size)
-				return '%s (%7s avg.)' % (str(self._bar), self._rate(cur_size, 0, start_time))
-			size_str = str_file_size(cur_size)
-			output_str += '(%7s - %7s avg. - %7s inst.)' % (size_str,
-				self._rate(cur_size, 0, start_time), self._rate(cur_size, old_size, old_time))
-			if fi.get(FileInfo.Size) is not None:
-				output_str += ' <%5.1f%%>' % (cur_size / float(fi[FileInfo.Size]) * 100)
-		return output_str
-
-	def _build_transfer_intro_str(self, fi_idx):
-		fi = self._fi_list[fi_idx]
-		output_str = '%s -> %s ' % (fi[FileInfo.NameLocal], fi[FileInfo.NameDest])
-		if fi.get(FileInfo.Size) is not None:
-			output_str += '[%s]' % str_file_size(fi.get(FileInfo.Size))
-			self._bar = BasicProgressBar(value_max=fi.get(FileInfo.Size), total_width=45)
-		return output_str
-
-	def _write(self, msg):
-		sys.stdout.write(msg)  # always stay in one line (except for manual newlines)
+def set_job_prop(job_db, jobnum, job_obj, key, value):
+	job_obj.set(key, value)
+	job_db.commit(jobnum, job_obj)
 
 
-class ThreadedJobDownloadDisplay(JobDownloadDisplay):
-	def __init__(self, opts, jobnum, error_msg_list):
-		JobDownloadDisplay.__init__(self, opts, jobnum)
-		self._output_str_list = ['', '', '']
-		self._error_output = error_msg_list
+def show_file_info(jobnum, fi_idx, fi):
+	log.info(log_intro(jobnum, fi_idx) + 'Name: %s -> %s',
+		fi[FileInfo.NameLocal], fi[FileInfo.NameDest])
+	se_host = get_se_host(fi[FileInfo.Path])
+	if se_host:
+		se_host = ' (%s)' % se_host
+	log.info(log_intro(jobnum, fi_idx) + 'Path: %s' + se_host, fi[FileInfo.Path])
+	if fi[FileInfo.Size] is not None:
+		log.info(log_intro(jobnum, fi_idx) + 'Size: %s', str_file_size(fi[FileInfo.Size]))
 
-	def check_hash(self, fi_idx, local_hash=None):
-		remote_hash = self._fi_list[fi_idx][FileInfo.Hash]
-		self._output_str_list[2] = self._match_result(remote_hash == local_hash)
 
-	def cleanup_files(self, fi_idx=None, msg=''):
-		self._output_str_list[2] = msg
+class StatusMonitor(object):
+	def __init__(self, num_jobs):
+		self._result = {}
+		self._lock = GCLock()
+		self._num_jobs = num_jobs
 
-	def error(self, msg):
-		self._output_str_list[2] = msg
-		self._error_output.append('Job %d: %s' % (self._jobnum, msg))
+	def is_finished(self):
+		num_success = sum(imap(lambda jds: self._result.get(jds, 0), [
+			JobDownloadStatus.JOB_OK, JobDownloadStatus.JOB_ALREADY, JobDownloadStatus.JOB_INCOMPLETE]))
+		return num_success == self._num_jobs
 
-	def error_file(self, fi_idx, msg):
-		self._output_str_list[2] = msg
-		self._error_output.append('Job %d - File %d: %s' % (self._jobnum, fi_idx, msg))
-
-	def get_display_str(self):
-		return str.join('\n', imap(str.strip, imap(str, self._output_str_list)))
-
-	def monitor_transfer_progress(self, fi_idx, cur_size=None, old_size=0, start_time=0, old_time=0):
-		if fi_idx > len(self._fi_list):
-			return
-		intro_str = '[%s-%s] ' % (self._jobnum, fi_idx)
-		if cur_size is None:
-			self._output_str_list[0] = intro_str + self._build_transfer_intro_str(fi_idx)
-		elif old_time is None:
-			self._bar = None
+	def register_file_result(self, jobnum, fi_idx, msg, status, proc=None):
+		if proc:
+			log.log_process(proc, msg=log_intro(jobnum, fi_idx) + msg)
 		else:
-			self._output_str_list[1] = intro_str + self._build_transfer_info_str(fi_idx,
-				cur_size, old_size, start_time, old_time)
+			log.info(log_intro(jobnum, fi_idx) + msg)
+		self._register_result(status)
+		return status  # returned file status is actually used later
 
-	def process_job_files_begin(self, fi_list):
-		self._fi_list = fi_list
-		self._output_str_list = ['', '', '']
+	def register_job_result(self, jobnum, msg, status):
+		log.info(log_intro(jobnum) + msg)
+		self._register_result(status)
 
-	def process_job_files_end(self):
-		pass
+	def show_results(self):
+		def _iter_download_results(cls):
+			marker = False
+			for stat in sorted(self._result, key=self._result.get):
+				if self._result[stat] and (stat in cls.enum_value_list):
+					yield {0: cls.enum2str(stat), 1: self._result[stat]}
+					marker = True
+			if marker:
+				yield '='
+			yield {0: 'Total', 1: self._num_jobs}
+
+		if self._result:
+			ConsoleTable.create([(0, 'Status'), (1, '')],
+				_iter_download_results(JobDownloadStatus), title='Job status overview')
+			ConsoleTable.create([(0, 'Status'), (1, '')],
+				_iter_download_results(FileDownloadStatus), title='File status overview')
+
+	def _register_result(self, status):
+		self._lock.acquire()
+		try:
+			self._result[status] = self._result.get(status, 0) + 1
+		finally:
+			self._lock.release()
 
 
 def _main():
 	options = _parse_cmd_line()
 	opts = options.opts
+	signal.signal(signal.SIGINT, handle_abort_interrupt)
 
 	# Disable loop mode if it is pointless
 	if (opts.loop and not opts.skip_existing) and (opts.mark_ignore_dl or not opts.mark_dl):
-		sys.stderr.write('Loop mode was disabled to avoid continuously downloading the same files\n')
+		log.info('Loop mode was disabled to avoid continuously downloading the same files\n')
 		(opts.loop, opts.infinite) = (False, False)
 
 	while True:
-		try:
-			if (loop_download(opts, options.args) or not opts.loop) and not opts.infinite:
-				break
-			time.sleep(60)
-		except KeyboardInterrupt:
-			logging.critical('\n\nDownload aborted!\n')
-			sys.exit(os.EX_TEMPFAIL)
+		if (process_all(opts, options.args) or not opts.loop) and not opts.infinite:
+			break
+		wait(60)
 
 
 def _parse_cmd_line():
@@ -506,19 +472,34 @@ def _parse_cmd_line():
 		parser.add_flag(group, short_pair or '  ', (_create_opt(0), _create_opt(1)),
 			default=default, dest=dest, help_pair=(_create_help(0), _create_help(1)))
 
-	_add_bool_opt(None, 'v ', 'verify-md5', default=True,
-		help_base='MD5 verification of SE files', help_prefix_pair=('enable ', 'disable '))
 	_add_bool_opt(None, 'l ', 'loop', default=False,
 		help_base='loop over jobs until all files are successfully processed')
 	_add_bool_opt(None, 'L ', 'infinite', default=False,
 		help_base='process jobs in an infinite loop')
 	_add_bool_opt(None, None, 'shuffle', default=False,
-		help_base='shuffle download order')
-	_add_bool_opt(None, None, '', default=False,
-		option_prefix_pair=('skip-existing', 'overwrite'), dest='skip_existing',
-		help_base='files which are already on local disk', help_prefix_pair=('skip ', 'overwrite '))
+		help_base='shuffle job processing order')
+	parser.add_text(None, 'J', 'job-selector', default=None,
+		help='specify the job selector')
+	parser.add_text(None, 'T', 'token', default='VomsProxy',
+		help='specify the access token used to determine ability to download / delete' +
+			' - VomsProxy or TrivialAccessToken')
+	parser.add_list(None, 'S', 'select-se', default=None,
+		help='specify the SE paths to process')
+	parser.add_bool(None, 'd', 'delete', default=False,
+		help='perform file deletions')
+	parser.add_bool(None, 'R', 'hide-results', default=False,
+		help='specify if the transfer overview should be hidden')
+	parser.add_text(None, 't', 'threads', default=0,
+		help='how many jobs should be processed in parallel [Default: no multithreading]')
+	parser.add_text(None, None, 'slowdown', default=2,
+		help='specify delay between processing jobs [Default: 2 sec]')
 
 	parser.section('jobs', 'Job state / flag handling')
+	_add_bool_opt('jobs', None, 'job-success', default=True,
+		help_base='only select successful jobs')
+	_add_bool_opt('jobs', None, 'mark-rm', default=False,
+		option_prefix_pair=('ignore', 'use'), dest='mark_ignore_rm',
+		help_base='mark about sucessfully removed jobs', help_prefix_pair=('ignore ', 'use '))
 	_add_bool_opt('jobs', None, 'mark-dl', default=True,
 		help_base='mark sucessfully downloaded jobs as such')
 	_add_bool_opt('jobs', None, 'mark-dl', default=False,
@@ -529,7 +510,20 @@ def _parse_cmd_line():
 	_add_bool_opt('jobs', None, 'mark-empty-fail', default=False,
 		help_base='mark jobs without any files as failed')
 
-	parser.section('file', 'Local / SE file handling')
+	parser.section('down', 'Download options')
+	_add_bool_opt('down', 'v ', 'verify-md5', default=True,
+		help_base='MD5 verification of SE files', help_prefix_pair=('enable ', 'disable '))
+	_add_bool_opt('down', None, '', default=False,
+		option_prefix_pair=('skip-existing', 'overwrite'), dest='skip_existing',
+		help_base='files which are already on local disk', help_prefix_pair=('skip ', 'overwrite '))
+	parser.add_text('down', 'o', 'output', default=None,
+		help='specify the local output directory')
+	parser.add_text('down', 'O', 'tmp-dir', default='/tmp',
+		help='specify the local tmp directory')
+	parser.add_text('down', 'r', 'retry',
+		help='how often should a transfer be attempted [Default: 0]')
+
+	parser.section('file', 'Local / SE file handling during download')
 	option_help_base_list = [
 		('local-ok', 'files of successful jobs in local directory'),
 		('local-fail', 'files of failed jobs in local directory'),
@@ -540,58 +534,37 @@ def _parse_cmd_line():
 		_add_bool_opt('file', None, option, default=False, option_prefix_pair=('rm', 'keep'),
 			help_base=help_base, help_prefix_pair=('remove ', 'keep '))
 
-	parser.add_text(None, 'o', 'output', default=None,
-		help='specify the local output directory')
-	parser.add_text(None, 'O', 'tmp-dir', default='/tmp',
-		help='specify the local tmp directory')
-	parser.add_text(None, 'T', 'token', default='VomsProxy',
-		help='specify the access token used to determine ability to download ' +
-			'- VomsProxy or TrivialAccessToken')
-	parser.add_list(None, 'S', 'select-se', default=None,
-		help='specify the SE paths to process')
-	parser.add_text(None, 'r', 'retry',
-		help='how often should a transfer be attempted [Default: 0]')
-	if ANSI is not None:
-		parser.add_text(None, 't', 'threads', default=0,
-			help='how many parallel download threads should be used to download files ' +
-				'[Default: no multithreading]')
-	parser.add_text(None, None, 'slowdown', default=2,
-		help='specify time between downloads [Default: 2 sec]')
-	parser.add_bool(None, None, 'show-host', default=False,
-		help='show SE hostname during download')
-	if BasicProgressBar is not None:
-		parser.add_bool(None, None, 'show-bar', default=False,
-			help='show progress bar during download')
+	parser.section('short_delete', 'Shortcuts for delete options')
+	parser.add_fset('short_delete', 'D', 'just-delete',
+		help='Delete files from SE and local area - shorthand for:'.ljust(100) + '%s',
+		flag_set='--delete --use-mark-rm --ignore-mark-dl ' +
+			'--rm-se-fail --rm-local-fail --rm-se-ok --rm-local-ok')
 
-	parser.section('short', 'Shortcuts')
-	parser.add_fset('short', 'm', 'move',
+	parser.section('short_down', 'Shortcuts for download options')
+	parser.add_fset('short_down', 'm', 'move',
 		help='Move files from SE - shorthand for:'.ljust(100) + '%s',
 		flag_set='--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail ' +
 			'--rm-se-fail --rm-local-fail --rm-se-ok --keep-local-ok')
-	parser.add_fset('short', 'c', 'copy',
+	parser.add_fset('short_down', 'c', 'copy',
 		help='Copy files from SE - shorthand for:'.ljust(100) + '%s',
 		flag_set='--verify-md5 --overwrite --mark-dl --use-mark-dl --mark-fail ' +
 			'--rm-se-fail --rm-local-fail --keep-se-ok --keep-local-ok')
-	parser.add_fset('short', 'j', 'just-copy',
+	parser.add_fset('short_down', 'j', 'just-copy',
 		help='Just copy files from SE - shorthand for:'.ljust(100) + '%s',
 		flag_set='--verify-md5 --skip-existing --no-mark-dl --ignore-mark-dl --no-mark-fail ' +
 			'--keep-se-fail --keep-local-fail --keep-se-ok --keep-local-ok')
-	parser.add_fset('short', 's', 'smart-copy',
+	parser.add_fset('short_down', 's', 'smart-copy',
 		help='Copy correct files from SE, but remember already downloaded ' +
 			'files and delete corrupt files - shorthand for: '.ljust(100) + '%s',
 		flag_set='--verify-md5 --mark-dl --mark-fail --rm-se-fail ' +
 			'--rm-local-fail --keep-se-ok --keep-local-ok')
-	parser.add_fset('short', 'V', 'just-verify',
+	parser.add_fset('short_down', 'V', 'just-verify',
 		help='Just verify files on SE - shorthand for:'.ljust(100) + '%s',
 		flag_set='--verify-md5 --no-mark-dl --keep-se-fail ' +
 			'--rm-local-fail --keep-se-ok --rm-local-ok --ignore-mark-dl')
-	parser.add_fset('short', 'D', 'just-delete',
-		help='Just delete all finished files on SE - shorthand for:'.ljust(100) + '%s',
-		flag_set='--skip-existing --rm-se-fail --rm-se-ok --rm-local-fail ' +
-			'--keep-local-ok --no-mark-dl --ignore-mark-dl')
 
 	options = parser.script_parse(verbose_short=None)
-	if len(options.args) < 1:  # we need exactly one positional argument (config file)
+	if len(options.args) != 1:  # we need exactly one positional argument (config file)
 		parser.exit_with_usage(msg='Config file not specified!')
 	options.opts.threads = int(options.opts.threads)
 	return options

@@ -12,53 +12,67 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys, time
+import time, logging
 from grid_control.logging_setup import GCStreamHandler
 from grid_control.report import Report
-from grid_control.stream_base import ActivityStream
+from grid_control.stream_base import ActivityMonitor
 from grid_control.utils.activity import Activity
-from grid_control.utils.file_objects import erase_content
+from grid_control.utils.file_tools import erase_content
 from grid_control_gui.ansi import ANSI
-from grid_control_gui.ge_base import BasicGUIElement, BufferGUIElement
-from grid_control_gui.stream_gui import GUIStream
-from python_compat import lmap, sorted
+from grid_control_gui.ge_base import GUIElement
+from python_compat import StringBuffer, irange, lmap, sorted
 
 
-class ReportGUIElement(BasicGUIElement):
-	alias_list = ['report']
+class BufferGUIElement(GUIElement):
+	def __init__(self, config, name, workflow, redraw_event, stream, truncate_back=True):
+		GUIElement.__init__(self, config, name, workflow, redraw_event, stream)
+		(self._buffer, self._truncate_back) = (StringBuffer(), truncate_back)
 
-	def __init__(self, config, name, workflow, redraw_event):
-		BasicGUIElement.__init__(self, config, name, workflow, redraw_event, 'console.report')
-		(self._job_manager, self._report_last) = (workflow.job_manager, 0)
-		report_config_str = config.get('report options', '', on_change=None)
-		self._report_interval = config.get_float('report interval', 1., on_change=None)
-		self._report = config.get_composited_plugin('report', 'HeaderReport BasicReport ColorBarReport',
-			'MultiReport', cls=Report, on_change=None, pargs=(self._job_manager.job_db, workflow.task),
-			pkwargs={'config_str': report_config_str})
+	def flush(self):  # implementing buffer interface
+		self._buffer.flush()
 
-	def draw_finish(self):
-		BasicGUIElement.draw_finish(self)
-		self._job_manager.remove_event_handler(self.make_dirty)
+	def write(self, value):  # implementing buffer interface
+		self._buffer.write(value)
+		self.make_dirty()
 
-	def draw_init(self):
-		self._job_manager.add_event_handler(self.make_dirty)
-		BasicGUIElement.draw_init(self)
+	def _draw(self):
+		self._update_buffer()
+		self._buffer.flush()
+		self._draw_buffer(self._buffer.getvalue())
+		self._dirty = False
 
-	def get_height(self):
-		return self._report.get_height()
+	def _draw_buffer(self, msg, prefix='', postfix='\r'):  # draw message while staying in layout area
+		if self._layout_height > 0:
+			output_iter = self._trim_height(self._trim_width(self._pre_processing(msg.splitlines())))
+			self._stream.write(self._post_processing(prefix + str.join('\n', output_iter) + postfix))
 
-	def _is_dirty(self):
-		return self._dirty or (time.time() - self._report_last > self._report_interval)
+	def _post_processing(self, output_iter):
+		return output_iter
+
+	def _pre_processing(self, output_iter):
+		return output_iter
+
+	def _trim_height(self, output_iter):
+		output_list = list(output_iter)
+		if self._truncate_back:
+			output_list = output_list[:self._layout_height]
+		else:
+			output_list = output_list[-self._layout_height:]
+		output_list.extend([ANSI.erase_line] * (self._layout_height - len(output_list)))
+		return output_list
+
+	def _trim_width(self, output_iter):
+		for line in output_iter:
+			line = line.rstrip()[:self._layout_width + len(line) - len(ANSI.strip_fmt(line))]
+			yield line.rstrip(ANSI.esc) + ANSI.reset + ANSI.erase_line
 
 	def _update_buffer(self):
-		erase_content(self._buffer)
-		self._report.show_report(self._job_manager.job_db)
-		self._report_last = time.time()
+		pass
 
 
 class AfterImageGUIElement(BufferGUIElement):
-	def __init__(self, config, name, workflow, redraw_event, truncate_back=True):
-		BufferGUIElement.__init__(self, config, name, workflow, redraw_event, truncate_back)
+	def __init__(self, config, name, workflow, redraw_event, stream, truncate_back=True):
+		BufferGUIElement.__init__(self, config, name, workflow, redraw_event, stream, truncate_back)
 		self._old_lines = {}
 
 	def _format_old_line(self, cur_time, line_idx, old_line_raw, old_line_age):
@@ -67,10 +81,10 @@ class AfterImageGUIElement(BufferGUIElement):
 			self._old_lines.pop(line_idx)
 		return ANSI.color_grayscale(line_brightness) + old_line_raw + ANSI.reset + ANSI.erase_line
 
-	def _process_lines(self, output_list):
+	def _pre_processing(self, output_iter):
 		cur_time = time.time()
 		old_lines = dict(self._old_lines)
-		for line_idx, cur_line in enumerate(BufferGUIElement._process_lines(self, output_list)):
+		for line_idx, cur_line in enumerate(output_iter):
 			(old_line_raw, old_line_age) = old_lines.pop(line_idx, (None, None))
 			cur_line_raw = ANSI.strip_fmt(cur_line)
 			if old_line_raw and not cur_line_raw:
@@ -82,93 +96,142 @@ class AfterImageGUIElement(BufferGUIElement):
 			yield self._format_old_line(cur_time, old_line_idx, *old_lines.pop(old_line_idx))
 
 
+class BasicGUIElement(BufferGUIElement):
+	def __init__(self, config, name, workflow, redraw_event, stream, log_name):
+		BufferGUIElement.__init__(self, config, name, workflow, redraw_event, stream)
+		(self._log, self._old_log_state) = (logging.getLogger(log_name), None)
+
+	def draw_finish(self):
+		BufferGUIElement.draw_finish(self)
+		(self._log.handlers, self._log.propagate) = self._old_log_state
+
+	def draw_startup(self):
+		self._old_log_state = (self._log.handlers, self._log.propagate)
+		self._log.handlers = [logging.StreamHandler(self)]
+		self._log.propagate = False
+		BufferGUIElement.draw_startup(self)
+
+
 class SpanGUIElement(BufferGUIElement):
 	alias_list = ['span']
 
-	def get_height(self):
+	def _get_height(self):
 		return None
 
 
 class UserLogGUIElement(BufferGUIElement):
 	alias_list = ['log']
 
-	def __init__(self, config, name, workflow, redraw_event):
-		BufferGUIElement.__init__(self, config, name, workflow, redraw_event, truncate_back=False)
+	def __init__(self, config, name, workflow, redraw_event, stream):
+		BufferGUIElement.__init__(self, config, name, workflow, redraw_event, stream, truncate_back=False)
 		self._log_max = config.get_int('log length', 200, on_change=None)
 		self._log_dump = config.get_bool('log dump', True, on_change=None)
 		self._log_wrap = config.get_bool('log wrap', True, on_change=None)
+		self._text_attr = {}
+		self._add_keyword(ANSI.bold + ANSI.color_cyan, 'DONE', ANSI.reset)
+		self._add_keyword(ANSI.bold + ANSI.color_red, 'FAILED', ANSI.reset)
+		self._add_keyword(ANSI.bold + ANSI.color_blue, 'RUNNING', ANSI.reset)
+		self._add_keyword(ANSI.bold + ANSI.color_green, 'SUCCESS', ANSI.reset)
 
 	def draw_finish(self):
 		BufferGUIElement.draw_finish(self)
 		GCStreamHandler.pop_std_stream()
 		if self._log_dump:
-			sys.stdout.write('\n' + ANSI.erase_down + '-' * 20 + ' LOG HISTORY ' + '-' * 20 + '-\n')
-			sys.stdout.write(self._buffer.getvalue())
+			self._stream.write('\n' + ANSI.erase_down + '-' * 20 + ' LOG HISTORY ' + '-' * 20 + '-\n')
+			self._stream.write(self._buffer.getvalue())
 
-	def draw_init(self):
-		gui_stream = GUIStream(self._buffer, self.make_dirty)
-		GCStreamHandler.push_std_stream(gui_stream, gui_stream)
-		BufferGUIElement.draw_init(self)
+	def draw_startup(self):
+		GCStreamHandler.push_std_stream(self, self)
+		BufferGUIElement.draw_startup(self)
 
-	def get_height(self):
+	def _add_keyword(self, prefix, keyword, suffix):
+		self._text_attr[keyword] = prefix + keyword + suffix
+		for kw_idx in irange(1, len(keyword)):
+			keyword_broken = keyword[:kw_idx] + ANSI.reset + ANSI.erase_line + '\n' + keyword[kw_idx:]
+			self._text_attr[keyword_broken] = prefix + keyword_broken.replace('\n', '\n' + prefix) + suffix
+
+	def _get_height(self):
 		return None
 
-	def _process_lines(self, output_list):
-		if self._log_wrap:
-			output_list = self._wrap_lines(output_list)
-		return BufferGUIElement._process_lines(self, output_list)
+	def _post_processing(self, value):
+		for keyword in self._text_attr:
+			value = value.replace(keyword, self._text_attr[keyword])
+		return BufferGUIElement._post_processing(self, value)
 
-	def _update_buffer(self):
+	def _pre_processing(self, output_iter):
+		if self._log_wrap:
+			return self._wrap_lines(output_iter)
+		return output_iter
+
+	def _update_buffer(self):  # truncate message log
 		msg_line_list = lmap(lambda line: line + '\n', self._buffer.getvalue().splitlines())
 		erase_content(self._buffer)
 		self._buffer.write(str.join('', msg_line_list[-self._log_max:]))
 
-	def _wrap_lines(self, output_list):
-		for line in output_list:
-			(tmp, tmp_len) = ('', 0)
-			for token in line.split(' '):
-				token_len = len(ANSI.strip_fmt(token))
-				if tmp_len + token_len + 1 > self._layout_width:
-					yield tmp
-					(tmp, tmp_len) = ('', 0)
-				if tmp:
-					tmp += ' '
-					tmp_len += 1
-				tmp += token
-				tmp_len += token_len
-			if tmp:
-				yield tmp
+	def _wrap_lines(self, output_iter):
+		for line in output_iter:
+			while True:
+				truncated_line = line[:self._layout_width].rstrip()
+				if not truncated_line:
+					break
+				yield truncated_line
+				line = line[self._layout_width:]
 
 
 class ActivityGUIElement(AfterImageGUIElement):
 	alias_list = ['activity']
 
-	def __init__(self, config, name, workflow, redraw_event):
-		AfterImageGUIElement.__init__(self, config, name, workflow, redraw_event)
-		self._stream = ActivityStream.create_instance('simple', self._buffer)
+	def __init__(self, config, name, workflow, redraw_event, stream):
+		AfterImageGUIElement.__init__(self, config, name, workflow, redraw_event, stream)
+		self._activity_monitor = config.get_plugin('activity stream', 'MultiActivityMonitor',
+			cls=ActivityMonitor, pargs=(self._buffer,), on_change=None)
 		self._height_max = config.get_int('activity height max', 5, on_change=None)
 		self._height_min = config.get_int('activity height min', 1, on_change=None)
-		self._height_interval = config.get_int('activity height interval', 5, on_change=None)
-		(self._height_last, self._height_next_time) = (0, 0)
+		self._height_last = 0
 
 	def draw_finish(self):
 		AfterImageGUIElement.draw_finish(self)
 		Activity.callbacks.remove(self.make_dirty)
 
-	def draw_init(self):
+	def draw_startup(self):
 		Activity.callbacks.append(self.make_dirty)
-		AfterImageGUIElement.draw_init(self)
+		AfterImageGUIElement.draw_startup(self)
 
-	def get_height(self):
-		if (self._height_last > self._layout_height) or (time.time() > self._height_next_time):
-			self._height_next_time = time.time() + self._height_interval
-			return self._height_last
-		return self._layout_height
+	def _get_height(self):
+		return min(self._height_min, max(self._height_min, self._height_last))
 
 	def _update_buffer(self):
 		erase_content(self._buffer)
-		self._stream.write()
-		message = ANSI.strip_cmd(self._buffer.getvalue()).strip()
-		self._buffer.truncate(0)
-		self._height_last = max(self._layout_height, 1 + message.count('\n'))
-		self._buffer.write(message)
+		self._activity_monitor.write()
+		self._buffer.flush()
+		msg = ANSI.strip_cmd(self._buffer.getvalue()).strip()
+		erase_content(self._buffer)
+		self._height_last = 1 + msg.count('\n')
+		self._buffer.write(msg)
+
+
+class ReportGUIElement(BasicGUIElement):
+	alias_list = ['report']
+
+	def __init__(self, config, name, workflow, redraw_event, stream):
+		BasicGUIElement.__init__(self, config, name, workflow, redraw_event, stream, 'console.report')
+		self._job_manager = workflow.job_manager
+		self._report = config.get_composited_plugin('report', 'ANSITheme', 'MultiReport',
+			cls=Report, on_change=None, pargs=(self._job_manager.job_db, workflow.task))
+		self._last_report_height = 0
+
+	def draw_finish(self):
+		BasicGUIElement.draw_finish(self)
+		self._job_manager.remove_event_handler(self.make_dirty)
+
+	def draw_startup(self):
+		self._job_manager.add_event_handler(self.make_dirty)
+		BasicGUIElement.draw_startup(self)
+
+	def _get_height(self):
+		return self._last_report_height
+
+	def _update_buffer(self):
+		erase_content(self._buffer)
+		self._report.show_report(self._job_manager.job_db, self._job_manager.job_db.get_job_list())
+		self._last_report_height = self._buffer.getvalue().count('\n')

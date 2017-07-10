@@ -13,48 +13,50 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, time, fcntl, logging
+# pylint:disable=wrong-import-position
+import os, sys, logging
 
 
 # add python subdirectory from where exec was started to search path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'packages')))
 
-from grid_control import utils
 from grid_control.job_db import Job, JobClass
 from grid_control.job_selector import ClassSelector, JobSelector, TaskNeededException
 from grid_control.logging_setup import GCStreamHandler, LogLevelEnum, parse_logging_args
 from grid_control.output_processor import FileInfo, FileInfoProcessor
-from grid_control.stream_base import ActivityStream
-from grid_control.utils import Result, exit_with_usage
+from grid_control.stream_base import ActivityMonitor
+from grid_control.utils import Result
 from grid_control.utils.activity import Activity, ProgressActivity
 from grid_control.utils.cmd_options import Options
 from grid_control.utils.table import ConsoleTable
 from grid_control_api import gc_create_config, gc_create_workflow
-from grid_control_gui.ansi import install_console_reset
-from hpfwk import Plugin, clear_current_exception
-from python_compat import ifilter, imap, lmap, sorted, tarfile
+from hpfwk import Plugin, clear_current_exception, except_nested, get_current_exception
+from python_compat import ifilter, imap, lfilter, lmap, sorted, tarfile
 
 
-Activity.root = Activity('Running %s' % os.path.basename(sys.argv[0]).split('.')[0], name='root')
-GCStreamHandler.push_std_stream(ActivityStream.create_instance('default', sys.stdout, True),
-	ActivityStream.create_instance('default', sys.stderr))
-install_console_reset()
+try:
+	from grid_control_gui.ansi import install_console_reset
+	install_console_reset()
+except Exception:
+	clear_current_exception()
 
 
-def display_plugin_list(cls_list, sort_key='Name', title=None):
+def display_plugin_list(cls_list, show_all=False, sort_key='Name', title=None):
 	header = [('Name', 'Name')]
-	fmt_string = 'll'
+	align_str = 'll'
 	for entry in cls_list:
 		if entry['Alias']:
 			header.append(('Alias', 'Alternate names'))
 			break
 	if sort_key:
-		cls_list = sorted(cls_list, key=lambda x: str(x[sort_key]).lower())
-	ConsoleTable.create(header, cls_list, fmt_string=fmt_string, title=title)
+		cls_list = sorted(cls_list, key=lambda entry: str(entry[sort_key]).lower())
+	if not show_all:
+		cls_list = lfilter(lambda entry: entry['Alias'], cls_list)
+	ConsoleTable.create(header, cls_list, align_str=align_str, title=title)
 
 
-def display_plugin_list_for(cls_name, title=None):
-	display_plugin_list(get_plugin_list(cls_name), title=title)
+def display_plugin_list_for(cls_name, **kwargs):
+	display_plugin_list(get_plugin_list(cls_name), **kwargs)
 
 
 def get_cmssw_info(tar_fn):
@@ -64,11 +66,7 @@ def get_cmssw_info(tar_fn):
 	fwk_report_list = ifilter(lambda x: os.path.basename(x.name) == 'report.xml',
 		cmssw_tar.getmembers())
 	for fwk_report_fn in imap(cmssw_tar.extractfile, fwk_report_list):
-		try:
-			yield xml.dom.minidom.parse(fwk_report_fn)
-		except Exception:
-			logging.exception('Error while parsing %s', tar_fn)
-			raise
+		yield xml.dom.minidom.parse(fwk_report_fn)
 
 
 def get_plugin_list(pname, inherit_prefix=False):
@@ -101,8 +99,7 @@ def get_plugin_list(pname, inherit_prefix=False):
 			new_name = ' | ' * (inherit_map[name].count('-') - 1) + new_name
 		entry = {'Name': new_name, 'Alias': str.join(', ', alias_list),
 			'Depth': '%02d' % depth, 'Inherit': inherit_map.get(name, '')}
-		if ('Multi' not in name) and ('Base' not in name):
-			table_list.append(entry)
+		table_list.append(entry)
 	return table_list
 
 
@@ -110,11 +107,8 @@ def get_script_object(config_file, job_selector_str, only_success=False, require
 	config = gc_create_config(config_file=config_file, load_only_old_config=True)
 	(task, job_selector) = _get_job_selector_and_task(config, job_selector_str, require_task)
 	if only_success:
-		success_selector = ClassSelector(JobClass.SUCCESS)
-		if job_selector:
-			job_selector = JobSelector.create_instance('AndJobSelector', success_selector, job_selector)
-		else:
-			job_selector = success_selector
+		job_selector = JobSelector.create_instance('AndJobSelector',
+			ClassSelector(JobClass.SUCCESS), job_selector)
 	new_config = gc_create_config(config_file=config_file)
 	jobs_config = new_config.change_view(set_sections=['jobs'])
 	job_db = jobs_config.get_plugin('job database', 'TextFileJobDB', cls='JobDB',
@@ -132,7 +126,19 @@ def get_script_object_cmdline(args, only_success=False, require_task=False):
 	user_selector_str = None
 	if len(args) > 1:
 		user_selector_str = args[1]
-	return get_script_object(args[0], user_selector_str)
+	return get_script_object(args[0], user_selector_str, only_success)
+
+
+def handle_abort_interrupt(signum, frame, stream=sys.stdout):
+	logging.getLogger().critical('\n\nInterrupted by user!\n')
+	sys.exit(os.EX_TEMPFAIL)
+
+
+def install_activity_monitor():
+	config = gc_create_config(config_dict={'global': {'activity max length': 1000}})
+	GCStreamHandler.push_std_stream(
+		ActivityMonitor.create_instance('DefaultActivityMonitor', config, sys.stdout, True),
+		ActivityMonitor.create_instance('DefaultActivityMonitor', config, sys.stderr))
 
 
 def iter_jobnum_output_dn(output_dn, jobnum_list):
@@ -152,45 +158,15 @@ def iter_output_files(output_dn):
 
 
 def str_file_size(size):
-	suffixes = [('B', 2**10), ('K', 2**20), ('M', 2**30), ('G', 2**40), ('T', 2**50)]
+	suffixes = [('B', 2 ** 10), ('K', 2 ** 20), ('M', 2 ** 30), ('G', 2 ** 40), ('T', 2 ** 50)]
 	for suf, lim in suffixes:
 		if size > lim:
 			continue
 		else:
-			return str(round(size / float(lim / 2**10), 2)) + suf
-
-
-class FileMutex(object):
-	def __init__(self, lockfile):
-		first = time.time()
-		self._lockfile = lockfile
-		while os.path.exists(self._lockfile):
-			if first and (time.time() - first > 10):
-				logging.info('Trying to aquire lock file %s ...', lockfile)
-				first = False
-			time.sleep(0.2)
-		self._fd = open(self._lockfile, 'w')
-		fcntl.flock(self._fd, fcntl.LOCK_EX)
-
-	def __del__(self):
-		self.release()
-
-	def release(self):
-		if self._fd:
-			fcntl.flock(self._fd, fcntl.LOCK_UN)
-			self._fd.close()
-			self._fd = None
-		try:
-			if os.path.exists(self._lockfile):
-				os.unlink(self._lockfile)
-		except Exception:
-			clear_current_exception()
+			return str(round(size / float(lim / 2 ** 10), 2)) + suf
 
 
 class ScriptOptions(Options):
-	def exit_with_usage(self, usage=None, msg=None):
-		exit_with_usage(usage or self.usage(), msg)
-
 	def script_parse(self, arg_keys=None, verbose_short='v'):
 		self.add_bool(None, None, 'parseable', default=False,
 			help='Output tabular data in parseable format')
@@ -206,6 +182,7 @@ class ScriptOptions(Options):
 			logging.getLogger(logger_name).setLevel(LogLevelEnum.str2enum(logger_level))
 		if opts.parseable:
 			ConsoleTable.table_mode = 'ParseableTable'
+			GCStreamHandler.pop_std_stream()
 		elif opts.pivot:
 			ConsoleTable.table_mode = 'Pivot'
 		ConsoleTable.wraplen = int(opts.textwidth)
@@ -216,14 +193,18 @@ def _get_job_selector_and_task(config, job_selector_str, require_task):
 	if not require_task:
 		try:  # try to build job selector without task
 			return (None, JobSelector.create(job_selector_str))
-		except TaskNeededException:
+		except Exception:
+			if not except_nested(TaskNeededException, get_current_exception()):
+				raise
 			clear_current_exception()
-	task = gc_create_workflow(config, abort_on='task').task
+	task = gc_create_workflow(config).task
 	return (task, JobSelector.create(job_selector_str, task=task))
 
 
+install_activity_monitor()
+
+
 __all__ = ['Activity', 'ClassSelector', 'ConsoleTable', 'display_plugin_list',
-	'display_plugin_list_for', 'FileInfo', 'FileInfoProcessor', 'FileMutex', 'gc_create_config',
-	'get_cmssw_info', 'get_plugin_list', 'get_script_object', 'get_script_object_cmdline',
-	'iter_jobnum_output_dn', 'iter_output_files', 'Job', 'JobClass', 'JobSelector', 'Plugin',
-	'ScriptOptions', 'utils']
+	'display_plugin_list_for', 'FileInfo', 'FileInfoProcessor', 'gc_create_config', 'get_cmssw_info',
+	'get_plugin_list', 'get_script_object', 'get_script_object_cmdline', 'iter_jobnum_output_dn',
+	'iter_output_files', 'Job', 'JobClass', 'JobSelector', 'Plugin', 'ScriptOptions']

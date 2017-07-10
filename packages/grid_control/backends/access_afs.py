@@ -21,7 +21,7 @@ from python_compat import imap, lmap, rsplit
 
 
 class AFSAccessToken(RefreshableAccessToken):
-	alias_list = ['afs', 'AFSProxy']
+	alias_list = ['afs', 'AFSProxy', 'KerberosAccessToken']
 	env_lock = GCLock()
 
 	def __init__(self, config, name):

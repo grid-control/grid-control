@@ -16,7 +16,7 @@ import os, logging
 from grid_control.config.config_entry import ConfigEntry, ConfigError
 from grid_control.utils import exec_wrapper, get_file_name, get_path_pkg, resolve_path
 from grid_control.utils.data_structures import UniqueList
-from grid_control.utils.file_objects import SafeFile
+from grid_control.utils.file_tools import SafeFile
 from grid_control.utils.parsing import parse_list
 from grid_control.utils.persistency import load_dict
 from grid_control.utils.thread_tools import TimeoutException, hang_protection
@@ -47,7 +47,7 @@ class CompatConfigFiller(ConfigFiller):
 	def __init__(self, persistency_file):
 		self._persistency_dict = {}
 		if os.path.exists(persistency_file):
-			self._persistency_dict = load_dict(persistency_file, ' = ')
+			self._persistency_dict = load_dict(persistency_file, ' = ', fmt_key=str.lower)
 
 	def fill(self, container):
 		def _set_persistent_setting(section, key):
@@ -96,7 +96,7 @@ class FileConfigFiller(ConfigFiller):
 		log = logging.getLogger(('config.%s' % get_file_name(config_fn)).rstrip('.').lower())
 		log.log(logging.INFO1, 'Reading config file %s', config_fn)
 		config_fn = resolve_path(config_fn, search_path_list, exception_type=ConfigError)
-		config_str_list = SafeFile(config_fn).readlines()
+		config_str_list = list(SafeFile(config_fn).iter_close())
 
 		# Single pass, non-recursive list retrieval
 		tmp_content_configfile = {}
@@ -236,11 +236,7 @@ class PythonConfigFiller(DictConfigFiller):
 	def __init__(self, config_fn_list):
 		from grid_control_settings import Settings
 		for config_fn in config_fn_list:
-			fp = SafeFile(config_fn)
-			try:
-				exec_wrapper(fp.read(), {'Settings': Settings})
-			finally:
-				fp.close()
+			exec_wrapper(SafeFile(resolve_path(config_fn, ['.'])).read_close(), {'Settings': Settings})
 		DictConfigFiller.__init__(self, Settings.get_config_dict())
 
 
@@ -260,7 +256,7 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 			hostname = None
 			logging.getLogger('console').warning('System call to resolve hostname is hanging!')
 
-		def get_default_config_fn_iter():  # return possible default config files
+		def _get_default_config_fn_iter():  # return possible default config files
 			if hostname:  # host / domain specific
 				for part_idx in irange(hostname.count('.') + 1, -1, -1):
 					yield get_path_pkg('../config/%s.conf' % hostname.split('.', part_idx)[-1])
@@ -270,7 +266,7 @@ class DefaultFilesConfigFiller(FileConfigFiller):
 			if os.environ.get('GC_CONFIG'):
 				yield '$GC_CONFIG'  # environment specific
 
-		config_fn_list = list(get_default_config_fn_iter())
+		config_fn_list = list(_get_default_config_fn_iter())
 		log = logging.getLogger('config.sources.default')
 		log.log(logging.DEBUG1, 'Possible default config files: %s', str.join(', ', config_fn_list))
 		config_fn_iter = imap(lambda fn: resolve_path(fn, must_exist=False), config_fn_list)

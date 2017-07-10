@@ -29,8 +29,7 @@ def _get_version():
 	try:
 		for line in fp.readlines():
 			if line.startswith('__version__'):
-				version = eval(line.split('=')[1])  # pylint:disable=eval-used
-				return str.join('.', [str(int(version[:-3])), str(int(version[-3])), str(int(version[-2:]))])
+				return line.split('=')[1].strip().strip('\'').split(' ')[0]
 	finally:
 		fp.close()
 	raise Exception('Unable to find version information!')
@@ -66,6 +65,8 @@ setup(
 		'Programming Language :: Python :: 3.3',
 		'Programming Language :: Python :: 3.4',
 		'Programming Language :: Python :: 3.5',
+		'Programming Language :: Python :: 3.6',
+		'Programming Language :: Python :: 3.7',
 	],
 	keywords='grid cloud batch jobs processing analysis HEP CMS',
 	zip_safe=False,

@@ -12,16 +12,16 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import math, time, bisect, random, logging
+import time, bisect, random, logging
 from grid_control.config import ConfigError
+from grid_control.event_base import LocalEventHandler
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.job_db import Job, JobClass, JobDB, JobError
 from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
 from grid_control.output_processor import TaskOutputProcessor
 from grid_control.report import Report
 from grid_control.utils import abort, wait
-from grid_control.utils.file_objects import SafeFile
-from grid_control.utils.parsing import str_time_long
+from grid_control.utils.file_tools import SafeFile, with_file
 from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import clear_current_exception
 from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
@@ -30,12 +30,16 @@ from python_compat import ifilter, imap, izip, lfilter, lmap, set, sorted
 class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 	config_section_list = NamedPlugin.config_section_list + ['jobs']
 	config_tag_name = 'jobmgr'
+	alias_list = ['NullJobManager']
 
-	def __init__(self, config, name, task, eventhandler):
+	def __init__(self, config, name, task):
 		NamedPlugin.__init__(self, config, name)
-		self._eventhandler = eventhandler
+		self._local_event_handler = config.get_composited_plugin(
+			['local monitor', 'local event handler'], 'logmonitor', 'MultiLocalEventHandler',
+			cls=LocalEventHandler, bind_kwargs={'tags': [self, task]}, pargs=(task,),
+			require_plugin=False, on_change=None)
+		self._local_event_handler = self._local_event_handler or LocalEventHandler(None, '', None)
 		self._log = logging.getLogger('jobs.manager')
-		self._map_error_code2message = dict(task.map_error_code2message)
 
 		self._njobs_limit = config.get_int('jobs', -1, on_change=None)
 		self._njobs_inflight = config.get_int('in flight', -1, on_change=None)
@@ -61,27 +65,27 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		self._interactive_delete = config.is_interactive('delete jobs', True)
 		self._interactive_reset = config.is_interactive('reset jobs', True)
 		self._do_shuffle = config.get_bool('shuffle', False, on_change=None)
-		self._report_cls = Report.get_class(config.get('abort report', 'LocationReport', on_change=None))
+		self._abort_report = config.get_plugin('abort report', 'LocationReport',
+			cls=Report, pargs=(self.job_db, task), on_change=None)
 		self._show_blocker = True
 		self._callback_list = []
 
 	def add_event_handler(self, callback):
 		self._callback_list.append(callback)
 
-	def cancel(self, task, wms, jobnum_list, interactive, show_jobs):
+	def cancel(self, wms, jobnum_list, interactive, show_jobs):
 		if len(jobnum_list) == 0:
 			return
 		if show_jobs:
-			self._report_cls(self.job_db, task, jobnum_list).show_report(self.job_db)
+			self._abort_report.show_report(self.job_db, jobnum_list)
 		if interactive and not self._uii.prompt_bool('Do you really want to cancel these jobs?', True):
 			return
 
 		def _mark_cancelled(jobnum):
 			job_obj = self.job_db.get_job(jobnum)
-			if job_obj is None:
-				return
-			self._update(job_obj, jobnum, Job.CANCELLED)
-			self._eventhandler.on_job_update(wms, job_obj, jobnum, {'reason': 'cancelled'})
+			if job_obj is not None:
+				self._update(job_obj, jobnum, Job.CANCELLED)
+				self._local_event_handler.on_job_update(wms, job_obj, jobnum, {'reason': 'cancelled'})
 
 		jobnum_list.reverse()
 		map_gc_id2jobnum = self._get_map_gc_id_jobnum(jobnum_list)
@@ -93,18 +97,15 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		if map_gc_id2jobnum:
 			jobnum_list = list(map_gc_id2jobnum.values())
 			self._log.warning('There was a problem with cancelling the following jobs:')
-			self._report_cls(self.job_db, task, jobnum_list).show_report(self.job_db)
+			self._abort_report.show_report(self.job_db, jobnum_list)
 			if (not interactive) or self._uii.prompt_bool('Do you want to mark them as cancelled?', True):
 				lmap(_mark_cancelled, jobnum_list)
 		if interactive:
 			wait(2)
 
 	def check(self, task, wms):
-		check_chunk_size = -1
-		if self._chunks_enabled:
-			check_chunk_size = self._chunks_check
 		jobnum_list = self._sample(self.job_db.get_job_list(ClassSelector(JobClass.PROCESSING)),
-			check_chunk_size)
+			self._get_chunk_size(self._chunks_check))
 
 		# Check jobs in the jobnum_list and return changes, timeouts and successfully reported jobs
 		(change, jobnum_list_timeout, reported) = self._check_get_jobnum_list(wms, jobnum_list)
@@ -118,7 +119,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		if len(jobnum_list_timeout):
 			change = True
 			self._log.warning('Timeout for the following jobs:')
-			self.cancel(task, wms, jobnum_list_timeout, interactive=False, show_jobs=True)
+			self.cancel(wms, jobnum_list_timeout, interactive=False, show_jobs=True)
 
 		# Process task interventions
 		self._process_intervention(task, wms)
@@ -126,9 +127,8 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		# Quit when all jobs are finished
 		if self.job_db.get_job_len(ClassSelector(JobClass.ENDSTATE)) == len(self.job_db):
 			self._log_disabled_jobs()
-			self._eventhandler.on_task_finish(len(self.job_db))
 			if task.can_finish():
-				self._log.log_time(logging.INFO, 'Task successfully completed. Quitting grid-control!')
+				self._local_event_handler.on_task_finish(len(self.job_db))
 				abort(True)
 
 		return change
@@ -139,33 +139,30 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		jobs = self.job_db.get_job_list(selector)
 		if jobs:
 			self._log.warning('Cancelling the following jobs:')
-			self.cancel(task, wms, jobs, interactive=self._interactive_delete, show_jobs=True)
+			self.cancel(wms, jobs, interactive=self._interactive_delete, show_jobs=True)
 
 	def finish(self):
-		self._eventhandler.on_workflow_finish()
+		self._local_event_handler.on_workflow_finish()
 
 	def remove_event_handler(self, callback):
 		self._callback_list.remove(callback)
 
 	def reset(self, task, wms, select):
-		jobs = self.job_db.get_job_list(JobSelector.create(select, task=task))
-		if jobs:
+		jobnum_list = self.job_db.get_job_list(JobSelector.create(select, task=task))
+		if jobnum_list:
 			self._log.warning('Resetting the following jobs:')
-			self._report_cls(self.job_db, task, jobs).show_report(self.job_db)
+			self._abort_report.show_report(self.job_db, jobnum_list)
 			ask_user_msg = 'Are you sure you want to reset the state of these jobs?'
 			if self._interactive_reset or self._uii.prompt_bool(ask_user_msg, False):
-				self.cancel(task, wms, self.job_db.get_job_list(
-					ClassSelector(JobClass.PROCESSING), jobs), interactive=False, show_jobs=False)
-				for jobnum in jobs:
+				self.cancel(wms, self.job_db.get_job_list(
+					ClassSelector(JobClass.PROCESSING), jobnum_list), interactive=False, show_jobs=False)
+				for jobnum in jobnum_list:
 					self.job_db.commit(jobnum, Job())
 
 	def retrieve(self, task, wms):
 		change = False
-		retrieve_chunk_size = -1
-		if self._chunks_enabled:
-			retrieve_chunk_size = self._chunks_retrieve
 		jobnum_list = self._sample(self.job_db.get_job_list(ClassSelector(JobClass.DONE)),
-			retrieve_chunk_size)
+			self._get_chunk_size(self._chunks_retrieve))
 
 		job_output_iter = wms.retrieve_jobs(self._get_wms_args(jobnum_list))
 		for (jobnum, exit_code, data, outputdir) in job_output_iter:
@@ -190,7 +187,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 				job_obj.set('retcode', exit_code)
 				job_obj.set('runtime', data.get('TIME', -1))
 				self._update(job_obj, jobnum, state)
-				self._eventhandler.on_job_output(wms, job_obj, jobnum, exit_code)
+				self._local_event_handler.on_job_output(wms, job_obj, jobnum, exit_code)
 
 			if abort():
 				return False
@@ -206,6 +203,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		for (jobnum, gc_id, data) in wms.submit_jobs(jobnum_list, task):
 			submitted.append(jobnum)
 			job_obj = self.job_db.get_job_persistent(jobnum)
+			job_obj.clear_old_state()
 
 			if gc_id is None:
 				# Could not register at WMS
@@ -217,7 +215,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 				job_obj.set(key, value)
 
 			self._update(job_obj, jobnum, Job.SUBMITTED)
-			self._eventhandler.on_job_submit(wms, job_obj, jobnum)
+			self._local_event_handler.on_job_submit(wms, job_obj, jobnum)
 			if abort():
 				return False
 		return len(submitted) != 0
@@ -234,7 +232,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 				for (key, value) in info.items():
 					job_obj.set(key, value)
 				self._update(job_obj, jobnum, state)
-				self._eventhandler.on_job_update(wms, job_obj, jobnum, info)
+				self._local_event_handler.on_job_update(wms, job_obj, jobnum, info)
 			else:
 				# If a job stays too long in an inital state, cancel it
 				if job_obj.state in (Job.SUBMITTED, Job.WAITING, Job.READY, Job.QUEUED):
@@ -276,10 +274,10 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			if can_submit and can_retry:
 				jobnum_list_enabled.append(jobnum)
 			if can_submit and (job_obj.state == Job.DISABLED):  # recover jobs
-				self._update(job_obj, jobnum, Job.INIT, message='reenabled by task module')
+				self._update(job_obj, jobnum, Job.INIT, reason='reenabled by task module')
 			elif not can_submit and (job_obj.state != Job.DISABLED):  # disable invalid jobs
 				self._update(self.job_db.get_job_persistent(jobnum),
-					jobnum, Job.DISABLED, message='disabled by task module')
+					jobnum, Job.DISABLED, reason='disabled by task module')
 		return (n_mod_ok, n_retry_ok, jobnum_list_enabled)
 
 	def _get_map_gc_id_jobnum(self, jobnum_list):
@@ -308,9 +306,8 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 	def _log_disabled_jobs(self):
 		disabled = self.job_db.get_job_list(ClassSelector(JobClass.DISABLED))
 		try:
-			fp = SafeFile(self._disabled_jobs_logfile, 'w')
-			fp.write(str.join('\n', imap(str, disabled)))
-			fp.close()
+			with_file(SafeFile(self._disabled_jobs_logfile, 'w'),
+				lambda fp: fp.write(str.join('\n', imap(str, disabled))))
 		except Exception:
 			raise JobError('Could not write disabled jobs to file %s!' % self._disabled_jobs_logfile)
 		if disabled:
@@ -348,12 +345,12 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			self.job_db.set_job_limit(max_job_len_new)
 			applied_change = True
 		if redo:
-			self.cancel(task, wms, self.job_db.get_job_list(
+			self.cancel(wms, self.job_db.get_job_list(
 				ClassSelector(JobClass.PROCESSING), redo), interactive=False, show_jobs=True)
 			_reset_state(redo, Job.INIT)
 			applied_change = True
 		if disable:
-			self.cancel(task, wms, self.job_db.get_job_list(
+			self.cancel(wms, self.job_db.get_job_list(
 				ClassSelector(JobClass.PROCESSING), disable), interactive=False, show_jobs=True)
 			_reset_state(disable, Job.DISABLED)
 			applied_change = True
@@ -398,52 +395,22 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			return self._sample(jobnum_list, submit)
 		return sorted(jobnum_list)[:submit]
 
-	def _update(self, job_obj, jobnum, state, show_wms=False, message=None):
-		if job_obj.state == state:
-			return
-
-		state_old = job_obj.state
-		job_obj.update(state)
-		self.job_db.commit(jobnum, job_obj)
-
-		jobnum_len = int(math.log10(max(1, len(self.job_db))) + 1)
-		job_status_str_list = ['Job %s state changed from %s to %s ' % (
-			str(jobnum).ljust(jobnum_len), Job.enum2str(state_old), Job.enum2str(state))]
-
-		def _add_msg(msg_list, msg):
-			if msg:
-				msg_list.append(msg)
-
-		_add_msg(job_status_str_list, message)
-		if show_wms and job_obj.gc_id:
-			job_status_str_list.append('(WMS:%s)' % job_obj.gc_id.split('.')[1])
-		if (state == Job.SUBMITTED) and (job_obj.attempt > 1):
-			job_status_str_list.append('(retry #%s)' % (job_obj.attempt - 1))
-		elif (state == Job.QUEUED) and (job_obj.get('dest') != 'N/A'):
-			job_status_str_list.append('(%s)' % job_obj.get('dest'))
-		elif (state in [Job.WAITING, Job.ABORTED, Job.DISABLED]) and job_obj.get('reason'):
-			job_status_str_list.append('(%s)' % job_obj.get('reason'))
-		elif (state == Job.SUCCESS) and (job_obj.get('runtime') is not None):
-			if (job_obj.get('runtime') or 0) >= 0:
-				job_status_str_list.append('(runtime %s)' % str_time_long(job_obj.get('runtime') or 0))
-		elif state == Job.FAILED:
-			msg_list = []
-			exit_code = job_obj.get('retcode')
-			if exit_code:
-				msg_list.append('error code: %d' % exit_code)
-				if self._log.isEnabledFor(logging.DEBUG) and (exit_code in self._map_error_code2message):
-					msg_list.append(self._map_error_code2message[exit_code])
-			_add_msg(msg_list, job_obj.get('dest'))
-			if len(msg_list):
-				job_status_str_list.append('(%s)' % str.join(' - ', msg_list))
-		self._log.log_time(logging.INFO, str.join(' ', job_status_str_list))
-		for callback in self._callback_list:
-			callback()
+	def _update(self, job_obj, jobnum, new_state, show_wms=False, reason=None):
+		old_state = job_obj.state
+		if old_state != new_state:
+			job_obj.update(new_state)
+			self.job_db.commit(jobnum, job_obj)
+			self._local_event_handler.on_job_state_change(len(self.job_db), jobnum, job_obj,
+				old_state, new_state, reason)
+			for callback in self._callback_list:
+				callback()
 
 
 class SimpleJobManager(JobManager):
-	def __init__(self, config, name, task, eventhandler):
-		JobManager.__init__(self, config, name, task, eventhandler)
+	alias_list = ['default']
+
+	def __init__(self, config, name, task):
+		JobManager.__init__(self, config, name, task)
 
 		# Non-persistent Job defect heuristic to remove jobs, causing errors during status queries
 		self._defect_tries = config.get_int(['kick offender', 'defect tries'], 10, on_change=None)

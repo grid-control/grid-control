@@ -17,7 +17,7 @@ from hpfwk import InstanceFactory, Plugin
 
 
 class ConfigurablePlugin(Plugin):
-	# ConfigurablePlugin is the base class for plugins that need config as constructor parameter
+	# ConfigurablePlugin is the base class for plugins that need "config" as constructor parameter
 	def __init__(self, config):
 		pass
 
@@ -25,7 +25,8 @@ class ConfigurablePlugin(Plugin):
 		config = kwargs.pop('config')
 		cls_config = config.change_view(add_sections=cls.config_section_list)
 		for entry in value.split():
-			yield InstanceFactory(entry, cls.get_class(entry), cls_config)
+			cls_new = cls.get_class(entry)
+			yield InstanceFactory(cls_new.get_bind_class_name(entry), cls_new, cls_config)
 	bind = classmethod(bind)
 
 
@@ -51,13 +52,15 @@ class NamedPlugin(ConfigurablePlugin):
 				(cls_name, instance_name) = tmp
 			elif len(tmp) == 1:
 				cls_name = tmp[0]
-			cls_new = cls.get_class(cls_name)
+			cls_new = cls.get_class(cls_name.strip())
+			bind_value = '%s:%s' % (cls_new.get_bind_class_name(cls_name), instance_name)
 			if not instance_name:
 				instance_name = cls_new.__name__.split('.')[-1]
+				bind_value = cls_new.get_bind_class_name(cls_name)
 			cls_config = config.change_view(view_class='TaggedConfigView',
 				set_classes=[cls_new], set_sections=None, set_names=[instance_name],
 				add_tags=tags or [], inherit_sections=inherit_sections)
-			yield InstanceFactory(entry, cls_new, cls_config, instance_name)
+			yield InstanceFactory(bind_value, cls_new, cls_config, instance_name, **kwargs)
 	bind = classmethod(bind)
 
 	def get_object_name(self):

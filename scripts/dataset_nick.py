@@ -13,7 +13,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys
+import os, sys
 from gc_scripts import ConsoleTable, Plugin, ScriptOptions, display_plugin_list_for, gc_create_config  # pylint:disable=line-too-long
 from python_compat import lmap
 
@@ -22,7 +22,7 @@ def _main():
 	parser = ScriptOptions(usage='%s [OPTIONS] <DBS dataset path>')
 	parser.add_text(None, '', 'producer', default='SimpleNickNameProducer',
 		help='Name of the nickname producer')
-	parser.add_bool(None, 'l', 'nick-list', default=False,
+	parser.add_bool(None, 'L', 'nick-list', default=False,
 		help='List available nickname producer classes')
 	options = parser.script_parse()
 
@@ -32,9 +32,12 @@ def _main():
 		parser.exit_with_usage()
 
 	dataset_path = options.args[0]
-	if '*' in dataset_path:
-		dbs3 = Plugin.create_instance('DBS3Provider', gc_create_config(), dataset_path, None)
-		dataset_path_list = dbs3.getCMSDatasetsImpl(dataset_path)
+	if ('*' in dataset_path) or os.path.exists(dataset_path):
+		dataset_provider = 'DBS3Provider'
+		if os.path.exists(dataset_path):
+			dataset_provider = 'ListProvider'
+		provider = Plugin.create_instance(dataset_provider, gc_create_config(), 'dataset', dataset_path)
+		dataset_path_list = provider.get_dataset_name_list()
 	else:
 		dataset_path_list = [dataset_path]
 

@@ -13,7 +13,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+# Source: github.com/grid-control
 
 echo "Searching for CMSSW environment..."
 if [ -n "$VO_CMS_SW_DIR" -a -d "$VO_CMS_SW_DIR" ]; then

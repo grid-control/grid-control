@@ -25,6 +25,7 @@ class CMSAuthenticationException(NestedException):
 
 
 def get_cms_cert(config=None, ignore_errors=False):
+	logging.getLogger('access.cms-proxy').setLevel(logging.ERROR)
 	if not ignore_errors:
 		return _get_cms_cert(config or create_config())
 	return ignore_exception(Exception, None, _get_cms_cert, config or create_config())
@@ -33,12 +34,13 @@ def get_cms_cert(config=None, ignore_errors=False):
 def _get_cms_cert(config):
 	config = config.change_view(set_sections=['cms', 'access', 'proxy'])
 	try:
-		access = AccessToken.create_instance('VomsAccessToken', config, 'cms_proxy')
+		access = AccessToken.create_instance('VomsAccessToken', config, 'cms-proxy')
 	except Exception:
 		if os.environ.get('X509_USER_PROXY'):
 			return os.environ['X509_USER_PROXY']
 		raise CMSAuthenticationException('Unable to find grid environment')
-	if not access.can_submit(60, True):
+	can_submit = ignore_exception(Exception, False, access.can_submit, 5 * 60, True)
+	if not can_submit:
 		logging.getLogger('access.cms').warning('The grid proxy has expired or is invalid!')
 		role = config.get_list('new proxy roles', '', on_change=None)
 		timeout = config.get_time('new proxy timeout', 10, on_change=None)
@@ -46,13 +48,17 @@ def _get_cms_cert(config):
 		# password in variable name removes it from debug log
 		password = getpass.getpass('Please enter proxy password: ')
 		try:
-			proc = LocalProcess(resolve_install_path('voms-proxy-info'), '--voms',
-				str.join(':', ['cms'] + role), '--valid', '%d:%d' % (lifetime / 60, lifetime % 60))
+			proxy_init_exec = resolve_install_path('voms-proxy-init')
+			proc = LocalProcess(proxy_init_exec, '--voms', str.join(':', ['cms'] + role),
+				'--valid', '%d:%d' % (lifetime / 60, lifetime % 60), logging=False)
 			if password:
 				proc.stdin.write(password + '\n')
+				proc.stdin.close()
 			proc.get_output(timeout=timeout)
 		except Exception:
 			raise CMSAuthenticationException('Unable to create new grid proxy')
-	if not access.can_submit(60, True):
-		raise CMSAuthenticationException('Newly created grid proxy is also invalid')
+		access = AccessToken.create_instance('VomsAccessToken', config, 'cms-proxy')  # new instance
+		can_submit = ignore_exception(Exception, False, access.can_submit, 5 * 60, True)
+		if not can_submit:
+			raise CMSAuthenticationException('Newly created grid proxy is also invalid')
 	return access.get_auth_fn_list()[0]

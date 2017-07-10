@@ -35,7 +35,7 @@ def run_command(cmd, args, fd_map, env):  # run command by replacing the current
 		os.execve(cmd, args, env)  # replace process - this command DOES NOT RETURN if successful!
 	except Exception:
 		pass
-	error_message_list = [
+	error_msg_list = [
 		'== grid-control process error ==',
 		'        pid: %s' % os.getpid(),
 		'     fd map: %s' % repr(fd_map),
@@ -44,7 +44,7 @@ def run_command(cmd, args, fd_map, env):  # run command by replacing the current
 		'  arguments: %s' % repr(args),
 		'  exception: %s' % repr(sys.exc_info()[1]),
 	]
-	sys.stderr.write(str.join('\n', error_message_list))
+	sys.stderr.write(str.join('\n', error_msg_list))
 	for fd_std in [0, 1, 2]:
 		_safe_close(fd_std)
 	exit_without_cleanup(os.EX_OSERR)  # exit forked process with OS error

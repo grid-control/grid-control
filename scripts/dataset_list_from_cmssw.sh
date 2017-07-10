@@ -28,6 +28,6 @@ fi
 
 echo "[$1]"
 while read FILE; do
-	EVENTS=`edmFileUtil -e file://$FILE | grep "^$FILE" | sed -e "s/.*( \(.*\)events.*/\1/"`
-	echo "file://`readlink -e $FILE` = $EVENTS"
+	EVENTS="$(edmFileUtil -e file://$FILE | grep "^$FILE" | sed -e "s/.*( \(.*\)events.*/\1/")"
+	echo "file://$(readlink -e $FILE) = $EVENTS"
 done

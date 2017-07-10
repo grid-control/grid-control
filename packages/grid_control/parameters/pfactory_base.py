@@ -16,7 +16,6 @@ import random, logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters.config_param import ParameterConfig
 from grid_control.parameters.psource_base import ParameterError, ParameterSource
-from grid_control.parameters.psource_lookup import parse_lookup_factory_args
 from hpfwk import AbstractError
 from python_compat import ifilter, imap, irange, lidfilter, lmap, sorted
 
@@ -29,9 +28,11 @@ class ParameterFactory(ConfigurablePlugin):
 
 
 class BasicParameterFactory(ParameterFactory):
+	alias_list = ['basic']
+
 	def __init__(self, config):
 		ParameterFactory.__init__(self, config)
-		(self._psrc_list_const, self._psrc_list_lookup, self._psrc_list_nested) = ([], [], [])
+		self._psrc_list = []
 
 		# Random number variables
 		jobs_config = config.change_view(add_sections=['jobs'])
@@ -69,34 +70,24 @@ class BasicParameterFactory(ParameterFactory):
 			source_list.append(_create_psrc('RNGParameterSource', name))
 		for (idx, seed) in enumerate(self._random_seeds):
 			source_list.append(_create_psrc('CounterParameterSource', 'SEED_%d' % idx, int(seed)))
-		source_list.extend(self._psrc_list_const)
+		source_list.extend(self._psrc_list)
 		source_list.append(self._pfactory.get_psrc(repository))
-		source_list.extend(self._psrc_list_lookup)
 		source = _create_psrc('ZipLongParameterSource', *source_list)
-		for (psrc_type, args) in self._psrc_list_nested:
-			source = psrc_type(source, *args)
 		if self._req:
 			req_source = _create_psrc('RequirementParameterSource')
 			source = _create_psrc('ZipLongParameterSource', source, req_source)
 		source = self._use_available_data_psrc(source, repository)
 		return _create_psrc('RepeatParameterSource', source, self._repeat)
 
-	def _register_psrc(self, pconfig, vn):
-		def replace_nonalnum(value):
+	def _register_psrc(self, pconfig, output_vn):
+		def _replace_nonalnum(value):
 			if str.isalnum(value):
 				return value
 			return ' '
-		lookup_str = pconfig.get(vn, 'lookup', '')
-		lookup_list = lidfilter(str.join('', imap(replace_nonalnum, lookup_str)).split())
-		for (is_nested, psrc_type, args) in parse_lookup_factory_args(pconfig, [vn], lookup_list):
-			if is_nested:  # switch needs elevation beyond local scope
-				self._psrc_list_nested.append((psrc_type, args))
-			else:
-				psrc = psrc_type.create_instance(psrc_type.__name__, *args)
-				if psrc.get_parameter_deps():
-					self._psrc_list_lookup.append(psrc)
-				else:
-					self._psrc_list_const.append(psrc)
+		lookup_str = pconfig.get(output_vn, 'lookup', '')
+		lookup_vn_list = lidfilter(str.join('', imap(_replace_nonalnum, lookup_str)).split())
+		self._psrc_list.append(ParameterSource.create_psrc_safe('InternalAutoParameterSource',
+			pconfig, {}, output_vn, lookup_vn_list))
 
 	def _use_available_data_psrc(self, source, repository):
 		used_sources = source.get_used_psrc_list()
@@ -125,6 +116,7 @@ class UserParameterFactory(ParameterFactory):
 			source = self._get_psrc_user(self._pexpr, respository)
 		except:
 			raise ParameterError('Unable to parse parameter expression %r' % self._pexpr)
+		source = _create_psrc('InternalResolveParameterSource', source)
 		self._log.debug('Parsed parameter source: %s', repr(source))
 		return source
 

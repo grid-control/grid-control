@@ -17,7 +17,7 @@ from grid_control.gc_exceptions import UserError
 from grid_control.job_db import Job, JobClass
 from grid_control.utils.parsing import parse_time
 from hpfwk import AbstractError, Plugin
-from python_compat import identity, imap, ismap, lfilter, lmap, reduce, sorted
+from python_compat import identity, imap, ismap, lfilter, lidfilter, lmap, reduce, sorted
 
 
 class TaskNeededException(Exception):
@@ -46,6 +46,14 @@ class NullJobSelector(JobSelector):
 
 
 class AndJobSelector(JobSelector):  # Internally used
+	def __new__(cls, *args):
+		args = lidfilter(args)
+		if not args:
+			return None
+		elif len(args) == 1:
+			return args[0]
+		return JobSelector.__new__(cls)
+
 	def __init__(self, *args):
 		self._selectors = args
 
@@ -99,6 +107,8 @@ class IDSelector(JobSelector):
 
 
 class MultiJobSelector(JobSelector):
+	alias_list = ['multi']
+
 	def __init__(self, arg, **kwargs):
 		def _parse_term(term):
 			negate = (term[0] == '~')
@@ -219,13 +229,11 @@ class QueueSelector(RegExSelector):
 	alias_list = ['queue']
 
 	def __init__(self, arg, **kwargs):
-		RegExSelector.__init__(self, arg,
-			obj_parser=lambda num, obj: obj.get('dest', '').split('/')[-1].split(':')[0])
+		RegExSelector.__init__(self, arg, obj_parser=lambda num, obj: obj.get('queue', ''))
 
 
 class SiteSelector(RegExSelector):
 	alias_list = ['site']
 
 	def __init__(self, arg, **kwargs):
-		RegExSelector.__init__(self, arg,
-			obj_parser=lambda num, obj: obj.get('dest', '').split('/')[0].split(':')[0])
+		RegExSelector.__init__(self, arg, obj_parser=lambda num, obj: obj.get('site', '').split(':')[0])

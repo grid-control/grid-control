@@ -1,4 +1,4 @@
-# | Copyright 2015-2016 Karlsruhe Institute of Technology
+# | Copyright 2015-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -72,10 +72,17 @@ class LocationPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
 		self._filter = config.get_filter(self._get_pproc_opt('location filter'),
-			default='', default_matcher='blackwhite', default_filter='weak')
+			default='', default_matcher='BlackWhiteMatcher', default_filter='WeakListFilter')
 		self._preference = config.get_list(self._get_pproc_opt('location preference'), [])
 		self._reqs = config.get_bool(self._get_pproc_opt('location requirement'), True)
 		self._disable = config.get_bool(self._get_pproc_opt('location check'), True)
+
+	def __repr__(self):
+		result = self._repr_base('preference = %s, reqs = %s, check = %s' % (
+			self._preference, self._reqs, self._disable))
+		if self._filter.get_selector():
+			result = 'filter = %s ' % self._filter + result
+		return result
 
 	def enabled(self):
 		return self._filter.get_selector() or self._preference or self._reqs or self._disable
@@ -101,6 +108,9 @@ class MetaPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
 		self._metadata_list = config.get_list(self._get_pproc_opt('metadata'), [])
+
+	def __repr__(self):
+		return self._repr_base(str.join(', ', self._metadata_list))
 
 	def enabled(self):
 		return self._metadata_list != []
@@ -156,6 +166,9 @@ class TFCPartitionProcessor(PartitionProcessor):
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
 		self._tfc = config.get_lookup(self._get_pproc_opt('tfc'), {})
+
+	def __repr__(self):
+		return self._repr_base(repr(self._tfc))
 
 	def enabled(self):
 		return not self._tfc.empty()

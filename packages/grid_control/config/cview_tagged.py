@@ -14,7 +14,7 @@
 
 from grid_control.config.config_entry import ConfigError, norm_config_locations
 from grid_control.config.cview_base import SimpleConfigView
-from grid_control.utils import safe_index
+from grid_control.utils.algos import safe_index
 from hpfwk import APIError
 from python_compat import identity, imap, itemgetter, lfilter, lmap, unspecified
 

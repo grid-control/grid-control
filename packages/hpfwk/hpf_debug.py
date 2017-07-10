@@ -12,15 +12,13 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys, threading
-from hpfwk.hpf_compat import get_thread_name, impl_detail
-from hpfwk.hpf_exceptions import ExceptionWrapper, ignore_exception, parse_frame
+import os, sys, threading
+from hpfwk.hpf_exceptions import ExceptionWrapper, ignore_exception, impl_detail, parse_frame
 
 
 def format_exception(exc_info,
 		show_code_context=0, show_variables=0, show_file_stack=0, show_exception_stack=1, show_threads=1):
 	msg_parts = []
-
 	if exc_info not in [None, (None, None, None)]:
 		frame_dict_list, ex_info_list = _collect_exception_infos(*exc_info)
 
@@ -46,14 +44,25 @@ def format_exception(exc_info,
 	return str.join('\n', msg_parts)
 
 
+def get_thread_name(thread=None):
+	if thread is None:
+		thread = _get_current_thread()
+	try:  # new lowercase name in >= py-2.6
+		return thread.name
+	except Exception:
+		return thread.getName()
+
+
 def get_trace_fun():
 	return get_trace_fun.trace_fun
 get_trace_fun.trace_fun = None  # <global-state>
 
 
 def set_trace_fun(trace_fun=None):
-	sys.settrace(trace_fun)  # set trace function in local thread
-	get_trace_fun.trace_fun = trace_fun  # set global trace function for all newly started threads
+	if set_trace_fun.enabled:
+		sys.settrace(trace_fun)  # set trace function in local thread
+		get_trace_fun.trace_fun = trace_fun  # set global trace function for all newly started threads
+set_trace_fun.enabled = True  # <global-state>
 
 
 class DebugInterface(object):
@@ -67,39 +76,32 @@ class DebugInterface(object):
 	def get_console(self, env_dict):
 		import code
 		console = code.InteractiveConsole(env_dict)
-		console.push('import rlcompleter, readline')
-		console.push('readline.parse_and_bind("tab: complete")')
-		console.push('readline.set_completer(rlcompleter.Completer(globals()).complete)')
-		console.push('del rlcompleter')
-		console.push('del readline')
+		console.push('try:')
+		console.push('  import rlcompleter, readline')
+		console.push('  readline.parse_and_bind("tab: complete")')
+		console.push('  readline.set_completer(rlcompleter.Completer(globals()).complete)')
+		console.push('  del rlcompleter')
+		console.push('  del readline')
+		console.push('except Exception:')
+		console.push('  pass')
+		console.push('')
 		return console
+
+	def get_console_env_dict(self, env_dict):
+		env_dict = env_dict or {}
+		env_dict.update({'stack': self.show_stack, 'locals': self._get_locals,
+			'trace': self.set_trace, 'resume': self._resume, 'threads': self._get_thread_list})
+		msg = '\nDEBUG MODE ENABLED!\n  available debug commands: %s\n' % str.join(', ', env_dict)
+		msg += '  list of active threads [%d]:\n' % len(list(threading.enumerate()))
+		msg += '  available thread ids: %s\n' % list(self._get_thread_id2_frame_map().keys())
+		self._stream.write(msg)
+		self._get_thread_list()
+		return env_dict
 
 	def set_trace(self, filename=None, lineno=None, fun_name=None, event=None,
 			stop_on_match=False, start_on_match=False):
-		def _output_trace(frame, event, arg):
-			arg_str = ignore_exception(Exception, '<repr failed>', repr, arg)
-			thread_name = ignore_exception(Exception, '<unknown thread>', get_thread_name)
-			self._stream.write('%s %s:%s %s %s %s\n' % (thread_name, frame.f_code.co_filename,
-				frame.f_lineno, frame.f_code.co_name, event, arg_str))
-
-		def _trace_fun(frame, event, arg):
-			if _trace_fun.started:
-				_output_trace(frame, event, arg)
-			elif (filename is None) or (filename in frame.f_code.co_filename):
-				if (lineno is None) or (lineno == frame.f_lineno):
-					if (fun_name is None) or (fun_name == frame.f_code.co_name):
-						if start_on_match:
-							_trace_fun.started = True
-						_output_trace(frame, event, arg)
-						if stop_on_match and not _trace_fun.stopped:
-							set_trace_fun(None)
-							_trace_fun.stopped = True
-							self._interrupt_fun(duration=0)
-							return
-			return _trace_fun
-		_trace_fun.started = False
-		_trace_fun.stopped = False
-		set_trace_fun(_trace_fun)
+		set_trace_fun(_create_trace_fun(self._stream, self._interrupt_fun, filename, lineno,
+			fun_name, event, stop_on_match, start_on_match))
 
 	def show_stack(self, stack_depth=None, thread_id=None, show_vars=-1, show_code=0):
 		def _show_frame_list(frame):
@@ -123,22 +125,11 @@ class DebugInterface(object):
 	def start_console(self, env_dict=None):
 		for (callback_start, _) in DebugInterface.callback_list:
 			callback_start()
-		env_dict = self._get_console_env_dict(env_dict=env_dict)
+		env_dict = self.get_console_env_dict(env_dict=env_dict)
 		ignore_exception(SystemExit, None, self.get_console(env_dict).interact, '')
 		for (_, callback_end) in DebugInterface.callback_list:
 			callback_end()
 		self._stream.write('Resuming ...\n')
-
-	def _get_console_env_dict(self, env_dict):
-		env_dict = env_dict or {}
-		env_dict.update({'stack': self.show_stack, 'locals': self._get_locals,
-			'trace': self.set_trace, 'resume': self._resume, 'threads': self._get_thread_list})
-		msg = '\nDEBUG MODE ENABLED!\n  available debug commands: %s\n' % str.join(', ', env_dict)
-		msg += '  list of active threads [%d]:\n' % len(list(threading.enumerate()))
-		msg += '  available thread ids: %s\n' % list(self._get_thread_id2_frame_map().keys())
-		self._stream.write(msg)
-		self._get_thread_list()
-		return env_dict
 
 	def _get_frame(self, cur_frame, stack_depth=-1):
 		frame_list = []
@@ -169,7 +160,7 @@ class DebugInterface(object):
 	def _resume(self, duration=None):
 		if duration is not None:
 			self._interrupt_fun(duration)
-		raise SystemExit()
+		raise SystemExit(os.EX_OK)
 
 
 def _collect_exception_infos(exception_type, exception_value, exception_traceback):
@@ -197,6 +188,30 @@ def _collect_exception_infos(exception_type, exception_value, exception_tracebac
 	return (frame_dict_list, exception_info_list)  # skipping top-level exception helper
 
 
+def _create_trace_fun(stream, interrupt_fun, filename=None, lineno=None, fun_name=None, event=None,
+		stop_on_match=False, start_on_match=False):
+	def _trace_fun(frame, event, arg):
+		if _trace_fun.started:
+			_output_trace(stream, frame, event, arg)
+		if (filename is None) or (filename in frame.f_code.co_filename):
+			if (lineno is None) or (lineno == frame.f_lineno):
+				if (fun_name is None) or (fun_name == frame.f_code.co_name):
+					if not _trace_fun.started:
+						_output_trace(stream, frame, event, arg)
+					if start_on_match:
+						_trace_fun.started = True
+					if stop_on_match and not _trace_fun.stopped:
+						_trace_fun.stopped = True
+						set_trace_fun(None)
+						if interrupt_fun:
+							interrupt_fun(duration=0)
+						return
+		return _trace_fun
+	_trace_fun.started = False
+	_trace_fun.stopped = False
+	return _trace_fun
+
+
 def _format_ex_tree(ex_info_list, show_exception_stack=2):
 	ex_msg_list = []
 	for info in ex_info_list:
@@ -208,14 +223,13 @@ def _format_ex_tree(ex_info_list, show_exception_stack=2):
 		ex_msg_list.append('%s%s: %s' % (prefix, exception_type_name, exception_value))
 		if (show_exception_stack <= 1) or hasattr(exception_value, 'nested'):
 			continue
-		if not hasattr(exception_value, 'args'):
-			continue
-		args = exception_value.args
-		already_displayed = (len(args) == 1) and str(args[0]) not in str(exception_value)
-		if already_displayed or (len(args) > 1):
-			def _fmt_ex_args():
-				return ['%s%s  %s' % (prefix, len(exception_type_name) * ' ', exception_value.args)]
-			ex_msg_list.extend(ignore_exception(Exception, [], _fmt_ex_args))
+		if hasattr(exception_value, 'args'):
+			args = exception_value.args
+			already_displayed = (len(args) == 1) and str(args[0]) not in str(exception_value)
+			if already_displayed or (len(args) > 1):
+				def _fmt_ex_args():
+					return ['%s%s  %s' % (prefix, len(exception_type_name) * ' ', exception_value.args)]
+				ex_msg_list.extend(ignore_exception(Exception, [], _fmt_ex_args))
 	if show_exception_stack > 1:
 		return str.join('\n', ex_msg_list)
 	return str.join('\n' + '-' * 10 + '\n', ex_msg_list)
@@ -239,14 +253,14 @@ def _format_frame(frame, code_context, truncate_var_repr):
 	yield 'Stack #%s%02d [%s:%d] %s' % (exception_id,
 		frame['idx'], frame['file'], frame['line'], frame['fun'])
 
-	def get_source_code(line_num):
+	def _get_source_code(line_num):
 		return linecache.getline(frame['file'], line_num).rstrip().replace('\t', '  ')
 	delta_line_num = -code_context
 	while delta_line_num <= code_context:
 		if delta_line_num == 0:
-			yield '\t=>| %s' % get_source_code(frame['line'] + delta_line_num)
+			yield '\t=>| %s' % _get_source_code(frame['line'] + delta_line_num)
 		else:
-			yield '\t  | %s' % get_source_code(frame['line'] + delta_line_num)
+			yield '\t  | %s' % _get_source_code(frame['line'] + delta_line_num)
 		delta_line_num += 1
 	if (truncate_var_repr != -1) and frame['locals']:
 		yield ''
@@ -296,6 +310,20 @@ def _format_variables_list(truncate_var_repr, var_dict, vn_prefix=''):
 		if 'password' in vn:
 			repr_str = '<redacted>'
 		yield '\t\t%s%s = %s' % (vn_prefix, vn.ljust(max_vn_len), repr_str)
+
+
+def _get_current_thread():
+	try:  # new lowercase name in >= py-2.6
+		return threading.current_thread()
+	except Exception:
+		return threading.currentThread()
+
+
+def _output_trace(stream, frame, event, arg):
+	arg_str = ignore_exception(Exception, '<repr failed>', repr, arg)
+	thread_name = ignore_exception(Exception, '<unknown thread>', get_thread_name)
+	stream.write('%s %s:%s %s %s %s\n' % (thread_name, frame.f_code.co_filename,
+		frame.f_lineno, frame.f_code.co_name, event, arg_str))
 
 
 def _parse_stack(frame):

@@ -18,12 +18,15 @@ import os, glob, shutil, logging
 from grid_control.backends.access import AccessToken
 from grid_control.backends.aspect_status import CheckInfo
 from grid_control.backends.storage import StorageManager
+from grid_control.config import TriggerInit
+from grid_control.event_base import RemoteEventHandler
 from grid_control.gc_plugin import NamedPlugin
 from grid_control.output_processor import JobResult
-from grid_control.utils import DictFormat, Result, abort, create_tarball, ensure_dir_exists, get_path_pkg, get_path_share, merge_dict_list, resolve_path, safe_write  # pylint:disable=line-too-long
+from grid_control.utils import DictFormat, Result, abort, create_tarball, ensure_dir_exists, get_path_pkg, get_path_share, resolve_path, safe_write  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
+from grid_control.utils.algos import dict_union
 from grid_control.utils.data_structures import make_enum
-from grid_control.utils.file_objects import SafeFile, VirtualFile
+from grid_control.utils.file_tools import SafeFile, VirtualFile
 from hpfwk import AbstractError, NestedException, clear_current_exception, ignore_exception
 from python_compat import ichain, identity, imap, izip, lchain, lmap, set, sorted
 
@@ -44,6 +47,7 @@ BackendJobState = make_enum([  # pylint:disable=invalid-name
 
 
 class WMS(NamedPlugin):
+	alias_list = ['NullWMS']
 	config_section_list = NamedPlugin.config_section_list + ['wms', 'backend']
 	config_tag_name = 'wms'
 
@@ -54,6 +58,10 @@ class WMS(NamedPlugin):
 		self._wait_work = config.get_int('wait work', 10, on_change=None)
 		self._job_parser = config.get_plugin('job parser', 'JobInfoProcessor',
 			cls='JobInfoProcessor', on_change=None)
+		self._remote_event_handler = config.get_composited_plugin(
+			['remote monitor', 'remote event handler'], '', 'MultiRemoteEventHandler',
+			cls=RemoteEventHandler, bind_kwargs={'tags': [self]},
+			require_plugin=False, on_change=TriggerInit('sandbox')) or RemoteEventHandler(config, 'dummy')
 
 	def can_submit(self, needed_time, can_currently_submit):
 		raise AbstractError
@@ -66,7 +74,7 @@ class WMS(NamedPlugin):
 		# Check status and return (gc_id, job_state, job_info) for active jobs
 		raise AbstractError
 
-	def deploy_task(self, task, monitor, transfer_se, transfer_sb):
+	def deploy_task(self, task, transfer_se, transfer_sb):
 		raise AbstractError
 
 	def get_access_token(self, gc_id):
@@ -103,7 +111,7 @@ class WMS(NamedPlugin):
 		return tuple(gc_id.split('.', 2)[1:])
 
 make_enum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND',
-	'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE'], WMS)
+	'SITES', 'QUEUES', 'SOFTWARE', 'STORAGE', 'DISKSPACE'], WMS)
 
 
 class BasicWMS(WMS):
@@ -162,7 +170,7 @@ class BasicWMS(WMS):
 			return value
 		return self._run_executor('checking job status', self._check_executor, _fmt, gc_id_list)
 
-	def deploy_task(self, task, monitor, transfer_se, transfer_sb):
+	def deploy_task(self, task, transfer_se, transfer_sb):
 		# HACK
 		self._output_fn_list = lmap(lambda d_s_t: d_s_t[2], self._get_out_transfer_info_list(task))
 		task.validate_variables()
@@ -176,17 +184,17 @@ class BasicWMS(WMS):
 		def _convert(fn_list):
 			for fn in fn_list:
 				if isinstance(fn, str):
-					yield (fn, os.path.basename(fn), False)
+					yield (fn, os.path.basename(fn))
 				else:
-					yield (None, os.path.basename(fn.name), fn)
+					yield (fn, os.path.basename(fn.name))
 
 		# Package sandbox tar file
 		self._log.log(logging.INFO1, 'Packing sandbox')
 		sandbox = self._get_sandbox_name(task)
 		ensure_dir_exists(os.path.dirname(sandbox), 'sandbox directory')
 		if not os.path.exists(sandbox) or transfer_sb:
-			sandbox_file_list = self._get_sandbox_file_list(task, monitor, [self._sm_se_in, self._sm_se_out])
-			create_tarball(sandbox, _convert(sandbox_file_list))
+			sandbox_file_list = self._get_sandbox_file_list(task, [self._sm_se_in, self._sm_se_out])
+			create_tarball(_convert(sandbox_file_list), name=sandbox)
 
 	def get_access_token(self, gc_id):
 		return self._token
@@ -272,18 +280,19 @@ class BasicWMS(WMS):
 			('GC Job summary', 'job.info', 'job.info'),
 		] + lmap(lambda fn: ('Task output', fn, fn), task.get_sb_out_fn_list())
 
-	def _get_sandbox_file_list(self, task, monitor, sm_list):
+	def _get_sandbox_file_list(self, task, sm_list):
 		# Prepare all input files
 		dep_list = set(ichain(imap(lambda x: x.get_dependency_list(), [task] + sm_list)))
 		dep_fn_list = lmap(lambda dep: resolve_path('env.%s.sh' % dep,
 			lmap(lambda pkg: get_path_share('', pkg=pkg), os.listdir(get_path_pkg()))), dep_list)
-		task_config_dict = merge_dict_list(
-			imap(lambda x: x.get_task_dict(), [monitor, task] + sm_list))
+		task_config_dict = dict_union(self._remote_event_handler.get_mon_env_dict(),
+			*imap(lambda x: x.get_task_dict(), [task] + sm_list))
 		task_config_dict.update({'GC_DEPFILES': str.join(' ', dep_list),
 			'GC_USERNAME': self._token.get_user_name(), 'GC_WMS_NAME': self._name})
 		task_config_str_list = DictFormat(escape_strings=True).format(
 			task_config_dict, format='export %s%s%s\n')
-		vn_alias_dict = dict(izip(monitor.get_task_dict().keys(), monitor.get_task_dict().keys()))
+		vn_alias_dict = dict(izip(self._remote_event_handler.get_mon_env_dict().keys(),
+			self._remote_event_handler.get_mon_env_dict().keys()))
 		vn_alias_dict.update(task.get_var_alias_map())
 		vn_alias_str_list = DictFormat(delimeter=' ').format(vn_alias_dict, format='%s%s%s\n')
 
@@ -296,12 +305,13 @@ class BasicWMS(WMS):
 						yield match
 				else:
 					yield fpi.path_abs
-		return lchain([monitor.get_file_list(), dep_fn_list, _get_task_fn_list(), [
+		return lchain([self._remote_event_handler.get_file_list(), dep_fn_list, _get_task_fn_list(), [
 			VirtualFile('_config.sh', sorted(task_config_str_list)),
 			VirtualFile('_varmap.dat', sorted(vn_alias_str_list))]])
 
 	def _get_sandbox_name(self, task):
-		return os.path.join(self._path_file_cache, task.task_id, self._name, 'gc-sandbox.tar.gz')
+		return os.path.join(self._path_file_cache,
+			task.get_description().task_id, self._name, 'gc-sandbox.tar.gz')
 
 	def _run_executor(self, desc, executor, fmt, gc_id_list, *args):
 		# Perform some action with the executor, translate wms_id -> gc_id and format the result
@@ -323,7 +333,7 @@ class BasicWMS(WMS):
 
 	def _write_job_config(self, job_config_fn, jobnum, task, extras):
 		try:
-			job_env_dict = merge_dict_list([task.get_job_dict(jobnum), extras])
+			job_env_dict = dict_union(task.get_job_dict(jobnum), extras)
 			job_env_dict['GC_ARGS'] = task.get_job_arguments(jobnum).strip()
 			content = DictFormat(escape_strings=True).format(job_env_dict, format='export %s%s%s\n')
 			safe_write(open(job_config_fn, 'w'), content)

@@ -15,9 +15,10 @@
 import os, time, random
 from grid_control.backends.wms import BackendError
 from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
-from grid_control.utils import PersistentDict, get_path_share, ping_host, resolve_install_path
+from grid_control.utils import get_path_share, ping_host, resolve_install_path
 from grid_control.utils.activity import Activity
 from grid_control.utils.parsing import parse_bool, parse_str
+from grid_control.utils.persistency import load_dict, save_dict
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import clear_current_exception
 from python_compat import md5_hex, sort_inplace
@@ -100,13 +101,13 @@ class DiscoverGliteEndpointsLazy(object):  # TODO: Move to broker infrastructure
 	def _load_state(self):
 		try:
 			assert os.path.exists(self._state_fn)
-			tmp = PersistentDict(self._state_fn, ' = ')
+			tmp = load_dict(self._state_fn, ' = ')
 			ping_dict = {}
 			for wms in tmp:
 				is_ok, ping, ping_time = tuple(tmp[wms].split(',', 2))
 				if parse_bool(is_ok):
 					ping_dict[wms] = (parse_str(ping, float), parse_str(ping_time, float, 0))
-			return (ping_dict.keys(), tmp.keys(), ping_dict, 0)
+			return (list(ping_dict), list(tmp), ping_dict, 0)
 		except Exception:
 			clear_current_exception()
 			return ([], [], {}, None)
@@ -136,10 +137,11 @@ class DiscoverGliteEndpointsLazy(object):  # TODO: Move to broker infrastructure
 		for wms in self._wms_list_all:
 			pingentry = self._ping_dict.get(wms, (None, 0))
 			tmp[wms] = '%r,%s,%s' % (wms in self._wms_list_ok, pingentry[0], pingentry[1])
-		PersistentDict(self._state_fn, ' = ').write(tmp)
+		save_dict(tmp, self._state_fn, ' = ')
 
 
 class GliteWMS(GridWMS):
+	alias_list = ['gwms']
 	config_section_list = GridWMS.config_section_list + ['glite-wms', 'glitewms']
 
 	def __init__(self, config, name, check_executor=None):

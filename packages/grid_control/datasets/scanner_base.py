@@ -46,5 +46,7 @@ class InfoScanner(ConfigurablePlugin):
 
 
 class NullScanner(InfoScanner):
+	alias_list = ['null']
+
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		yield (item, metadata_dict, entries, location_list, obj_dict)

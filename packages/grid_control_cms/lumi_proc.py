@@ -14,7 +14,7 @@
 
 from grid_control.datasets import DataProcessor, DataProvider, DataSplitter, DatasetError, PartitionProcessor  # pylint:disable=line-too-long
 from grid_control.parameters import ParameterMetadata
-from grid_control.utils import safe_index
+from grid_control.utils.algos import safe_index
 from grid_control.utils.data_structures import make_enum
 from grid_control_cms.lumi_tools import filter_lumi_filter, format_lumi, parse_lumi_filter, select_lumi, select_run, str_lumi  # pylint:disable=line-too-long
 from python_compat import any, ichain, imap, izip, set
@@ -42,6 +42,10 @@ class LumiDataProcessor(DataProcessor):
 		self._lumi_strict = config.get_enum(
 			['lumi filter strictness', '%s lumi filter strictness' % datasource_name],
 			LumiMode, LumiMode.strict)
+
+	def __repr__(self):
+		return self._repr_base('filter=%s, keep=%s, strict=%s' % (self._lumi_filter,
+			LumiKeep.enum2str(self._lumi_keep), LumiMode.enum2str(self._lumi_strict)))
 
 	def process_block(self, block):
 		if self._lumi_filter.empty():
@@ -112,10 +116,15 @@ class LumiDataProcessor(DataProcessor):
 
 
 class LumiPartitionProcessor(PartitionProcessor):
+	alias_list = ['lumi']
+
 	def __init__(self, config, datasource_name):
 		PartitionProcessor.__init__(self, config, datasource_name)
 		self._lumi_filter = config.get_lookup(['lumi filter', '%s lumi filter' % datasource_name],
 			default={}, parser=parse_lumi_filter, strfun=str_lumi)
+
+	def __repr__(self):
+		return self._repr_base(str(self._lumi_filter))
 
 	def enabled(self):
 		return not self._lumi_filter.empty()

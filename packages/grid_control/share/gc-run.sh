@@ -56,11 +56,11 @@ echo "==========================="
 echo
 timestamp "DEPLOYMENT" "START"
 echo "==========================="
-checkfile "$GC_LANDINGZONE/gc-sandbox.tar.gz"
+gc_check_file_exists "$GC_LANDINGZONE/gc-sandbox.tar.gz"
 
 echo "Unpacking basic job configuration"
 tar xvfz "$GC_LANDINGZONE/gc-sandbox.tar.gz" -C "$GC_SCRATCH" _config.sh || fail 105
-checkfile "$GC_SCRATCH/_config.sh"
+gc_check_file_exists "$GC_SCRATCH/_config.sh"
 source "$GC_SCRATCH/_config.sh"
 
 # Monitor space usage
@@ -78,14 +78,14 @@ fi
 
 echo "Unpacking environment"
 tar xvfz "$GC_LANDINGZONE/gc-sandbox.tar.gz" -C "$GC_SCRATCH" || fail 105
-checkfile "$GC_LANDINGZONE/job_${GC_JOB_ID}.var"
+gc_check_file_exists "$GC_LANDINGZONE/job_${GC_JOB_ID}.var"
 cat "$GC_LANDINGZONE/job_${GC_JOB_ID}.var" >> "$GC_SCRATCH/_config.sh"
 source "$GC_SCRATCH/_config.sh"
 
 echo "Prepare variable substitution"
-checkfile "$GC_SCRATCH/_varmap.dat"
+gc_check_file_exists "$GC_SCRATCH/_varmap.dat"
 echo "@DATE@: Variable substitution in task @GC_TASK_ID@: @X@" | var_replacer "SUCCESSFUL"
-checkfile "$GC_SCRATCH/_replace.awk"
+gc_check_file_exists "$GC_SCRATCH/_replace.awk"
 cat "$GC_SCRATCH/_replace.awk" | display_short
 
 # Job timeout (for debugging)
@@ -104,7 +104,7 @@ if [ -n "$GC_DEPFILES" ]; then
 	echo "==========================="
 	echo
 	for DEPFILE in $GC_DEPFILES; do
-		checkfile "$GC_SCRATCH/env.$DEPFILE.sh"
+		gc_check_file_exists "$GC_SCRATCH/env.$DEPFILE.sh"
 		source "$GC_SCRATCH/env.$DEPFILE.sh"
 	done
 	echo
@@ -117,7 +117,7 @@ if [ -n "$GC_MONITORING" ]; then
 	my_move "$GC_SCRATCH" "$GC_LANDINGZONE" "$GC_MONITORING"
 	echo
 	for MON_APP in $GC_MONITORING; do
-		checkfile "$GC_LANDINGZONE/$MON_APP"
+		gc_check_file_exists "$GC_LANDINGZONE/$MON_APP"
 		source "$GC_LANDINGZONE/$MON_APP" "start"
 	done
 	echo
@@ -178,7 +178,7 @@ done
 
 SAVED_SE_INPUT_PATH="$SE_INPUT_PATH"
 SAVED_SE_OUTPUT_PATH="$SE_OUTPUT_PATH"
-checkfile "$GC_SCRATCH/_config.sh"
+gc_check_file_exists "$GC_SCRATCH/_config.sh"
 source "$GC_SCRATCH/_config.sh"
 export SE_INPUT_PATH="$SAVED_SE_INPUT_PATH"
 export SE_OUTPUT_PATH="$SAVED_SE_OUTPUT_PATH"
@@ -292,7 +292,7 @@ if [ -n "$GC_MONITORING" ]; then
 	export GC_CPUTIME=`cat "$GC_LANDINGZONE/cputime" | awk "$GC_CPUTIMEPARSER"`
 
 	for MON_APP in $GC_MONITORING; do
-		checkfile "$GC_LANDINGZONE/$MON_APP"
+		gc_check_file_exists "$GC_LANDINGZONE/$MON_APP"
 		source "$GC_LANDINGZONE/$MON_APP" "stop"
 	done
 	echo

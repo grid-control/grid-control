@@ -18,6 +18,10 @@ from python_compat import get_user_input, imap
 
 
 class UserInputInterface(object):
+	def __init__(self, user_input_fun=get_user_input):
+		self._user_input_fun = user_input_fun
+		self._log = logging.getLogger('console.input')
+
 	def prompt_bool(self, text, default):
 		default_str = 'no'
 		if default:
@@ -26,7 +30,7 @@ class UserInputInterface(object):
 
 	def prompt_text(self, text, default=None, raise_error=True):
 		try:
-			return get_user_input(text).strip()
+			return self._user_input_fun(self._output(text)).strip()
 		except Exception:
 			sys.stdout.write('\n')  # continue on next line
 			if raise_error:
@@ -34,14 +38,20 @@ class UserInputInterface(object):
 			return default
 
 	def _input_loop(self, text, default, choices, parser):
-		log = logging.getLogger('console')
 		while True:
 			handler = signal.signal(signal.SIGINT, signal.SIG_DFL)
-			userinput = self.prompt_text('%s %s: ' % (text, '[%s]' % default))
+			userinput = self.prompt_text(self._output('%s %s: ' % (text, '[%s]' % default)))
 			signal.signal(signal.SIGINT, handler)
 			if userinput == '':
 				return parser(default)
 			if parser(userinput) is not None:
 				return parser(userinput)
 			valid = str.join(', ', imap(lambda x: '"%s"' % x, choices[:-1]))
-			log.critical('Invalid input! Answer with %s or "%s"', valid, choices[-1])
+			self._log.critical('Invalid input "%s"! Answer with %s or "%s"', userinput, valid, choices[-1])
+
+	def _output(self, text):
+		msg_str_list = text.splitlines()
+		if len(msg_str_list) > 1:
+			self._log.info(str.join('\n', msg_str_list[:-1]))
+			return msg_str_list[-1]
+		return text

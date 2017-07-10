@@ -16,10 +16,11 @@ import os, copy, logging
 from grid_control.config import TriggerResync, create_config
 from grid_control.datasets.dproc_base import DataProcessor, NullDataProcessor
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.utils import abort, ensure_dir_exists, get_list_difference, split_list
+from grid_control.utils import abort, ensure_dir_exists
 from grid_control.utils.activity import Activity
+from grid_control.utils.algos import get_list_difference, split_list
 from grid_control.utils.data_structures import make_enum
-from grid_control.utils.file_objects import erase_content
+from grid_control.utils.file_tools import SafeFile, erase_content, with_file_iter
 from hpfwk import AbstractError, InstanceFactory, NestedException
 from python_compat import StringBuffer, identity, ifilter, imap, irange, itemgetter, json, lmap, lrange, md5_hex, set, sort_inplace  # pylint:disable=line-too-long
 
@@ -57,7 +58,7 @@ class DataProvider(ConfigurablePlugin):
 			'LocationDataProcessor', 'MultiDataProcessor', cls=DataProcessor, pargs=(datasource_name,))
 
 	def bind(cls, value, **kwargs):
-		instance_arg_list = cls.parse_bind_args(value, **kwargs)
+		instance_arg_list = list(cls.parse_bind_args(value, **kwargs))
 		for (instance_idx, instance_arg) in enumerate(instance_arg_list):
 			if len(instance_arg_list) > 1:
 				(bind_value, provider, config, datasource_name, dataset_expr, nickname) = instance_arg
@@ -89,9 +90,6 @@ class DataProvider(ConfigurablePlugin):
 	def get_block_list_cached(self, show_stats):
 		return self._create_block_cache(show_stats, self.iter_blocks_normed)
 
-	def get_dataset_expr(self):
-		return self._dataset_expr
-
 	def get_dataset_name_list(self):
 		# Default implementation via get_block_list_cached
 		if self._cache_dataset is None:
@@ -122,6 +120,7 @@ class DataProvider(ConfigurablePlugin):
 					raise DatasetError('Block does not contain the dataset name!')
 				block.setdefault(DataProvider.BlockName, '0')
 				block.setdefault(DataProvider.Provider, self.__class__.__name__)
+				block.setdefault(DataProvider.Query, self._dataset_expr)
 				block.setdefault(DataProvider.Locations, None)
 				events = sum(imap(itemgetter(DataProvider.NEntries), block[DataProvider.FileList]))
 				block.setdefault(DataProvider.NEntries, events)
@@ -150,7 +149,6 @@ class DataProvider(ConfigurablePlugin):
 		datasource_name = kwargs.pop('datasource_name', 'dataset')
 		provider_name_default = kwargs.pop('provider_name_default', 'ListProvider')
 
-		instance_args = []
 		for entry in ifilter(str.strip, value.splitlines()):
 			(nickname, provider_name, dataset_expr) = ('', provider_name_default, None)
 			tmp = lmap(str.strip, entry.split(':', 2))
@@ -164,9 +162,8 @@ class DataProvider(ConfigurablePlugin):
 				dataset_expr = tmp[0]
 
 			provider = cls.get_class(provider_name)
-			bind_value = str.join(':', [nickname, provider_name, dataset_expr])
-			instance_args.append((bind_value, provider, config, datasource_name, dataset_expr, nickname))
-		return instance_args
+			bind_value = str.join(':', [nickname, provider.get_bind_class_name(provider_name), dataset_expr])
+			yield (bind_value, provider, config, datasource_name, dataset_expr, nickname)
 	parse_bind_args = classmethod(parse_bind_args)
 
 	def parse_block_id(cls, block_id_str):
@@ -219,14 +216,8 @@ class DataProvider(ConfigurablePlugin):
 		# Save dataset information in 'ini'-style => 10x faster to r/w than cPickle
 		if os.path.dirname(path):
 			ensure_dir_exists(os.path.dirname(path), 'dataset cache directory')
-		fp = open(path, 'w')
-		try:
-			for block in DataProvider.save_to_stream(fp, block_iter, strip_metadata):
-				yield block
-		except Exception:
-			fp.close()
-			raise
-		fp.close()
+		return with_file_iter(SafeFile(path, 'w'),
+			lambda fp: DataProvider.save_to_stream(fp, block_iter, strip_metadata))
 	save_to_file_iter = staticmethod(save_to_file_iter)
 
 	def save_to_stream(stream, block_iter, strip_metadata=False):
@@ -312,11 +303,11 @@ class DataProvider(ConfigurablePlugin):
 
 	def _raise_on_abort(self):
 		if abort():
-			raise DatasetError('Received abort request during retrieval of %r' % self.get_dataset_expr())
+			raise DatasetError('Received abort request during dataset retrieval')
 
 make_enum(  # To uncover errors, the enums of DataProvider / DataSplitter do *NOT* match type wise
 	['NEntries', 'BlockName', 'Dataset', 'Locations', 'URL', 'FileList',
-	'Nickname', 'Metadata', 'Provider'], DataProvider)
+	'Nickname', 'Metadata', 'Provider', 'Query'], DataProvider)
 
 
 def _split_metadata_idx_list(block):

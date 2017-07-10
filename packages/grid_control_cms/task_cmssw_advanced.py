@@ -15,6 +15,7 @@
 import os
 from grid_control.config import ConfigError
 from grid_control.datasets import DataProvider
+from grid_control.parameters import ParameterSource
 from grid_control.utils.parsing import str_dict_cfg
 from grid_control.utils.table import ConsoleTable
 from grid_control_cms.lumi_tools import format_lumi, parse_lumi_filter, str_lumi
@@ -38,7 +39,7 @@ class CMSSWAdvanced(CMSSW):  # pylint:disable=too-many-ancestors
 		head = [('DATASETNICK', 'Nickname')]
 
 		# Mapping between nickname and config files:
-		self._nm_cfg = config.get_lookup('nickname config', {}, default_matcher='regex',
+		self._nm_cfg = config.get_lookup('nickname config', {}, default_matcher='RegExMatcher',
 			parser=lambda x: lmap(str.strip, x.split(',')), strfun=lambda x: str.join(',', x))
 		if not self._nm_cfg.empty():
 			all_config_fn_list = sorted(set(ichain(self._nm_cfg.get_values())))
@@ -52,15 +53,15 @@ class CMSSWAdvanced(CMSSW):  # pylint:disable=too-many-ancestors
 		nm_const_vn_list = config.get_list('nickname constants', [], on_change=None)
 		param_config = config.change_view(view_class='TaggedConfigView',
 			set_classes=None, set_names=None, add_sections=['parameters'])
-		param_config.set('constants', str.join(' ', nm_const_vn_list), '+=', unique=True)
+		param_config.set('constants', str.join(' ', nm_const_vn_list), '+=')
 		for const_vn in nm_const_vn_list:
-			param_config.set(const_vn + ' matcher', 'regex')
+			param_config.set(const_vn + ' matcher', 'RegexMatcher')
 			param_config.set(const_vn + ' lookup', 'DATASETNICK')
 			head.append((const_vn, const_vn))
 
 		# Mapping between nickname and lumi filter - configure and display
 		# work is handled by the 'normal' lumi filter
-		config.set('lumi filter matcher', 'regex')
+		config.set('lumi filter matcher', 'RegexMatcher')
 		if 'nickname lumi filter' in config.get_option_list():
 			config.set('lumi filter',
 				str_dict_cfg(config.get_dict('nickname lumi filter', {}, on_change=None)))
@@ -78,12 +79,6 @@ class CMSSWAdvanced(CMSSW):  # pylint:disable=too-many-ancestors
 		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, config_fn_list))
 		return data
 
-	def get_task_dict(self):
-		# Remove config file variable from the global settings
-		data = CMSSW.get_task_dict(self)
-		data.pop('CMSSW_CONFIG')
-		return data
-
 	def _display_setup(self, dataset_fn, head):
 		if os.path.exists(dataset_fn):
 			nick_name_set = set()
@@ -91,8 +86,12 @@ class CMSSWAdvanced(CMSSW):  # pylint:disable=too-many-ancestors
 				nick_name_set.add(block[DataProvider.Nickname])
 			self._log.info('Mapping between nickname and other settings:')
 			report = []
-			ps_lookup = lfilter(lambda ps: 'DATASETNICK' in ps.get_parameter_deps(),
-				self.source.get_used_psrc_list())
+
+			def _get_dataset_lookup_psrc(psrc):
+				is_lookup_cls = isinstance(psrc, ParameterSource.get_class('LookupBaseParameterSource'))
+				return is_lookup_cls and ('DATASETNICK' in psrc.get_parameter_deps())
+
+			ps_lookup = lfilter(_get_dataset_lookup_psrc, self._source.get_used_psrc_list())
 			for nick in sorted(nick_name_set):
 				tmp = {'DATASETNICK': nick}
 				for src in ps_lookup:

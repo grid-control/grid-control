@@ -62,4 +62,7 @@ class GridAccessToken(TimedAccessToken):
 			msg += '%s failed with return code %d' % (self._proxy_info_exec, exit_code)
 			raise AccessTokenError(msg)
 		self._cache = DictFormat(':').parse(stdout)
+		if not self._cache:
+			msg = 'Unable to parse access token information:\n\t%s\n\t%s\n'
+			raise AccessTokenError(msg % (stdout.strip(), stderr.strip()))
 		return self._cache

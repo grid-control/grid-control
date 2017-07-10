@@ -20,9 +20,10 @@ from grid_control.backends.broker_base import Broker
 from grid_control.backends.jdl_writer import JDLWriter
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.job_db import Job
-from grid_control.utils import ensure_dir_exists, filter_dict, remove_files, resolve_install_path, safe_write  # pylint:disable=line-too-long
+from grid_control.utils import ensure_dir_exists, remove_files, resolve_install_path, safe_write
 from grid_control.utils.activity import Activity
-from grid_control.utils.file_objects import SafeFile
+from grid_control.utils.algos import filter_dict
+from grid_control.utils.file_tools import SafeFile
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import clear_current_exception

@@ -13,12 +13,12 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-# grid-control: https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control
+# Source: github.com/grid-control
 
-source $GC_LANDINGZONE/gc-run.lib || exit 101
+source "$GC_LANDINGZONE/gc-run.lib" || exit 101
 
 # Task name: derive DASH_TASK from TASK_NAME - replace "__" by "_" and remove "_" from start / end:
-DASH_TASK=$(echo $TASK_NAME | var_replacer "" | sed "s/__/_/g;s/^_//;s/_$//")
+DASH_TASK=$(echo $TASK_NAME | var_replacer | sed "s/__/_/g;s/^_//;s/_$//")
 export REPORTID="taskId=$DASH_TASK MonitorID=$DASH_TASK"
 
 # JobID & CE
@@ -50,9 +50,9 @@ case "$1" in
 		export GC_DASHBOARDINFO="$GC_LANDINGZONE/Dashboard.report"
 
 		echo "Update Dashboard: $REPORTID"
-		checkfile "$GC_LANDINGZONE/report.py"
+		gc_check_file_exists "$GC_LANDINGZONE/report.py"
 		chmod u+x "$GC_LANDINGZONE/report.py"
-		checkbin "$GC_LANDINGZONE/report.py"
+		gc_check_bin "$GC_LANDINGZONE/report.py" || fail 103
 		echo $GC_LANDINGZONE/report.py $REPORTID \
 			SyncGridJobId="$GC_WMS_ID" SyncGridName="$GC_USERNAME" SyncCE="$GC_CE_NAME" WNHostName="$(hostname -f)" \
 			WNname="$(hostname -f)" ExeStart="$DB_EXEC"
@@ -62,7 +62,7 @@ case "$1" in
 		;;
 	"stop")
 		echo "Update Dashboard: $REPORTID"
-		checkbin "$GC_LANDINGZONE/report.py"
+		gc_check_bin "$GC_LANDINGZONE/report.py" || fail 103
 		[ -f "$GC_DASHBOARDINFO" ] && DASH_EXT="$(< "$GC_DASHBOARDINFO")"
 		echo $GC_LANDINGZONE/report.py $REPORTID \
 			ExeEnd="$DB_EXEC" WCCPU="$GC_WRAPTIME" CrabUserCpuTime="$GC_CPUTIME" CrabWrapperTime="$GC_WRAPTIME" \

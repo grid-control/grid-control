@@ -16,6 +16,10 @@
 import os, sys, logging, itertools
 
 
+class ZipExhausted(Exception):
+	pass
+
+
 def identity(value):
 	return value
 
@@ -42,6 +46,8 @@ def resolve_fun(*args):
 						for member_name_part in member_name.split('.'):
 							result = getattr(result, member_name_part)
 				except Exception:
+					if 'Condition' in location:
+						raise
 					continue
 				_log.debug('using %s', location)
 				return result
@@ -101,9 +107,9 @@ def _any(iterable):
 
 
 def _get_listified(fun):
-	def function(*args):
+	def _function(*args):
 		return list(fun(*args))
-	return function
+	return _function
 
 
 def _ichain(iterables):
@@ -118,28 +124,46 @@ def _itemgetter(*items):
 			return obj[item]
 	else:
 		def _get(obj):
-			return tuple(imap(lambda item: obj[item], items))
+			return tuple(imap(obj.__getitem__, items))
 	return _get
 
 
+def _izip_longest(*args, **kwargs):
+	fillvalue = kwargs.get('fillvalue')
+	counter = [len(args) - 1]
+
+	def _sentinel():
+		if not counter[0]:
+			raise ZipExhausted
+		counter[0] -= 1
+		yield fillvalue
+	fillers = itertools.repeat(fillvalue)
+	iterators = lmap(lambda it: itertools.chain(it, _sentinel(), fillers), args)
+	try:
+		while iterators:
+			yield tuple(imap(lambda it: it.next(), iterators))
+	except ZipExhausted:
+		pass
+
+
 def _lru_cache(maxsize=128):
-	def decorating_function(user_function):
-		def fun_proxy(*args, **kargs):
+	def _decorating_function(user_function):
+		def _fun_proxy(*args, **kargs):
 			idx = None
-			for (cidx, value) in enumerate(fun_proxy.cache):
+			for (cidx, value) in enumerate(_fun_proxy.cache):
 				if value[0] == (args, kargs):
 					idx = cidx
 			if idx is not None:
-				(_, item) = fun_proxy.cache.pop(idx)
+				(_, item) = _fun_proxy.cache.pop(idx)
 			else:
-				item = fun_proxy.fun(*args, **kargs)
-			fun_proxy.cache.insert(0, ((args, kargs), item))
-			while len(fun_proxy.cache) > maxsize:
-				fun_proxy.cache.pop()
+				item = _fun_proxy.fun(*args, **kargs)
+			_fun_proxy.cache.insert(0, ((args, kargs), item))
+			while len(_fun_proxy.cache) > maxsize:
+				_fun_proxy.cache.pop()
 			return item
-		(fun_proxy.fun, fun_proxy.cache) = (user_function, [])
-		return fun_proxy
-	return decorating_function
+		(_fun_proxy.fun, _fun_proxy.cache) = (user_function, [])
+		return _fun_proxy
+	return _decorating_function
 
 
 def _next(iterable, default=unspecified, *args):
@@ -149,6 +173,14 @@ def _next(iterable, default=unspecified, *args):
 		if not unspecified(default):
 			return default
 		raise
+
+
+def _partial(fun, *args, **kwargs):
+	def _partial_fun(*fun_args, **fun_kwargs):
+		new_kwargs = dict(kwargs)
+		new_kwargs.update(fun_kwargs)
+		return fun(*(args + fun_args), **new_kwargs)
+	return _partial_fun
 
 
 def _relpath(path, start=None):
@@ -182,14 +214,6 @@ def _rsplit(value, sep, maxsplit=None):
 	return str_parts
 
 
-def _partial(fun, *args, **kwargs):
-	def _partial_fun(*fun_args, **fun_kwargs):
-		new_kwargs = dict(kwargs)
-		new_kwargs.update(fun_kwargs)
-		return fun(*(args + fun_args), **new_kwargs)
-	return _partial_fun
-
-
 def _sorted(unsorted_iterable, key=None, reverse=False):
 	""" Sort list by either using the function key that returns
 	the key to sort by - default is the identity function.
@@ -206,7 +230,6 @@ def _sorted(unsorted_iterable, key=None, reverse=False):
 		unsorted_list.reverse()
 	return unsorted_list
 
-
 all = resolve_fun('<builtin>:all', _all)  # >= py-2.5
 any = resolve_fun('<builtin>:any', _any)  # >= py-2.5
 BytesBuffer = resolve_fun('cStringIO:StringIO', 'io:BytesIO')  # < py-2.6
@@ -219,6 +242,7 @@ imap = resolve_fun('itertools:imap', '<builtin-py3>:map')  # < py-3.0
 irange = resolve_fun('<builtin-py2>:xrange', '<builtin-py3>:range')  # < py-3.0
 ismap = resolve_fun('itertools:starmap')
 itemgetter = resolve_fun('operator:itemgetter', _itemgetter)  # >= py-2.4
+izip_longest = resolve_fun('itertools:izip_longest', _izip_longest)  # >= py-2.6
 izip = resolve_fun('itertools:izip', '<builtin-py3>:zip')  # < py-3.0
 lchain = _get_listified(ichain)
 lru_cache = resolve_fun('functools:lru_cache', _lru_cache)  # >= py-3.2
@@ -302,16 +326,23 @@ else:
 
 __all__ = ['all', 'any', 'bytes2str', 'BytesBuffer', 'BytesBufferBase', 'exit_without_cleanup',
 	'get_user_input', 'ichain', 'identity', 'ifilter', 'iidfilter', 'imap', 'irange', 'ismap',
-	'itemgetter', 'izip', 'json', 'lchain', 'lfilter', 'lidfilter', 'lmap', 'lrange', 'lru_cache',
-	'lsmap', 'lzip', 'md5', 'md5_hex', 'next', 'parsedate', 'partial', 'reduce', 'relpath',
-	'resolve_fun', 'rsplit', 'set', 'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer', 'tarfile',
-	'unicode', 'unspecified', 'when_unspecified']
+	'itemgetter', 'izip', 'izip_longest', 'json', 'lchain', 'lfilter', 'lidfilter', 'lmap', 'lrange',
+	'lru_cache', 'lsmap', 'lzip', 'md5', 'md5_hex', 'next', 'parsedate', 'partial', 'reduce',
+	'relpath', 'resolve_fun', 'rsplit', 'set', 'sort_inplace', 'sorted', 'str2bytes', 'StringBuffer',
+	'tarfile', 'unicode', 'unspecified', 'when_unspecified']
 
 
 if __name__ == '__main__':
 	import re, doctest
 	logging.basicConfig()
 	doctest.testmod()
+	pattern_list = [
+		r' %s,', r'[^_\'\/\.a-zA-Z]%s\(', r'[^_\'\/\.a-zA-Z]%s\.',
+		r'\(%s[,\)]', r', %s[,\)]', r' = %s[,\)\n]', r'=%s[^_\'\/\.a-zA-Z]'
+	]
+	builtin_avoid = ['basestring', 'cmp', 'filter', 'map', 'range', 'reduce', 'xrange', 'zip']
+	fun_re_list = lchain(imap(lambda pattern: imap(lambda fun, pattern=pattern:
+		(fun, re.compile(pattern % fun)), __all__ + builtin_avoid), pattern_list))
 	for (root, dirs, files) in os.walk('.'):
 		if root.startswith('./.') or ('source_check' in root):
 			continue
@@ -322,14 +353,10 @@ if __name__ == '__main__':
 			tmp = open(fn).read().replace('\'zip(', '').replace('def set(', '').replace('type(range(', '')
 			tmp = tmp.replace('def filter(', '').replace('def next(', '').replace('next()', '')
 			tmp = tmp.replace('python_compat_popen2', '')
-			builtin_avoid = ['basestring', 'cmp', 'filter', 'map', 'range', 'reduce', 'xrange', 'zip']
 			needed = set()
-			pattern_list = [
-				r' %s,', r'[^_\'\/\.a-zA-Z]%s\(', r'[^_\'\/\.a-zA-Z]%s\.',
-				r'\(%s[,\)]', r', %s[,\)]', r' = %s[,\)\n]', r'=%s[^_\'\/\.a-zA-Z]'
-			]
-			for pattern in pattern_list:
-				needed.update(ifilter(lambda name: re.search(pattern % name, tmp), __all__ + builtin_avoid))
+			for (fun_name, re_matcher) in fun_re_list:
+				if re_matcher.search(tmp):
+					needed.add(fun_name)
 			imported = set()
 			for iline in ifilter(lambda line: 'python_compat ' in line, tmp.splitlines()):
 				try:

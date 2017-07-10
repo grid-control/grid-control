@@ -15,16 +15,11 @@
 from grid_control.config import ConfigError, Matcher
 from grid_control.parameters.psource_base import ParameterError, ParameterInfo, ParameterSource
 from grid_control.parameters.psource_basic import KeyParameterSource, SingleParameterSource
+from grid_control.parameters.psource_internal import InternalNestedParameterSource
 from python_compat import imap, irange, izip, lmap, md5_hex
 
 
-def parse_lookup_factory_args(pconfig, output_vn_list, lookup_vn_list):
-	for output_vn in output_vn_list:  # multi-lookup handling
-		assert isinstance(output_vn, str)
-		yield _get_psrc_info_for_parameter(pconfig, output_vn, lookup_vn_list)
-
-
-class LookupHelper(object):
+class LookupHelper(object):  # TODO: use grid_control.config.matcher_base.DictLookup here
 	def __init__(self, lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order):
 		(self._lookup_vn_list, self._lookup_matcher_list) = (lookup_vn_list, lookup_matcher_list)
 		(self._lookup_dict, self._lookup_order) = (lookup_dict, lookup_order)
@@ -53,19 +48,62 @@ class LookupHelper(object):
 				return lookup_dict_key
 
 
-class SimpleLookupParameterSource(SingleParameterSource):
+class InternalSwitchPlaceholder(InternalNestedParameterSource):
+	alias_list = ['switch_placeholder']
+
+	def __init__(self, output_vn, lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order):
+		self._output_vn = output_vn
+		self._lookup_vn_list = lookup_vn_list
+		self._lookup_matcher_list = lookup_matcher_list
+		self._lookup_dict = lookup_dict
+		self._lookup_order = lookup_order
+		InternalNestedParameterSource.__init__(self, [self._output_vn, self._lookup_vn_list,
+			self._lookup_matcher_list, self._lookup_dict, self._lookup_order])
+
+	def __repr__(self):
+		lookup_arg = 'key(%s)' % str.join(', ', imap(lambda x: "'%s'" % x, self._lookup_vn_list))
+		if len(self._lookup_vn_list) == 1:
+			lookup_arg = repr(self._lookup_vn_list[0])
+		return "switch_placeholder('%s', %s)" % (self._output_vn, lookup_arg)
+
+	def get_nested(self, psrc):
+		return SwitchingLookupParameterSource(psrc, self._output_vn, self._lookup_vn_list,
+			self._lookup_matcher_list, self._lookup_dict, self._lookup_order)
+
+
+class InternalAutoLookupParameterSource(ParameterSource):
+	def __new__(cls, pconfig, output_vn, lookup_vn_list):
+		lookup_vn = None
+		if lookup_vn_list:  # default lookup key
+			lookup_vn = KeyParameterSource(*lookup_vn_list)
+
+		lookup_args = _get_lookup_args(pconfig, KeyParameterSource(output_vn), lookup_vn)
+		# Determine kind of lookup, [3] == lookup_dict
+		lookup_len = lmap(len, lookup_args[3].values())
+
+		if (min(lookup_len) == 1) and (max(lookup_len) == 1):  # simple lookup sufficient for this setup
+			return SimpleLookupParameterSource(*lookup_args)
+		# switch needs elevation beyond local scope
+		return InternalSwitchPlaceholder(*lookup_args)
+
+
+class LookupBaseParameterSource(SingleParameterSource):
+	pass
+
+
+class SimpleLookupParameterSource(LookupBaseParameterSource):
 	alias_list = ['lookup']
 
 	def __init__(self, output_vn, lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order):
 		self._lookup_vn_list = lookup_vn_list
 		self._helper = LookupHelper(lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order)
-		SingleParameterSource.__init__(self, output_vn, [output_vn, self._helper.get_psrc_hash()])
+		LookupBaseParameterSource.__init__(self, output_vn, [output_vn, self._helper.get_psrc_hash()])
 
 	def __repr__(self):
-		return "lookup('%s', %s)" % (self._key, repr(self._helper))
+		return "lookup('%s', %s)" % (self._output_vn, repr(self._helper))
 
-	def create_psrc(cls, pconfig, repository, key, lookup=None):  # pylint:disable=arguments-differ
-		return SimpleLookupParameterSource(*_get_lookup_args(pconfig, key, lookup))
+	def create_psrc(cls, pconfig, repository, output_vn, lookup=None):  # pylint:disable=arguments-differ
+		return SimpleLookupParameterSource(*_get_lookup_args(pconfig, output_vn, lookup))
 	create_psrc = classmethod(create_psrc)
 
 	def fill_parameter_content(self, pnum, result):
@@ -75,30 +113,31 @@ class SimpleLookupParameterSource(SingleParameterSource):
 		elif len(output_tuple) != 1:
 			raise ConfigError("%s can't handle multiple lookup parameter sets!" % self.__class__.__name__)
 		elif output_tuple[0] is not None:
-			result[self._key] = output_tuple[0]
+			result[self._output_vn] = output_tuple[0]
 
 	def get_parameter_deps(self):
 		return self._lookup_vn_list
 
 	def show_psrc(self):
-		return ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, repr(self._helper))]
+		return ['%s: var = %s, lookup = %s' % (self.__class__.__name__,
+			self._output_vn, repr(self._helper))]
 
 
-class SwitchingLookupParameterSource(SingleParameterSource):
+class SwitchingLookupParameterSource(LookupBaseParameterSource):
 	alias_list = ['switch']
 
 	def __init__(self, psrc, output_vn,
 			lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order):
-		SingleParameterSource.__init__(self, output_vn, [])
+		LookupBaseParameterSource.__init__(self, output_vn, [])
 		self._helper = LookupHelper(lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order)
 		self._psrc = psrc
 		self._psp_field = self._init_psp_field()
 
 	def __repr__(self):
-		return "switch(%r, '%s', %s)" % (self._psrc, self._key, repr(self._helper))
+		return "switch(%r, '%s', %s)" % (self._psrc, self._output_vn, repr(self._helper))
 
-	def create_psrc(cls, pconfig, repository, psrc, key, lookup=None):  # pylint:disable=arguments-differ
-		return SwitchingLookupParameterSource(psrc, *_get_lookup_args(pconfig, key, lookup))
+	def create_psrc(cls, pconfig, repository, psrc, output_vn, lookup=None):  # pylint:disable=arguments-differ
+		return SwitchingLookupParameterSource(psrc, *_get_lookup_args(pconfig, output_vn, lookup))
 	create_psrc = classmethod(create_psrc)
 
 	def fill_parameter_content(self, pnum, result):
@@ -107,7 +146,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 			return
 		psrc_pnum, output_idx = self._psp_field[pnum]
 		self._psrc.fill_parameter_content(psrc_pnum, result)
-		result[self._key] = self._helper.lookup(result)[output_idx]
+		result[self._output_vn] = self._helper.lookup(result)[output_idx]
 
 	def fill_parameter_metadata(self, result):
 		result.append(self._meta)
@@ -117,7 +156,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		return len(self._psp_field)
 
 	def get_psrc_hash(self):
-		return md5_hex(self._key + self._helper.get_psrc_hash() + self._psrc.get_psrc_hash())
+		return md5_hex(self._output_vn + self._helper.get_psrc_hash() + self._psrc.get_psrc_hash())
 
 	def get_used_psrc_list(self):
 		return [self] + self._psrc.get_used_psrc_list()
@@ -135,7 +174,8 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 		return (result_redo, result_disable, psrc_size_change)
 
 	def show_psrc(self):
-		result = ['%s: var = %s, lookup = %s' % (self.__class__.__name__, self._key, repr(self._helper))]
+		result = ['%s: var = %s, lookup = %s' % (self.__class__.__name__,
+			self._output_vn, repr(self._helper))]
 		return result + lmap(lambda x: '\t' + x, self._psrc.show_psrc())
 
 	def _init_psp_field(self):
@@ -156,7 +196,7 @@ class SwitchingLookupParameterSource(SingleParameterSource):
 			for pnum in irange(self._psrc.get_parameter_len()):
 				_add_psp_entry(pnum)
 		if len(result) == 0:
-			self._log.critical('Lookup parameter "%s" has no matching entries!', self._key)
+			self._log.critical('Lookup parameter "%s" has no matching entries!', self._output_vn)
 		return result
 
 
@@ -199,31 +239,3 @@ def _get_lookup_args(pconfig, output_user, lookup_user_list):
 			if len(lookup_dict[lookup_key]) == 0:
 				lookup_dict[lookup_key].append('')
 	return (output_vn, lookup_vn_list, lookup_matcher_list, lookup_dict, lookup_order)
-
-
-def _get_psrc_info_for_lookup(pconfig, output_vn, lookup_vn_list):
-	lookup_vn = None
-	if lookup_vn_list:  # default lookup key
-		lookup_vn = KeyParameterSource(*lookup_vn_list)
-
-	lookup_args = _get_lookup_args(pconfig, KeyParameterSource(output_vn), lookup_vn)
-	# Determine kind of lookup, [3] == lookup_dict
-	lookup_len = lmap(len, lookup_args[3].values())
-
-	if (min(lookup_len) == 1) and (max(lookup_len) == 1):  # simple lookup sufficient for this setup
-		return (False, SimpleLookupParameterSource, list(lookup_args))
-	# switch needs elevation beyond local scope
-	return (True, SwitchingLookupParameterSource, list(lookup_args))
-
-
-def _get_psrc_info_for_parameter(pconfig, output_vn, lookup_vn_list):
-	# yield (is_nested, psrc_type, psrc_args)
-	parameter_value = pconfig.get_parameter(output_vn.lstrip('!'))
-	# simplify parameter source
-	if isinstance(parameter_value, list):
-		if len(parameter_value) != 1:
-			return (False, ParameterSource.get_class('SimpleParameterSource'), [output_vn, parameter_value])
-		return (False, ParameterSource.get_class('ConstParameterSource'), [output_vn, parameter_value[0]])
-	elif isinstance(parameter_value, tuple) and parameter_value[0] == 'format':
-		return (False, ParameterSource.get_class('FormatterParameterSource'), parameter_value[1:])
-	return _get_psrc_info_for_lookup(pconfig, output_vn, lookup_vn_list)

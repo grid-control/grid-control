@@ -21,7 +21,7 @@
 # add the option --use-task if you want the plotting script to load data like event count
 # per job from the configuration
 
-import os, re, logging
+import os, re
 
 
 try:
@@ -34,10 +34,10 @@ try:
 except ImportError:
 	matplotlib = None
 from grid_control.output_processor import JobInfoProcessor, JobResult
-from grid_control.report import Report
+from grid_control.report import ImageReport
 from grid_control.utils.data_structures import make_enum
 from hpfwk import clear_current_exception
-from python_compat import irange, izip
+from python_compat import BytesBuffer, irange, izip
 
 
 JobMetrics = make_enum([  # pylint:disable=invalid-name
@@ -59,14 +59,14 @@ JobMetrics = make_enum([  # pylint:disable=invalid-name
 ])
 
 
-class PlotReport(Report):
+class PlotReport(ImageReport):
 	alias_list = ['plot']
 
-	def __init__(self, job_db, task, jobs=None, config_str=''):
-		Report.__init__(self, job_db, task, jobs, config_str)
+	def __init__(self, config, name, job_db, task=None):
+		ImageReport.__init__(self, config, name, job_db, task)
 		self._task = task
+		self._output_dn = config.get_work_path('output')
 		self._job_result_list = []
-		self._log = logging.getLogger('report.plotreport')
 		if not numpy:
 			raise Exception('Unable to find numpy')
 		if not matplotlib:
@@ -74,22 +74,23 @@ class PlotReport(Report):
 		# larger default fonts
 		matplotlib.rcParams.update({'font.size': 16})
 
-	def show_report(self, job_db):
+	def show_report(self, job_db, jobnum_list):
 		self._job_result_list = []
-		self._log.info(str(len(self._jobs)) + ' job(s) selected for plots')
+		self._log.info(str(len(jobnum_list)) + ' job(s) selected for plots')
 
 		time_span_se_out = (None, None)
 		time_span_se_in = (None, None)
 		time_span_wrapper = (None, None)
 		time_span_cmssw = (None, None)
 
-		workdir = job_db.get_work_path()
-		for jobnum in self._jobs:
+		for jobnum in jobnum_list:
 			try:
-				job_info = JobInfoProcessor().process(os.path.join(workdir, 'output', 'job_%d' % jobnum))
+				job_info = JobInfoProcessor().process(os.path.join(self._output_dn, 'job_%d' % jobnum))
 			except Exception:
 				clear_current_exception()
 				self._log.info('Ignoring job')
+				continue
+			if job_info.get(JobResult.EXITCODE) != 0:
 				continue
 
 			job_result = _extract_job_metrics(job_info, self._task)
@@ -155,10 +156,10 @@ class PlotReport(Report):
 
 	def _bound_time(self, job_result, time_span, stamp_start, stamp_end):
 		(min_time, max_time) = time_span
-		if (min_time is None) or (max_time is None):
+		if ((min_time is None) or (max_time is None)) and (stamp_start in job_result):
 			min_time = job_result[stamp_start]
 			max_time = job_result[stamp_end]
-		else:
+		elif stamp_start in job_result:
 			min_time = min(min_time, job_result[stamp_start])
 			max_time = max(max_time, job_result[stamp_end])
 		return (min_time, max_time)
@@ -191,7 +192,10 @@ class PlotReport(Report):
 			matplotlib.pyplot.legend(loc='upper right', numpoints=1, frameon=False, ncol=2)
 		image_type_list = ['png', 'pdf']
 		for image_type in image_type_list:
-			matplotlib.pyplot.savefig(name_fig_axis[0] + '.' + image_type)
+			buffer = BytesBuffer()
+			matplotlib.pyplot.savefig(buffer, format=image_type)
+			self._show_image(name_fig_axis[0] + '.' + image_type, buffer)
+			buffer.close()
 
 	def _init_hist(self, name, xlabel, ylabel):
 		fig = matplotlib.pyplot.figure()

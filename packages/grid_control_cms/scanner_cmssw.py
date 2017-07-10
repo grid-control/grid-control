@@ -29,12 +29,16 @@ class GCProviderSetupCMSSW(GCProviderSetup):
 
 
 class FilterEDMFiles(InfoScanner):
+	alias_list = ['edm']
+
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		if all(imap(metadata_dict.__contains__, ['CMSSW_EVENTS_WRITE', 'CMSSW_CONFIG_FILE'])):
 			yield (item, metadata_dict, entries, location_list, obj_dict)
 
 
 class LFNFromPath(InfoScanner):
+	alias_list = ['lfn']
+
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		self._strip_path = config.get('lfn marker', '/store/')
@@ -48,6 +52,8 @@ class LFNFromPath(InfoScanner):
 
 
 class MetadataFromCMSSW(InfoScanner):
+	alias_list = ['cmssw_metadata']
+
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		self._include_config = config.get_bool('include config infos', False)
@@ -62,6 +68,8 @@ class MetadataFromCMSSW(InfoScanner):
 
 
 class ObjectsFromCMSSW(InfoScanner):
+	alias_list = ['cmssw_obj']
+
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		self._import_parents = config.get_bool('include parent infos', False)
@@ -184,6 +192,8 @@ class ObjectsFromCMSSW(InfoScanner):
 
 
 class SEListFromPath(InfoScanner):
+	alias_list = ['storage']
+
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		tmp = item.split(':', 1)
 		if len(tmp) == 1:

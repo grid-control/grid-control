@@ -13,16 +13,18 @@
 # | limitations under the License.
 
 import os, logging
+from grid_control.backends.storage import se_ls
 from grid_control.config import ConfigError, create_config
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.datasets.scanner_base import InfoScanner
-from grid_control.job_db import Job
-from grid_control.job_selector import JobSelector
-from grid_control.utils import DictFormat, clean_path, filter_dict, split_opt
+from grid_control.job_db import JobClass
+from grid_control.job_selector import AndJobSelector, ClassSelector, JobSelector
+from grid_control.utils import DictFormat, clean_path, split_opt
 from grid_control.utils.activity import ProgressActivity
+from grid_control.utils.algos import filter_dict
 from grid_control.utils.parsing import parse_str
 from hpfwk import clear_current_exception
-from python_compat import identity, ifilter, imap, irange, izip, lfilter, lmap, set, sorted
+from python_compat import identity, ifilter, imap, irange, izip, lfilter, lidfilter, lmap, set, sorted  # pylint:disable=line-too-long
 
 
 class AddFilePrefix(InfoScanner):
@@ -62,6 +64,8 @@ class DetermineEntries(InfoScanner):
 
 
 class FilesFromDataProvider(InfoScanner):
+	alias_list = ['provider_files']
+
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		source_dataset_path = config.get('source dataset path')
@@ -80,6 +84,8 @@ class FilesFromDataProvider(InfoScanner):
 
 
 class FilesFromJobInfo(InfoScanner):
+	alias_list = ['jobinfo_files']
+
 	def get_guard_keysets(self):
 		return (['SE_OUTPUT_FILE'], ['SE_OUTPUT_PATH'])
 
@@ -99,38 +105,48 @@ class FilesFromJobInfo(InfoScanner):
 
 
 class FilesFromLS(InfoScanner):
+	alias_list = ['ls']
+
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		self._path = config.get('source directory', '.')
+		self._timeout = config.get_int('source timeout', 120)
+		self._trim = config.get_bool('source trim local', True)
 		self._recurse = config.get_bool('source recurse', False)
-		if ('://' in self._path) and self._recurse:
-			raise DatasetError('Recursion is not supported for URL: %s' % repr(self._path))
-		elif '://' not in self._path:
-			self._path = clean_path(self._path)
+		if '://' not in self._path:
+			self._path = 'file://' + self._path
+		(prot, path) = self._path.split('://')
+		self._path = prot + '://' + clean_path(path)
 
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		metadata_dict['GC_SOURCE_DIR'] = self._path
 		progress = ProgressActivity('Reading source directory')
-		for counter, url in enumerate(self._iter_path()):
+		for counter, size_url in enumerate(self._iter_path(self._path)):
 			progress.update_progress(counter)
-			yield (os.path.join(self._path, url.strip()), metadata_dict, entries, location_list, obj_dict)
+			metadata_dict['FILE_SIZE'] = size_url[0]
+			url = size_url[1]
+			if self._trim:
+				url = url.replace('file://', '')
+			yield (url, metadata_dict, entries, location_list, obj_dict)
 		progress.finish()
 
-	def _iter_path(self):
-		if self._recurse:
-			for (root, _, files) in os.walk(self._path):
-				for url in files:
-					yield clean_path(os.path.join(root, url))
-		else:
-			from grid_control.backends.storage import se_ls
-			proc = se_ls(self._path)
-			for url in proc.stdout.iter(timeout=60):
-				yield url
-			if proc.status(timeout=0) != 0:
-				self._log.log_process(proc)
+	def _iter_path(self, path):
+		proc = se_ls(path)
+		for size_basename in proc.stdout.iter(timeout=self._timeout):
+			(size, basename) = size_basename.strip().split(' ', 1)
+			size = int(size)
+			if size >= 0:
+				yield (size, os.path.join(path, basename))
+			elif self._recurse:
+				for result in self._iter_path(os.path.join(path, basename)):
+					yield result
+		if proc.status(timeout=0) != 0:
+			self._log.log_process(proc)
 
 
 class JobInfoFromOutputDir(InfoScanner):
+	alias_list = ['dn_jobinfo']
+
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		job_info_path = os.path.join(item, 'job.info')
 		try:
@@ -198,14 +214,20 @@ class MatchOnFilename(InfoScanner):
 
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._match = config.get_matcher('filename filter', '*.root', default_matcher='shell')
+		self._match = config.get_matcher('filename filter', '*.root', default_matcher='ShellStyleMatcher')
+		self._relative = config.get_bool('filename filter relative', True)
 
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
-		if self._match.match(item) > 0:
+		fn_match = item
+		if self._relative:
+			fn_match = os.path.basename(item)
+		if self._match.match(fn_match) > 0:
 			yield (item, metadata_dict, entries, location_list, obj_dict)
 
 
 class MetadataFromTask(InfoScanner):
+	alias_list = ['task_metadata']
+
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
 		ignore_list_default = lmap(lambda x: 'SEED_%d' % x, irange(10)) + ['DOBREAK', 'FILE_NAMES',
@@ -217,38 +239,37 @@ class MetadataFromTask(InfoScanner):
 		self._ignore_vars = config.get_list('ignore task vars', ignore_list_default)
 
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
-		if 'GC_TASK' in obj_dict:
-			tmp = dict(obj_dict['GC_TASK'].get_task_dict())
-			if 'GC_JOBNUM' in metadata_dict:
-				tmp.update(obj_dict['GC_TASK'].get_job_dict(metadata_dict['GC_JOBNUM']))
+		if ('GC_TASK' in obj_dict) and ('GC_JOBNUM' in metadata_dict):
+			job_env_dict = obj_dict['GC_TASK'].get_job_dict(metadata_dict['GC_JOBNUM'])
 			for (key_new, key_old) in obj_dict['GC_TASK'].get_var_alias_map().items():
-				tmp[key_new] = tmp.get(key_old)
-			metadata_dict.update(filter_dict(tmp, key_filter=lambda k: k not in self._ignore_vars))
+				job_env_dict[key_new] = job_env_dict.get(key_old)
+			metadata_dict.update(filter_dict(job_env_dict, key_filter=lambda k: k not in self._ignore_vars))
 		yield (item, metadata_dict, entries, location_list, obj_dict)
 
 
 class OutputDirsFromConfig(InfoScanner):
+	alias_list = ['config_dn']
+
 	# Get output directories from external config file
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		ext_config_fn = config.get_path('source config')
+		ext_config_fn = config.get_fn('source config')
 		ext_config_raw = create_config(ext_config_fn, load_only_old_config=True)
 		ext_config = ext_config_raw.change_view(set_sections=['global'])
 		self._ext_work_dn = ext_config.get_work_path()
 		logging.getLogger().disabled = True
-		self._ext_workflow = ext_config.get_plugin('workflow', 'Workflow:global',
-			cls='Workflow', pargs=('task',))
+		ext_workflow = ext_config.get_plugin('workflow', 'Workflow:global', cls='Workflow',
+			pkwargs={'backend': 'NullWMS'})
 		logging.getLogger().disabled = False
-		self._ext_task = self._ext_workflow.task
-		ext_job_db = ext_config.get_plugin('job database', 'TextFileJobDB', cls='JobDB',
-			pkwargs={'job_selector': lambda jobnum, job_obj: job_obj.state == Job.SUCCESS}, on_change=None)
+		self._ext_task = ext_workflow.task
 		job_selector = JobSelector.create(config.get('source job selector', ''), task=self._ext_task)
-		self._selected = sorted(ext_job_db.get_job_list(job_selector))
+		self._selected = sorted(ext_workflow.job_manager.job_db.get_job_list(AndJobSelector(
+			ClassSelector(JobClass.SUCCESS), job_selector)))
 
 	def _iter_datasource_items(self, item, metadata_dict, entries, location_list, obj_dict):
 		progress_max = None
 		if self._selected:
-			progress_max = self._selected[-1]
+			progress_max = self._selected[-1] + 1
 		progress = ProgressActivity('Reading job logs', progress_max)
 		for jobnum in self._selected:
 			progress.update_progress(jobnum)
@@ -260,9 +281,11 @@ class OutputDirsFromConfig(InfoScanner):
 
 
 class OutputDirsFromWork(InfoScanner):
+	alias_list = ['work_dn']
+
 	def __init__(self, config, datasource_name):
 		InfoScanner.__init__(self, config, datasource_name)
-		self._ext_work_dn = config.get_path('source directory')
+		self._ext_work_dn = config.get_dn('source directory')
 		self._ext_output_dir = os.path.join(self._ext_work_dn, 'output')
 		if not os.path.isdir(self._ext_output_dir):
 			raise DatasetError('Unable to find task output directory %s' % repr(self._ext_output_dir))
@@ -326,7 +349,7 @@ class ParentLookup(InfoScanner):
 				parent_lfn_list = [metadata_dict[key]]
 			for parent_lfn in parent_lfn_list:
 				pdn_list.append(map_plfnp2pdn.get(self._get_lfnp(parent_lfn)))
-		metadata_dict['PARENT_PATH'] = lfilter(identity, set(pdn_list))
+		metadata_dict['PARENT_PATH'] = lidfilter(set(pdn_list))
 		yield (item, metadata_dict, entries, location_list, obj_dict)
 
 	def _read_plfnp_map(self, config, parent_dataset_expr):

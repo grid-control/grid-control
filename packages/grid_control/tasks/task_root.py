@@ -15,7 +15,8 @@
 import os, logging
 from grid_control.config import ConfigError, TriggerInit
 from grid_control.tasks.task_user import UserTask
-from grid_control.utils import Result, get_path_share, merge_dict_list
+from grid_control.utils import Result, get_path_share
+from grid_control.utils.algos import dict_union
 
 
 class ROOTTask(UserTask):
@@ -24,15 +25,17 @@ class ROOTTask(UserTask):
 
 	def __init__(self, config, name):
 		# Determine ROOT path from previous settings / environment / config file
-		self._rootpath = config.get('root path', os.environ.get('ROOTSYS', ''),
-			persistent=True, on_change=TriggerInit('sandbox'))
-		if not self._rootpath:
+		def _check_root_dn(loc, obj):
+			if os.path.isdir(obj):
+				return obj
 			raise ConfigError('Either set environment variable "ROOTSYS" or set option "root path"!')
-		logging.getLogger('task').info('Using the following ROOT path: %s', self._rootpath)
+		self._root_dn = config.get_dn('root path', os.environ.get('ROOTSYS', ''),
+			persistent=True, on_change=TriggerInit('sandbox'), on_valid=_check_root_dn)
+		logging.getLogger('task').info('Using the following ROOT path: %s', self._root_dn)
 
 		# Special handling for executables bundled with ROOT
 		self._executable = config.get('executable', on_change=TriggerInit('sandbox'))
-		exe_full = os.path.join(self._rootpath, 'bin', self._executable.lstrip('/'))
+		exe_full = os.path.join(self._root_dn, 'bin', self._executable.lstrip('/'))
 		self._is_builtin = os.path.exists(exe_full)
 		if self._is_builtin:
 			config.set('send executable', 'False')
@@ -40,7 +43,7 @@ class ROOTTask(UserTask):
 
 		# Apply default handling from UserTask
 		UserTask.__init__(self, config, name)
-		self._update_map_error_code2message(get_path_share('gc-run.root.sh'))
+		self._update_map_error_code2msg(get_path_share('gc-run.root.sh'))
 
 		# Collect lib files needed by executable
 		self._lib_fn_list = []
@@ -56,4 +59,4 @@ class ROOTTask(UserTask):
 			Result(path_abs=get_path_share('gc-run.root.sh'), path_rel='gc-run.root.sh')]
 
 	def get_task_dict(self):
-		return merge_dict_list([UserTask.get_task_dict(self), {'GC_ROOTSYS': self._rootpath}])
+		return dict_union(UserTask.get_task_dict(self), {'GC_ROOTSYS': self._root_dn})

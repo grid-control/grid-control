@@ -133,10 +133,10 @@ class TCPsocket(PlugIn):
             self._sock.connect((server[0], int(server[1])))
             self._send=self._sock.sendall
             self._recv=self._sock.recv
-            self.DEBUG("Successfully connected to remote host %s"%`server`,'start')
+            self.DEBUG("Successfully connected to remote host %s"%repr(server),'start')
             return 'ok'
         except socket.error, (errno, strerror): 
-            self.DEBUG("Failed to connect to remote host %s: %s (%s)"%(`server`, strerror, errno),'error')
+            self.DEBUG("Failed to connect to remote host %s: %s (%s)"%(repr(server), strerror, errno),'error')
         except: pass
 
     def plugout(self):

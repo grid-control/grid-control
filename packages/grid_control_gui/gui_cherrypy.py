@@ -17,16 +17,24 @@ from grid_control.gc_exceptions import InstallationError
 from grid_control.gui import GUI
 from grid_control.job_db import Job
 from grid_control.utils import wait
-from grid_control_gui.plugin_graph import get_graph_image, get_workflow_graph
-from hpfwk import clear_current_exception
-from python_compat import lmap, lzip, sorted
+from python_compat import StringBuffer, imap, lmap, lzip, sorted
 
 
-try:
-	import cherrypy
-except Exception:
-	clear_current_exception()
-	cherrypy = None  # pylint:disable=invalid-name
+class CPNavbar(object):
+	def __init__(self, title_link_list, name=None):
+		(self._title_link_list, self._name) = (title_link_list, name)
+
+	def get_body(self):
+		return _tag('div', str.join('\n', imap(lambda title_link:
+			_tag('a', title_link[0], href=title_link[1]), self._title_link_list)),
+			Class='topnav', id=self._name or '')
+
+	def get_stylesheet(self):
+		return str.join('\n', ['.topnav { background-color: #333333; overflow: hidden; }',
+			'.topnav a { float: left; display: block; color: #7799aa; text-align: center;',
+			'padding: 14px 16px; text-decoration: none; font-size: 16px; }',
+			'.topnav a:hover { background-color: #7799aa; color: #333333; }',
+			'.topnav a.active { background-color: #7799aa; color: white; }'])
 
 
 class CPProgressBar(object):
@@ -34,63 +42,77 @@ class CPProgressBar(object):
 		self._width = total_width
 		self._done = round(((progress - value_min) / float(value_max - value_min)) * 100.0)
 
-	def __str__(self):
-		return """
-<div style="width:%dpx;padding:2px;background-color:white;border:1px solid black;text-align:center">
-	<div style="width:%dpx;background-color:green;"> %s%%
-	</div>
-</div>""" % (self._width, int(self._width * self._done / 100), int(self._done))
+	def get_body(self):
+		pbar = _tag('div', '%s%%' % self._done, style='width:%d%%;' % self._done, Class='progressbar')
+		return _tag('div', pbar, Class='progress', style='width:%dpx' % self._width)
+
+	def get_stylesheet(self):
+		return str.join('\n', ['.progressbar {background-color:green;}',
+			'.progress {padding:2px;background-color:white;border:1px solid black;text-align:center;}'])
 
 
-class TabularHTML(object):
-	def __init__(self, head, data, fmt=None, top=True):
-		self._table = """
-<style type="text/css">
-	table {font-size:12px;color:#333333;border-width: 1px;border-color: #7799aa;border-collapse: collapse;}
-	th {font-size:12px;background-color:#aacccc;border-width: 1px;padding: 8px;border-style: solid;border-color: #7799aa;text-align:left;}
-	tr {background-color:#ffffff;}
-	td {font-size:12px;border-width: 1px;padding: 8px;border-style: solid;border-color: #7799aa;}
-</style>"""
-		fmt = fmt or {}
-		lookup_dict = lmap(lambda id_name: (id_name[0], fmt.get(id_name[0], str)), head)
-		header_list = lmap(lambda id_name: '<th>%s</th>' % id_name[1], head)
+class CPTable(object):
+	def __init__(self, head, data, fmt_dict=None, pivot=True):
+		(self._head, self._data, self._fmt_dict, self._pivot) = (head, data, fmt_dict, pivot)
+
+	def get_body(self):
+		fmt_dict = self._fmt_dict or {}
+		lookup_dict = lmap(lambda id_name: (id_name[0], fmt_dict.get(id_name[0], str)), self._head)
+		header_list = lmap(lambda id_name: _tag('th', id_name[1]), self._head)
 
 		def _make_entry_list(entry):
-			return lmap(lambda id_fmt: '<td>%s</td>' % id_fmt[1](entry.get(id_fmt[0])), lookup_dict)
-		row_list = [header_list] + lmap(_make_entry_list, data)
-		if not top:
+			return lmap(lambda id_fmt: _tag('td', id_fmt[1](entry.get(id_fmt[0]))), lookup_dict)
+		row_list = [header_list] + lmap(_make_entry_list, self._data)
+		width_str = 'width:100%;'
+		if not self._pivot:
 			row_list = lzip(*row_list)
-		rows = lmap(lambda row: '\t<tr>%s</tr>\n' % str.join('', row), row_list)
-		if top:
-			width_str = 'width:100%;'
-		else:
 			width_str = ''
-		self._table += '<table style="%s" border="1">\n%s</table>' % (width_str, str.join('', rows))
+		return _tag('table', str.join('', lmap(lambda row: _tag('tr', str.join('', row)), row_list)),
+			style=width_str, border=1)
 
-	def __str__(self):
-		return self._table
+	def get_stylesheet(self):
+		common = 'font-size:12px;border-color:#7799aa;border-width:1px'
+		return str.join('\n', [
+			'table {%s;color:#333333;border-collapse:collapse;}' % common,
+			'th {%s;background-color:#7799aa;padding:8px;border-style:solid;text-align:left;}' % common,
+			'tr {%s;background-color:#ffffff;}' % common,
+			'td {%s;padding:8px;border-style:solid;}' % common,
+		])
 
 
 class CPWebserver(GUI):
+	alias_list = ['cherrypy']
+
 	def __init__(self, config, workflow):
-		if not cherrypy:
+		try:
+			import cherrypy
+		except Exception:
 			raise InstallationError('cherrypy is not installed!')
+		self._cherrypy = cherrypy
 		GUI.__init__(self, config, workflow)
-		self._counter = 0
-		self._workflow = workflow
+		(self._config, self._workflow, self._counter) = (config, workflow, 0)
+		self._title = self._workflow.task.get_description().task_name
+
+	def show_config(self):
+		buffer = StringBuffer()
+		try:
+			self._config.write(buffer)
+			return _tag('pre', _tag('code', buffer.getvalue()))
+		finally:
+			buffer.close()
+	show_config.exposed = True
 
 	def image(self):
-		cherrypy.response.headers['Content-Type'] = 'image/png'
-		return get_graph_image(get_workflow_graph(self._workflow))
+		self._cherrypy.response.headers['Content-Type'] = 'image/png'
+		return ''
 	image.exposed = True
 
 	def jobs(self, *args, **kw):
-		result = '<body>'
-		result += str(CPProgressBar(0, min(100, self._counter), 100, 300))
+		element_list = [CPProgressBar(0, min(100, self._counter), 100, 300)]
 		if 'job' in kw:
 			jobnum = int(kw['job'])
 			info = self._workflow.task.get_job_dict(jobnum)
-			result += str(TabularHTML(lzip(sorted(info), sorted(info)), [info], top=False))
+			element_list.append(CPTable(lzip(sorted(info), sorted(info)), [info], pivot=False))
 
 		def _fmt_time(value):
 			return time.strftime('%Y-%m-%d %T', time.localtime(value))
@@ -104,37 +126,57 @@ class CPWebserver(GUI):
 
 		header_list = [
 			('jobnum', 'Job'), ('state', 'Status'), ('attempt', 'Attempt'),
-			('gc_id', 'WMS ID'), ('dest', 'Destination'), ('submitted', 'Submitted')
+			('gc_id', 'WMS ID'), ('SITE', 'Site'), ('QUEUE', 'Queue'), ('submitted', 'Submitted')
 		]
 		fmt_dict = {
 			'jobnum': lambda x: '<a href="jobs?job=%s">%s</a>' % (x, x),
 			'state': Job.enum2str, 'submitted': _fmt_time
 		}
-		result += str(TabularHTML(header_list, _iter_job_objs(), fmt=fmt_dict, top=True))
-		result += '</body>'
-		return result
+		element_list.append(CPTable(header_list, _iter_job_objs(), fmt_dict=fmt_dict, pivot=True))
+		return _get_html_page(element_list)
 	jobs.exposed = True
 
+	def show_request_info(self):
+		return _get_html_page([_tag('code', self._cherrypy.request.__dict__)])
+	show_request_info.exposed = True
+
 	def index(self):
-		result = '<body>'
-		result += '<a href="jobs">go to jobs</a>'
-		result += '<div>%s</div>' % cherrypy.request.__dict__
-		result += '</body>'
-		return result
+		return _get_html_page([
+			CPNavbar([('Jobs', 'jobs'), ('Config', 'show_config'), ('Workflow Graph', 'image'),
+				('grid-control task: %s' % self._title, ''), ('Show request info', 'show_request_info')]),
+		])
 	index.exposed = True
 
-	def start_display(self):
+	def end_interface(self):
+		self._cherrypy.engine.exit()
+		self._cherrypy.server.stop()
+
+	def start_interface(self):
 		basic_auth = {'tools.auth_basic.on': True, 'tools.auth_basic.realm': 'earth',
-			'tools.auth_basic.checkpassword': cherrypy.lib.auth_basic.checkpassword_dict({'user': '123'})}
-		cherrypy.log.screen = False
-		cherrypy.engine.autoreload.unsubscribe()
-		cherrypy.server.socket_port = 12345
-		cherrypy.tree.mount(self, '/', {'/': basic_auth})
-		cherrypy.engine.start()
-		self._workflow.process(wait=self._process_queue)
-		cherrypy.engine.exit()
-		cherrypy.server.stop()
+			'tools.auth_basic.checkpassword':
+				self._cherrypy.lib.auth_basic.checkpassword_dict({'user': '123'})}
+		self._cherrypy.log.screen = False
+		self._cherrypy.engine.timeout_monitor.unsubscribe()
+		self._cherrypy.engine.autoreload.unsubscribe()
+		self._cherrypy.server.socket_port = 12345
+		self._cherrypy.tree.mount(self, '/', {'/': basic_auth})
+		self._cherrypy.engine.start()
 
 	def _process_queue(self, timeout):
 		self._counter += 1
 		wait(timeout)
+
+
+def _get_html_page(html_obj_list):
+	html_stylesheets = str.join('\n', imap(lambda html_obj: html_obj.get_stylesheet(), html_obj_list))
+	html_body = str.join('\n', imap(lambda html_obj: html_obj.get_body(), html_obj_list))
+	return _tag('html',
+		_tag('head', _tag('style', html_stylesheets, Type='text/css')) + _tag('body', '\n' + html_body))
+
+
+def _tag(value, content='', **kwargs):
+	attr_str = str.join('',
+		imap(lambda key_value: ' %s="%s"' % (key_value[0].lower(), key_value[1]), kwargs.items()))
+	if not content:
+		return '<%s%s/>' % (value, attr_str)
+	return '<%s%s>%s</%s>' % (value, attr_str, content, value)

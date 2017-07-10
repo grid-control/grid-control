@@ -96,6 +96,7 @@ def get_psrc(opts, args):
 	adapter = 'BasicParameterAdapter'
 	if opts.persistent:
 		adapter = 'TrackedParameterAdapter'
+		config.set_state(True, 'resync', detail='parameters')
 	return ParameterAdapter.create_instance(adapter, config, psrc)
 
 
@@ -125,7 +126,8 @@ def list_parameters(psrc, opts):
 
 def save_parameters(psrc, fn):
 	logging.info('')
-	ParameterSource.get_class('GCDumpParameterSource').write(fn, psrc)
+	ParameterSource.get_class('GCDumpParameterSource').write(fn, psrc.get_job_len(),
+		psrc.get_job_metadata(), psrc.iter_jobs())
 	logging.info('Parameter information saved to ./%s', fn)
 
 

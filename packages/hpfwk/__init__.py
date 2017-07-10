@@ -14,13 +14,12 @@
 
 # pylint:disable=line-too-long
 
-from hpfwk.hpf_compat import clear_current_exception, get_thread_name, get_thread_state
-from hpfwk.hpf_debug import DebugInterface, format_exception, get_trace_fun, ignore_exception
-from hpfwk.hpf_exceptions import APIError, AbstractError, ExceptionCollector, NestedException, get_current_exception
+from hpfwk.hpf_debug import DebugInterface, format_exception, get_thread_name, get_trace_fun, ignore_exception
+from hpfwk.hpf_exceptions import APIError, AbstractError, ExceptionCollector, NestedException, clear_current_exception, except_nested, get_current_exception, rethrow
 from hpfwk.hpf_plugin import InstanceFactory, Plugin, PluginError, init_hpf_plugins
 
 
 __all__ = ['AbstractError', 'APIError', 'clear_current_exception', 'DebugInterface',
-	'ExceptionCollector', 'format_exception', 'get_current_exception', 'get_thread_name',
-	'get_thread_state', 'get_trace_fun', 'ignore_exception', 'init_hpf_plugins', 'InstanceFactory',
-	'NestedException', 'Plugin', 'PluginError']
+	'except_nested', 'ExceptionCollector', 'format_exception', 'get_current_exception',
+	'get_thread_name', 'get_trace_fun', 'ignore_exception', 'init_hpf_plugins', 'InstanceFactory',
+	'NestedException', 'Plugin', 'PluginError', 'rethrow']

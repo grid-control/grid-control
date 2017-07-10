@@ -38,8 +38,8 @@ class DASProvider(CMSBaseProvider):
 		if self._dataset_instance.startswith('http'):
 			self._url = self._dataset_instance
 			self._dataset_instance = ''
-		self._gjrc = DASRestClient(self._url, 'VOMS proxy needed to query DAS!', UserError,
-			cert=get_cms_cert(config))
+		self._gjrc = DASRestClient(get_cms_cert(config), self._url,
+			'VOMS proxy needed to query DAS!', UserError)
 
 	def _get_cms_dataset_list(self, dataset_path):
 		for cms_dataset_info in self._query_das('dataset dataset=%s' % dataset_path):

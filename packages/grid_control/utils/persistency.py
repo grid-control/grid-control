@@ -12,16 +12,18 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from python_compat import identity
+from grid_control.utils.file_tools import SafeFile
+from python_compat import identity, imap
 
 
-def load_dict(fn, delimeter, fmt_key=str.lower, fmt_value=identity):
-	fp = open(fn)
+def load_dict(fn, delimeter, fmt_key=identity, fmt_value=identity):
 	result = {}
-	try:
-		for line in fp.readlines():
-			(key, value) = line.split(delimeter, 2)
-			result[fmt_key(key.strip())] = fmt_value(value.strip())
-	finally:
-		fp.close()
+	for line in SafeFile(fn).iter_close():
+		(key, value) = line.split(delimeter, 1)
+		result[fmt_key(key.strip())] = fmt_value(value.strip())
 	return result
+
+
+def save_dict(value, fn, delimeter, fmt_key=identity, fmt_value=identity, key_list=None):
+	SafeFile(fn, 'w').write_close(str.join('\n', imap(lambda key: '%s%s%s' % (
+		fmt_key(key), delimeter, fmt_value(value[key])), key_list or value)))

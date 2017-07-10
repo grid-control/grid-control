@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import logging
-from grid_control.utils.parsing import str_dict
+from grid_control.utils.parsing import str_dict_linear
 from hpfwk import APIError, NestedException, clear_current_exception
 from python_compat import ichain, ifilter, imap, lchain, lidfilter, lmap, set, sorted, unspecified
 
@@ -43,22 +43,19 @@ def norm_config_locations(value):
 class ConfigContainer(object):
 	def __init__(self, name):
 		self.enabled = True
-		self._read_only = False
+		self._write_mode = True  # True: allowed | None: ignored | False: raise APIError
 		self._counter = 0
 		self._content = {}
 		self._content_default = {}
 
-	def append(self, entry, unique=False):
-		if self._read_only:
+	def append(self, entry):
+		if self._write_mode is False:
 			raise APIError('Config container is read-only!')
-		self._counter += 1
-		entry.order = self._counter
-		option_list = self._content.setdefault(entry.option, [])
-		if unique:
-			existing_values = imap(lambda e: (e.section, e.value), option_list)
-			if (entry.section, entry.value) in existing_values:
-				return
-		option_list.append(entry)
+		elif self._write_mode is True:
+			self._counter += 1
+			entry.order = self._counter
+			option_list = self._content.setdefault(entry.option, [])
+			option_list.append(entry)
 
 	def get_default_entry(self, entry):
 		return self._content_default.get(entry.option, {}).get(entry.section)
@@ -72,6 +69,12 @@ class ConfigContainer(object):
 	def iter_config_entries(self, option, filter_fun):
 		source_list = [self._content.get(option, []), self._content_default.get(option, {}).values()]
 		return ifilter(filter_fun, ichain(source_list))
+
+	def protect(self, raise_on_change=True):
+		if (self._write_mode is True) and raise_on_change:
+			self._write_mode = False
+		elif self._write_mode is True:
+			self._write_mode = None
 
 	def resolve(self):
 		so_value_dict = self._get_value_dict()
@@ -92,15 +95,13 @@ class ConfigContainer(object):
 
 	def set_default_entry(self, entry):
 		entry_cur = self.get_default_entry(entry)
-		if self._read_only and not entry_cur:
-			raise APIError('Config container is read-only!')
-		elif entry_cur and (entry_cur.value != entry.value):
+		if entry_cur and (entry_cur.value != entry.value):
 			raise APIError('Inconsistent default values! (%r != %r)' % (entry_cur.value, entry.value))
-		entry.order = 0
-		self._content_default.setdefault(entry.option, {}).setdefault(entry.section, entry)
-
-	def set_read_only(self):
-		self._read_only = True
+		elif (self._write_mode is False) and not entry_cur:
+			raise APIError('Config container is read-only!')
+		elif self._write_mode is True:
+			entry.order = 0
+			self._content_default.setdefault(entry.option, {}).setdefault(entry.section, entry)
 
 	def _get_value_dict(self):
 		so_entries_dict = {}
@@ -133,7 +134,7 @@ class ConfigEntry(object):
 		(self.value, self.opttype, self.accessed, self.used) = (value, opttype, accessed, used)
 
 	def __repr__(self):
-		return '%s(%s)' % (self.__class__.__name__, str_dict(self.__dict__))
+		return '%s(%s)' % (self.__class__.__name__, str_dict_linear(self.__dict__))
 
 	def combine_entries(cls, entry_iter):
 		(result, entry_list_used) = cls._process_and_mark_entries(entry_iter)
@@ -176,61 +177,34 @@ class ConfigEntry(object):
 			return '<%s> %s' % (self.section.replace('!', ''), self.option)
 		return '[%s] %s' % (self.section, self.option)
 
-	def process_entries(cls, entry_iter):
-		entry_iter = iter(entry_iter)
-		result = None
-		entry_list_used = []
-		modifier_list = []
-		for entry in entry_iter:
-			if entry.opttype == '-=':  # context sensitive option
-				if entry.value.strip() == '':  # set-like option
-					entry_list_used = [entry]
-					result = None
-					modifier_list = []
-				else:
-					modifier_list.append(entry)
-			elif entry.opttype in ['+=', '^=']:  # modifier options
-				modifier_list.append(entry)
-			elif entry.opttype in ['*=', '!=', '?=', '=']:  # set options
-				if entry.opttype == '*=':  # this option can not be changed by other config entries
-					return _discard_following(entry, entry_iter)
-				elif entry.opttype == '=':  # set but don't apply collected modifiers
-					# subsequent modifiers apply!
-					entry_list_used = [entry]
-					result = entry
-					modifier_list = []
-				elif entry.opttype == '?=':  # Conditional set with applied modifiers
-					if not result:
-						entry_list_used = [entry] + modifier_list
-						result = cls._apply_modifiers(entry, modifier_list)
-						modifier_list = []
-				elif entry.opttype == '!=':  # set and apply collected modifiers
-					entry_list_used = [entry] + modifier_list
-					result = cls._apply_modifiers(entry, modifier_list)
-					modifier_list = []
-		if modifier_list:  # apply remaining modifiers - result can be None
-			entry_list_used.extend(modifier_list)
-			result = cls._apply_modifiers(result, modifier_list)
-		return (result, entry_list_used)
+	def process_entries(cls, entry_iter, apply_modifiers=True):
+		entry_list = list(entry_iter)
+		try:
+			return cls._process_entries(entry_list, apply_modifiers)
+		except Exception:
+			raise ConfigError('Error while processing:\n\t' + str.join('\n\t',
+				imap(lambda entry: entry.format(print_section=True), entry_list)))
 	process_entries = classmethod(process_entries)
 
 	def simplify_entries(cls, entry_iter):
 		# called to simplify entries for a specific option *and* section - sorted by order
-		(result_base, entry_list_used) = cls._process_and_mark_entries(entry_iter)
+		(result_base, entry_list_used) = cls._process_and_mark_entries(entry_iter, apply_modifiers=False)
 
 		# Merge subsequent += and ^= entries
 		def _merge_subsequent_entries(entry_iter):
 			prev_entry = None
 			for entry in entry_iter:
+				entry = ConfigEntry(entry.section, entry.option, entry.value, entry.opttype,
+					'<processed>', entry.order, entry.accessed, entry.used)  # copy entry for modifications
 				if prev_entry and (entry.opttype == prev_entry.opttype):
 					if entry.opttype == '+=':
 						entry.value = prev_entry.value + '\n' + entry.value
-						entry.source = '<processed>'
 					elif entry.opttype == '^=':
 						entry.value = entry.value + '\n' + prev_entry.value
-						entry.source = '<processed>'
 					else:
 						yield prev_entry
+				elif prev_entry:
+					yield prev_entry
 				prev_entry = entry
 			if prev_entry:
 				yield prev_entry
@@ -240,7 +214,12 @@ class ConfigEntry(object):
 		else:
 			result = list(_merge_subsequent_entries(entry_list_used))
 
-		(result_simplified, used_simplified) = cls._process_and_mark_entries(result)
+		try:
+			(result_base, entry_list_used) = cls._process_and_mark_entries(entry_iter, apply_modifiers=True)
+			(result_simplified, used_simplified) = cls._process_and_mark_entries(result)
+		except ConfigError:  # unable to simplify pure modification list
+			clear_current_exception()
+			return result
 		assert len(used_simplified) == len(result)
 		if result_simplified and result_base:
 			assert result_simplified.value.strip() == result_base.value.strip()
@@ -273,12 +252,50 @@ class ConfigEntry(object):
 		return entry
 	_apply_modifiers = classmethod(_apply_modifiers)
 
-	def _process_and_mark_entries(cls, entry_iter):
+	def _process_and_mark_entries(cls, entry_iter, apply_modifiers=True):
 		entry_list = list(entry_iter)
 		for entry in entry_list:
 			entry.accessed = True
-		return cls.process_entries(entry_list)
+		return cls.process_entries(entry_list, apply_modifiers)
 	_process_and_mark_entries = classmethod(_process_and_mark_entries)
+
+	def _process_entries(cls, entry_iter, apply_modifiers=True):
+		entry_iter = iter(entry_iter)
+		result = None
+		entry_list_used = []
+		modifier_list = []
+		for entry in entry_iter:
+			if entry.opttype == '-=':  # context sensitive option
+				if entry.value.strip() == '':  # set-like option
+					entry_list_used = [entry]
+					result = None
+					modifier_list = []
+				else:
+					modifier_list.append(entry)
+			elif entry.opttype in ['+=', '^=']:  # modifier options
+				modifier_list.append(entry)
+			elif entry.opttype in ['*=', '!=', '?=', '=']:  # set options
+				if entry.opttype == '*=':  # this option can not be changed by other config entries
+					return _discard_following(entry, entry_iter)
+				elif entry.opttype == '=':  # set but don't apply collected modifiers
+					# subsequent modifiers apply!
+					entry_list_used = [entry]
+					result = entry
+					modifier_list = []
+				elif entry.opttype == '?=':  # Conditional set with applied modifiers
+					if not result:
+						entry_list_used = [entry] + modifier_list
+						result = cls._apply_modifiers(entry, modifier_list)
+						modifier_list = []
+				elif entry.opttype == '!=':  # set and apply collected modifiers
+					entry_list_used = [entry] + modifier_list
+					result = cls._apply_modifiers(entry, modifier_list)
+					modifier_list = []
+		entry_list_used.extend(modifier_list)
+		if apply_modifiers and modifier_list:  # apply remaining modifiers - result can be None
+			result = cls._apply_modifiers(result, modifier_list)
+		return (result, entry_list_used)
+	_process_entries = classmethod(_process_entries)
 
 
 def _discard_following(entry, entry_iter):

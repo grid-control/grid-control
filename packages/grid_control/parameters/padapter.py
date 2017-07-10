@@ -15,14 +15,15 @@
 import os, time, logging
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.parameters.psource_base import ParameterError, ParameterInfo, ParameterMetadata, ParameterSource  # pylint:disable=line-too-long
-from grid_control.utils import ensure_dir_exists, filter_dict, get_list_difference, swap
+from grid_control.utils import ensure_dir_exists
 from grid_control.utils.activity import Activity
+from grid_control.utils.algos import filter_dict, get_list_difference, reverse_dict
 from grid_control.utils.data_structures import make_enum
-from grid_control.utils.file_objects import ZipFile
+from grid_control.utils.file_tools import GZipTextFile
 from grid_control.utils.parsing import str_time_short
 from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import APIError
-from python_compat import ifilter, iidfilter, imap, irange, ismap, itemgetter, lfilter, lmap, md5_hex, set, sort_inplace, sorted  # pylint:disable=line-too-long
+from python_compat import ifilter, iidfilter, imap, irange, itemgetter, lfilter, lmap, md5_hex, set, sort_inplace, sorted  # pylint:disable=line-too-long
 
 
 # TrackingInfo enum values == fast resync tuple indices
@@ -84,9 +85,9 @@ class ResyncParameterAdapter(ParameterAdapter):
 		self._resync_state = ParameterSource.get_empty_resync_result()
 
 	def resync(self, force=False):
-		# Do not overwrite resync results - eg. from external or init trigger
 		source_hash = self._psrc.get_psrc_hash()
-		do_resync = (source_hash != self._psrc_hash) or force
+		do_resync = (source_hash != self._psrc_hash) or self._psrc.get_resync_request() or force
+		# Do not overwrite resync results - eg. from external or init trigger
 		if (self._resync_state == ParameterSource.get_empty_resync_result()) and do_resync:
 			activity = Activity('Syncronizing parameter information')
 			t_start = time.time()
@@ -107,6 +108,8 @@ class ResyncParameterAdapter(ParameterAdapter):
 
 
 class BasicParameterAdapter(ResyncParameterAdapter):
+	alias_list = ['basic']
+
 	def __init__(self, config, source):
 		ResyncParameterAdapter.__init__(self, config, source)
 		self._can_submit_map = {}
@@ -124,6 +127,8 @@ class BasicParameterAdapter(ResyncParameterAdapter):
 
 
 class TrackedParameterAdapter(BasicParameterAdapter):
+	alias_list = ['tracked']
+
 	# Parameter parameter adapter that tracks changes in the underlying parameter source
 	def __init__(self, config, source):
 		self._psrc_raw = source
@@ -148,32 +153,36 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		do_init = init_requested or init_needed
 
 		# Find out if resync should be performed
-		resync_requested = config.get_state('resync', detail='parameters')
+		resync_by_user = config.get_state('resync', detail='parameters')
 		config.set_state(False, 'resync', detail='parameters')
-		resync_needed = False
 		psrc_hash = self._psrc_raw.get_psrc_hash()
 		self._psrc_hash_stored = config.get('parameter hash', psrc_hash, persistent=True)
-		if self._psrc_hash_stored != psrc_hash:
-			resync_needed = True  # Resync needed if parameters have changed
-			self._log.info('Parameter hash has changed')
-			self._log.debug('\told hash: %s', self._psrc_hash_stored)
-			self._log.debug('\tnew hash: %s', psrc_hash)
-			self._log.log(logging.DEBUG1, '\tnew src: %s', self._psrc_raw)
-			config.set_state(True, 'init', detail='config')
-		do_resync = (resync_requested or resync_needed) and not do_init
+		psrc_hash_changed = self._psrc_hash_stored != psrc_hash  # Resync if parameters have changed
+		resync_by_psrc = self._psrc_raw.get_resync_request()
 
-		if not (do_resync or do_init):  # Reuse old mapping
-			activity = Activity('Loading cached parameter information')
-			self._read_jobnum2pnum()
-			activity.finish()
-			return
-		elif do_resync:  # Perform sync
-			self._psrc_hash_stored = None
-			self._resync_state = self.resync(force=True)
-		elif do_init:  # Write current state
+		if do_init:  # Write current state
 			self._write_jobnum2pnum(self._path_jobnum2pnum)
 			ParameterSource.get_class('GCDumpParameterSource').write(self._path_params,
 				self.get_job_len(), self.get_job_metadata(), self.iter_jobs())
+		elif resync_by_user or resync_by_psrc or psrc_hash_changed:  # Perform sync
+			if psrc_hash_changed:
+				self._log.info('Parameter hash has changed')
+				self._log.debug('\told hash: %s', self._psrc_hash_stored)
+				self._log.debug('\tnew hash: %s', psrc_hash)
+				self._log.log(logging.DEBUG1, '\tnew src: %s', self._psrc_raw)
+				config.set_state(True, 'init', detail='config')
+			elif resync_by_psrc:
+				self._log.info('Parameter source requested resync')
+				self._log.debug('\t%r', str.join(', ', imap(repr, resync_by_psrc)))
+			elif resync_by_user:
+				self._log.info('User requested resync')
+			self._psrc_hash_stored = None
+			self._resync_state = self.resync(force=True)
+		else:  # Reuse old mapping
+			activity = Activity('Loading cached parameter information')
+			self._read_jobnum2pnum()
+			activity.finish()
+			return  # do not set parameter hash in config
 		config.set('parameter hash', self._psrc_raw.get_psrc_hash())
 
 	def get_job_content(self, jobnum, pnum=None):
@@ -187,7 +196,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		return result
 
 	def _read_jobnum2pnum(self):
-		fp = ZipFile(self._path_jobnum2pnum, 'r')
+		fp = GZipTextFile(self._path_jobnum2pnum, 'r')
 		try:
 			def _translate_info(jobnum_pnum_info):
 				return tuple(imap(lambda x: int(x.lstrip('!')), jobnum_pnum_info.split(':', 1)))
@@ -238,7 +247,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 
 		result_redo = result_redo.difference(result_disable)
 		if result_redo or result_disable:
-			map_pnum2jobnum = dict(ismap(swap, self._map_jobnum2pnum.items()))
+			map_pnum2jobnum = reverse_dict(self._map_jobnum2pnum)
 
 			def _translate_pnum(pnum):
 				return map_pnum2jobnum.get(pnum, pnum)
@@ -248,7 +257,7 @@ class TrackedParameterAdapter(BasicParameterAdapter):
 		return (set(), set(), size_change)
 
 	def _write_jobnum2pnum(self, fn):
-		fp = ZipFile(fn, 'w')
+		fp = GZipTextFile(fn, 'w')
 		try:
 			fp.write('%d\n' % (self._psrc_raw.get_parameter_len() or 0))
 			data = ifilter(lambda jobnum_pnum: jobnum_pnum[0] != jobnum_pnum[1],

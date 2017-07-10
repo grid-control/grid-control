@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import sys, optparse  # pylint:disable=deprecated-module
+import os, sys, optparse  # pylint:disable=deprecated-module
 from python_compat import ifilter
 
 
@@ -60,6 +60,15 @@ class Options(object):
 
 	def add_text(self, group, short, option, default=None, help='', dest=None):
 		return self._add(group, short, option, default, 'store', help, dest)
+
+	def exit_with_usage(self, usage=None, msg=None, show_help=True):
+		exit_msg = 'Syntax: %s\n' % (usage or self.usage())
+		if show_help:
+			exit_msg += 'Use --help to get a list of options!\n'
+		if msg:
+			exit_msg += msg + '\n'
+		sys.stderr.write(exit_msg)
+		sys.exit(os.EX_USAGE)
 
 	def parse(self, args=None, arg_keys=None):
 		args = args or sys.argv[1:]

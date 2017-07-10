@@ -13,17 +13,19 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, time, pickle, logging
-from gc_scripts import FileMutex, ScriptOptions, gc_create_config
+import os, sys, time, fcntl, pickle, logging
+from gc_scripts import ScriptOptions, gc_create_config
 from grid_control.config import create_config
 from grid_control.datasets import DataProvider, DatasetError
 from grid_control.gc_exceptions import UserError
+from grid_control.utils.activity import Activity
+from grid_control.utils.file_tools import SafeFile, with_file
 from grid_control.utils.webservice import GridJSONRestClient
 from grid_control_cms.access_cms import get_cms_cert
 from grid_control_cms.dbs3_input_validation import validate_dbs3_json
 from grid_control_cms.sitedb import SiteDB
 from hpfwk import NestedException, clear_current_exception
-from python_compat import imap, izip, json, lmap, md5_hex, resolve_fun, set
+from python_compat import imap, izip, json, lmap, md5_hex, partial, resolve_fun, set
 
 
 class AlreadyQueued(NestedException):
@@ -210,9 +212,7 @@ def do_migration(queue):
 def dump_dbs3_json(dn, block_dump_iter):
 	for block_dump in block_dump_iter:
 		block_dump_fn = block_dump['block']['block_name'].strip('/').replace('/', '_') + '.json'
-		fp = open(os.path.join(dn, block_dump_fn), 'w')
-		json.dump(block_dump, fp)
-		fp.close()
+		with_file(SafeFile(os.path.join(dn, block_dump_fn), 'w'), partial(json.dump, block_dump))
 
 
 def filter_blocks(opts, blocks):
@@ -280,8 +280,8 @@ class DBS3LiteClient(object):
 		self._reader_url = '%s/%s' % (url, 'DBSReader')
 		self._writer_url = '%s/%s' % (url, 'DBSWriter')
 		self._migrate_url = '%s/%s' % (url, 'DBSMigrate')
-		self._gjrc = GridJSONRestClient(cert_error_msg='VOMS proxy needed to query DBS3!',
-			cert_error_cls=UserError, cert=get_cms_cert(create_config()))
+		self._gjrc = GridJSONRestClient(get_cms_cert(create_config()),
+			cert_error_msg='VOMS proxy needed to query DBS3!', cert_error_cls=UserError)
 
 	def get_dbs_block_list(self, **kwargs):
 		return self._gjrc.get(url=self._reader_url, api='blocks', params=kwargs)
@@ -297,6 +297,31 @@ class DBS3LiteClient(object):
 
 	def migration_request_submit(self, data):
 		return self._gjrc.post(url=self._migrate_url, api='submit', data=data)
+
+
+class FileMutex(object):
+	def __init__(self, lockfile):
+		self._lockfile = lockfile
+		activity = Activity('Trying to aquire lock file %s ...' % lockfile)
+		while os.path.exists(self._lockfile):
+			time.sleep(0.2)
+		activity.finish()
+		self._fd = open(self._lockfile, 'w')
+		fcntl.flock(self._fd, fcntl.LOCK_EX)
+
+	def __del__(self):
+		self.release()
+
+	def release(self):
+		if self._fd:
+			fcntl.flock(self._fd, fcntl.LOCK_UN)
+			self._fd.close()
+			self._fd = None
+		try:
+			if os.path.exists(self._lockfile):
+				os.unlink(self._lockfile)
+		except Exception:
+			clear_current_exception()
 
 
 class MigrationDoneState(object):
@@ -437,11 +462,11 @@ class DBS3MigrationQueue(resolve_fun('collections:deque', '<builtin>:list')):
 			raise AlreadyQueued('%s is already queued!' % migration_task)
 
 	def read_from_disk(filename):
-		return pickle.load(open(filename, 'r'))
+		return with_file(SafeFile(filename), pickle.load)
 	read_from_disk = staticmethod(read_from_disk)
 
 	def save_to_disk(self, filename):
-		pickle.dump(self, open(filename, 'w'))
+		with_file(SafeFile(filename, 'w'), partial(pickle.dump, self))
 
 
 def _main():

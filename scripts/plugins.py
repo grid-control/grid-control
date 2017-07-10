@@ -15,11 +15,12 @@
 
 import sys
 from gc_scripts import Plugin, ScriptOptions, display_plugin_list, get_plugin_list
-from python_compat import lmap
+from python_compat import lidfilter, lmap
 
 
 def _main():
 	parser = ScriptOptions(usage='%s [OPTIONS] <BasePlugin>')
+	parser.add_bool(None, 'a', 'show_all', default=False, help='Show plugins without user alias')
 	parser.add_bool(None, 'p', 'parents', default=False, help='Show plugin parents')
 	parser.add_bool(None, 'c', 'children', default=False, help='Show plugin children')
 	options = parser.script_parse()
@@ -27,14 +28,16 @@ def _main():
 		parser.exit_with_usage()
 	pname = options.args[0]
 	if options.opts.parents:
-		cls_info = lmap(lambda cls: {'Name': cls.__name__, 'Alias': str.join(', ', cls.alias_list)},
-			Plugin.get_class(pname).iter_class_bases())
-		display_plugin_list(cls_info, sort_key=None, title='Parents of plugin %r' % pname)
+		def _get_cls_info(cls):
+			return {'Name': cls.__name__, 'Alias': str.join(', ', lidfilter(cls.get_class_name_list()[1:]))}
+		display_plugin_list(lmap(_get_cls_info, Plugin.get_class(pname).iter_class_bases()),
+			show_all=True, sort_key=None, title='Parents of plugin %r' % pname)
 	else:
 		sort_key = 'Name'
 		if options.opts.children:
 			sort_key = 'Inherit'
 		display_plugin_list(get_plugin_list(pname, inherit_prefix=options.opts.children),
+			show_all=options.opts.children or options.opts.show_all,
 			sort_key=sort_key, title='Available plugins of type %r' % pname)
 
 

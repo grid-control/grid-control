@@ -47,6 +47,8 @@ class AccessToken(NamedPlugin):
 
 
 class MultiAccessToken(AccessToken):
+	alias_list = ['multi']
+
 	def __init__(self, config, name, token_list):
 		AccessToken.__init__(self, config, name)
 		self._subtoken_list = token_list

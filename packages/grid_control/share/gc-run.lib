@@ -129,7 +129,7 @@ updatejobinfo() {
 	fi
 }
 
-checkfile() {
+gc_check_file_exists() {
 	debug_helper $FUNCNAME "$@"
 	echo -n "Checking for file $1 ... "
 	if [ ! -f "$1" ]; then
@@ -149,7 +149,7 @@ checkdir() {
 	getrealdir $2 && echo "$1 content:" && ls -al $2 && df -hP $2 && echo
 }
 
-checkbin() {
+gc_check_bin() {
 	debug_helper $FUNCNAME "$@"
 	[ "$(type -t $1)" == "function" ] && return
 	echo -n "Checking for binary $1 ... "
@@ -159,7 +159,7 @@ checkbin() {
 		echo "OK (`getcommand $1`)"
 	else
 		echo "FAILED"
-		checkfile $1
+		gc_check_file_exists $1
 		echo "`basename $1` not executable" 1>&2
 		fail 103
 	fi
@@ -179,8 +179,8 @@ checkvar() {
 
 getrealdir() {
 	debug_helper $FUNCNAME "$@"
-	[ -d "$1" ] && cd $1 && pwd -P && cd $OLDPWD && return `true`;
-	return `false`
+	[ -d "$1" ] && cd $1 && pwd -P && cd $OLDPWD && return 0;
+	return 1
 }
 
 getscratch() {
@@ -376,7 +376,7 @@ monitordirlimits() {
 
 print_and_eval() {
 	debug_helper $FUNCNAME "$@"
-	[ "$1" != " " ] && checkbin "$1" || shift
+	[ "$1" != " " ] && gc_check_bin "$1" || shift
 	CMD="$1"
 	shift
 	echo "$PAELEVEL`basename $CMD` $@"
@@ -393,7 +393,7 @@ print_and_eval() {
 
 url_ls_oneline() {
 	debug_helper $FUNCNAME "$@"
-	checkbin "$1" 1>&2
+	gc_check_bin "$1" 1>&2
 	eval "$1 $2" | awk '{sub(/\r$/,"")};1' | while read FILE; do
 		BASEDIR=$(dirname "$2")
 		case "$FILE" in
@@ -417,7 +417,7 @@ url_ls() {
 		"srm://"*)
 			BASE=''
 			LSCMD="`getcommand srmls`"
-			checkbin "$LSCMD" 1>&2
+			gc_check_bin "$LSCMD" 1>&2
 			eval "$LSCMD $1" | grep -v "WARNING" | while read TMP FILE; do
 				[ -z "$BASE" ] && BASE="$FILE" && continue
 				[ -z "$2" ] && echo ${FILE#$BASE} && continue

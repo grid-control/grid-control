@@ -35,6 +35,9 @@ def make_enum(enum_name_list=None, cls=None, use_hash=True, register=True):
 		value = len(cls.enum_name_list)
 		if use_hash:
 			value += int(enum_id, 16)
+		for enum_cls in make_enum.enum_list:
+			if use_hash and (value in enum_cls.enum_value_list) and (enum_cls.enum_id != enum_id):
+				raise APIError('enum value collision detected!')
 		cls.enum_name_list.append(name)
 		cls.enum_value_list.append(value)
 		setattr(cls, name, value)
@@ -44,14 +47,18 @@ def make_enum(enum_name_list=None, cls=None, use_hash=True, register=True):
 			raise APIError('Invalid enum definition! (%s:%s)' % (_map_name2value, _map_value2name))
 
 	def _str2enum(cls, value, *args):
+		lookup_fun = _map_name2value.__getitem__
+		if args:
+			lookup_fun = _map_name2value.get
 		try:
-			return _map_name2value.get(value.lower(), *args)
+			return lookup_fun(value.lower(), *args)
 		except Exception:
 			allowed_str = str.join(', ', cls.enum_name_list)
 			raise Exception('Invalid enum string %s (allowed are %r)' % (repr(value), allowed_str))
 
 	_map_value2name = {}
 	_map_name2value = {}
+	cls.enum_id = enum_id
 	cls.enum_name_list = []
 	cls.enum_value_list = []
 	cls.enum2str = _map_value2name.get

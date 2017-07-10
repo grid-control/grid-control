@@ -18,7 +18,7 @@ from grid_control.backends.broker_base import Broker
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
 from grid_control.utils import ensure_dir_exists, get_path_share, remove_files, resolve_install_path
 from grid_control.utils.activity import Activity
-from grid_control.utils.file_objects import VirtualFile
+from grid_control.utils.file_tools import VirtualFile
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCLock, with_lock
 from hpfwk import AbstractError, ExceptionCollector, ignore_exception
@@ -115,8 +115,8 @@ class LocalWMS(BasicWMS):
 			yield (jobnum, path)
 		activity.finish()
 
-	def _get_sandbox_file_list(self, task, monitor, sm_list):
-		files = BasicWMS._get_sandbox_file_list(self, task, monitor, sm_list)
+	def _get_sandbox_file_list(self, task, sm_list):
+		files = BasicWMS._get_sandbox_file_list(self, task, sm_list)
 		for idx, auth_fn in enumerate(self._token.get_auth_fn_list()):
 			files.append(VirtualFile(('_proxy.dat.%d' % idx).replace('.0', ''), open(auth_fn, 'r').read()))
 		return files
@@ -138,7 +138,7 @@ class LocalWMS(BasicWMS):
 		activity = Activity('submitting job %d' % jobnum)
 
 		try:
-			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (task.task_id, jobnum),
+			sandbox = tempfile.mkdtemp('', '%s.%04d.' % (task.get_description().task_id, jobnum),
 				self._sandbox_helper.get_path())
 		except Exception:
 			raise BackendError('Unable to create sandbox directory "%s"!' % sandbox)

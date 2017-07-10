@@ -16,7 +16,7 @@ import os, gzip
 from grid_control.datasets.splitter_base import DataSplitter, PartitionReader, PartitionWriter
 from grid_control.utils import DictFormat
 from grid_control.utils.activity import Activity
-from grid_control.utils.file_objects import VirtualFile
+from grid_control.utils.file_tools import VirtualFile
 from grid_control.utils.parsing import parse_bool, parse_json, parse_list
 from hpfwk import AbstractError, NestedException, clear_current_exception, ignore_exception
 from python_compat import BytesBuffer, bytes2str, ifilter, imap, json, lmap, tarfile

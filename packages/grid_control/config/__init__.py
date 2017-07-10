@@ -12,14 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config.chandlers_base import NoVarCheck, TriggerAbort, TriggerInit, TriggerResync
+from grid_control.config.chandlers_base import NoVarCheck, TriggerInit, TriggerResync
 from grid_control.config.config_entry import ConfigError, join_config_locations
 from grid_control.config.config_factory import create_config
-from grid_control.config.matcher_base import ListFilter, ListOrder, Matcher
+from grid_control.config.matcher_base import ListOrder, Matcher
 
 
-__all__ = ['ConfigError', 'create_config', 'join_config_locations', 'ListFilter', 'ListOrder',
-	'Matcher', 'NoVarCheck', 'TriggerAbort', 'TriggerInit', 'TriggerResync']
+__all__ = ['ConfigError', 'create_config', 'join_config_locations', 'ListOrder',
+	'Matcher', 'NoVarCheck', 'TriggerInit', 'TriggerResync']
 
 # At the lowest level, all config option values are represented by strings
 # which are encapsulated in the ConfigEntry class, which holds access and source

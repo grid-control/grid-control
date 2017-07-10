@@ -24,7 +24,7 @@ class TaskExecutableWrapper(object):
 		self._executable_send = config.get_bool('%s send executable' % prefix, True,
 			on_change=init_sandbox)
 		if self._executable_send:
-			self._executable = config.get_path('%s executable' % prefix, executable_default,
+			self._executable = config.get_fn('%s executable' % prefix, executable_default,
 				on_change=init_sandbox)
 		else:
 			self._executable = config.get('%s executable' % prefix, executable_default,

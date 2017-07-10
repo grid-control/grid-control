@@ -16,7 +16,7 @@ import re, fnmatch, logging
 from grid_control.config.config_entry import join_config_locations
 from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils.data_structures import make_enum
-from grid_control.utils.parsing import str_dict
+from grid_control.utils.parsing import str_dict_linear
 from hpfwk import AbstractError, Plugin
 from python_compat import lfilter, sorted, unspecified
 
@@ -49,7 +49,8 @@ class Matcher(ConfigurablePlugin):
 		if case_override is None:
 			self._case = config.get_bool(join_config_locations(option_prefix, 'case sensitive'),
 				default=True, **kwargs)
-		self._log = logging.getLogger('matcher.%s' % option_prefix)
+		self._log = logging.getLogger('matcher.%s.%s' % (self.__class__.__name__,
+			option_prefix[0].replace(' ', '_')))
 		if not self._log.isEnabledFor(logging.DEBUG1):
 			self._log = None
 
@@ -81,7 +82,7 @@ class DictLookup(Plugin):
 
 	def __repr__(self):
 		return '%s(values = {%s}, matcher = %r, only_first = %r, always_default = %r)' % (
-			self.__class__.__name__, str_dict(self._values, self._order), self._matcher,
+			self.__class__.__name__, str_dict_linear(self._values, self._order), self._matcher,
 			self._only_first, self._always_default)
 
 	def empty(self):
@@ -152,7 +153,23 @@ class ListFilter(Plugin):
 		raise AbstractError
 
 
-class BasicMatcher(Matcher):
+class AlwaysMatcher(Matcher):
+	alias_list = ['always']
+
+	def create_matcher(self, selector):
+		class AlwaysSelector(MatcherHolder):
+			def match(self, value):
+				return 1
+		return AlwaysSelector('', '')
+
+	def get_positive_selector(self, selector):
+		return [selector]
+
+	def matcher(self, value, selector):
+		return 1
+
+
+class BaseMatcher(Matcher):
 	def create_matcher(self, selector):
 		matcher = self.__class__.match_function
 
@@ -195,8 +212,8 @@ class BlackWhiteMatcher(Matcher):
 			elif self._base_matcher.matcher(value, subselector) > 0:
 				result = idx + 1
 			if self._log:
-				self._log.log(logging.DEBUG1, 'matching value %s against selector %s: %s',
-					value, subselector, result)
+				self._log.log(logging.DEBUG1, 'matching value %s against selector %s (%s): %s',
+					value, subselector, self._base_matcher, result)
 		return result
 
 	def parse_selector(self, selector):
@@ -272,36 +289,24 @@ class WeakListFilter(ListFilter):
 		return lfilter(lambda entry: match_function(entry) >= 0, entries)
 
 
-class EndMatcher(BasicMatcher):
+class EndMatcher(BaseMatcher):
 	alias_list = ['end']
 	match_function = str.endswith
 
 
-class EqualMatcher(BasicMatcher):
+class EqualMatcher(BaseMatcher):
 	alias_list = ['equal']
 	match_function = str.__eq__
 
 
-class StartMatcher(BasicMatcher):
+class ShellStyleMatcher(BaseMatcher):
+	alias_list = ['shell']
+	match_function = staticmethod(fnmatch.fnmatch)
+
+
+class StartMatcher(BaseMatcher):
 	alias_list = ['start']
 	match_function = str.startswith
-
-
-class ShellStyleMatcher(RegExMatcher):
-	alias_list = ['shell']
-
-	def __init__(self, config, option_prefix, case_override=None, **kwargs):
-		RegExMatcher.__init__(self, config, option_prefix, case_override=None, **kwargs)
-		self._case_regex = True
-
-	def create_matcher(self, selector):
-		return RegExMatcher.create_matcher(self, self._translate(selector))
-
-	def matcher(self, value, selector):
-		return RegExMatcher.matcher(self, value, self._translate(selector))
-
-	def _translate(self, selector):
-		return fnmatch.translate(_get_case(self._case, selector))
 
 
 def _get_case(case, value):

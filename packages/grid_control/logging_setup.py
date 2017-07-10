@@ -14,11 +14,11 @@
 
 import os, sys, time, logging, threading
 from grid_control.gc_exceptions import GCError, GCLogHandler
-from grid_control.stream_base import ActivityStream
+from grid_control.stream_base import ActivityMonitor
 from grid_control.utils.data_structures import UniqueList, make_enum
-from grid_control.utils.file_objects import SafeFile, VirtualFile
+from grid_control.utils.file_tools import SafeFile, VirtualFile
 from grid_control.utils.thread_tools import GCLock, with_lock
-from hpfwk import AbstractError, format_exception, ignore_exception
+from hpfwk import AbstractError, format_exception, ignore_exception, rethrow
 from python_compat import any, imap, irange, lmap, set, sorted, tarfile
 
 
@@ -36,7 +36,7 @@ def dump_log_setup(level):
 	# Display logging setup
 	output = logging.getLogger('logging')
 
-	def display_logger(indent, logger, name):
+	def _display_logger(indent, logger, name):
 		propagate_symbol = '+'
 		if hasattr(logger, 'propagate') and not logger.propagate:
 			propagate_symbol = 'o'
@@ -59,9 +59,9 @@ def dump_log_setup(level):
 					for log_filter in handler.filters:
 						output.log(level, '%s  # %s', '|  ' * (indent + 1), log_filter.__class__.__name__)
 
-	display_logger(0, logging.getLogger(), '<root>')
+	_display_logger(0, logging.getLogger(), '<root>')
 	for key, logger in sorted(logging.getLogger().manager.loggerDict.items()):
-		display_logger(key.count('.') + 1, logger, key)
+		_display_logger(key.count('.') + 1, logger, key)
 
 
 def get_debug_file_candidates():
@@ -74,18 +74,18 @@ def get_debug_file_candidates():
 
 def logging_configure_handler(config, logger_name, handler_str, handler):
 	# Configure formatting of handlers
-	def get_handler_option(postfix):
+	def _get_handler_option(postfix):
 		return ['%s %s' % (logger_name, postfix), '%s %s %s' % (logger_name, handler_str, postfix)]
 	fmt = GCFormatter(
-		details_lt=config.get_enum(get_handler_option('detail lower limit'),
+		details_lt=config.get_enum(_get_handler_option('detail lower limit'),
 			LogLevelEnum, logging.DEBUG, on_change=None),
-		details_gt=config.get_enum(get_handler_option('detail upper limit'),
+		details_gt=config.get_enum(_get_handler_option('detail upper limit'),
 			LogLevelEnum, logging.ERROR, on_change=None),
-		ex_context=config.get_int(get_handler_option('code context'), 2, on_change=None),
-		ex_vars=config.get_int(get_handler_option('variables'), 200, on_change=None),
-		ex_fstack=config.get_int(get_handler_option('file stack'), 1, on_change=None),
-		ex_tree=config.get_int(get_handler_option('tree'), 2, on_change=None),
-		ex_threads=config.get_int(get_handler_option('thread stack'), 1, on_change=None))
+		ex_context=config.get_int(_get_handler_option('code context'), 2, on_change=None),
+		ex_vars=config.get_int(_get_handler_option('variables'), 200, on_change=None),
+		ex_fstack=config.get_int(_get_handler_option('file stack'), 1, on_change=None),
+		ex_tree=config.get_int(_get_handler_option('tree'), 2, on_change=None),
+		ex_threads=config.get_int(_get_handler_option('thread stack'), 1, on_change=None))
 	handler.setFormatter(fmt)
 	return handler
 
@@ -109,7 +109,7 @@ def logging_create_handlers(config, logger_name):
 		elif handler_str == 'file':
 			handler = logging.FileHandler(config.get(logger_name + ' file', on_change=None), 'w')
 		elif handler_str == 'debug_file':
-			handler = GCLogHandler(config.get_path_list(logger_name + ' debug file',
+			handler = GCLogHandler(config.get_fn_list(logger_name + ' debug file',
 				get_debug_file_candidates(), on_change=None, must_exist=False), 'w')
 		else:
 			raise Exception('Unknown handler %s for logger %s' % (handler_str, logger_name))
@@ -143,7 +143,7 @@ def logging_defaults():
 	logging.getLogger('requests').setLevel(logging.WARNING)
 
 	# Adding log_process_result to Logging class
-	def log_process(self, proc, level=logging.WARNING, files=None, msg=None):
+	def _log_process(self, proc, level=logging.WARNING, files=None, msg=None):
 		msg = msg or 'Process %(call)s finished with exit code %(proc_status)s'
 		status = proc.status(timeout=0)
 		record = self.makeRecord(self.name, level, '<process>', 0, msg, tuple(), None)
@@ -153,17 +153,17 @@ def logging_defaults():
 		record.files = files or {}
 		record.msg = record.msg % record.__dict__
 		self.handle(record)
-	logging.Logger.log_process = log_process
+	logging.Logger.log_process = _log_process
 
 	# Adding log with time prefix to Logging class
-	def log_time(self, level, msg, *args, **kwargs):
+	def _log_time(self, level, msg, *args, **kwargs):
 		if self.isEnabledFor(level):
 			tmp = self.findCaller()
 			record = self.makeRecord(self.name, level,
 				tmp[0], tmp[1], msg, args, kwargs.pop('exc_info', None))
 			record.print_time = True
 			self.handle(record)
-	logging.Logger.log_time = log_time
+	logging.Logger.log_time = _log_time
 
 
 def logging_setup(config):
@@ -178,7 +178,7 @@ def logging_setup(config):
 		config.set_int('abort file stack', 2, '?=')
 		config.set_int('abort tree', 2, '?=')
 
-	display_logger = config.get_bool('display logger', False, on_change=None)
+	do_display_logger = config.get_bool('display logger', False, on_change=None)
 
 	# Find logger names in options
 	logger_names_set = set()
@@ -196,16 +196,16 @@ def logging_setup(config):
 
 	logging.getLogger().addHandler(ProcessArchiveHandler(config.get_work_path('error.tar')))
 
-	if display_logger:
+	if do_display_logger:
 		dump_log_setup(logging.WARNING)
 
 	# Setup activity logs
-	StdoutStreamHandler.push_std_stream(
-		config.get_plugin(['activity stream', 'activity stream stdout'],
-			'default', cls=ActivityStream, require_plugin=False, pargs=(sys.stdout,), on_change=None,
+	GCStreamHandler.push_std_stream(
+		config.get_plugin(['activity stream', 'activity stream stdout'], 'DefaultActivityMonitor',
+			cls=ActivityMonitor, require_plugin=False, pargs=(sys.stdout,), on_change=None,
 			pkwargs={'register_callback': True}),
-		config.get_plugin(['activity stream', 'activity stream stderr'],
-			'default', cls=ActivityStream, require_plugin=False, pargs=(sys.stderr,), on_change=None))
+		config.get_plugin(['activity stream', 'activity stream stderr'], 'DefaultActivityMonitor',
+			cls=ActivityMonitor, require_plugin=False, pargs=(sys.stderr,), on_change=None))
 
 
 def parse_logging_args(arg_list):
@@ -355,19 +355,19 @@ class ProcessArchiveHandler(logging.Handler):
 		files['stdout'] = record.proc.stdout.read_log()
 		files['stderr'] = record.proc.stderr.read_log()
 		files['stdin'] = record.proc.stdin.read_log()
-		try:
+
+		def _log_tar():
 			tar = tarfile.TarFile.open(self._fn, 'a')
 			for key, value in record.files.items():
 				if os.path.exists(value):
-					value = SafeFile(value).read()
+					value = SafeFile(value).read_close()
 				file_obj = VirtualFile(os.path.join(entry, key), [value])
 				info, handle = file_obj.get_tar_info()
 				tar.addfile(info, handle)
 				handle.close()
 			tar.close()
-		except Exception:
-			raise GCError('Unable to log results of external call "%s" to "%s"' % (
-				record.proc.get_call(), self._fn))
+		rethrow(GCError('Unable to log results of external call "%s" to "%s"' % (
+			record.proc.get_call(), self._fn)), _log_tar)
 
 
 class StderrStreamHandler(GCStreamHandler):

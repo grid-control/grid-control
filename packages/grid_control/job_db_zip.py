@@ -14,13 +14,16 @@
 
 import os, zipfile
 from grid_control.job_db_text import TextFileJobDB
-from grid_control.utils import remove_files
+from grid_control.utils import remove_files, resolve_install_path
 from grid_control.utils.activity import Activity
+from grid_control.utils.process_base import LocalProcess
 from hpfwk import clear_current_exception
 from python_compat import imap
 
 
 class ZippedJobDB(TextFileJobDB):
+	alias_list = ['zipdb']
+
 	def __init__(self, config, job_limit=-1, job_selector=None):
 		self._db_fn = config.get_work_path('jobs.zip')
 		TextFileJobDB.__init__(self, config, job_limit, job_selector)
@@ -41,28 +44,11 @@ class ZippedJobDB(TextFileJobDB):
 		if os.path.exists(self._db_fn):
 			try:
 				tar = zipfile.ZipFile(self._db_fn, 'r', zipfile.ZIP_DEFLATED)
+				tar.testzip()
 			except Exception:  # Try to recover job archive
 				clear_current_exception()
-				self._log.warning('=' * 40 + '\nStarting recovery of broken job database' +
-					' => Answer "y" if asked "Is this a single-disk archive?"!\n' + '=' * 40)
-				os.system('zip -FF %s --out %s.tmp 2> /dev/null' % (self._db_fn, self._db_fn))
-				os.rename(self._db_fn, self._db_fn + '.broken')
-				os.rename(self._db_fn + '.tmp', self._db_fn)
-				tar = zipfile.ZipFile(self._db_fn, 'r', zipfile.ZIP_DEFLATED)
-				remove_files([self._db_fn + '.broken'])
-				broken_fn_list = []
-				for idx, tar_info_fn in enumerate(tar.namelist()):
-					(jobnum, tid) = tuple(imap(lambda s: int(s[1:]), tar_info_fn.split('_', 1)))
-					try:
-						fp = tar.open(tar_info_fn)
-						try:
-							fp.read()
-						finally:
-							fp.close()
-					except Exception:
-						clear_current_exception()
-				for broken in broken_fn_list:
-					os.system('zip %s -d %s' % (self._db_fn, broken))
+				self._log.warning('Job database is corrupted - starting recovery')
+				self._recover_jobs()
 				self._log.info('Recover completed!')
 			activity = Activity('Reading job transactions')
 			max_job_len = len(tar.namelist())
@@ -84,20 +70,50 @@ class ZippedJobDB(TextFileJobDB):
 		self._serial = max_job_len
 		return job_map
 
+	def _recover_jobs(self):
+		proc = LocalProcess('zip', '-FF', self._db_fn, '--out', '%s.tmp' % self._db_fn)
+		proc.stdin.write('y\n')
+		proc.status(timeout=None)
+		os.rename(self._db_fn, self._db_fn + '.broken')
+		os.rename(self._db_fn + '.tmp', self._db_fn)
+		tar = zipfile.ZipFile(self._db_fn, 'r', zipfile.ZIP_DEFLATED)
+		remove_files([self._db_fn + '.broken'])
+		broken_fn_list = []
+		for tar_info_fn in tar.namelist():
+			try:
+				tuple(imap(lambda s: int(s[1:]), tar_info_fn.split('_', 1)))  # check name
+				fp = tar.open(tar_info_fn)
+				try:
+					fp.read()
+				finally:
+					fp.close()
+			except Exception:
+				clear_current_exception()
+				broken_fn_list.append(tar_info_fn)
+		for broken in broken_fn_list:
+			os.system('zip %s -d %s' % (self._db_fn, broken))
+
 
 class Migrate2ZippedJobDB(ZippedJobDB):
-	def __init__(self, config, job_limit=-1, job_selector=None):
+	alias_list = ['migrate']
+
+	def __new__(cls, config, job_limit=-1, job_selector=None):
+		try:
+			resolve_install_path('zip')
+		except Exception:
+			clear_current_exception()
+			return TextFileJobDB.__new__(cls, config, job_limit, job_selector)
 		path_db = config.get_work_path('jobs')
-		self._db_fn = config.get_work_path('jobs.zip')
-		if os.path.exists(path_db) and os.path.isdir(path_db) and not os.path.exists(self._db_fn):
+		db_fn = config.get_work_path('jobs.zip')
+		if os.path.exists(path_db) and os.path.isdir(path_db) and not os.path.exists(db_fn):
 			activity = Activity('Converting job database')
-			self._serial = 0
+			new_db = ZippedJobDB(config)
 			try:
 				old_db = TextFileJobDB(config)
 				for jobnum in old_db.get_job_list():
-					self.commit(jobnum, old_db.get_job(jobnum))
+					new_db.commit(jobnum, old_db.get_job(jobnum))
 			except Exception:
-				remove_files([self._db_fn])
+				remove_files([db_fn])
 				raise
 			activity.finish()
-		ZippedJobDB.__init__(self, config, job_limit, job_selector)
+		return ZippedJobDB.__new__(cls, config, job_limit, job_selector)

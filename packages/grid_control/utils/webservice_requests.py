@@ -21,10 +21,10 @@ class RequestsSession(RestSession):
 	_session = None
 
 	def __init__(self):
-		if not self._session:
+		if not RequestsSession._session:
 			# disable ssl ca verification errors
 			requests.packages.urllib3.disable_warnings()
-			self._session = requests.Session()
+			RequestsSession._session = requests.Session()
 		RestSession.__init__(self)
 
 	def request(self, mode, url, headers, params=None, data=None, cert=None):

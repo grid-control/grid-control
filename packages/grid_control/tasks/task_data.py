@@ -16,25 +16,21 @@ import signal
 from grid_control.config import TriggerResync
 from grid_control.parameters import ParameterSource
 from grid_control.tasks.task_base import TaskModule
-from grid_control.utils import merge_dict_list
+from grid_control.utils.algos import dict_union
 
 
 class DataTask(TaskModule):
 	def get_var_alias_map(self):
 		if self._has_dataset:  # create alias NICK for DATASETNICK
-			return merge_dict_list([TaskModule.get_var_alias_map(self), {'NICK': 'DATASETNICK'}])
+			return dict_union(TaskModule.get_var_alias_map(self), {'NICK': 'DATASETNICK'})
 		return TaskModule.get_var_alias_map(self)
 
 	def _create_datasource(self, config, datasource_name, psrc_repository, psrc_list):
 		data_ps = ParameterSource.create_instance('DataParameterSource',
 			config, datasource_name, psrc_repository)
 		if not isinstance(data_ps, ParameterSource.get_class('NullParameterSource')):
-			tmp_config = config.change_view(view_class='TaggedConfigView',
-				set_classes=None, set_names=None, set_tags=[], add_sections=['storage'])
-			tmp_config.set('se output pattern', '@NICK@_job_@GC_JOB_ID@_@X@')
-			tmp_config = config.change_view(view_class='TaggedConfigView',
-				set_classes=None, set_names=None, set_tags=[], add_sections=['parameters'])
-			tmp_config.set('default lookup', 'DATASETNICK')
+			config.set('se output pattern', '@NICK@_job_@GC_JOB_ID@_@X@', section='storage')
+			config.set('default lookup', 'DATASETNICK', section='parameters')
 			psrc_list.append(data_ps)
 			return data_ps
 

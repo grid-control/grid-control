@@ -20,16 +20,13 @@ from python_compat import ifilter, imap
 class TimeReport(ConsoleReport):
 	alias_list = ['time']
 
-	def __init__(self, job_db, task, jobs=None, config_str=''):
-		ConsoleReport.__init__(self, job_db, task, jobs, config_str)
-		self._dollar_per_hour = float(config_str or 0.013)
+	def __init__(self, config, name, job_db, task=None):
+		ConsoleReport.__init__(self, config, name, job_db, task)
+		self._dollar_per_hour = config.get_float('dollar per hour', 0.013, on_change=None)
 
-	def get_height(self):
-		return 1
-
-	def show_report(self, job_db):
-		job_runtimes = imap(lambda jobnum: job_db.get_job_transient(jobnum).get('runtime', 0), self._jobs)
-		cpu_time = sum(ifilter(lambda rt: rt > 0, job_runtimes))
-		msg = 'Consumed wall time: %-20s' % str_time_long(cpu_time)
-		msg += 'Estimated cost: $%.2f' % ((cpu_time / 60. / 60.) * self._dollar_per_hour)
-		self._output.info(msg)
+	def show_report(self, job_db, jobnum_list):
+		jr_iter = imap(lambda jobnum: job_db.get_job_transient(jobnum).get('runtime', 0), jobnum_list)
+		cpu_time = sum(ifilter(lambda rt: rt > 0, jr_iter))
+		msg1 = 'Consumed wall time: %-20s' % str_time_long(cpu_time)
+		msg2 = 'Estimated cost: $%.2f' % ((cpu_time / 60. / 60.) * self._dollar_per_hour)
+		self._show_line(msg1 + msg2.rjust(65 - len(msg1)))
