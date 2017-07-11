@@ -34,21 +34,21 @@ class ScanProviderBase(DataProvider):
 
 		def _create_scanner(scanner_name):
 			return InfoScanner.create_instance(scanner_name, scanner_config, datasource_name)
-		scanner_list = config.get_list('scanner', scanner_list_default) + ['NullScanner']
+		scanner_list = scanner_config.get_list('scanner', scanner_list_default) + ['NullScanner']
 		self._scanner_list = lmap(_create_scanner, scanner_list)
 
 		# Configure dataset / block naming and selection
 		def _setup(prefix):
-			selected_hash_list = config.get_list(join_config_locations(prefix, 'key select'), [])
-			name = config.get(join_config_locations(prefix, 'name pattern'), '')
+			selected_hash_list = scanner_config.get_list(join_config_locations(prefix, 'key select'), [])
+			name = scanner_config.get(join_config_locations(prefix, 'name pattern'), '')
 			return (selected_hash_list, name)
 		(self._selected_hash_list_dataset, self._dataset_pattern) = _setup('dataset')
 		(self._selected_hash_list_block, self._block_pattern) = _setup('block')
 
 		# Configure hash input for separation of files into datasets / blocks
 		def _get_active_hash_input(prefix, guard_entry_idx):
-			hash_input_list_user = config.get_list(join_config_locations(prefix, 'hash keys'), [])
-			hash_input_list_guard = config.get_list(join_config_locations(prefix, 'guard override'),
+			hash_input_list_user = scanner_config.get_list(join_config_locations(prefix, 'hash keys'), [])
+			hash_input_list_guard = scanner_config.get_list(join_config_locations(prefix, 'guard override'),
 				lchain(imap(lambda scanner: scanner.get_guard_keysets()[guard_entry_idx], self._scanner_list)))
 			return hash_input_list_user + hash_input_list_guard
 		self._hash_input_set_dataset = _get_active_hash_input('dataset', 0)

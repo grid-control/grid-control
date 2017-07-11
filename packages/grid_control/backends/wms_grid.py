@@ -27,7 +27,7 @@ from grid_control.utils.file_tools import SafeFile
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.user_interface import UserInputInterface
 from hpfwk import clear_current_exception
-from python_compat import identity, ifilter, imap, lfilter, lmap, md5, parsedate
+from python_compat import identity, ifilter, imap, lfilter, lmap, md5_hex, parsedate
 
 
 class GridWMS(BasicWMS):
@@ -75,7 +75,7 @@ class GridWMS(BasicWMS):
 		try:
 			if len(gc_id_jobnum_list) == 1:
 				# For single jobs create single subdir
-				tmp_dn = os.path.join(root_dn, md5(gc_id_jobnum_list[0][0]).hexdigest())
+				tmp_dn = os.path.join(root_dn, md5_hex(gc_id_jobnum_list[0][0]))
 			else:
 				tmp_dn = root_dn
 			ensure_dir_exists(tmp_dn)

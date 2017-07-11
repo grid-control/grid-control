@@ -127,11 +127,10 @@ class BasicWMS(WMS):
 			self._log.info('Using batch system: %s', self._name)
 
 		self._runlib = config.get_work_path('gc-run.lib')
-		if not os.path.exists(self._runlib):
-			fp = SafeFile(self._runlib, 'w')
-			content = SafeFile(get_path_share('gc-run.lib')).read()
-			fp.write(content.replace('__GC_VERSION__', __import__('grid_control').__version__))
-			fp.close()
+		fp = SafeFile(self._runlib, 'w')
+		content = SafeFile(get_path_share('gc-run.lib')).read()
+		fp.write(content.replace('__GC_VERSION__', __import__('grid_control').__version__))
+		fp.close()
 		self._path_output = config.get_work_path('output')
 		self._path_file_cache = config.get_work_path('files')
 		ensure_dir_exists(self._path_output, 'output directory')

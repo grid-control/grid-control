@@ -25,7 +25,7 @@ from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
 from grid_control.utils import Result, ensure_dir_exists, get_path_share, remove_files, resolve_install_path, safe_write, split_blackwhite_list  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
-from python_compat import imap, irange, lmap, lzip, md5
+from python_compat import imap, irange, lmap, lzip, md5_hex
 
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
@@ -68,7 +68,7 @@ class Condor(BasicWMS):
 		BasicWMS.__init__(self, config, name,
 			check_executor=CheckJobsMissingState(config, CondorCheckJobs(config)),
 			cancel_executor=cancel_executor)
-		self._task_id = config.get('task id', md5(str(time.time())).hexdigest(), persistent=True)  # FIXME
+		self._task_id = config.get('task id', md5_hex(str(time.time())), persistent=True)  # FIXME
 		# finalize config state by reading values or setting to defaults
 		# load keys for condor pool ClassAds
 		self._jdl_writer = CondorJDLWriter(config)
@@ -216,6 +216,7 @@ class Condor(BasicWMS):
 			'Log = ' + os.path.join(self._get_remote_output_dn(), 'GC_Condor.%s.log') % self._task_id,
 			'should_transfer_files = YES',
 			'when_to_transfer_output = ON_EXIT',
+			'transfer_executable = false',
 		])
 		# cancel held jobs - ignore spooling ones
 		remove_cond = '(JobStatus == 5 && HoldReasonCode != 16)'

@@ -23,7 +23,7 @@ from grid_control.utils import ensure_dir_exists, remove_files, resolve_install_
 from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import clear_current_exception
-from python_compat import imap, irange, md5, md5_hex
+from python_compat import imap, irange, md5_hex
 
 
 class CREAMCancelJobs(CancelJobsWithProcessBlind):
@@ -160,7 +160,7 @@ class CreamWMS(GridWMS):
 		try:
 			if len(gc_id_jobnum_list) == 1:
 				# For single jobs create single subdir
-				tmp_dn = os.path.join(tmp_dn, md5(gc_id_jobnum_list[0][0]).hexdigest())
+				tmp_dn = os.path.join(tmp_dn, md5_hex(gc_id_jobnum_list[0][0]))
 			ensure_dir_exists(tmp_dn)
 		except Exception:
 			raise BackendError('Temporary path "%s" could not be created.' % tmp_dn, BackendError)

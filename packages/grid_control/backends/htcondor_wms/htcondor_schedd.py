@@ -22,7 +22,7 @@ from grid_control.backends.htcondor_wms.wmsid import HTCJobID
 from grid_control.backends.wms import BackendError, WMS
 from grid_control.utils import Result, get_version, safe_write, split_blackwhite_list
 from hpfwk import AbstractError, Plugin, clear_current_exception
-from python_compat import ismap, lmap, lru_cache, md5
+from python_compat import ismap, lmap, lru_cache, md5_hex
 
 
 """
@@ -367,7 +367,7 @@ class HTCScheddLocal(HTCScheddCLIBase):
 		return jobnum_list
 
 	def _prepareSubmit(self, task, jobnum_list, queryArguments):
-		jdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wms_name,md5(self.getURI()).hexdigest()))
+		jdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wms_name,md5_hex(self.getURI())))
 		safe_write(open(jdlFilePath, 'w'),
 			lmap(lambda line: line + '\n', self._getJDLData(task, jobnum_list, queryArguments)))
 		return jdlFilePath
@@ -522,7 +522,7 @@ class HTCScheddSSH(HTCScheddCLIBase):
 		return retrievedJobs
 
 	def _prepareSubmit(self, task, jobnum_list, queryArguments):
-		localJdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wms_name,md5(self.getURI()).hexdigest()))
+		localJdlFilePath = os.path.join(self.parentPool.getSandboxPath(), 'htc-%s.schedd-%s.jdl' % (self.parentPool.wms_name,md5_hex(self.getURI())))
 		readyJobNumList  = self._stageSubmitFiles(task, jobnum_list)
 		safe_write(open(localJdlFilePath, 'w'),
 			lmap(lambda line: line + '\n', self._getJDLData(task, readyJobNumList, queryArguments)))

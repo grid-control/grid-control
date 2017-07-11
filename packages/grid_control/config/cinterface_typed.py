@@ -253,7 +253,7 @@ class SimpleConfigInterface(TypedConfigInterface):
 		def _filter_parser(value):
 			return str.join(' ', value.split())
 		filter_expr = self.get(option, default, str2obj=filter_parser or _filter_parser,
-			obj2str=filter_str, **kwargs)
+			obj2str=filter_str, on_change=on_change, **kwargs)
 		return matcher_obj.create_matcher(filter_expr)
 
 	def get_state(self, statename, detail='', default=False):

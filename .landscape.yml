@@ -12,10 +12,29 @@ ignore-patterns:
 python-targets:
   - 2
   - 3
-strictness: medium
+strictness: veryhigh
+max-line-length: 160
 pylint:
+  options:
+    max-args: 15
+    max-attributes: 15
+    good-names: dn,fi,fn,fp,vn,_
+    bad-functions: map,filter,range,next,sorted,reduce
   disable:
+    - bad-continuation
+    - broad-except
     - cell-var-from-loop
+    - missing-docstring
+    - no-self-use
     - redefined-builtin
-    - too-many-arguments
+    - too-few-public-methods
     - unused-argument
+pep8:
+  disable:
+    - W191
+    - E128
+    - E401
+    - E501
+mccabe:
+  disable:
+    - MC0001

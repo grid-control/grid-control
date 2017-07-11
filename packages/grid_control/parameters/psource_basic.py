@@ -175,32 +175,33 @@ class RNGParameterSource(SingleParameterSource):
 class RegexTransformParameterSource(SingleParameterSource):
 	alias_list = ['regex_transform']
 
-	def __init__(self, output_vn, source, regex_dict, regex_order):
+	def __init__(self, output_vn, source_vn, regex_dict, regex_order, default=None):
 		SingleParameterSource.__init__(self, '!%s' % output_vn,
-			[output_vn, source, regex_order, str_dict_linear(regex_dict)])
-		(self._source, self._regex_order, self._regex_dict) = (source, regex_order, regex_dict)
+			[output_vn, source_vn, regex_order, str_dict_linear(regex_dict)])
+		(self._source_vn, self._default) = (source_vn, default)
+		(self._regex_order, self._regex_dict) = (regex_order, regex_dict)
 		self._regex_comp = {}  # precompile regex
 		for regex_pattern in self._regex_order:
 			self._regex_comp[regex_pattern] = re.compile(regex_pattern)
 
 	def __repr__(self):
-		return 'regex_transform(%r, %r, %r)' % (self._output_vn, self._source, self._regex_dict)
+		return 'regex_transform(%r, %r, %r)' % (self._output_vn, self._source_vn, str_dict_linear(self._regex_dict))
 
 	def fill_parameter_content(self, pnum, result):
 		for regex_pattern in self._regex_order:
 			regex_obj = self._regex_comp[regex_pattern]
-			source_str = result.get(self._source, '')
+			source_str = result.get(self._source_vn, '')
 			if regex_obj.match(source_str):
 				result[self._output_vn] = regex_obj.sub(self._regex_dict[regex_pattern], source_str)
 				return
-		result[self._output_vn] = self._regex_dict.get(None, '')
+		result[self._output_vn] = self._regex_dict.get(None, self._default)
 
 	def get_parameter_deps(self):
-		return [self._source]
+		return [self._source_vn]
 
 	def show_psrc(self):
-		return ['%s: var = %s, source = %r, regex_dict = %r' %
-			(self.__class__.__name__, self._output_vn, self._source, str_dict_linear(self._regex_dict))]
+		return ['%s: var = %s, source_vn = %r, regex_dict = %r' %
+			(self.__class__.__name__, self._output_vn, self._source_vn, str_dict_linear(self._regex_dict))]
 
 
 class SimpleParameterSource(SingleParameterSource):
