@@ -65,7 +65,7 @@ class Process(object):
 		if not os.access(cmd, os.X_OK):
 			raise ProcessError('%r is not executable' % cmd)
 		self._log = logging.getLogger('process.%s' % os.path.basename(cmd).lower())
-		self._log.debug('External programm called: %s %s', cmd, self._args)
+		self._log.debug('External program called: %s %s', cmd, self._args)
 		self._cmd = cmd
 		self.start()
 

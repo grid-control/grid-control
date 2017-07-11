@@ -80,6 +80,8 @@ class BasicLogEventHandler(LocalEventHandler):
 		job_location = job_obj.get_job_location()
 		if job_location:
 			msg_list.append(job_location)
+		if (job_obj.get('runtime') is not None) and ((job_obj.get('runtime') or 0) >= 0):
+			msg_list.append('runtime %s' % str_time_long(job_obj.get('runtime') or 0))
 		return str.join(' - ', msg_list)
 
 

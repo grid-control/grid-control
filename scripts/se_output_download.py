@@ -499,12 +499,12 @@ def _parse_cmd_line():
 		help_base='only select successful jobs')
 	_add_bool_opt('jobs', None, 'mark-rm', default=False,
 		option_prefix_pair=('ignore', 'use'), dest='mark_ignore_rm',
-		help_base='mark about sucessfully removed jobs', help_prefix_pair=('ignore ', 'use '))
+		help_base='mark about successfully removed jobs', help_prefix_pair=('ignore ', 'use '))
 	_add_bool_opt('jobs', None, 'mark-dl', default=True,
-		help_base='mark sucessfully downloaded jobs as such')
+		help_base='mark successfully downloaded jobs as such')
 	_add_bool_opt('jobs', None, 'mark-dl', default=False,
 		option_prefix_pair=('ignore', 'use'), dest='mark_ignore_dl',
-		help_base='mark about sucessfully downloaded jobs', help_prefix_pair=('ignore ', 'use '))
+		help_base='mark about successfully downloaded jobs', help_prefix_pair=('ignore ', 'use '))
 	_add_bool_opt('jobs', None, 'mark-fail', default=True,
 		help_base='mark jobs failing verification as such')
 	_add_bool_opt('jobs', None, 'mark-empty-fail', default=False,
