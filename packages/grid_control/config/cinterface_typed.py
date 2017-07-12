@@ -59,14 +59,16 @@ class TypedConfigInterface(ConfigInterface):
 			pargs=tuple([cls_list] + list(pargs or [])),
 			bind_args=bind_args, bind_kwargs=bind_kwargs, **kwargs)
 
-	def get_dict(self, option, default=unspecified, parser=identity, strfun=str, **kwargs):
+	def get_dict(self, option, default=unspecified, default_order=None,
+			parser=identity, strfun=str, **kwargs):
 		# Returns a tuple with (<dictionary>, <keys>) - the keys are sorted by order of appearance
 		# Default key is accessed via key == None (None is never in keys!)
+		def _def2obj(value):
+			return (value, default_order or sorted(ifilter(lambda key: key is not None, value.keys())))
 		return self._get_internal('dictionary',
 			obj2str=lambda value: str_dict_cfg(value, parser, strfun),
 			str2obj=lambda value: parse_dict_cfg(value, parser),
-			def2obj=lambda value: (value, sorted(ifilter(lambda key: key is not None, value.keys()))),
-			option=option, default_obj=default, **kwargs)
+			def2obj=_def2obj, option=option, default_obj=default, **kwargs)
 
 	def get_float(self, option, default=unspecified, **kwargs):
 		# Handling floating point config options - using strict float (de-)serialization

@@ -58,11 +58,11 @@ class RemoteEventHandler(NamedPlugin):  # Remote monitoring base class
 	def get_file_list(self):
 		return []
 
-	def get_script(self):  # Script to call later on
-		return []
-
 	def get_mon_env_dict(self):
 		return {'GC_MONITORING': str.join(' ', imap(os.path.basename, self.get_script()))}
+
+	def get_script(self):  # Script to call later on
+		return []
 
 
 class MultiLocalEventHandler(LocalEventHandler):
@@ -107,9 +107,9 @@ class MultiRemoteEventHandler(RemoteEventHandler):
 	def get_file_list(self):
 		return lchain(lmap(lambda h: h.get_file_list(), self._handlers) + [self.get_script()])
 
-	def get_script(self):
-		return lchain(imap(lambda h: h.get_script(), self._handlers))
-
 	def get_mon_env_dict(self):
 		tmp = RemoteEventHandler.get_mon_env_dict(self)
 		return dict_union(*(lmap(lambda m: m.get_mon_env_dict(), self._handlers) + [tmp]))
+
+	def get_script(self):
+		return lchain(imap(lambda h: h.get_script(), self._handlers))

@@ -47,6 +47,7 @@ class CMSBaseProvider(DataProvider):
 			default_matcher='BlackWhiteMatcher', default_filter='StrictListFilter')
 		self._only_complete = dataset_config.get_bool('only complete sites', True)
 		self._only_valid = dataset_config.get_bool('only valid', True)
+		self._allow_phedex = dataset_config.get_bool('allow phedex', True)
 		self._location_format = dataset_config.get_enum('location format',
 			CMSLocationFormat, CMSLocationFormat.hostname)
 		self._pjrc = JSONRestClient(url='https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
@@ -147,7 +148,7 @@ class CMSBaseProvider(DataProvider):
 				progress_block.update_progress(counter,
 					msg='Getting block information for ' + result[DataProvider.BlockName])
 
-				if use_phedex:  # Start parallel phedex query
+				if use_phedex and self._allow_phedex:  # Start parallel phedex query
 					replicas_dict = {}
 					phedex_thread = start_thread('Query phedex site info for %s' % block_path,
 						self._get_phedex_replica_list, block_path, replicas_dict)

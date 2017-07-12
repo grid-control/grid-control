@@ -62,9 +62,9 @@ class Settings(object):
 
 	def set(self, name, value, override=False, append=False, force=False):
 		if isinstance(value, list):
-			def iter_values():
+			def _iter_values():
 				for item in value:
 					yield str(item)
-			value = str.join('\n\t', iter_values())
+			value = str.join('\n\t', _iter_values())
 		mod = dict([(override, '?'), (append, '+'), (force, '*')]).get(True, '')
 		Settings._config.setdefault(self._section, []).append((name.replace('_', ' '), mod, value))

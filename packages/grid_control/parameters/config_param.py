@@ -229,9 +229,10 @@ class RegexTransformParameterParser(ParameterParser):
 	alias_list = ['regex_transform']
 
 	def parse_value(self, pconfig, varexpr, vn, value):
+		source = pconfig.get(varexpr, 'source')
 		default = pconfig.get(varexpr, 'default', '')
-		setup_dict = parse_dict_cfg(pconfig.get(varexpr, 'transform', ''))
-		return ('RegexTransformParameterSource', vn, value,
+		setup_dict = parse_dict_cfg(value)
+		return ('RegexTransformParameterSource', vn, source,
 			setup_dict[0], setup_dict[1], default)  # class init tuple
 
 

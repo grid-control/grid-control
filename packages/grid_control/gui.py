@@ -27,8 +27,8 @@ class GUI(ConfigurablePlugin):
 	def __init__(self, config, workflow):
 		ConfigurablePlugin.__init__(self, config)
 
-	def start_interface(self):
+	def end_interface(self):
 		pass
 
-	def end_interface(self):
+	def start_interface(self):
 		pass

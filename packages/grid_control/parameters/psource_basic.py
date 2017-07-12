@@ -185,7 +185,8 @@ class RegexTransformParameterSource(SingleParameterSource):
 			self._regex_comp[regex_pattern] = re.compile(regex_pattern)
 
 	def __repr__(self):
-		return 'regex_transform(%r, %r, %r)' % (self._output_vn, self._source_vn, str_dict_linear(self._regex_dict))
+		return 'regex_transform(%r, %r, %r)' % (self._output_vn, self._source_vn,
+			str_dict_linear(self._regex_dict))
 
 	def fill_parameter_content(self, pnum, result):
 		for regex_pattern in self._regex_order:

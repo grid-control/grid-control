@@ -284,7 +284,7 @@ UserTask options
 * ``cpu time`` = <duration hh[:mm[:ss]]> (Default: <wall time>)
     Requested cpu time
 
-* ``cpus`` = <integer> (Default: 1)
+* ``cpus / cores`` = <integer> (Default: 1)
     Requested number of cpus per node
 
 * ``datasource names`` = <list of values> (Default: 'dataset')
@@ -399,7 +399,7 @@ CMSSW options
 * ``cpu time`` = <duration hh[:mm[:ss]]> (Default: <wall time>)
     Requested cpu time
 
-* ``cpus`` = <integer> (Default: 1)
+* ``cpus / cores`` = <integer> (Default: 1)
     Requested number of cpus per node
 
 * ``datasource names`` = <list of values> (Default: 'dataset')
@@ -550,7 +550,7 @@ CMSSWAdvanced options
 * ``cpu time`` = <duration hh[:mm[:ss]]> (Default: <wall time>)
     Requested cpu time
 
-* ``cpus`` = <integer> (Default: 1)
+* ``cpus / cores`` = <integer> (Default: 1)
     Requested number of cpus per node
 
 * ``datasource names`` = <list of values> (Default: 'dataset')
@@ -617,7 +617,7 @@ CMSSWAdvanced options
 * ``nickname constants`` = <list of values> (Default: '')
     Allows to specify a list of nickname dependent variables. The value of the variables is specified separately in the form of a dictionary. (This option is deprecated, since *all* variables support this functionality now!)
 
-* ``nickname lumi filter`` = <dictionary> (Default: {})
+* ``nickname lumi filter`` = <dictionary> (Default: '')
     Allows to specify a dictionary with nickname dependent lumi filter expressions. (This option is deprecated, since the normal option ``lumi filter`` already supports this!)
 
 * ``node timeout`` = <duration hh[:mm[:ss]]> (Default: disabled (-1))
@@ -1243,6 +1243,9 @@ CMSBaseProvider options
 * ``<datasource> lumi metadata / lumi metadata`` = <boolean> (Default: <True/False for active/inactive lumi filter>)
     Toggle the retrieval of lumi metadata
 
+* ``allow phedex`` = <boolean> (Default: True)
+    Allow phedex queries to retrieve dataset location information
+
 * ``dbs instance`` = <text> (Default: 'prod/global')
     Specify the default dbs instance (by url or instance identifier) to use for dataset queries
 
@@ -1351,6 +1354,9 @@ DASProvider options
 
 * ``<datasource> lumi metadata / lumi metadata`` = <boolean> (Default: <True/False for active/inactive lumi filter>)
     Toggle the retrieval of lumi metadata
+
+* ``allow phedex`` = <boolean> (Default: True)
+    Allow phedex queries to retrieve dataset location information
 
 * ``das instance`` = <text> (Default: 'https://cmsweb.cern.ch/das/cache')
     Specify url to the DAS instance that is used to query the datasets
@@ -2269,7 +2275,7 @@ ROOTTask options
 * ``cpu time`` = <duration hh[:mm[:ss]]> (Default: <wall time>)
     Requested cpu time
 
-* ``cpus`` = <integer> (Default: 1)
+* ``cpus / cores`` = <integer> (Default: 1)
     Requested number of cpus per node
 
 * ``datasource names`` = <list of values> (Default: 'dataset')
@@ -2434,6 +2440,9 @@ Local options
 * ``wms`` = <text> (Default: '')
     Override automatic discovery of local backend
 
+* ``wms search list`` = <dictionary> (Default: 'sacct => SLURM <newline> sgepasswd => OGE <newline> pbs-config => PBS <newline> qsub => OGE <newline> condor_q => Condor <newline> bsub => LSF <newline> job_slurm => JMS')
+    Specify order of commands to check for available backends
+
 
 .. _MultiWMS:
 MultiWMS options
@@ -2496,10 +2505,10 @@ Condor options
 * ``pool host list / poolhostlist`` = <list of values> (Default: '')
     Specify list of pool hosts
 
-* ``poolargs query`` = <dictionary> (Default: {})
+* ``poolargs query`` = <dictionary> (Default: '')
     Specify keys for condor pool ClassAds
 
-* ``poolargs req`` = <dictionary> (Default: {})
+* ``poolargs req`` = <dictionary> (Default: '')
     Specify keys for condor pool ClassAds
 
 * ``remote dest`` = <text> (Default: '@')
@@ -3068,7 +3077,7 @@ LFNPartitionProcessor options
 * ``<datasource> partition lfn modifier / partition lfn modifier`` = <text> (Default: '')
     Specify a LFN prefix or prefix shortcut ('/': reduce to LFN)
 
-* ``<datasource> partition lfn modifier dict / partition lfn modifier dict`` = <dictionary> (Default: {'<xrootd>': 'root://cms-xrd-global.cern.ch/', '<xrootd:eu>': 'root://xrootd-cms.infn.it/', '<xrootd:us>': 'root://cmsxrootd.fnal.gov/'})
+* ``<datasource> partition lfn modifier dict / partition lfn modifier dict`` = <dictionary> (Default: '<xrootd:eu> => root://xrootd-cms.infn.it/ <newline> <xrootd:us> => root://cmsxrootd.fnal.gov/ <newline> <xrootd> => root://cms-xrd-global.cern.ch/')
     Specify a dictionary with lfn modifier shortcuts
 
 

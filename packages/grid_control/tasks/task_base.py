@@ -50,7 +50,7 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			add_sections=['jobs'], add_tags=[self])
 		self.wall_time = jobs_config.get_time('wall time', on_change=None)
 		self._cpu_time = jobs_config.get_time('cpu time', self.wall_time, on_change=None)
-		self._cpu_min = jobs_config.get_int('cpus', 1, on_change=None)
+		self._cores = jobs_config.get_int(['cores', 'cpus'], 1, on_change=None)
 		self._memory = jobs_config.get_int('memory', -1, on_change=None)
 		self._job_timeout = jobs_config.get_time('node timeout', -1, on_change=init_sandbox)
 
@@ -134,9 +134,10 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 
 	def get_job_dict(self, jobnum):  # Get job dependent environment variables
 		job_psp = self._source.get_job_content(jobnum)
-		job_dict = dict(imap(lambda key: (key.value, job_psp.get(key.value, '')),
+		job_env_dict = dict(imap(lambda key: (key.value, job_psp.get(key.value, '')),
 			self._source.get_job_metadata()))
-		return dict_union(job_dict, self._get_const_job_env())
+		job_env_dict['GC_ARGS'] = self.get_job_arguments(jobnum)
+		return dict_union(job_env_dict, self._get_const_job_env())
 
 	def get_job_len(self):
 		return self._source.get_job_len()
@@ -146,14 +147,14 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			(WMS.WALLTIME, self.wall_time),
 			(WMS.CPUTIME, self._cpu_time),
 			(WMS.MEMORY, self._memory),
-			(WMS.CPUS, self._cpu_min),
+			(WMS.CPUS, self._cores),
 			(WMS.DISKSPACE, self._disk_min),
 		] + self._source.get_job_content(jobnum)[ParameterInfo.REQS]
 
 	def get_sb_in_fpi_list(self):  # Get file path infos for input sandbox
-		def create_fpi(fn):
+		def _create_fpi(fn):
 			return Result(path_abs=fn, path_rel=os.path.basename(fn))
-		return lmap(create_fpi, self._sb_in_fn_list)
+		return lmap(_create_fpi, self._sb_in_fn_list)
 
 	def get_sb_out_fn_list(self):  # Get files for output sandbox
 		return list(self._sb_out_fn_list)
@@ -161,7 +162,7 @@ class TaskModule(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 	def get_se_in_fn_list(self):
 		return []
 
-	def get_task_dict(self):  # Get environment variables for gc_config.sh
+	def get_task_dict(self):  # OLD API: Get environment variables for gc_config.sh
 		task_base_dict = {
 			# Storage element
 			'SE_MINFILESIZE': self._se_min_size,
