@@ -93,7 +93,7 @@ def parse_lumi_filter(lumi_str):
 				token.append('')
 			try:
 				json_fn = os.path.normpath(os.path.expandvars(os.path.expanduser(token[0].strip())))
-				run_lumi_range_list.extend(parse_lumi_from_json(SafeFile(json_fn).read_close(), token[1]))
+				run_lumi_range_list.extend(_parse_lumi_from_json(SafeFile(json_fn).read_close(), token[1]))
 			except Exception:
 				raise ConfigError('Could not process lumi filter file: %r (filter: %r)' % tuple(token))
 		else:
@@ -102,16 +102,6 @@ def parse_lumi_filter(lumi_str):
 			except Exception:
 				raise ConfigError('Could not process lumi filter expression:\n\t%s' % token[0])
 	return merge_lumi_list(run_lumi_range_list)
-
-
-def parse_lumi_from_json(data, select=''):
-	run_dict = json.loads(data)
-	run_range = lmap(_parse_lumi_int, select.split('-') + [''])[:2]
-	for run in imap(int, run_dict.keys()):
-		if (run_range[0] and run < run_range[0]) or (run_range[1] and run > run_range[1]):
-			continue
-		for lumi_range in run_dict[str(run)]:
-			yield ([run, lumi_range[0]], [run, lumi_range[1]])
 
 
 def parse_lumi_from_str(run_lumi_range_str):
@@ -186,6 +176,16 @@ def select_run(run, run_lumi_range_list):
 
 def str_lumi(run_lumi_range_list):
 	return str.join(',', format_lumi(run_lumi_range_list))
+
+
+def _parse_lumi_from_json(data, select=''):
+	run_dict = json.loads(data)
+	run_range = lmap(_parse_lumi_int, select.split('-') + [''])[:2]
+	for run in imap(int, run_dict.keys()):
+		if (run_range[0] and run < run_range[0]) or (run_range[1] and run > run_range[1]):
+			continue
+		for lumi_range in run_dict[str(run)]:
+			yield ([run, lumi_range[0]], [run, lumi_range[1]])
 
 
 def _parse_lumi_int(value):

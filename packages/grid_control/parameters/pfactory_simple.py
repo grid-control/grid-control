@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import logging
-from grid_control.parameters.config_param import is_valid_parameter_char
+from grid_control.parameters.pconfig import is_valid_parameter_char
 from grid_control.parameters.pfactory_base import ParameterError, UserParameterFactory
 from grid_control.parameters.psource_base import ParameterSource
 from hpfwk import APIError
@@ -55,7 +55,7 @@ class SimpleParameterFactory(UserParameterFactory):
 			if operator == '[]':
 				psrc_list = []
 				for output_vn in _tree2names(args[0]):
-					psrc_list.append(ParameterSource.create_psrc_safe('InternalAutoParameterSource',
+					psrc_list.append(ParameterSource.create_instance('InternalAutoParameterSource',
 						self._parameter_config, repository, output_vn, _tree2names(args[1])))
 				return ParameterSource.create_psrc_safe('CrossParameterSource',
 					self._parameter_config, repository, *psrc_list)
@@ -67,7 +67,7 @@ class SimpleParameterFactory(UserParameterFactory):
 				return ParameterSource.create_psrc_safe(self._operator_map_eval[operator],
 					self._parameter_config, repository, *evaluated_args)
 		else:
-			return ParameterSource.create_psrc_safe('InternalAutoParameterSource',
+			return ParameterSource.create_instance('InternalAutoParameterSource',
 				self._parameter_config, repository, node)
 		raise APIError('Unable to parse node %s!' % repr(node))
 

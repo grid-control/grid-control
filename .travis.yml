@@ -1,35 +1,36 @@
+os: linux
 language: python
 python:
-  - "2.6"
-  - "2.7"
-  - "3.2"
-  - "3.3"
-  - "3.4"
-  - "3.5"
-  - "pypy"
-  - "pypy3"
-before_install:
-  - pip install codecov
-  - pip install 'coverage<4'
+  - 2.6
+  - 2.7
+  - 3.2
+  - 3.6
+env:
+  - GC_WRAPPER='coverage run -a'
+matrix:
+  include:
+  - python: pypy
+    env: GC_WRAPPER=''
+before_install: |
+  if [ "$TRAVIS_OS_NAME" == "osx" ]; then
+    brew update > /dev/null
+    brew install openssl readline > /dev/null
+    (brew outdated pyenv || brew upgrade pyenv) > /dev/null
+    export PYENV_VERSION=$PYTHON
+    pyenv install $PYTHON
+    export PATH="/Users/travis/.pyenv/shims:${PATH}"
+    python --version
+  fi
+  pip install 'coverage<4' > /dev/null
+  pip install requests > /dev/null
 script:
-  - ./packages/grid_control_update.py # randomized order
-  - ./packages/grid_control_update.py
-  - ./packages/grid_control_update.py
-  - ./packages/grid_control_update.py
-  - ./packages/grid_control_update.py
-  - export WRAPPER='coverage run -a'
+  - echo 'travis_fold:start:gc_env_setup'
   - ./setup.py install > setup.log 2>&1 || cat setup.log
   - rm -rf packages
+  - export GC_SCRIPT="/$(grep gridcontrol setup.log | cut -d "/" -f 2-)/gridcontrol"
+  - export GC_TEST_BRANCH="$TRAVIS_BRANCH"
+  - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then export GC_TEST_BRANCH="testing"; fi
+  - git clone --depth 1 https://github.com/grid-control/testsuite.git -b $GC_TEST_BRANCH testsuite
   - ls
-  - export GC_CHECK_OUTPUT=true
-  - export GC_SCRIPT=$VIRTUAL_ENV/bin/gridcontrol
-  - if [[ $TRAVIS_PYTHON_VERSION == 'pypy'* ]]; then export WRAPPER=''; fi
-  - $WRAPPER $GC_SCRIPT -s -o '[jobs] continuous = False' docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER $GC_SCRIPT --reset INIT docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER $GC_SCRIPT -o '[jobs] continuous = False' docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER $GC_SCRIPT -o '[interactive] default = False' -d ALL docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER $GC_SCRIPT -G --debug docs/examples/ExampleS1_stresstest.conf
-  - $WRAPPER $GC_SCRIPT docs/examples/ExampleS1_stresstest.conf
-  - diff ExampleS1_stresstest.list docs/examples/ExampleS1_stresstest.list.ref
-after_success:
-  - codecov
+  - echo 'travis_fold:end:gc_env_setup'
+  - ./testsuite/test_all.sh "$GC_WRAPPER" "$GC_SCRIPT"

@@ -135,7 +135,7 @@ def split_brackets(tokens, brackets=None, exception_type=Exception):
 					return True
 			else:
 				_raise_backet_error('does not match bracket %r at position %d' % stack[-1], token, position)
-	return split_with_stack(tokens, _split_brackets, 'Unclosed brackets: %s', exception_type)
+	return _split_with_stack(tokens, _split_brackets, 'Unclosed brackets: %s', exception_type)
 
 
 def split_quotes(tokens, quotes=None, exception_type=Exception):
@@ -149,26 +149,7 @@ def split_quotes(tokens, quotes=None, exception_type=Exception):
 					return True
 			else:
 				stack.append((token, position))
-	return split_with_stack(tokens, _split_quotes, 'Unclosed quotes: %s', exception_type)
-
-
-def split_with_stack(tokens, process_token, exception_msg, exception_type=Exception):
-	buffer = ''
-	stack = []
-	position = 0
-	for token in tokens:
-		position += len(token)  # store position for proper error messages
-		if process_token(position, token, stack):  # check if buffer should be emitted
-			buffer += token
-			yield buffer
-			buffer = ''
-		elif stack:
-			buffer += token
-		else:
-			yield token
-	if stack:
-		msg_pos = str.join('; ', imap(lambda item_pos: '%r at position %d' % item_pos, stack))
-		raise exception_type(exception_msg % msg_pos)
+	return _split_with_stack(tokens, _split_quotes, 'Unclosed quotes: %s', exception_type)
 
 
 def str_dict_cfg(value, parser=identity, strfun=str):
@@ -205,3 +186,22 @@ def str_time_long(secs, fmt='%dh %0.2dmin %0.2dsec'):
 
 def str_time_short(secs):
 	return str_time_long(secs, '%d:%0.2d:%0.2d')
+
+
+def _split_with_stack(tokens, process_token, exception_msg, exception_type=Exception):
+	buffer = ''
+	stack = []
+	position = 0
+	for token in tokens:
+		position += len(token)  # store position for proper error messages
+		if process_token(position, token, stack):  # check if buffer should be emitted
+			buffer += token
+			yield buffer
+			buffer = ''
+		elif stack:
+			buffer += token
+		else:
+			yield token
+	if stack:
+		msg_pos = str.join('; ', imap(lambda item_pos: '%r at position %d' % item_pos, stack))
+		raise exception_type(exception_msg % msg_pos)

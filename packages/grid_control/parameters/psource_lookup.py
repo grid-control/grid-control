@@ -1,4 +1,4 @@
-# | Copyright 2012-2016 Karlsruhe Institute of Technology
+# | Copyright 2012-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ from grid_control.config import ConfigError, Matcher
 from grid_control.parameters.psource_base import ParameterError, ParameterInfo, ParameterSource
 from grid_control.parameters.psource_basic import KeyParameterSource, SingleParameterSource
 from grid_control.parameters.psource_internal import InternalNestedParameterSource
-from python_compat import imap, irange, izip, lmap, md5_hex
+from python_compat import imap, irange, izip, lidfilter, lmap, md5_hex
 
 
 class LookupHelper(object):  # TODO: use grid_control.config.matcher_base.DictLookup here
@@ -73,6 +73,15 @@ class InternalSwitchPlaceholder(InternalNestedParameterSource):
 
 class InternalAutoLookupParameterSource(ParameterSource):
 	def __new__(cls, pconfig, output_vn, lookup_vn_list):
+		def _replace_nonalnum(value):
+			if str.isalnum(value):
+				return value
+			return ' '
+
+		if not lookup_vn_list:
+			lookup_str = pconfig.get(output_vn, 'lookup', '')
+			lookup_vn_list = lidfilter(str.join('', imap(_replace_nonalnum, lookup_str)).split())
+
 		lookup_vn = None
 		if lookup_vn_list:  # default lookup key
 			lookup_vn = KeyParameterSource(*lookup_vn_list)

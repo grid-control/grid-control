@@ -209,11 +209,11 @@ class Local(WMS):
 		if wms:
 			return _create_backend(wms)
 		exc = ExceptionCollector()
-		wms_search_dict = config.get_dict('wms search list',
+		(wms_search_dict, wms_search_order) = config.get_dict('wms search list',
 			default={'sacct': 'SLURM', 'sgepasswd': 'OGE', 'pbs-config': 'PBS', 'qsub': 'OGE',
 				'condor_q': 'Condor', 'bsub': 'LSF', 'job_slurm': 'JMS'},
 			default_order=['sacct', 'sgepasswd', 'pbs-config', 'qsub', 'condor_q', 'bsub', 'job_slurm'])
-		for cmd in wms_search_dict[1]:
+		for cmd in wms_search_order:
 			try:
 				resolve_install_path(cmd)
 			except Exception:

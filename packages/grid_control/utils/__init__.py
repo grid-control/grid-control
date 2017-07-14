@@ -106,16 +106,6 @@ def disk_space_avail(dn, timeout=5):
 		exit_without_cleanup(os.EX_OSERR)
 
 
-def display_selection(log, items_before, items_after, msg, formatter, log_level=logging.DEBUG1):
-	if len(items_before) != len(items_after):
-		log.log(logging.DEBUG, msg, (len(items_before) - len(items_after)))
-		for item in items_before:
-			if item in items_after:
-				log.log(log_level, ' * %s', formatter(item))
-			else:
-				log.log(log_level, '   %s', formatter(item))
-
-
 def ensure_dir_exists(dn, name='directory', exception_type=PathError):
 	if not os.path.exists(dn):
 		try:
@@ -190,7 +180,7 @@ def prune_processors(do_prune, processor_list, log, msg, formatter=None, id_fun=
 	def _get_class_name(proc):
 		return proc.__class__.__name__
 	selected = filter_processors(processor_list, id_fun or _get_class_name)
-	display_selection(log, processor_list, selected, msg, formatter or _get_class_name)
+	_display_selection(log, processor_list, selected, msg, formatter or _get_class_name)
 	return selected
 
 
@@ -401,3 +391,13 @@ class TwoSidedIterator(object):
 		while self._left + self._right < len(self.__content):
 			self._left += 1
 			yield self.__content[self._left - 1]
+
+
+def _display_selection(log, items_before, items_after, msg, formatter, log_level=logging.DEBUG1):
+	if len(items_before) != len(items_after):
+		log.log(logging.DEBUG, msg, (len(items_before) - len(items_after)))
+		for item in items_before:
+			if item in items_after:
+				log.log(log_level, ' * %s', formatter(item))
+			else:
+				log.log(log_level, '   %s', formatter(item))

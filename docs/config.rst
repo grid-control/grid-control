@@ -75,7 +75,7 @@ Workflow options
      * InactiveWMS_ (alias: inactive)
 
 * ``backend manager`` = <plugin> (Default: 'MultiWMS')
-    Specifiy compositor class to merge the different plugins given in ``backend``
+    Specify compositor class to merge the different plugins given in ``backend``
 
     List of available compositor plugins:
      * MultiWMS_
@@ -194,7 +194,7 @@ SimpleJobManager options
      * ScriptEventHandler_ (alias: scripts)
 
 * ``local event handler manager`` = <plugin> (Default: 'MultiLocalEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``local event handler``
+    Specify compositor class to merge the different plugins given in ``local event handler``
 
     List of available compositor plugins:
      * MultiLocalEventHandler_ (alias: multi)
@@ -247,7 +247,7 @@ backend options
      * VomsAccessToken_ (alias: voms, VomsProxy)
 
 * ``access token manager`` = <plugin> (Default: 'MultiAccessToken')
-    Specifiy compositor class to merge the different plugins given in ``access token``
+    Specify compositor class to merge the different plugins given in ``access token``
 
     List of available compositor plugins:
      * MultiAccessToken_ (alias: multi)
@@ -375,7 +375,7 @@ CMSSW options
     List of files that should be taken from the CMSSW project area for running the job
 
 * ``area files matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specifiy matcher plugin that is used to match filter expressions
+    Specify matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -526,7 +526,7 @@ CMSSWAdvanced options
     List of files that should be taken from the CMSSW project area for running the job
 
 * ``area files matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specifiy matcher plugin that is used to match filter expressions
+    Specify matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -602,7 +602,7 @@ CMSSWAdvanced options
     Allows to specify a dictionary with list of config files that will be sequentially processed by *cmsRun* calls. The dictionary key is the job dependent dataset nickname
 
 * ``nickname config matcher`` = <plugin> (Default: 'RegExMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -707,7 +707,7 @@ dataset options
      * ScanProvider_ (alias: scan)
 
 * ``<datasource> manager`` = <plugin> (Default: ':ThreadedMultiDatasetProvider:')
-    Specifiy compositor class to merge the different plugins given in ``<datasource>``
+    Specify compositor class to merge the different plugins given in ``<datasource>``
 
     List of available compositor plugins:
      * MultiDatasetProvider_ (alias: multi)
@@ -750,7 +750,7 @@ dataset options
      * TFCPartitionProcessor_ (alias: tfc)
 
 * ``<datasource> partition processor manager`` = <plugin> (Default: 'MultiPartitionProcessor')
-    Specifiy compositor class to merge the different plugins given in ``<datasource> partition processor``
+    Specify compositor class to merge the different plugins given in ``<datasource> partition processor``
 
     List of available compositor plugins:
      * MultiPartitionProcessor_ (alias: multi)
@@ -776,7 +776,7 @@ dataset options
      * UniqueDataProcessor_ (alias: unique)
 
 * ``<datasource> processor manager`` = <plugin> (Default: 'MultiDataProcessor')
-    Specifiy compositor class to merge the different plugins given in ``<datasource> processor``
+    Specify compositor class to merge the different plugins given in ``<datasource> processor``
 
     List of available compositor plugins:
      * MultiDataProcessor_ (alias: multi)
@@ -838,6 +838,46 @@ TaskExecutableWrapper options
 
 * ``[<prefix>] send executable`` = <boolean> (Default: True)
     Toggle to control if the specified executable should be send together with the job
+
+
+.. __get_lookup_args:
+_get_lookup_args options
+------------------------
+
+* ``<parameter>`` = <text>
+    Specify the output variable name where the lookup result is stored
+
+* ``default lookup`` = <text>
+    Specify the default lookup variable
+
+* ``<parameter> empty set`` = <boolean> (Default: False)
+    Toggle if empty lookup results should be interpreted as an empty set [] or alternatively as an empty string ''
+
+* ``<parameter> matcher`` = <text> (Default: <default matcher given by 'default matcher'>)
+    Specify matcher plugin that is used to match the lookup expressions
+
+    List of available matcher plugins:
+     * AlwaysMatcher_ (alias: always)
+     * BlackWhiteMatcher_ (alias: blackwhite)
+     * EndMatcher_ (alias: end)
+     * EqualMatcher_ (alias: equal)
+     * ExprMatcher_ (alias: expr, eval)
+     * RegExMatcher_ (alias: regex)
+     * ShellStyleMatcher_ (alias: shell)
+     * StartMatcher_ (alias: start)
+
+* ``default matcher`` = <text> (Default: 'equal')
+    Specify the default matcher plugin that is used to match the lookup expressions
+
+    List of available matcher plugins:
+     * AlwaysMatcher_ (alias: always)
+     * BlackWhiteMatcher_ (alias: blackwhite)
+     * EndMatcher_ (alias: end)
+     * EqualMatcher_ (alias: equal)
+     * ExprMatcher_ (alias: expr, eval)
+     * RegExMatcher_ (alias: regex)
+     * ShellStyleMatcher_ (alias: shell)
+     * StartMatcher_ (alias: start)
 
 
 .. _interactive:
@@ -925,6 +965,46 @@ logging options
 .. _parameters:
 parameters options
 ------------------
+
+* ``<parameter expression>`` = <text> (Default: '')
+    Specify parameter value
+
+* ``<parameter expression> key delimeter`` = <text> (Default: ',')
+    Specify delimeter to split parameter names
+
+* ``<parameter expression> parse dict`` = <boolean> (Default: True)
+    Toggle parsing parameter value as dictionary when it contains '=>'
+
+* ``<parameter expression> type`` = <text> (Default: 'default')
+    Specify parameter tuple parser
+
+    List of available parameter tuple parser plugins:
+     * BinningTupleParser_ (alias: binning)
+     * DefaultTupleParser_ (alias: tuple, default)
+
+* ``<parameter>`` = <text> (Default: '')
+    Specify parameter value
+
+* ``<parameter> repeat`` = <text> (Default: '1')
+    Specify how often the parameter values should be repeated
+
+* ``<parameter> repeat idx <index>`` = <text> (Default: '1')
+    Specify how often the given parameter value should be repeated
+
+* ``<parameter> type`` = <text> (Default: 'default')
+    Specify parameter value parser
+
+    List of available parameter value parser plugins:
+     * ExprParameterParser_ (alias: expr, eval)
+     * FormatParameterParser_ (alias: format)
+     * GitParameterParser_ (alias: git)
+     * LinesParameterParser_ (alias: lines)
+     * RegexTransformParameterParser_ (alias: regex_transform)
+     * ShellParameterParser_ (alias: shell, default)
+     * SplitParameterParser_ (alias: split)
+     * SvnParameterParser_ (alias: svn)
+     * TransformParameterParser_ (alias: transform)
+     * VerbatimParameterParser_ (alias: verbatim)
 
 * ``parameters`` = <text> (Default: '')
     Specify the parameter expression that defines the parameter space. The syntax depends on the used parameter factory
@@ -1044,7 +1124,7 @@ LocationDataProcessor options
     Specify dataset location filter. Dataset without locations have the filter whitelist applied
 
 * ``<datasource> location filter plugin`` = <plugin> (Default: 'StrictListFilter')
-    Specifiy plugin that is used to filter the list
+    Specify plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -1052,7 +1132,7 @@ LocationDataProcessor options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``<datasource> location filter matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specifiy matcher plugin that is used to match filter expressions
+    Specify matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1065,7 +1145,7 @@ LocationDataProcessor options
      * StartMatcher_ (alias: start)
 
 * ``<datasource> location filter order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
-    Specifiy the order of the filtered list
+    Specify the order of the filtered list
 
 
 .. _LumiDataProcessor:
@@ -1076,7 +1156,7 @@ LumiDataProcessor options
     Specify lumi filter for the dataset (as nickname dependent dictionary)
 
 * ``<datasource> lumi filter matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1150,7 +1230,7 @@ URLDataProcessor options
     Specify list of url / data sources to remove from the dataset
 
 * ``<datasource> ignore urls plugin`` = <plugin> (Default: 'WeakListFilter')
-    Specifiy plugin that is used to filter the list
+    Specify plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -1158,7 +1238,7 @@ URLDataProcessor options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``<datasource> ignore urls matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specifiy matcher plugin that is used to match filter expressions
+    Specify matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1171,7 +1251,7 @@ URLDataProcessor options
      * StartMatcher_ (alias: start)
 
 * ``<datasource> ignore urls order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
-    Specifiy the order of the filtered list
+    Specify the order of the filtered list
 
 
 .. _EntriesConsistencyDataProcessor:
@@ -1228,7 +1308,7 @@ CMSBaseProvider options
     Specify lumi filter for the dataset (as nickname dependent dictionary)
 
 * ``<datasource> lumi filter matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1262,7 +1342,7 @@ CMSBaseProvider options
     Toggle the inclusion of files marked as invalid dataset
 
 * ``phedex sites plugin`` = <plugin> (Default: 'StrictListFilter')
-    Specifiy plugin that is used to filter the list
+    Specify plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -1270,7 +1350,7 @@ CMSBaseProvider options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``phedex sites matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specifiy matcher plugin that is used to match filter expressions
+    Specify matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1283,7 +1363,7 @@ CMSBaseProvider options
      * StartMatcher_ (alias: start)
 
 * ``phedex sites order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
-    Specifiy the order of the filtered list
+    Specify the order of the filtered list
 
 
 .. _ConfigDataProvider:
@@ -1340,7 +1420,7 @@ DASProvider options
     Specify lumi filter for the dataset (as nickname dependent dictionary)
 
 * ``<datasource> lumi filter matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1377,7 +1457,7 @@ DASProvider options
     Toggle the inclusion of files marked as invalid dataset
 
 * ``phedex sites plugin`` = <plugin> (Default: 'StrictListFilter')
-    Specifiy plugin that is used to filter the list
+    Specify plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -1385,7 +1465,7 @@ DASProvider options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``phedex sites matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specifiy matcher plugin that is used to match filter expressions
+    Specify matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1398,7 +1478,7 @@ DASProvider options
      * StartMatcher_ (alias: start)
 
 * ``phedex sites order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
-    Specifiy the order of the filtered list
+    Specify the order of the filtered list
 
 
 .. _ThreadedMultiDatasetProvider:
@@ -1443,7 +1523,7 @@ EventBoundarySplitter options
     Set granularity of dataset splitter
 
 * ``<datasource> entries per job matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1472,7 +1552,7 @@ FileBoundarySplitter options
     Set granularity of dataset splitter
 
 * ``<datasource> files per job matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1493,7 +1573,7 @@ HybridSplitter options
     Set guideline for the granularity of the dataset splitter
 
 * ``<datasource> entries per job matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1514,7 +1594,7 @@ RunSplitter options
     Specify number of sequential runs that are processed per job
 
 * ``<datasource> run range matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1535,7 +1615,7 @@ UserMetadataSplitter options
     Specify the name of the metadata variable that is used to partition the dataset into equivalence classes
 
 * ``split metadata matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1570,7 +1650,7 @@ ANSIGUI options
      * UserLogGUIElement_ (alias: log)
 
 * ``gui element manager`` = <plugin> (Default: 'MultiGUIElement')
-    Specifiy compositor class to merge the different plugins given in ``gui element``
+    Specify compositor class to merge the different plugins given in ``gui element``
 
     List of available compositor plugins:
      * MultiGUIElement_ (alias: multi)
@@ -1615,7 +1695,7 @@ BasicConsoleGUI options
      * VariablesReport_ (alias: variables, vars)
 
 * ``report manager`` = <plugin> (Default: 'MultiReport')
-    Specifiy compositor class to merge the different plugins given in ``report``
+    Specify compositor class to merge the different plugins given in ``report``
 
     List of available compositor plugins:
      * MultiReport_ (alias: multi)
@@ -1676,7 +1756,7 @@ LFNFromPath options
 -------------------
 
 * ``lfn marker`` = <text> (Default: '/store/')
-    Specifiy the string that marks the beginning of the LFN
+    Specify the string that marks the beginning of the LFN
 
 
 .. _MatchDelimeter:
@@ -1707,7 +1787,7 @@ MatchOnFilename options
     Specify filename filter to select files for the dataset
 
 * ``filename filter matcher`` = <plugin> (Default: 'ShellStyleMatcher')
-    Specifiy matcher plugin that is used to match filter expressions
+    Specify matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1736,7 +1816,7 @@ MetadataFromTask options
 ------------------------
 
 * ``ignore task vars`` = <list of values> (Default: <list of common task vars>)
-    Specifiy the list of task variables that is not included in the dataset metadata
+    Specify the list of task variables that is not included in the dataset metadata
 
 
 .. _ObjectsFromCMSSW:
@@ -1900,7 +1980,7 @@ CoverageBroker options
     Specify broker requirement
 
 * ``<broker prefix> plugin`` = <plugin> (Default: 'try_strict')
-    Specifiy plugin that is used to filter the list
+    Specify plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -1908,7 +1988,7 @@ CoverageBroker options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``<broker prefix> matcher`` = <plugin> (Default: 'blackwhite')
-    Specifiy matcher plugin that is used to match filter expressions
+    Specify matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1921,7 +2001,7 @@ CoverageBroker options
      * StartMatcher_ (alias: start)
 
 * ``<broker prefix> order`` = <enum: SOURCE|MATCHER> (Default: MATCHER)
-    Specifiy the order of the filtered list
+    Specify the order of the filtered list
 
 * ``<broker prefix> entries`` = <integer> (Default: 0)
     Specify the number of broker results to store in the job requirements (0: no limit)
@@ -1938,7 +2018,7 @@ FilterBroker options
     Specify the filter expression to select entries given to the broker
 
 * ``<broker prefix> plugin`` = <plugin> (Default: 'try_strict')
-    Specifiy plugin that is used to filter the list
+    Specify plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -1946,7 +2026,7 @@ FilterBroker options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``<broker prefix> matcher`` = <plugin> (Default: 'blackwhite')
-    Specifiy matcher plugin that is used to match filter expressions
+    Specify matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -1959,7 +2039,7 @@ FilterBroker options
      * StartMatcher_ (alias: start)
 
 * ``<broker prefix> order`` = <enum: SOURCE|MATCHER> (Default: MATCHER)
-    Specifiy the order of the filtered list
+    Specify the order of the filtered list
 
 * ``<broker prefix> entries`` = <integer> (Default: 0)
     Specify the number of broker results to store in the job requirements (0: no limit)
@@ -1982,7 +2062,7 @@ StorageBroker options
     Specify the lookup dictionary that maps storage requirements into other kinds of requirements
 
 * ``<broker prefix> storage access matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -2108,7 +2188,7 @@ ReportGUIElement options
      * VariablesReport_ (alias: variables, vars)
 
 * ``report manager`` = <plugin> (Default: 'MultiReport')
-    Specifiy compositor class to merge the different plugins given in ``report``
+    Specify compositor class to merge the different plugins given in ``report``
 
     List of available compositor plugins:
      * MultiReport_ (alias: multi)
@@ -2161,25 +2241,25 @@ ScriptEventHandler options
     Specify script that is executed when grid-control is exited
 
 * ``on finish type`` = <enum: EXECUTABLE|COMMAND> (Default: 'executable')
-    Specifiy the type of command
+    Specify the type of command
 
 * ``on output`` = <command or path> (Default: '')
     Specify script that is executed when the job output is retrieved
 
 * ``on output type`` = <enum: EXECUTABLE|COMMAND> (Default: 'executable')
-    Specifiy the type of command
+    Specify the type of command
 
 * ``on status`` = <command or path> (Default: '')
     Specify script that is executed when the job status changes
 
 * ``on status type`` = <enum: EXECUTABLE|COMMAND> (Default: 'executable')
-    Specifiy the type of command
+    Specify the type of command
 
 * ``on submit`` = <command or path> (Default: '')
     Specify script that is executed when a job is submitted
 
 * ``on submit type`` = <enum: EXECUTABLE|COMMAND> (Default: 'executable')
-    Specifiy the type of command
+    Specify the type of command
 
 * ``script timeout`` = <duration hh[:mm[:ss]]> (Default: 00:00:20)
     Specify the maximal script runtime after which the script is aborted
@@ -2372,7 +2452,7 @@ InactiveWMS options
      * VomsAccessToken_ (alias: voms, VomsProxy)
 
 * ``access token manager`` = <plugin> (Default: 'MultiAccessToken')
-    Specifiy compositor class to merge the different plugins given in ``access token``
+    Specify compositor class to merge the different plugins given in ``access token``
 
     List of available compositor plugins:
      * MultiAccessToken_ (alias: multi)
@@ -2392,7 +2472,7 @@ InactiveWMS options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2423,7 +2503,7 @@ Local options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2463,7 +2543,7 @@ MultiWMS options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2521,7 +2601,7 @@ Condor options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2582,7 +2662,7 @@ GridWMS options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2634,7 +2714,7 @@ HTCondor options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2683,7 +2763,7 @@ CreamWMS options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2744,7 +2824,7 @@ GliteWMS options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2808,7 +2888,7 @@ PBSGECommon options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2829,7 +2909,7 @@ PBSGECommon options
     Specify a dictionary to map job requirements into submission options
 
 * ``software requirement map matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -2888,7 +2968,7 @@ GridEngine options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2909,7 +2989,7 @@ GridEngine options
     Specify a dictionary to map job requirements into submission options
 
 * ``software requirement map matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -2968,7 +3048,7 @@ PBS options
      * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
-    Specifiy compositor class to merge the different plugins given in ``remote event handler``
+    Specify compositor class to merge the different plugins given in ``remote event handler``
 
     List of available compositor plugins:
      * MultiRemoteEventHandler_ (alias: multi)
@@ -2992,7 +3072,7 @@ PBS options
     Specify a dictionary to map job requirements into submission options
 
 * ``software requirement map matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -3092,7 +3172,7 @@ LocationPartitionProcessor options
     Specify filter for dataset locations
 
 * ``<datasource> partition location filter plugin`` = <plugin> (Default: 'WeakListFilter')
-    Specifiy plugin that is used to filter the list
+    Specify plugin that is used to filter the list
 
     List of available filters:
      * MediumListFilter_ (alias: try_strict)
@@ -3100,7 +3180,7 @@ LocationPartitionProcessor options
      * WeakListFilter_ (alias: weak, prefer)
 
 * ``<datasource> partition location filter matcher`` = <plugin> (Default: 'BlackWhiteMatcher')
-    Specifiy matcher plugin that is used to match filter expressions
+    Specify matcher plugin that is used to match filter expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -3113,7 +3193,7 @@ LocationPartitionProcessor options
      * StartMatcher_ (alias: start)
 
 * ``<datasource> partition location filter order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
-    Specifiy the order of the filtered list
+    Specify the order of the filtered list
 
 * ``<datasource> partition location preference / partition location preference`` = <list of values> (Default: '')
     Specify dataset location preferences
@@ -3130,7 +3210,7 @@ LumiPartitionProcessor options
     Specify lumi filter for the dataset (as nickname dependent dictionary)
 
 * ``<datasource> lumi filter matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -3190,7 +3270,7 @@ TFCPartitionProcessor options
     Specify a dataset location dependent trivial file catalogue with file name prefixes
 
 * ``<datasource> partition tfc matcher`` = <plugin> (Default: 'StartMatcher')
-    Specifiy matcher plugin that is used to match the lookup expressions
+    Specify matcher plugin that is used to match the lookup expressions
 
     List of available matcher plugins:
      * AlwaysMatcher_ (alias: always)
@@ -3201,6 +3281,119 @@ TFCPartitionProcessor options
      * RegExMatcher_ (alias: regex)
      * ShellStyleMatcher_ (alias: shell)
      * StartMatcher_ (alias: start)
+
+
+.. _FormatParameterParser:
+FormatParameterParser options
+-----------------------------
+
+* ``<parameter expression> source`` = <text>
+    Specify name of input variable
+
+* ``<parameter expression> default`` = <text> (Default: '')
+    Specify default value for the output variable
+
+
+.. _GitParameterParser:
+GitParameterParser options
+--------------------------
+
+* ``<parameter expression> version`` = <text> (Default: <version of repository given by parameter>)
+    Override the result returned by the version control system
+
+
+.. _RegexTransformParameterParser:
+RegexTransformParameterParser options
+-------------------------------------
+
+* ``<parameter expression> source`` = <text>
+    Specify name of input variable
+
+* ``<parameter expression> default`` = <text> (Default: '')
+    Specify default value for the output variable
+
+
+.. _SplitParameterParser:
+SplitParameterParser options
+----------------------------
+
+* ``<parameter expression> delimeter`` = <text> (Default: ',')
+    Specify delimeter to split parameter value
+
+
+.. _SvnParameterParser:
+SvnParameterParser options
+--------------------------
+
+* ``<parameter expression> version`` = <text> (Default: <version of repository given by parameter>)
+    Override the result returned by the version control system
+
+
+.. _TransformParameterParser:
+TransformParameterParser options
+--------------------------------
+
+* ``<parameter expression> default`` = <text> (Default: '')
+    Specify default value for the output variable
+
+
+.. _InternalAutoLookupParameterSource:
+InternalAutoLookupParameterSource options
+-----------------------------------------
+
+* ``<parameter> lookup`` = <text> (Default: '')
+    Specify name of the lookup variable
+
+
+.. _CSVParameterSource:
+CSVParameterSource options
+--------------------------
+
+* ``<parameter reference> source`` = <text>
+    Specify filename of referenced CSV file
+
+* ``<parameter reference> format`` = <text> (Default: 'sniffed')
+    Specify format of referenced CSV file
+
+
+.. _ConstParameterSource:
+ConstParameterSource options
+----------------------------
+
+* ``<parameter>`` = <text>
+    Specify the parameter with the constant value
+
+
+.. _SimpleParameterSource:
+SimpleParameterSource options
+-----------------------------
+
+* ``<parameter>`` = <text>
+    Specify parameter value
+
+
+.. _InternalAutoParameterSource:
+InternalAutoParameterSource options
+-----------------------------------
+
+* ``<parameter>`` = <text>
+    Specify parameter value
+
+
+.. _InternalReferenceParameterSource:
+InternalReferenceParameterSource options
+----------------------------------------
+
+* ``<parameter reference> type`` = <text> (Default: <'data' when datasource is defined, 'csv' otherwise>)
+    Specify reference type
+
+
+.. _DefaultTupleParser:
+DefaultTupleParser options
+--------------------------
+
+* ``<parameter expression> delimeter`` = <text> (Default: ',')
+    Specify delimeter to split tuples
 
 
 Unused: 'nodes broker' {'disable_dupe_check': True, 'user_text': 'Specify broker plugin to select the queue for job submission', 'broker_desc': 'Specify worker nodes for job submission'}

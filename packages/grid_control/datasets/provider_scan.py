@@ -20,7 +20,7 @@ from grid_control.utils import replace_with_dict, split_opt
 from grid_control.utils.algos import filter_dict, intersect_first_dict
 from grid_control.utils.data_structures import UniqueList
 from grid_control.utils.user_interface import UserInputInterface
-from hpfwk import Plugin, PluginError, clear_current_exception
+from hpfwk import Plugin
 from python_compat import ifilter, imap, itemgetter, lchain, lmap, lsmap, md5_hex, sorted
 
 
@@ -212,13 +212,11 @@ class GCProvider(ScanProviderBase):
 		ext_task_name = ext_config.change_view(set_sections=['global']).get(['module', 'task'])
 		ext_task_cls = Plugin.get_class(ext_task_name)
 		for ext_task_cls in Plugin.get_class(ext_task_name).iter_class_bases():
-			try:
-				scan_holder = GCProviderSetup.get_class('GCProviderSetup_' + ext_task_cls.__name__)
-			except PluginError:
-				clear_current_exception()
-				continue
-			scanner_list += scan_holder.scanner_list
-			break
+			scan_setup_name = 'GCProviderSetup_' + ext_task_cls.__name__
+			scan_setup_cls = GCProviderSetup.get_class(scan_setup_name, ignore_missing=True)
+			if scan_setup_cls:
+				scanner_list += scan_setup_cls.scanner_list
+				break
 		ScanProviderBase.__init__(self, ds_config, datasource_name, dataset_expr,
 			dataset_nick, dataset_proc, scanner_list)
 
