@@ -1704,13 +1704,20 @@ BasicConsoleGUI options
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> 4f15d3ca... Improved web GUI & plugin graph
 .. _CPWebserver:
 CPWebserver options
 -------------------
 
 * ``hide login`` = <boolean> (Default: False)
+<<<<<<< HEAD
     Toggle displaying the login account information at startup
+=======
+    Toggle displaying the login URL / account information at startup
+>>>>>>> 4f15d3ca... Improved web GUI & plugin graph
 
 * ``password`` = <text> (Default: <random string>)
     Specify the password protecting the web user interface

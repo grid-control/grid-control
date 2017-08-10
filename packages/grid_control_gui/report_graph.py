@@ -1,4 +1,4 @@
-# | Copyright 2016-2017 Karlsruhe Institute of Technology
+# | Copyright 2016 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ from grid_control.gc_plugin import ConfigurablePlugin, NamedPlugin
 from grid_control.report import ImageReport
 from grid_control.utils.process_base import LocalProcess
 from hpfwk import Plugin, clear_current_exception
-from python_compat import any, imap, lidfilter, set, sorted
+from python_compat import BytesBuffer, any, imap, lfilter, lidfilter, lmap, set, sorted
 
 
 class PluginReport(ImageReport):
@@ -24,17 +24,19 @@ class PluginReport(ImageReport):
 
 	def __init__(self, config, name, job_db, task=None):
 		ImageReport.__init__(self, config, name, job_db, task)
-		self._workflow = task
+		self._root = task
 
 	def show_report(self, job_db, jobnum_list):
-		self._show_image('plugin_graph.png', _get_graph_image(_get_workflow_graph(self._workflow)))
+		self._show_image('plugin_graph.png',
+			BytesBuffer(_get_graph_image(_get_plugin_graph(self._root))))
 
 
 def _get_graph(instance, graph=None, visited=None):
 	graph = graph or {}
 	children = _get_instance_children(instance)
-
 	visited = visited or set()
+	visited.add(instance)
+
 	for child in children:
 		child_module = ''
 		if hasattr(child, '__module__'):
@@ -56,7 +58,6 @@ def _get_graph(instance, graph=None, visited=None):
 			continue
 		graph.setdefault(instance, []).append(child)
 		if child not in visited:
-			visited.add(child)
 			_get_graph(child, graph, visited)
 
 	return (graph, list(visited))
@@ -67,8 +68,11 @@ def _get_graph_image(graph_dot):
 	proc.stdin.write(graph_dot)
 	proc.stdin.close()
 	if proc.status(timeout=20) is None:
-		return 'Unable to render graph!'
-	return proc.stdout.read_log() or 'Empty render result!'
+		raise Exception('Unable to render graph: ' + repr(proc))
+	result = proc.stdout.read_log()
+	if not result:
+		raise Exception('Empty render result from ' + repr(proc))
+	return result
 
 
 def _get_instance_children(instance):
@@ -96,16 +100,21 @@ def _get_node_color(instance, color_map):
 def _get_node_label(instance):
 	names = [instance.__class__.__name__, repr(instance)]
 	if hasattr(instance.__class__, 'alias_list'):
-		alias_list = lidfilter(instance.__class__.get_class_name_list())
-		if hasattr(instance.__class__, 'config_tag_name'):
-			names.extend(imap(lambda alias: '%s:%s' % (instance.config_tag_name, alias), alias_list))
-		elif len(repr(instance)) > len(instance.__class__.__name__):
-			names.extend(alias_list[1:])
+		names.extend(lidfilter(instance.__class__.get_class_name_list()))
 	result = sorted(names, key=len)[0]
 	if isinstance(instance, NamedPlugin):
 		if instance.get_object_name().lower() != instance.__class__.__name__.lower():
 			result += ' (%s)' % instance.get_object_name()
-	return result
+
+	prefix = ''
+	if hasattr(instance.__class__, 'config_tag_name'):
+		prefix = '%s:' % instance.config_tag_name
+	else:
+		base_blacklist = ['ConfigurablePlugin', 'NamedPlugin', 'Plugin', 'object']
+		base_list = lmap(lambda cls: cls.__name__.split('.')[-1], instance.__class__.iter_class_bases())
+		base_list = lfilter(lambda x: x not in base_blacklist, base_list)
+		prefix = '%s:' % base_list[-1]
+	return prefix + result
 
 
 def _get_node_name(instance, node_names):
@@ -126,8 +135,8 @@ def _get_node_parent(cls):
 	return cls
 
 
-def _get_workflow_graph(workflow):
-	(graph, node_list) = _get_graph(workflow)
+def _get_plugin_graph(root):
+	(graph, node_list) = _get_graph(root)
 
 	# Process nodes
 	node_str_list = []
@@ -139,7 +148,7 @@ def _get_workflow_graph(workflow):
 			'fillcolor': '"%s"' % _get_node_color(node, map_node2color),
 			'style': '"filled"',
 		}
-		if node == workflow:
+		if node == root:
 			node_props['root'] = 'True'
 		node_prop_str = str.join('; ', imap(lambda key: '%s = %s' % (key, node_props[key]), node_props))
 		node_str_list.append('%s [%s];\n' % (_get_node_name(node, map_node2name), node_prop_str))
