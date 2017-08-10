@@ -542,6 +542,8 @@
 
       * grid_control.parameters.psource_file CSVParameterSource csv
 
+     * grid_control.parameters.psource_basic MultiCounterParameterSource multi_counter
+
      * grid_control.parameters.psource_basic SingleParameterSource
 
       * grid_control.parameters.psource_basic CollectParameterSource collect
