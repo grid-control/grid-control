@@ -1703,6 +1703,23 @@ BasicConsoleGUI options
      * MultiReport_ (alias: multi)
 
 
+.. _CPWebserver:
+CPWebserver options
+-------------------
+
+* ``hide login`` = <boolean> (Default: False)
+    Toggle displaying the login account information at startup
+
+* ``password`` = <text> (Default: <random string>)
+    Specify the password protecting the web user interface
+
+* ``port`` = <integer> (Default: 12345)
+    Specify the port used by the web user interface
+
+* ``username`` = <text> (Default: <local user name>)
+    Specify the username protecting the web user interface
+
+
 .. _AddFilePrefix:
 AddFilePrefix options
 ---------------------
