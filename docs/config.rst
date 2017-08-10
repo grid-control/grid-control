@@ -5,14 +5,14 @@ grid-control options
 global options
 --------------
 
+* ``cancel / delete`` = <job selector> (Default: '')
+    The unfinished jobs selected by this expression are cancelled
+
 * ``cmdargs`` = <list of values> (Default: '')
     Automatically added command line arguments
 
 * ``config id`` = <text> (Default: <config file name w/o extension> or 'unnamed')
     Identifier for the current configuration
-
-* ``delete`` = <job selector> (Default: '')
-    The unfinished jobs selected by this expression are cancelled
 
 * ``gui`` = <plugin> (Default: 'BasicConsoleGUI')
     Specify GUI plugin to handle the user interaction
@@ -888,11 +888,11 @@ interactive options
 * ``<option name>`` = <boolean> (Default: True)
     Toggle to switch interactive questions on and off
 
+* ``cancel jobs / delete jobs`` = <boolean> (Default: True)
+    Toggle interactivity of job deletion requests
+
 * ``dataset name assignment`` = <boolean> (Default: True)
     Toggle interactive question about issues with the bijectivity of the dataset / block name assignments in the scan provider
-
-* ``delete jobs`` = <boolean> (Default: True)
-    Toggle interactivity of job deletion requests
 
 * ``reset jobs`` = <boolean> (Default: True)
     Toggle interactivity of job reset requests
