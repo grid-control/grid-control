@@ -49,6 +49,9 @@ global options
 * ``workdir create`` = <boolean> (Default: True)
     Skip interactive question about workdir creation
 
+* ``workdir recreate`` = <boolean> (Default: False)
+    Skip interactive question about abandoning the current workdir
+
 * ``workdir space`` = <integer> (Default: 10)
     Lower space limit in the work directory. Monitoring can be deactived with 0
 

@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, time, atexit, signal, logging
+import os, sys, time, atexit, shutil, signal, logging
 from grid_control.config import create_config
 from grid_control.gc_exceptions import gc_excepthook
 from grid_control.gui import GUI, GUIException
@@ -101,7 +101,7 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 			if value is not None:
 				self._add_entry(container, section, option, str(value), '<cmdline>')  # pylint:disable=no-member
 		cmd_line_config_map = {
-			'state!': {'#init': opts.init, '#resync': opts.resync,
+			'state!': {'#init': opts.init, '#resync': opts.resync, '#recreate': opts.recreate,
 				'#display config': opts.help_conf, '#display minimal config': opts.help_confmin},
 			'action': {'delete': opts.delete, 'cancel': opts.cancel, 'reset': opts.reset},
 			'global': {'gui': opts.gui, 'submission': opts.submission},
@@ -207,6 +207,7 @@ def _parse_cmd_line(cmd_line_args):
 	parser.add_bool(None, 'h', 'help', default=False)
 	parser.add_bool(None, 'i', 'init', default=False)
 	parser.add_bool(None, 'q', 'resync', default=False)
+	parser.add_bool(None, 'R', 'recreate', default=False)
 	parser.add_bool(None, 's', 'no-submission', default=True, dest='submission')
 	parser.add_bool(None, 'G', 'gui', default=False, dest='gui_ansi')
 	parser.add_accu(None, 'v', 'verbose')
@@ -248,6 +249,11 @@ def _parse_cmd_line(cmd_line_args):
 
 def _setup_work_path(config):
 	# Check work dir validity (default work directory is the config file name)
+	if config.get_state('recreate') and os.path.exists(config.get_work_path()):
+		work_dn_create_msg = 'Do you want to abandon the existing working directory %s?'
+		if config.get_choice_yes_no('workdir recreate', False,
+				interactive_msg=work_dn_create_msg % config.get_work_path()):
+			shutil.rmtree(config.get_work_path())
 	if not os.path.exists(config.get_work_path()):
 		if not config.get_state('init'):
 			log = logging.getLogger('workflow')
