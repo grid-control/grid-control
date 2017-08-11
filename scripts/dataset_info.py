@@ -44,13 +44,14 @@ def get_dataset_config(opts, args):
 	if opts.metadata or opts.list_metadata or opts.list_metadata_common:
 		config_dict['lumi filter *'] = '-'
 		config_dict['keep lumi metadata *'] = 'True'
-	return gc_create_config(config_file=opts.settings, config_dict={'dataset': config_dict})
+	return gc_create_config(config_file=opts.settings, config_dict={'dataset': config_dict},
+		load_old_config=False)
 
 
 def get_dataset_info(opts, args, query_blocks=True):
 	config = get_dataset_config(opts, args)
 	if opts.threads is not None:
-		config.set('dataprovider thread max', opts.threads)
+		config.set_int('dataprovider thread max', int(opts.threads) or 1)
 	provider = config.get_composited_plugin('dataset', cls=DataProvider,
 		bind_kwargs={'provider_name_default': config.get('dataset provider')},
 		default_compositor=':ThreadedMultiDatasetProvider:')

@@ -1,0 +1,9 @@
+[FORMAT]
+indent-string=\t
+max-args=15
+max-attributes=15
+good-names=fn,dn,vn,fp,_,fi
+bad-functions=map,filter,range,next,sorted,reduce,rsplit,set,any
+
+[MESSAGES CONTROL]
+disable = bad-continuation,broad-except,cell-var-from-loop,missing-docstring,multiple-imports,unused-argument,no-self-use,too-few-public-methods,redefined-builtin,locally-enabled,locally-disabled,interface-not-implemented,no-classmethod-decorator,no-staticmethod-decorator

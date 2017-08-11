@@ -60,8 +60,8 @@ class JDLWriter(object):
 				req_string_list.append(self._format_reqs_storage(arg))
 			elif req_type == WMS.SITES:
 				req_string_list.append(self._format_reqs_sites(arg))
-			elif req_type == WMS.CPUS:
-				pass  # Handle number of cpus in prepare
+			elif req_type in (WMS.CPUS, WMS.DISKSPACE):
+				pass  # Handled outside of "requirement" directive or GlueCE attribute not available
 			else:
 				raise APIError('Unknown requirement type %r or argument %r' % (WMS.enum2str(req_type), arg))
 		result['Requirements'] = str.join(' && ', iidfilter(req_string_list))

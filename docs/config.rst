@@ -2531,7 +2531,7 @@ Local options
 * ``wms`` = <text> (Default: '')
     Override automatic discovery of local backend
 
-* ``wms search list`` = <dictionary> (Default: 'sacct => SLURM <newline> sgepasswd => OGE <newline> pbs-config => PBS <newline> qsub => OGE <newline> condor_q => Condor <newline> bsub => LSF <newline> job_slurm => JMS')
+* ``wms search list`` = <dictionary> (Default: 'bsub => LSF <newline> condor_q => Condor <newline> job_slurm => JMS <newline> pbs-config => PBS <newline> qsub => OGE <newline> sacct => SLURM <newline> sgepasswd => OGE')
     Specify order of commands to check for available backends
 
 
