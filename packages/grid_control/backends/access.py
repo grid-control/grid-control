@@ -85,6 +85,10 @@ class TimedAccessToken(AccessToken):
 		self._last_update = 0
 
 	def can_submit(self, needed_time, can_currently_submit):
+		if self._get_timeleft(cached=True) < 0:
+			raise UserError('Your access token (%s) expired %s ago! (Required lifetime: %s)' %
+				(self.get_object_name(), str_time_long(-self._get_timeleft(cached=True)),
+				str_time_long(self._min_life_time)))
 		if not self._check_time_left(self._min_life_time):
 			raise UserError('Your access token (%s) only has %d seconds left! (Required are %s)' %
 				(self.get_object_name(), self._get_timeleft(cached=True), str_time_long(self._min_life_time)))
