@@ -12,12 +12,14 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.backends.wms_multi import MultiWMS
 from grid_control.utils.thread_tools import tchain
+from grid_control_usb.wms_multi import MultiWMS
 from python_compat import ifilter, imap
 
 
 class ThreadedMultiWMS(MultiWMS):
+	alias_list = ['threaded']
+
 	def _forward_call(self, args, assign_fun, call_fun):
 		backend_name2args = self._get_map_backend_name2args(args, assign_fun)
 

@@ -20,11 +20,11 @@ from grid_control.backends.aspect_status import CheckJobsMissingState
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS
-from grid_control.backends.wms_condor import CondorCancelJobs, CondorCheckJobs
-from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
 from grid_control.utils import Result, ensure_dir_exists, get_path_share, remove_files, resolve_install_path, safe_write, split_blackwhite_list  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
+from grid_control_usb.wms_condor import CondorCancelJobs, CondorCheckJobs
+from grid_control_usb.wms_local import LocalPurgeJobs, SandboxHelper
 from python_compat import imap, irange, lmap, lzip, md5_hex
 
 

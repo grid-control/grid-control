@@ -12,8 +12,8 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
 from grid_control.utils import deprecated, resolve_install_path
+from grid_control_usb.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
 
 
 class Glite(GridWMS):

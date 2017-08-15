@@ -40,14 +40,6 @@
 
     * grid_control.backends.backend_tools BackendDiscovery
 
-     * grid_control.backends.wms_gridengine GridEngineDiscoverNodes
-
-     * grid_control.backends.wms_gridengine GridEngineDiscoverQueues
-
-     * grid_control.backends.wms_pbs PBSDiscoverNodes
-
-     * grid_control.backends.wms_pbs PBSDiscoverQueues
-
     * grid_control.backends.backend_tools BackendExecutor
 
      * grid_control.backends.aspect_cancel CancelJobs
@@ -58,21 +50,9 @@
 
        * grid_control.backends.aspect_cancel CancelJobsWithProcessBlind
 
-        * grid_control.backends.wms_arc ARCCancelJobs
+       * grid_control_usb.wms_condor CondorCancelJobs
 
-        * grid_control.backends.wms_cream CREAMCancelJobs
-
-        * grid_control.backends.wms_cream CREAMPurgeJobs
-
-        * grid_control.backends.wms_host HostCancelJobs
-
-        * grid_control.backends.wms_lsf LSFCancelJobs
-
-       * grid_control.backends.wms_condor CondorCancelJobs
-
-       * grid_control.backends.wms_grid GridCancelJobs
-
-      * grid_control.backends.wms_local LocalPurgeJobs
+      * grid_control_usb.wms_local LocalPurgeJobs
 
      * grid_control.backends.aspect_status CheckJobs
 
@@ -80,27 +60,7 @@
 
       * grid_control.backends.aspect_status CheckJobsWithProcess
 
-       * grid_control.backends.wms_arc ARCCheckJobs
-
-       * grid_control.backends.wms_cream CREAMCheckJobs
-
-       * grid_control.backends.wms_condor CondorCheckJobs
-
-       * grid_control.backends.wms_grid GridCheckJobs
-
-       * grid_control.backends.wms_gridengine GridEngineCheckJobs
-
-       * grid_control.backends.wms_host HostCheckJobs
-
-       * grid_control.backends.wms_jms JMSCheckJobs
-
-       * grid_control.backends.wms_lsf LSFCheckJobs
-
-       * grid_control.backends.wms_pbs PBSCheckJobs
-
-       * grid_control.backends.wms_slurm SLURMCheckJobs
-
-      * grid_control.backends.wms_glitewms_direct GliteWMSDirectCheckJobs
+       * grid_control_usb.wms_condor CondorCheckJobs
 
      * grid_control.backends.backend_tools ForwardingExecutor
 
@@ -340,49 +300,11 @@
 
       * grid_control.backends.wms BasicWMS
 
-       * grid_control.backends.wms_arc ARC
-
        * grid_control.backends.condor_wms.condor_wms Condor
-
-       * grid_control.backends.wms_grid GridWMS
-
-        * grid_control.backends.wms_cream CreamWMS cream
-
-        * grid_control.backends.wms_edg EuropeanDataGrid EDG LCG
-
-        * grid_control.backends.wms_glite Glite
-
-        * grid_control.backends.wms_glitewms GliteWMS gwms
-
-         * grid_control.backends.wms_glitewms_direct GliteWMSDirect
 
        * grid_control.backends.htcondor_wms.htcondor_wms HTCondor
 
-       * grid_control.backends.wms_local LocalWMS
-
-        * grid_control.backends.wms_host Host Localhost
-
-        * grid_control.backends.wms_jms JMS
-
-        * grid_control.backends.wms_lsf LSF
-
-        * grid_control.backends.wms_pbsge PBSGECommon
-
-         * grid_control.backends.wms_gridengine GridEngine SGE UGE OGE
-
-         * grid_control.backends.wms_pbs PBS
-
-        * grid_control.backends.wms_slurm SLURM
-
       * grid_control.backends.wms Grid
-
-      * grid_control.backends.wms_inactive InactiveWMS inactive
-
-      * grid_control.backends.wms_local Local
-
-      * grid_control.backends.wms_multi MultiWMS
-
-       * grid_control.backends.wms_thread ThreadedMultiWMS
 
      * grid_control.workflow Workflow default_workflow
 
@@ -426,13 +348,9 @@
 
      * grid_control.backends.backend_tools ProcessCreatorViaArguments
 
-      * grid_control.backends.wms_gridengine GridEngineCheckJobsProcessCreator
-
       * grid_control.backends.backend_tools ProcessCreatorAppendArguments
 
      * grid_control.backends.backend_tools ProcessCreatorViaStdin
-
-      * grid_control.backends.wms_grid GridProcessCreator
 
     * grid_control.tasks.task_base TaskNamePlugin
 

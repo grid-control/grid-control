@@ -14,12 +14,12 @@
 
 import os, time, random
 from grid_control.backends.wms import BackendError
-from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
 from grid_control.utils import get_path_share, ping_host, resolve_install_path
 from grid_control.utils.activity import Activity
 from grid_control.utils.parsing import parse_bool, parse_str
 from grid_control.utils.persistency import load_dict, save_dict
 from grid_control.utils.process_base import LocalProcess
+from grid_control_usb.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
 from hpfwk import clear_current_exception
 from python_compat import md5_hex, sort_inplace
 

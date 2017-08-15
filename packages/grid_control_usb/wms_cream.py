@@ -17,11 +17,11 @@ from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWi
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments, unpack_wildcard_tar  # pylint:disable=line-too-long
 from grid_control.backends.wms import BackendError
-from grid_control.backends.wms_grid import GridWMS
 from grid_control.job_db import Job
 from grid_control.utils import ensure_dir_exists, remove_files, resolve_install_path
 from grid_control.utils.activity import Activity
 from grid_control.utils.process_base import LocalProcess
+from grid_control_usb.wms_grid import GridWMS
 from hpfwk import clear_current_exception
 from python_compat import imap, irange, md5_hex
 

@@ -16,9 +16,9 @@ from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
 from grid_control.backends.wms import WMS
-from grid_control.backends.wms_local import LocalWMS
 from grid_control.job_db import Job
 from grid_control.utils import resolve_install_path
+from grid_control_usb.wms_local import LocalWMS
 from python_compat import identity, ifilter, izip, lmap, next
 
 

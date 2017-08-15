@@ -17,12 +17,12 @@ from grid_control.backends.aspect_cancel import CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsMissingState, CheckJobsWithProcess, CheckStatus  # pylint:disable=line-too-long
 from grid_control.backends.backend_tools import BackendDiscovery, ProcessCreatorViaArguments
 from grid_control.backends.wms import BackendError, WMS
-from grid_control.backends.wms_pbsge import PBSGECommon
 from grid_control.config import ConfigError
 from grid_control.job_db import Job
 from grid_control.utils import get_local_username, resolve_install_path
 from grid_control.utils.parsing import parse_time
 from grid_control.utils.process_base import LocalProcess
+from grid_control_usb.wms_pbsge import PBSGECommon
 from python_compat import any, imap, izip, lmap, set, sorted
 
 

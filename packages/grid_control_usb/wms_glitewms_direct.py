@@ -15,10 +15,10 @@
 import os, sys
 from grid_control.backends.aspect_status import CheckInfo, CheckJobs, expand_status_map
 from grid_control.backends.wms import BackendError
-from grid_control.backends.wms_glitewms import GliteWMS
 from grid_control.job_db import Job
 from grid_control.utils import abort
 from grid_control.utils.algos import filter_dict
+from grid_control_usb.wms_glitewms import GliteWMS
 from hpfwk import ExceptionCollector, clear_current_exception
 from python_compat import imap, lmap, lzip
 
@@ -52,6 +52,8 @@ class GliteWMSDirectCheckJobs(CheckJobs):
 
 
 class GliteWMSDirect(GliteWMS):  # pylint:disable=too-many-ancestors
+	alias_list = ['']
+
 	def __init__(self, config, name):
 		glite_path = os.environ.get('GLITE_WMS_LOCATION', os.environ.get('GLITE_LOCATION', ''))
 		stored_sys_path = list(sys.path)
@@ -59,7 +61,7 @@ class GliteWMSDirect(GliteWMS):  # pylint:disable=too-many-ancestors
 			sys.path.append(os.path.join(glite_path, dn))
 
 		try:  # gLite 3.2
-			import wmsui_api
+			wmsui_api = __import__('wmsui_api')
 			glite_state_name_list = wmsui_api.states_names
 
 			def _get_status_direct(wms_id):
@@ -73,8 +75,7 @@ class GliteWMSDirect(GliteWMS):  # pylint:disable=too-many-ancestors
 		except Exception:  # gLite 3.1
 			clear_current_exception()
 			try:
-				from glite_wmsui_LbWrapper import Status
-				wrapper_status = Status()
+				wrapper_status = __import__('glite_wmsui_LbWrapper').Status()
 				job_status = __import__('Job').JobStatus(wrapper_status)
 
 				def _get_status_direct(wms_id):

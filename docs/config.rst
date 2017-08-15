@@ -72,6 +72,7 @@ Workflow options
     List of available plugins:
      * CreamWMS_ (alias: cream)
      * EuropeanDataGrid_ (alias: EDG, LCG)
+     * GliteWMSDirect_
      * GliteWMS_ (alias: gwms)
      * GridEngine_ (alias: SGE, UGE, OGE)
      * Host_ (alias: Localhost)
@@ -82,6 +83,7 @@ Workflow options
 
     List of available compositor plugins:
      * MultiWMS_
+     * ThreadedMultiWMS_ (alias: threaded)
 
 * ``task / module`` = <plugin[:name]>
     Select the task module to run

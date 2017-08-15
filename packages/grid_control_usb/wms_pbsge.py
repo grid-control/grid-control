@@ -13,8 +13,8 @@
 # | limitations under the License.
 
 from grid_control.backends.wms import WMS
-from grid_control.backends.wms_local import LocalWMS
 from grid_control.utils import resolve_install_path
+from grid_control_usb.wms_local import LocalWMS
 
 
 class PBSGECommon(LocalWMS):

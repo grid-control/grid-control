@@ -13,8 +13,8 @@
 # | limitations under the License.
 
 from grid_control.backends.jdl_writer import JDLWriter
-from grid_control.backends.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
 from grid_control.utils import resolve_install_path
+from grid_control_usb.wms_grid import GridCancelJobs, GridCheckJobs, GridWMS
 from python_compat import imap
 
 
