@@ -103,6 +103,7 @@ def disk_space_avail(dn, timeout=5):
 			'The file system is probably hanging or corrupted' +
 			' - try to check the free disk space manually. ' +
 			'Refer to the documentation to disable checking the free disk space - at your own risk')
+		time.sleep(1)  # give GUI report the possibility to log its output
 		exit_without_cleanup(os.EX_OSERR)
 
 
