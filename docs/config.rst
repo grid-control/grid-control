@@ -2647,6 +2647,9 @@ Condor options
 * ``wait work`` = <integer> (Default: 10)
     Wait for the specified duration during the work steps of the job cycle
 
+* ``wall time mode`` = <enum: HARD|IGNORE> (Default: IGNORE)
+    Whether to kill a job after the requested wall time elapsed. Only implemented for the condor backend at the moment.
+
 
 .. _GridWMS:
 GridWMS options
