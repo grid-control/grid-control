@@ -12,9 +12,10 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, time
+import os, time, logging
 from grid_control.backends.access import AccessTokenError, RefreshableAccessToken
 from grid_control.utils import resolve_install_path
+from grid_control.utils.parsing import str_time_long
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCLock, with_lock
 from python_compat import imap, lmap, rsplit
@@ -28,6 +29,7 @@ class AFSAccessToken(RefreshableAccessToken):
 		RefreshableAccessToken.__init__(self, config, name)
 		self._kinit_exec = resolve_install_path('kinit')
 		self._klist_exec = resolve_install_path('klist')
+		self._aklog_exec = resolve_install_path('aklog')
 		self._cache = None
 		self._map_auth_name2fn = dict(imap(lambda name: (name, config.get_work_path('proxy.%s' % name)),
 			['KRB5CCNAME', 'KRBTKFILE']))
@@ -109,7 +111,12 @@ class AFSAccessToken(RefreshableAccessToken):
 		return self._cache
 
 	def _refresh_access_token(self):
-		return LocalProcess(self._kinit_exec, '-R').finish(timeout=10)
+		timeleft_before = str_time_long(self._get_timeleft(cached=False))
+		LocalProcess(self._kinit_exec, '-R').finish(timeout=10)
+		LocalProcess(self._aklog_exec).finish(timeout=10)
+		timeleft_after = str_time_long(self._get_timeleft(cached=False))
+		self._log.log(logging.INFO2, 'Time left for access token "%s" changed from %s to %s',
+			self.get_object_name(), timeleft_before, timeleft_after)
 
 
 def _parse_date(value, format):
