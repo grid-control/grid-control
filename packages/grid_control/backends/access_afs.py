@@ -31,11 +31,12 @@ class AFSAccessToken(RefreshableAccessToken):
 		self._cache = None
 		self._map_auth_name2fn = dict(imap(lambda name: (name, config.get_work_path('proxy.%s' % name)),
 			['KRB5CCNAME', 'KRBTKFILE']))
+		self._auth_fn_list = []
 		with_lock(AFSAccessToken.env_lock, self._backup_tickets, config)
 		self._tickets = config.get_list('tickets', [], on_change=None)
 
 	def get_auth_fn_list(self):
-		return self._map_auth_name2fn.values()
+		return self._auth_fn_list
 
 	def get_fq_user_name(self):
 		return self._get_principal()
@@ -55,6 +56,7 @@ class AFSAccessToken(RefreshableAccessToken):
 					shutil.copyfile(fn, self._map_auth_name2fn[name])
 				os.chmod(self._map_auth_name2fn[name], stat.S_IRUSR | stat.S_IWUSR)
 				os.environ[name] = self._map_auth_name2fn[name]
+				self._auth_fn_list.append(os.environ[name])
 
 	def _get_principal(self):
 		info = self._parse_tickets()
