@@ -12,11 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, gzip, logging
+import os, sys, gzip, logging
 from grid_control.utils import DictFormat
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.file_tools import SafeFile
-from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception, get_current_exception  # pylint:disable=line-too-long
+from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception
 from python_compat import bytes2str, ifilter, izip
 
 
@@ -117,7 +117,7 @@ class FileInfoProcessor(JobInfoProcessor):
 			job_info_dict = JobInfoProcessor.process(self, dn)
 		except JobResultError:
 			logger = logging.getLogger('jobs.results')
-			logger.warning('Unable to process job information', exc_info=get_current_exception())
+			logger.warning('Unable to process job information', exc_info=sys.exc_info())
 			clear_current_exception()
 		if job_info_dict:
 			job_data_dict = job_info_dict[JobResult.RAW]

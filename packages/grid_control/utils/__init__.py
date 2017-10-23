@@ -123,15 +123,6 @@ def exec_wrapper(script, context=None):
 	return context
 
 
-def filter_processors(processor_list, id_fun=lambda proc: proc.__class__.__name__):
-	(result, processor_id_list) = ([], [])
-	for proc in processor_list:
-		if proc.enabled() and (id_fun(proc) not in processor_id_list):
-			result.append(proc)
-			processor_id_list.append(id_fun(proc))
-	return result
-
-
 def get_file_name(fn):  # Return file name without extension
 	return rsplit(os.path.basename(str(fn)).lstrip('.'), '.', 1)[0]
 
@@ -180,7 +171,7 @@ def ping_host(host, timeout=1):
 def prune_processors(do_prune, processor_list, log, msg, formatter=None, id_fun=None):
 	def _get_class_name(proc):
 		return proc.__class__.__name__
-	selected = filter_processors(processor_list, id_fun or _get_class_name)
+	selected = _filter_processors(processor_list, id_fun or _get_class_name)
 	_display_selection(log, processor_list, selected, msg, formatter or _get_class_name)
 	return selected
 
@@ -402,3 +393,12 @@ def _display_selection(log, items_before, items_after, msg, formatter, log_level
 				log.log(log_level, ' * %s', formatter(item))
 			else:
 				log.log(log_level, '   %s', formatter(item))
+
+
+def _filter_processors(processor_list, id_fun=lambda proc: proc.__class__.__name__):
+	(result, processor_id_list) = ([], [])
+	for proc in processor_list:
+		if proc.enabled() and (id_fun(proc) not in processor_id_list):
+			result.append(proc)
+			processor_id_list.append(id_fun(proc))
+	return result

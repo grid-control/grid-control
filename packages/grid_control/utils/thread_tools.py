@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import sys, time, logging, threading
-from hpfwk import ExceptionCollector, NestedException, clear_current_exception, get_current_exception, get_thread_name, get_trace_fun, ignore_exception  # pylint:disable=line-too-long
+from hpfwk import ExceptionCollector, NestedException, clear_current_exception, get_thread_name, get_trace_fun, ignore_exception  # pylint:disable=line-too-long
 
 
 BLOCKING_EQUIVALENT = 60 * 60 * 24 * 7  # instead of blocking, we wait for a week ;)
@@ -276,7 +276,7 @@ class GCThreadPool(object):
 		try:
 			fun(*args, **kwargs)
 		except Exception:
-			with_lock(self._lock, self._collect_exc, token, get_current_exception())
+			with_lock(self._lock, self._collect_exc, token, sys.exc_info())
 		with_lock(self._lock, self._unregister_token, token)
 		with_lock(self._lock, self._notify.set)
 

@@ -5,14 +5,14 @@ grid-control options
 global options
 --------------
 
+* ``cancel / delete`` = <job selector> (Default: '')
+    The unfinished jobs selected by this expression are cancelled
+
 * ``cmdargs`` = <list of values> (Default: '')
     Automatically added command line arguments
 
 * ``config id`` = <text> (Default: <config file name w/o extension> or 'unnamed')
     Identifier for the current configuration
-
-* ``delete`` = <job selector> (Default: '')
-    The unfinished jobs selected by this expression are cancelled
 
 * ``gui`` = <plugin> (Default: 'BasicConsoleGUI')
     Specify GUI plugin to handle the user interaction
@@ -888,11 +888,11 @@ interactive options
 * ``<option name>`` = <boolean> (Default: True)
     Toggle to switch interactive questions on and off
 
+* ``cancel jobs / delete jobs`` = <boolean> (Default: True)
+    Toggle interactivity of job deletion requests
+
 * ``dataset name assignment`` = <boolean> (Default: True)
     Toggle interactive question about issues with the bijectivity of the dataset / block name assignments in the scan provider
-
-* ``delete jobs`` = <boolean> (Default: True)
-    Toggle interactivity of job deletion requests
 
 * ``reset jobs`` = <boolean> (Default: True)
     Toggle interactivity of job reset requests
@@ -2531,7 +2531,7 @@ Local options
 * ``wms`` = <text> (Default: '')
     Override automatic discovery of local backend
 
-* ``wms search list`` = <dictionary> (Default: 'sacct => SLURM <newline> sgepasswd => OGE <newline> pbs-config => PBS <newline> qsub => OGE <newline> condor_q => Condor <newline> bsub => LSF <newline> job_slurm => JMS')
+* ``wms search list`` = <dictionary> (Default: 'bsub => LSF <newline> condor_q => Condor <newline> job_slurm => JMS <newline> pbs-config => PBS <newline> qsub => OGE <newline> sacct => SLURM <newline> sgepasswd => OGE')
     Specify order of commands to check for available backends
 
 
@@ -3407,31 +3407,33 @@ DefaultTupleParser options
     Specify delimeter to split tuples
 
 
-Unused: 'port' {'user_text': 'Specify the port used by the web user interface'}
-
-Unused: 'nodes broker' {'disable_dupe_check': True, 'user_text': 'Specify broker plugin to select the queue for job submission', 'broker_desc': 'Specify worker nodes for job submission'}
-
-Unused: '<name:storage_channel> path:LocalSBStorageManager' {'user_text': 'Specify the default transport URL(s) that are used to transfer files over this type of storage channel', 'default_map': {"<call:config.get_work_path('sandbox')>": '<workdir>/sandbox'}}
-
-Unused: 'memory:LocalMemoryBroker' {'user_text': 'Requested memory in MB by the batch system', 'default_map': {'-1': 'unspecified (%(default_raw)s)'}}
+Unused: '<name:broker_prefix> broker prune' {'user_text': 'Toggle the removal of unused brokers from the broker pipeline'}
 
 Unused: '<name:datasource_name> location merge mode' {'user_text': 'Specify how the location information should be processed by the dataset block merge procedure'}
 
 Unused: '<name:datasource_name> metadata merge mode' {'user_text': 'Specify how the metadata information should be processed by the dataset block merge procedure'}
 
+Unused: '<name:storage_channel> min size' {'user_text': 'output files below this file size (in MB) trigger a job failure', 'default_map': {'-1': 'disabled (%(default_raw)s)'}}
+
+Unused: '<name:storage_channel> path:LocalSBStorageManager' {'user_text': 'Specify the default transport URL(s) that are used to transfer files over this type of storage channel', 'default_map': {"<call:config.get_work_path('sandbox')>": '<workdir>/sandbox'}}
+
+Unused: '<name:storage_channel> retry' {'user_text': 'Specify number of transfer retries'}
+
 Unused: 'enable chunk' {'user_text': 'Toggle chunked processing of jobs by the backend'}
 
-Unused: 'username' {'user_text': 'Specify the username protecting the web user interface', 'default_map': {'<call:get_local_username()>': '<local user name>'}}
+Unused: 'hide login' {'user_text': 'Toggle displaying the login account information at startup'}
 
-Unused: 'submit timeout' {'user_text': 'Specify timeout of the process that is used to submit jobs'}
+Unused: 'memory:LocalMemoryBroker' {'user_text': 'Requested memory in MB by the batch system', 'default_map': {'-1': 'unspecified (%(default_raw)s)'}}
 
-Unused: '<name:storage_channel> min size' {'user_text': 'output files below this file size (in MB) trigger a job failure', 'default_map': {'-1': 'disabled (%(default_raw)s)'}}
+Unused: 'nodes broker' {'disable_dupe_check': True, 'user_text': 'Specify broker plugin to select the queue for job submission', 'broker_desc': 'Specify worker nodes for job submission'}
 
 Unused: 'password' {'default': '<random string>', 'user_text': 'Specify the password protecting the web user interface'}
 
-Unused: '<name:broker_prefix> broker prune' {'user_text': 'Toggle the removal of unused brokers from the broker pipeline'}
+Unused: 'port' {'user_text': 'Specify the port used by the web user interface'}
 
-Unused: 'hide login' {'user_text': 'Toggle displaying the login URL / account information at startup'}
+Unused: 'submit timeout' {'user_text': 'Specify timeout of the process that is used to submit jobs'}
 
-Unused: '<name:storage_channel> retry' {'user_text': 'Specify number of transfer retries'}
+Unused: 'username' {'user_text': 'Specify the username protecting the web user interface', 'default_map': {'<call:get_local_username()>': '<local user name>'}}
+
+Unused: 'workdir recreate' {'user_text': 'Skip interactive question about abandoning the current workdir'}
 

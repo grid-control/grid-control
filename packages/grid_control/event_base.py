@@ -27,23 +27,20 @@ class LocalEventHandler(NamedPlugin):  # Local event handler base class
 	config_section_list = NamedPlugin.config_section_list + ['events']
 	config_tag_name = 'event'
 
-	def __init__(self, config, name, task):
-		NamedPlugin.__init__(self, config, name)
-		self._task = task
-
-	def on_job_output(self, wms, job_obj, jobnum, exit_code):
+	def on_job_output(self, task, wms, job_obj, jobnum, exit_code):
 		pass
 
-	def on_job_state_change(self, job_db_len, jobnum, job_obj, old_state, new_state, reason=None):
+	def on_job_state_change(self, task, job_db_len,
+			jobnum, job_obj, old_state, new_state, reason=None):
 		pass
 
-	def on_job_submit(self, wms, job_obj, jobnum):
+	def on_job_submit(self, task, wms, job_obj, jobnum):
 		pass
 
-	def on_job_update(self, wms, job_obj, jobnum, data):
+	def on_job_update(self, task, wms, job_obj, jobnum, data):
 		pass
 
-	def on_task_finish(self, job_len):
+	def on_task_finish(self, task, job_len):
 		pass
 
 	def on_workflow_finish(self):
@@ -68,29 +65,30 @@ class RemoteEventHandler(NamedPlugin):  # Remote monitoring base class
 class MultiLocalEventHandler(LocalEventHandler):
 	alias_list = ['multi']
 
-	def __init__(self, config, name, handler_list, task):
-		LocalEventHandler.__init__(self, config, name, task)
+	def __init__(self, config, name, handler_list):
+		LocalEventHandler.__init__(self, config, name)
 		self._handlers = handler_list
 
-	def on_job_output(self, wms, job_obj, jobnum, exit_code):
+	def on_job_output(self, task, wms, job_obj, jobnum, exit_code):
 		for handler in self._handlers:
-			handler.on_job_output(wms, job_obj, jobnum, exit_code)
+			handler.on_job_output(task, wms, job_obj, jobnum, exit_code)
 
-	def on_job_state_change(self, job_db_len, jobnum, job_obj, old_state, new_state, reason=None):
+	def on_job_state_change(self, task, job_db_len,
+			jobnum, job_obj, old_state, new_state, reason=None):
 		for handler in self._handlers:
-			handler.on_job_state_change(job_db_len, jobnum, job_obj, old_state, new_state, reason)
+			handler.on_job_state_change(task, job_db_len, jobnum, job_obj, old_state, new_state, reason)
 
-	def on_job_submit(self, wms, job_obj, jobnum):
+	def on_job_submit(self, task, wms, job_obj, jobnum):
 		for handler in self._handlers:
-			handler.on_job_submit(wms, job_obj, jobnum)
+			handler.on_job_submit(task, wms, job_obj, jobnum)
 
-	def on_job_update(self, wms, job_obj, jobnum, data):
+	def on_job_update(self, task, wms, job_obj, jobnum, data):
 		for handler in self._handlers:
-			handler.on_job_update(wms, job_obj, jobnum, data)
+			handler.on_job_update(task, wms, job_obj, jobnum, data)
 
-	def on_task_finish(self, job_len):
+	def on_task_finish(self, task, job_len):
 		for handler in self._handlers:
-			handler.on_task_finish(job_len)
+			handler.on_task_finish(task, job_len)
 
 	def on_workflow_finish(self):
 		for handler in self._handlers:

@@ -69,8 +69,11 @@ class BasicParameterFactory(ParameterFactory):
 		source_list = []
 		for name in self._random_variables:
 			source_list.append(_create_psrc('RNGParameterSource', name))
+		random_seed_dict = {}
 		for (idx, seed) in enumerate(self._random_seeds):
-			source_list.append(_create_psrc('CounterParameterSource', 'SEED_%d' % idx, int(seed)))
+			random_seed_dict['SEED_%d' % idx] = int(seed)
+		if random_seed_dict:
+			source_list.append(_create_psrc('MultiCounterParameterSource', **random_seed_dict))
 		source_list.extend(self._psrc_list)
 		source_list.append(self._pfactory.get_psrc(repository))
 		source = _create_psrc('ZipLongParameterSource', *source_list)
@@ -115,5 +118,5 @@ class UserParameterFactory(ParameterFactory):
 		raise AbstractError
 
 
-def _create_psrc(psrc_name, *args):
-	return ParameterSource.create_instance(psrc_name, *args)
+def _create_psrc(psrc_name, *args, **kwargs):
+	return ParameterSource.create_instance(psrc_name, *args, **kwargs)
