@@ -29,7 +29,9 @@ script:
   - rm -rf packages
   - export GC_SCRIPT="/$(grep gridcontrol setup.log | cut -d "/" -f 2-)/gridcontrol"
   - export GC_TEST_BRANCH="$TRAVIS_BRANCH"
-  - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then export GC_TEST_BRANCH="testing"; fi
+  - if [ "$TRAVIS_EVENT_TYPE" = "pull_request" ]; then export GC_TEST_BRANCH="PR$TRAVIS_PULL_REQUEST"; fi
+  - if ! git ls-remote --exit-code --heads https://github.com/grid-control/testsuite.git $GC_TEST_BRANCH; then export GC_TEST_BRANCH="testing"; fi
+  - echo "GC_TEST_BRANCH=$GC_TEST_BRANCH"
   - git clone --depth 1 https://github.com/grid-control/testsuite.git -b $GC_TEST_BRANCH testsuite
   - ls
   - echo 'travis_fold:end:gc_env_setup'
