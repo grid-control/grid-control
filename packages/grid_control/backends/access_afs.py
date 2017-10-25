@@ -67,11 +67,14 @@ class AFSAccessToken(RefreshableAccessToken):
 	def _get_timeleft(self, cached):
 		info = self._parse_tickets(cached)['tickets']
 		time_current = time.time()
-		time_end = 0
+		time_end = None
 		for ticket in info:
 			if (self._tickets and (ticket not in self._tickets)) or not ticket:
 				continue
-			time_end = max(info[ticket], time_end)
+			if time_end is None:
+				time_end = info[ticket]
+			time_end = min(info[ticket], time_end)
+		time_end = time_end or 0
 		return time_end - time_current
 
 	def _parse_tickets(self, cached=True):
