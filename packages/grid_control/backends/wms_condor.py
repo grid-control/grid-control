@@ -14,7 +14,7 @@
 
 from grid_control.backends.aspect_cancel import CancelJobsWithProcess
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess, CheckStatus
-from grid_control.backends.backend_tools import ProcessCreatorAppendArguments
+from grid_control.backends.backend_tools import BackendError, ProcessCreatorAppendArguments
 from grid_control.job_db import Job
 from hpfwk import clear_current_exception
 from python_compat import imap
@@ -43,8 +43,13 @@ class CondorCheckJobs(CheckJobsWithProcess):
 			})
 
 	def _handle_error(self, proc):
-		if proc.status(timeout=0) and ('Failed to fetch ads' in proc.stderr.read_log()):
-			self._status = CheckStatus.ERROR
+		if proc.status(timeout=0):
+			stderr = proc.stderr.read_log()
+			if 'Failed to fetch ads' in stderr:
+				self._status = CheckStatus.ERROR
+			if 'Extra Info: You probably saw this error because the condor_schedd is not' in stderr:
+				self._log.log_process(proc, msg='condor_q failed:\n' + stderr)
+				raise BackendError('condor_schedd is not reachable.')
 		CheckJobsWithProcess._handle_error(self, proc)
 
 	def _parse(self, proc):
