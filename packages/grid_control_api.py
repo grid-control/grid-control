@@ -212,7 +212,7 @@ def _parse_cmd_line(cmd_line_args):
 	parser.add_accu(None, 'v', 'verbose')
 	parser.add_list(None, 'l', 'logging')
 	parser.add_list(None, 'o', 'override')
-	parser.add_text(None, ' ', 'action')
+	parser.add_text(None, 'a', 'action')
 	parser.add_text(None, 'd', 'delete')
 	parser.add_text(None, 'C', 'cancel')
 	parser.add_text(None, 'J', 'job-selector')
