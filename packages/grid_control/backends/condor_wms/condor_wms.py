@@ -197,6 +197,8 @@ class Condor(BasicWMS):
 				jdl_req_str_list.append('request_memory = %dM' % req_value)
 			elif (req_type == WMS.CPUS) and (req_value > 0):
 				jdl_req_str_list.append('request_cpus = %d' % req_value)
+			elif (req_type == WMS.DISKSPACE) and (req_value > 0):
+				jdl_req_str_list.append('request_disk = %d' % (1024*req_value) )
 			# TODO: GLIDEIN_REQUIRE_GLEXEC_USE, WMS.SOFTWARE
 
 		# (HPDA) file location service
