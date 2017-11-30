@@ -45,6 +45,8 @@ BackendJobState = make_enum([  # pylint:disable=invalid-name
 	'WAITING',  # job is at WMS but was not yet assigned some place to run
 ])
 
+WallTimeMode = make_enum(['hard', 'soft', 'ignore'])  # pylint:disable=invalid-name
+
 
 class WMS(NamedPlugin):
 	alias_list = ['NullWMS']

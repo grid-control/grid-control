@@ -19,7 +19,7 @@ from grid_control.backends.aspect_cancel import CancelAndPurgeJobs
 from grid_control.backends.aspect_status import CheckJobsMissingState
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
-from grid_control.backends.wms import BackendError, BasicWMS, WMS
+from grid_control.backends.wms import BackendError, BasicWMS, WMS, WallTimeMode
 from grid_control.backends.wms_condor import CondorCancelJobs, CondorCheckJobs
 from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
 from grid_control.utils import Result, ensure_dir_exists, get_path_share, remove_files, resolve_install_path, safe_write, split_blackwhite_list  # pylint:disable=line-too-long
@@ -87,6 +87,8 @@ class Condor(BasicWMS):
 		self._pool_host_list = config.get_list(['poolhostlist', 'pool host list'], [])
 		self._broker_site = config.get_plugin('site broker', 'UserBroker', cls=Broker,
 			bind_kwargs={'tags': [self]}, pargs=('sites', 'sites', lambda: self._pool_host_list))
+		self._wall_time_mode = config.get_enum('wall time mode', WallTimeMode, WallTimeMode.ignore,
+			subset=[WallTimeMode.hard, WallTimeMode.ignore])
 
 	def get_interval_info(self):
 		# overwrite for check/submit/fetch intervals
@@ -220,7 +222,13 @@ class Condor(BasicWMS):
 		])
 		# cancel held jobs - ignore spooling ones
 		remove_cond = '(JobStatus == 5 && HoldReasonCode != 16)'
+		if self._wall_time_mode == WallTimeMode.hard:
+			# remove a job when it exceeds the requested wall time
+			remove_cond += ' || ((JobStatus == 2) && (CurrentTime - EnteredCurrentStatus) > %s)' % task.wall_time
 		jdl_str_list.append('periodic_remove = (%s)' % remove_cond)
+
+		if self._wall_time_mode != WallTimeMode.ignore:
+			jdl_str_list.append('max_job_retirement_time = %s' % task.wall_time)
 
 		if self._remote_type == PoolType.SPOOL:
 			jdl_str_list.extend([
