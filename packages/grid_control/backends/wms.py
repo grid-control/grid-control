@@ -303,9 +303,10 @@ class BasicWMS(WMS):
 			jobnum = job_info_dict[JobResult.JOBNUM]
 			if jobnum != jobnum_input:  # consistency check
 				raise BackendError('Invalid job id in job file %s' % job_fn)
-			if _force_move(self._log, output_dn, os.path.join(self._path_output, 'job_%d' % jobnum)):
+			target_dn = os.path.join(self._path_output, 'job_%d' % jobnum)
+			if _force_move(self._log, output_dn, target_dn):
 				jobnum_list_retrieved.append(jobnum_input)
-				return (jobnum, job_info_dict[JobResult.EXITCODE], job_info_dict[JobResult.RAW], output_dn)
+				return (jobnum, job_info_dict[JobResult.EXITCODE], job_info_dict[JobResult.RAW], target_dn)
 			else:  # error while moving job output directory
 				return (jobnum, -1, {}, None)
 
