@@ -60,6 +60,15 @@ class DBS3Provider(CMSBaseProvider):
 		return lmap(_get_name_locationinfo_list,
 			self._query_dbsv3('blocks', dataset=dataset_path, detail=do_query_sites))
 
+	def _iter_cms_block_parents(self, block_name):
+		return lmap(lambda bpi: bpi['parent_block_name'],
+			self._query_dbsv3('blockparents', block_name=blockinfo['block_name']))
+
+	def _iter_cms_file_parents(self, block_name, lfn):
+		file_parent_info = self._query_dbsv3('fileparents', block_name=block_name, logical_file_name=lfn)
+		assert(len(file_parent_info) == 1)
+		return file_parent_info[0]['parent_logical_file_name']
+
 	def _iter_cms_files(self, block_path, query_only_valid, query_lumi):
 		for cms_fi in self._query_dbsv3('files', block_name=block_path, detail=True):
 			if (cms_fi['is_file_valid'] == 1) or not query_only_valid:

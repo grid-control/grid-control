@@ -2,6 +2,12 @@
 
    * grid_control.gc_plugin ConfigurablePlugin
 
+    * grid_control_cms.provider_cms CMSParentSelector
+
+     * grid_control_cms.provider_cms CMSDirectParentSelector direct
+
+     * grid_control_cms.provider_cms CMSNoParentSelector null
+
     * grid_control.datasets.dproc_base DataProcessor
 
      * grid_control_cms.lumi_proc LumiDataProcessor lumi

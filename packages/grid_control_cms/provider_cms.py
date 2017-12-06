@@ -22,11 +22,36 @@ from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import JSONRestClient
 from grid_control_cms.lumi_tools import parse_lumi_filter, str_lumi
 from grid_control_cms.sitedb import SiteDB
-from hpfwk import AbstractError
+from hpfwk import AbstractError, Plugin
 from python_compat import itemgetter, lfilter, sorted
-
+from grid_control.gc_plugin import ConfigurablePlugin
 
 CMSLocationFormat = make_enum(['hostname', 'siteDB', 'both'])  # pylint:disable=invalid-name
+
+class CMSParentSelector(ConfigurablePlugin):
+	def enabled(self):
+		return False
+
+	def select_parent(self, parent_list):
+		raise AbstractError
+
+
+class CMSNoParentSelector(CMSParentSelector):
+	alias_list = ['null']
+
+	def select_parent(self, parent_list):
+		return
+
+
+class CMSDirectParentSelector(CMSParentSelector):
+	alias_list = ['direct']
+
+	def enabled(self):
+		return True
+
+	def select_parent(self, parent_list):
+		return True
+#		self._parent_ds_list = config.get_list('secondary dataset', [])
 
 
 class CMSBaseProvider(DataProvider):
@@ -52,6 +77,7 @@ class CMSBaseProvider(DataProvider):
 			CMSLocationFormat, CMSLocationFormat.hostname)
 		self._pjrc = JSONRestClient(url='https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
 		self._sitedb = SiteDB()
+		self._parent_selector = config.get_plugin('secondary dataset selector', 'null', cls=CMSParentSelector)
 
 		dataset_expr_parts = split_opt(dataset_expr, '@#')
 		(self._dataset_path, self._dataset_instance, self._dataset_block_selector) = dataset_expr_parts
@@ -106,9 +132,17 @@ class CMSBaseProvider(DataProvider):
 				assert len(run_list_result) == len(lumi_list_result)
 				fi[DataProvider.Metadata] = [run_list_result, lumi_list_result]
 				lumi_used = True
+			if self._parent_selector.enabled():
+				parent_lfn_list = self._iter_cms_file_parents(block_path, fi[DataProvider.URL])
+				if DataProvider.Metadata in fi:
+					fi[DataProvider.Metadata].append(parent_lfn_list)
+				else:
+					fi[DataProvider.Metadata] = [parent_lfn_list]
 			fi_list.append(fi)
 		if lumi_used:
 			block.setdefault(DataProvider.Metadata, []).extend(['Runs', 'Lumi'])
+		if self._parent_selector.enabled():
+			block.setdefault(DataProvider.Metadata, []).extend(['CMSSW_PARENT_LFNS'])
 		block[DataProvider.FileList] = fi_list
 		activity_fi.finish()
 
@@ -178,8 +212,14 @@ class CMSBaseProvider(DataProvider):
 				replicas_dict[block_path].append(replica_info)
 		activity_fi.finish()
 
+	def _iter_cms_block_parents(self, block_path):
+		return []
+
 	def _iter_cms_blocks(self, dataset_path, do_query_sites):
 		raise AbstractError
+
+	def _iter_cms_file_parents(self, block_path, lfn):
+		return []
 
 	def _iter_cms_files(self, block_path, query_only_valid, query_lumi):
 		raise AbstractError

@@ -56,8 +56,23 @@ class LFNPartitionProcessor(PartitionProcessor):
 				partition[DataSplitter.FileList] = _modify_filelist_for_srm(partition[DataSplitter.FileList])
 
 
-class CMSSWPartitionProcessor(PartitionProcessor.get_class('BasicPartitionProcessor')):  # pylint:disable=no-init
+BasicPartitionProcessor = PartitionProcessor.get_class('BasicPartitionProcessor')
+
+class CMSSWPartitionProcessor(BasicPartitionProcessor):  # pylint:disable=no-init
 	alias_list = ['cmsswpart']
 
 	def _format_fn_list(self, fn_list):
 		return str.join(', ', imap(lambda x: '"%s"' % x, fn_list))
+
+	def get_partition_metadata(self):
+		result = BasicPartitionProcessor.get_partition_metadata(self)
+		result.append(ParameterMetadata('FILE_NAMES2', untracked=True))
+		return result
+
+	def process(self, pnum, partition_info, result):
+		BasicPartitionProcessor.process(self, pnum, partition_info, result)
+		if 'CMSSW_PARENT_LFNS' in partition_info.get(DataSplitter.MetadataHeader, []):
+			parent_lfn_info_idx = partition_info[DataSplitter.MetadataHeader].index('CMSSW_PARENT_LFNS')
+			parent_lfn_info = partition_info[DataSplitter.Metadata][parent_lfn_info_idx]
+			parent_lfn_list = reduce(list.__add__, parent_lfn_info, [])
+			result['FILE_NAMES2'] = self._format_fn_list(parent_lfn_list)
