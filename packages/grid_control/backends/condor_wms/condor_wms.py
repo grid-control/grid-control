@@ -322,8 +322,7 @@ class Condor(BasicWMS):
 		return ensure_dir_exists(sandpath, 'sandbox directory', BackendError)
 
 	def _get_script_and_fn_list(self, task):
-		# resolve file paths for different pool types
-		# handle gc executable separately
+		# Get list of files marked for transfer and identify the script command file
 		script_cmd = './gc-run.sh'
 		sb_in_fn_list = [d_s_t[1] for d_s_t in self._get_in_transfer_info_list(task)]
 
