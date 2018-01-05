@@ -61,8 +61,6 @@ class Urllib2Session(RestSession):
 
 			def _get_connection(self, host, timeout=None):
 				return Urllib2Session.HTTPSConnection(host, key_file=cert, cert_file=cert)
-		setattr(HTTPSClientAuthHandler, 'getConnection',
-			getattr(HTTPSClientAuthHandler, '_get_connection'))
 
 		if cert:
 			return Urllib2Session.build_opener(HTTPSClientAuthHandler())
