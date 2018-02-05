@@ -20,7 +20,7 @@ from grid_control.backends.aspect_status import CheckJobsMissingState
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS, WallTimeMode
-from grid_control.backends.wms_condor import CondorCancelJobs, CondorCheckJobs
+from grid_control.backends.wms_condor import CondorCancelJobs, CondorCheckJobs, CondorDebugJobs
 from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
 from grid_control.utils import Result, ensure_dir_exists, get_path_share, remove_files, resolve_install_path, safe_write, split_blackwhite_list  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
@@ -67,7 +67,8 @@ class Condor(BasicWMS):
 				LocalPurgeJobs(config, self._sandbox_helper))
 		BasicWMS.__init__(self, config, name,
 			check_executor=CheckJobsMissingState(config, CondorCheckJobs(config)),
-			cancel_executor=cancel_executor)
+			cancel_executor=cancel_executor,
+			debug_executor=CheckJobsMissingState(config, CondorDebugJobs(config)))
 		self._task_id = config.get('task id', md5_hex(str(time.time())), persistent=True)  # FIXME
 		# finalize config state by reading values or setting to defaults
 		# load keys for condor pool ClassAds

@@ -130,3 +130,9 @@ class TrivialReport(TableReport):
 	def show_report(self, job_db, jobnum_list):
 		self._show_table(lzip(Job.enum_value_list, Job.enum_name_list),
 			[self._get_job_state_dict(job_db, jobnum_list)], pivot=True)
+
+class CGReport(TableReport):
+	alias_list = ['gc']
+	def show_report(self, job_db, jobnum_list):
+		for jobnum in jobnum_list:
+			print job_db.get_job_transient(jobnum).gc_id.split('.', 2)[-1]
