@@ -207,6 +207,7 @@ SimpleJobManager options
     Specify plugin that processes the output sandbox of successful jobs
 
     List of available plugins:
+     * RemoveTaskOutputProcessor_ (alias: null)
      * SandboxProcessor_ (alias: null)
 
 * ``queue timeout`` = <duration hh[:mm[:ss]]> (Default: disabled (-1))
