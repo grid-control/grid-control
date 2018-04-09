@@ -433,7 +433,8 @@ class Condor(BasicWMS):
 		try:
 			# submit all jobs simultaneously and temporarily store verbose (ClassAdd) output
 			activity = Activity('queuing jobs at scheduler')
-			proc = self._proc_factory.logged_execute(self._submit_exec, ' -verbose ' + submit_jdl_fn)
+			submit_args = ' -verbose -batch-name ' + task.get_description().task_name + ' ' + submit_jdl_fn
+			proc = self._proc_factory.logged_execute(self._submit_exec, submit_args)
 
 			# extract the Condor ID (WMS ID) of the jobs from output ClassAds
 			jobnum_gc_id_list = []
