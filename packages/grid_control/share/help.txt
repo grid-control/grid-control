@@ -12,6 +12,8 @@
 	-a, --action             Specify job management actions and order
 	                            -a CHECK,RETRIEVAL,SUBMIT (default)
 	-s, --no-submission      Disable job submission
+	-n, --jobs <args>        Maximum number of jobs (truncated to task maximum)
+	                         Default: no limit (-1)
 	-m, --max-retry <args>   Set maximum number of job resubmission attempts
 	                         Default is to resubmit indefinitely
 	                            -m 0 (Disable job REsubmission)

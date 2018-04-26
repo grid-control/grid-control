@@ -105,7 +105,7 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 				'#display config': opts.help_conf, '#display minimal config': opts.help_confmin},
 			'action': {'delete': opts.delete, 'cancel': opts.cancel, 'reset': opts.reset},
 			'global': {'gui': opts.gui, 'submission': opts.submission},
-			'jobs': {'max retry': opts.max_retry, 'selected': opts.job_selector},
+			'jobs': {'jobs': opts.jobs, 'max retry': opts.max_retry, 'selected': opts.job_selector},
 			'logging': {'debug mode': opts.debug},
 		}
 		for section in cmd_line_config_map:
@@ -216,6 +216,7 @@ def _parse_cmd_line(cmd_line_args):
 	parser.add_text(None, 'd', 'delete')
 	parser.add_text(None, 'C', 'cancel')
 	parser.add_text(None, 'J', 'job-selector')
+	parser.add_text(None, 'n', 'jobs')
 	parser.add_text(None, 'm', 'max-retry')
 	parser.add_text(None, ' ', 'reset')
 	parser.add_bool(None, ' ', 'debug-console', False)  # undocumented debug option
