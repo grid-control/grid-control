@@ -1,4 +1,4 @@
-# | Copyright 2012-2017 Karlsruhe Institute of Technology
+# | Copyright 2012-2018 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 import os, re, time, tempfile
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs
 from grid_control.backends.aspect_status import CheckJobsMissingState
+from grid_control.backends.backend_tools import unpack_wildcard_tar
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
 from grid_control.backends.wms import BackendError, BasicWMS, WMS, WallTimeMode
@@ -25,7 +26,7 @@ from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
 from grid_control.utils import Result, ensure_dir_exists, get_path_share, remove_files, resolve_install_path, safe_write, split_blackwhite_list  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
-from python_compat import imap, irange, lmap, lzip, md5_hex
+from python_compat import imap, irange, lfilter, lmap, lzip, md5_hex
 
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
@@ -255,17 +256,27 @@ class Condor(BasicWMS):
 
 	def _get_jdl_str_list_job(self, jobnum, task, sb_in_fn_list):
 		workdir = self._get_remote_output_dn(jobnum)
+
+		# publish the WMS id for Dashboard
+		environ = 'CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self._name
+
 		sb_out_fn_list = []
 		for (_, src, target) in self._get_out_transfer_info_list(task):
 			if src not in ('gc.stdout', 'gc.stderr'):
 				sb_out_fn_list.append(target)
+
+		# condor does not handle wildcards in transfer_output_files
+		wildcard_list = lfilter(lambda x: '*' in x, sb_out_fn_list)
+		if len(wildcard_list):
+			sb_out_fn_list = lfilter(lambda x: x not in wildcard_list, sb_out_fn_list) + ['GC_WC.tar.gz']
+			environ += ';GC_WC=' + ' '.join(wildcard_list)
+
 		job_sb_in_fn_list = sb_in_fn_list + [os.path.join(workdir, 'job_%d.var' % jobnum)]
 		jdl_str_list = [
 			# store matching Grid-Control and Condor ID
 			'+GridControl_GCtoWMSID = "%s@$(Cluster).$(Process)"' % task.get_description(jobnum).job_name,
 			'+GridControl_GCIDtoWMSID = "%s@$(Cluster).$(Process)"' % jobnum,
-			# publish the WMS id for Dashboard
-			'environment = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self._name,
+			'environment = %s' % environ,
 			# condor doesn"t execute the job directly. actual job data, files and arguments
 			# are accessed by the GC scripts (but need to be copied to the worker)
 			'transfer_input_files = ' + str.join(', ', job_sb_in_fn_list),
@@ -303,6 +314,8 @@ class Condor(BasicWMS):
 				# clean up remote working directory
 				self._check_and_log_proc(self._proc_factory.logged_execute(
 					'rm -rf %s' % self._get_remote_output_dn(jobnum)))
+			# eventually extract wildcarded output files from the tarball
+			unpack_wildcard_tar(self._log, sandpath)
 			yield (jobnum, sandpath)
 		# clean up if necessary
 		activity.finish()
