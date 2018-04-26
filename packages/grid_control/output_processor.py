@@ -1,4 +1,4 @@
-# | Copyright 2014-2017 Karlsruhe Institute of Technology
+# | Copyright 2014-2018 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, sys, gzip, logging
+import os, sys, gzip, errno, logging
 from grid_control.utils import DictFormat
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.file_tools import SafeFile
@@ -73,6 +73,19 @@ class SandboxProcessor(TaskOutputProcessor):
 	alias_list = ['null']
 
 	def process(self, dn, task):
+		return True
+
+
+class RemoveTaskOutputProcessor(TaskOutputProcessor):
+	alias_list = ['null']
+
+	def process(self, dn, task):
+		for fname in ('gc.stdout', 'gc.stderr'):
+			try:
+				os.remove(os.path.join(dn, fname))
+			except OSError as e:
+				if e.errno != errno.ENOENT:  # no such file
+					raise
 		return True
 
 

@@ -662,5 +662,7 @@
 
    * grid_control.output_processor TaskOutputProcessor
 
+    * grid_control.output_processor RemoveTaskOutputProcessor null
+
     * grid_control.output_processor SandboxProcessor null
 

@@ -1,4 +1,4 @@
-# | Copyright 2007-2017 Karlsruhe Institute of Technology
+# | Copyright 2007-2018 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			cls=JobDB, pargs=(self._get_max_jobs(task), selected), on_change=None)
 		self._disabled_jobs_logfile = config.get_work_path('disabled')
 		self._output_processor = config.get_plugin('output processor', 'SandboxProcessor',
-			cls=TaskOutputProcessor)
+			cls=TaskOutputProcessor, on_change=None)
 
 		self._uii = UserInputInterface()
 		self._interactive_cancel = config.is_interactive(['delete jobs', 'cancel jobs'], True)
