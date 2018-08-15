@@ -44,14 +44,17 @@ def get_dataset_config(opts, args):
 	if opts.metadata or opts.list_metadata or opts.list_metadata_common:
 		config_dict['lumi filter *'] = '-'
 		config_dict['keep lumi metadata *'] = 'True'
-	return gc_create_config(config_file=opts.settings, config_dict={'dataset': config_dict})
+	return gc_create_config(config_file=opts.settings, config_dict={'dataset': config_dict},
+		load_old_config=False)
 
 
 def get_dataset_info(opts, args, query_blocks=True):
 	config = get_dataset_config(opts, args)
+	if opts.threads is not None:
+		config.set_int('dataprovider thread max', int(opts.threads) or 1)
 	provider = config.get_composited_plugin('dataset', cls=DataProvider,
 		bind_kwargs={'provider_name_default': config.get('dataset provider')},
-		default_compositor=':ThreadedMultiDatasetProvider:')  # -T disables multi-threading further below
+		default_compositor=':ThreadedMultiDatasetProvider:')
 	dataset_list = sorted(provider.get_dataset_name_list())
 	if len(dataset_list) == 0:
 		raise DatasetError('No datasets matched!')
@@ -243,11 +246,11 @@ def _main():
 
 	options = _parse_cmd_line()
 
-	# Disable threaded queries
+	# Disable threads everywhere
 	def _no_thread(desc, fun, *args, **kargs):
 		fun(*args, **kargs)
 		return type('DummyThread', (), {'join': lambda self: None})()
-	if options.opts.disable_threaded:
+	if options.opts.threads == '0':
 		thread_tools.start_daemon = _no_thread
 
 	(provider, dataset_list, block_list) = get_dataset_info(options.opts, options.args)
@@ -303,8 +306,8 @@ def _parse_cmd_line():
 		help='Gives config file entries to run over given dataset(s)')
 	parser.add_bool(None, 'n', 'config-nick', default=False,
 		help='Use dataset path to derive nickname in case it it undefined')
-	parser.add_bool(None, 'T', 'disable-threaded', default=False,
-		help='Disable multi-threaded dataset retrieval')
+	parser.add_text(None, 'T', 'threads', default=None,
+		help='Specify maximum number of threads used during dataset retrieval')
 	parser.add_text(None, 'L', 'location', default='hostname',
 		help='Format of location information')
 	parser.add_text(None, 'F', 'location-filter', default='',

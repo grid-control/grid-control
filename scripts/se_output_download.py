@@ -355,6 +355,9 @@ process_all.first = True  # <global-state>
 def process_job(opts, work_dn, status_mon, job_db, token, jobnum):
 	check_token(token)
 	job_obj = job_db.get_job(jobnum)
+	if job_obj is None:
+		return status_mon.register_job_result(jobnum, 'Job was not yet processed',
+			JobDownloadStatus.JOB_PROCESSING)
 	# Only run over finished and not yet downloaded jobs
 	if (job_obj.state != Job.SUCCESS) and opts.job_success:
 		return status_mon.register_job_result(jobnum, 'Job has not yet finished successfully',

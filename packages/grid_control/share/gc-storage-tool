@@ -1,5 +1,5 @@
 #!/bin/sh
-# | Copyright 2009-2016 Karlsruhe Institute of Technology
+# | Copyright 2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -387,7 +387,7 @@ sc_ls_s3()
 sc_copy()
 {
 	sc_debug_helper "$FUNCNAME" "$@"
-	GFAL_COPY_ARGS="--abort-on-failure"
+	GFAL_COPY_ARGS="--abort-on-failure -n 1"
 	case "$2" in # prepare target dir
 		"file://"*)
 			mkdir -p $(dirname ${2#file://}) || sc_fail "target_dir_failed" "Unable to create target directory";;
@@ -718,14 +718,24 @@ sc_exists() # Check existence of file on storage element
 			sc_ls "$1" > /dev/null || \
 			sc_fail "exists_failed";;
 		"dcap://"* | "gsidcap://"*)
-			sc_call "gfal-stat" "$1" || \
-			sc_ls "$1" > /dev/null || \
-			sc_fail "dcap_exists_failed";;
+			if sc_check_bin_exists "gfal-stat"; then
+				sc_call "gfal-stat" "$1" || \
+				sc_fail "dcap_exists_failed"
+			else
+				sc_ls "$1" > /dev/null || \
+				sc_fail "dcap_exists_failed"
+			fi;;
 		"eos://"*)
-			sc_call_eos "$1" stat || \
-			sc_call_xrdfs "${1#eos://}" stat || \
-			sc_ls "$1" > /dev/null || \
-			sc_fail "eos_exists_failed";;
+			if sc_check_bin_exists "eos"; then
+				sc_call_eos "$1" stat || \
+				sc_fail "eos_exists_failed"
+			elif sc_check_bin_exists "eos"; then
+				sc_call_xrdfs "${1#eos://}" stat || \
+				sc_fail "eos_exists_failed"
+			else
+				sc_ls "$1" > /dev/null || \
+				sc_fail "eos_exists_failed"
+			fi;;
 		"file://"* | "/"*)
 			sc_call "test" -f "${1#file://}" || \
 			sc_fail "file_exists_failed";;
@@ -733,32 +743,66 @@ sc_exists() # Check existence of file on storage element
 			sc_call "curl" "$1" --ssl --head > /dev/null || \
 			sc_fail "ftp_exists_failed";;
 		"gsiftp://"*)
-			sc_call "gfal-stat" "$1" || \
-			sc_call "glite-gridftp-exists" "$1" || \
-			sc_call "edg-gridftp-exists" "$1" || \
-			sc_ls "$1" > /dev/null || \
-			sc_fail "gsiftp_exists_failed";;
+			if sc_check_bin_exists "gfal-stat"; then
+				sc_call "gfal-stat" "$1" || \
+				sc_fail "gsiftp_exists_failed"
+			elif sc_check_bin_exists "glite-gridftp-exists"; then
+				sc_call "glite-gridftp-exists" "$1" || \
+				sc_fail "gsiftp_exists_failed"
+			elif sc_check_bin_exists "edg-gridftp-exists"; then
+				sc_call "edg-gridftp-exists" "$1" || \
+				sc_fail "gsiftp_exists_failed"
+			else
+				sc_ls "$1" > /dev/null || \
+				sc_fail "gsiftp_exists_failed"
+			fi;;
 		"http://"* | "https://"*)
-			sc_call "gfal-stat" -p "$1" || \
-			sc_call "curl" --head "$1" || \
-			sc_call "wget" --spider -q "$1" || \
-			sc_ls "$1" > /dev/null || \
-			sc_fail "http_exists_failed";;
+			if sc_check_bin_exists "gfal-stat"; then
+				sc_call "gfal-stat" "$1" || \
+				sc_fail "http_exists_failed"
+			elif sc_check_bin_exists "curl"; then
+				sc_call "curl" --head "$1" || \
+				sc_fail "http_exists_failed"
+			elif sc_check_bin_exists "wget"; then
+				sc_call "wget" --spider -q "$1" || \
+				sc_fail "http_exists_failed"
+			else
+				sc_ls "$1" > /dev/null || \
+				sc_fail "http_exists_failed"
+			fi;;
 		"lfc://"*)
-			sc_call "gfal-stat" "$1" || \
-			sc_call_lfc "$1" "lfc-getacl" || \
-			sc_ls "$1" > /dev/null || \
-			sc_fail "lfc_exists_failed";;
+			if sc_check_bin_exists "gfal-stat"; then
+				sc_call "gfal-stat" "$1" || \
+				sc_fail "lfc_exists_failed"
+			elif sc_check_bin_exists "lfc-getacl"; then
+				sc_call_lfc "$1" "lfc-getacl" || \
+				sc_fail "lfc_exists_failed"
+			else
+				sc_ls "$1" > /dev/null || \
+				sc_fail "lfc_exists_failed"
+			fi;;
 		"lfn://"*)
-			sc_call "gfal-stat" "$1" || \
-			sc_call "lfc-getacl" "$1" || \
-			sc_ls "$1" > /dev/null || \
-			sc_fail "lfn_exists_failed";;
+			if sc_check_bin_exists "gfal-stat"; then
+				sc_call "gfal-stat" "$1" || \
+				sc_fail "lfn_exists_failed"
+			elif sc_check_bin_exists "lfc-getacl"; then
+				sc_call "lfc-getacl" "$1" || \
+				sc_fail "lfn_exists_failed"
+			else
+				sc_ls "$1" > /dev/null || \
+				sc_fail "lfn_exists_failed"
+			fi;;
 		"rfio://"*)
-			sc_call "gfal-stat" "$1" || \
-			sc_call_castor "$1" "nsstat" || \
-			sc_ls "$1" > /dev/null || \
-			sc_fail "rfio_exists_failed";;
+			if sc_check_bin_exists "gfal-stat"; then
+				sc_call "gfal-stat" "$1" || \
+				sc_fail "rfio_exists_failed"
+			elif sc_check_bin_exists "nsstat"; then
+				sc_call_castor "$1" "nsstat" || \
+				sc_fail "rfio_exists_failed"
+			else
+				sc_ls "$1" > /dev/null || \
+				sc_fail "rfio_exists_failed"
+			fi;;
 		"s3://"*)
 			test -n $(sc_ls "$1" 2> /dev/null) || \
 			sc_fail "s3_exists_failed";;
@@ -766,10 +810,16 @@ sc_exists() # Check existence of file on storage element
 			sc_call_sftp "$1" ls > /dev/null || \
 			sc_fail "sftp_exists_failed";;
 		"srm://"*)
-			sc_call "gfal-stat" -p "$1" || \
-			sc_call "srm-check-permissions" -2 "$1" || \
-			sc_ls "$1" > /dev/null || \
-			sc_fail "srm_exists_failed";;
+			if sc_check_bin_exists "gfal-stat"; then
+				sc_call "gfal-stat" "$1" || \
+				sc_fail "srm_exists_failed"
+			elif sc_check_bin_exists "srm-check-permissions"; then
+				sc_call "srm-check-permissions" -2 "$1" || \
+				sc_fail "srm_exists_failed"
+			else
+				sc_ls "$1" > /dev/null || \
+				sc_fail "srm_exists_failed"
+			fi;;
 		*)
 			sc_fail "exists_not_supported";;
 	esac
@@ -877,7 +927,7 @@ sc_main()
 		"mkdir") sc_multi sc_mkdir "$@";;
 		"rm") sc_multi sc_rm "$@";;
 		*)
-			printf '%s' "Syntax: $0 <copy | copy_overwrite | exists | ls | mkdir | rm> [OPTIONS]"
+			printf '%s\n' "Syntax: $0 <copy | copy_overwrite | exists | ls | mkdir | rm> [OPTIONS]"
 			exit 1
 			;;
 	esac

@@ -45,7 +45,7 @@ class ROOTTask(UserTask):
 		UserTask.__init__(self, config, name)
 		self._update_map_error_code2msg(get_path_share('gc-run.root.sh'))
 
-		# Collect lib files needed by executable
+		# TODO: Collect lib files needed by executable
 		self._lib_fn_list = []
 
 	def get_command(self):

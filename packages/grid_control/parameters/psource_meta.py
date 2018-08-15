@@ -548,7 +548,7 @@ def _sort_deps(psrc_list):
 	for psrc in psrc_list:
 		tmp = []
 		psrc.fill_parameter_metadata(tmp)
-		metadata_dict[psrc] = lmap(str, tmp)
+		metadata_dict[psrc] = lmap(lambda meta: meta.value, tmp)
 		metadata_set_all.update(metadata_dict[psrc])
 
 	psrc_idx_list = lrange(len(psrc_list))
@@ -556,14 +556,15 @@ def _sort_deps(psrc_list):
 	while psrc_idx_list:
 		psrc_idx = psrc_idx_list.pop(0)
 		psrc = psrc_list[psrc_idx]
+		metadata_list_known_to_psrc = metadata_list_known + metadata_dict[psrc]
 		for dep in psrc.get_parameter_deps():
-			dep = str(dep)
-			if (dep in metadata_set_all) and (dep not in metadata_list_known):
+			if (dep in metadata_set_all) and (dep not in metadata_list_known_to_psrc):
+				# this psrc depends on a variable that is available not not yet seen
 				psrc_idx_list.append(psrc_idx)  # back to the queue
 				break
 		if psrc_idx not in psrc_idx_list:
 			yield psrc
-			metadata_list_known.extend(metadata_dict[psrc])
+			metadata_list_known = metadata_list_known_to_psrc
 
 
 def _strip_null_sources(psrc_list):

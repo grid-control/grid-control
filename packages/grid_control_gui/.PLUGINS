@@ -66,6 +66,8 @@
 
        * grid_control_gui.report_time TimeReport time
 
+      * grid_control_gui.report_file FileReport file
+
       * grid_control.report ImageReport
 
        * grid_control_gui.report_map MapReport map

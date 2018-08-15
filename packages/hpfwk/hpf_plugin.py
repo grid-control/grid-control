@@ -200,14 +200,14 @@ class Plugin(object):
 		return cls.__name__
 	get_bind_class_name = classmethod(get_bind_class_name)
 
-	def get_class(cls, cls_name):
+	def get_class(cls, cls_name, ignore_missing=False):
 		log = logging.getLogger('classloader.%s' % cls.__name__.lower())
 		log.log(logging.DEBUG2, 'Loading class %s', cls_name)
 		if cls_name not in cls._cls_cache.get(cls, {}):
-			for result in cls._get_class_checked(log, cls_name):
+			for result in cls._get_class_checked(log, cls_name, ignore_missing):
 				cls._cls_cache.setdefault(cls, {})[cls_name] = result
 				break  # return only first class
-		return cls._cls_cache[cls][cls_name]
+		return cls._cls_cache.get(cls, {}).get(cls_name)
 	get_class = classmethod(get_class)
 
 	def get_class_children(cls):
@@ -280,7 +280,7 @@ class Plugin(object):
 			cls_search_list.sort()  # sort by class inheritance depth
 	_get_class = classmethod(_get_class)
 
-	def _get_class_checked(cls, log, cls_name):
+	def _get_class_checked(cls, log, cls_name, ignore_missing=False):
 		cls_list_found = []
 		cls_list_processed = []
 		cls_list_bad_parents = []
@@ -289,7 +289,7 @@ class Plugin(object):
 			if result not in cls_list_found:
 				cls_list_found.append(result)
 				yield result
-		if not cls_list_found:
+		if not (cls_list_found or ignore_missing):
 			msg = 'Unable to load %r of type %r\n' % (cls_name, _get_fq_class_name(cls))
 			if cls_list_processed:
 				msg += '\tsearched plugin names:\n\t\t%s\n' % str.join('\n\t\t', cls_list_processed)
