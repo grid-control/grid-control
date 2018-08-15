@@ -347,23 +347,10 @@ class Condor(BasicWMS):
 	def _get_script_and_fn_list(self, task):
 		# resolve file paths for different pool types
 		# handle gc executable separately
-		(script_cmd, sb_in_fn_list) = ('', [])
-		if self._remote_type in (PoolType.SSH, PoolType.GSISSH):
-			for target in imap(lambda d_s_t: d_s_t[2], self._get_in_transfer_info_list(task)):
-				if 'gc-run.sh' in target:
-					script_cmd = os.path.join(self._get_remote_output_dn(), target)
-				else:
-					sb_in_fn_list.append(os.path.join(self._get_remote_output_dn(), target))
-		else:
-			for source in imap(lambda d_s_t: d_s_t[1], self._get_in_transfer_info_list(task)):
-				if 'gc-run.sh' in source:
-					script_cmd = source
-				else:
-					sb_in_fn_list.append(source)
-		if self._universe.lower() == 'docker':
-			script_cmd = './gc-run.sh'
-			sb_in_fn_list.append(get_path_share('gc-run.sh'))
-		return (script_cmd, sb_in_fn_list)
+		script_cmd = './gc-run.sh'
+		sb_in_fn_list = [d_s_t[1] for d_s_t in self._get_in_transfer_info_list(task)]
+		return script_cmd, sb_in_fn_list
+
 
 	def _init_pool_interface(self, config):
 		# prepare commands and interfaces according to selected submit type
