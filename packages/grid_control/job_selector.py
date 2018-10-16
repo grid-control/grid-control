@@ -35,16 +35,6 @@ class JobSelector(Plugin):
 	create = staticmethod(create)
 
 
-class NullJobSelector(JobSelector):
-	alias_list = ['null']
-
-	def __call__(self, jobnum, job_obj):
-		return True
-
-	def __repr__(self):
-		return self._repr_base()
-
-
 class AndJobSelector(JobSelector):  # Internally used
 	def __new__(cls, *args):
 		args = lidfilter(args)
@@ -133,6 +123,16 @@ class MultiJobSelector(JobSelector):
 
 	def __repr__(self):
 		return self._repr_base(self._arg)
+
+
+class NullJobSelector(JobSelector):
+	alias_list = ['null']
+
+	def __call__(self, jobnum, job_obj):
+		return True
+
+	def __repr__(self):
+		return self._repr_base()
 
 
 class RegExSelector(JobSelector):

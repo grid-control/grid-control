@@ -1,4 +1,4 @@
-grid-control (https://ekptrac.physik.uni-karlsruhe.de/trac/grid-control)
+grid-control (https://github.com/grid-control)
 
 Copyright (C) 2007-2017 Karlsruhe Institute of Technology
 
@@ -15,8 +15,8 @@ Maintained by: Fred Stober             <grid-control-dev@googlegroups.com>
                Volker Buege            <v.buege@enbw.com>
                Jochen Ott              <ott@ekp.uni-karlsruhe.de>
                Thomas Müller           <tmuller@cern.ch>
-               Manuel Zeise            <manuel.zeise@sap.com>
                Johannes Lange          <johannes.lange@rwth-aachen.de>
+               Manuel Zeise            <manuel.zeise@sap.com>
                Klaus Rabbertz          <klaus.rabbertz@cern.ch>
                Armin Burgmeier         <burgmeier@ekp.uni-karlsruhe.de>
                Artur Akhmetshin        <artur.akhmetshin@cern.ch>

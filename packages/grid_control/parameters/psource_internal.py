@@ -1,4 +1,4 @@
-# | Copyright 2012-2017 Karlsruhe Institute of Technology
+# | Copyright 2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -49,16 +49,6 @@ class InternalParameterSource(ImmutableParameterSource):
 		return len(self._value_list)
 
 
-class InternalReferenceParameterSource(ParameterSource):  # Redirector ParameterSource
-	def create_psrc(cls, pconfig, repository, ref_name, *args):  # pylint:disable=arguments-differ
-		ref_type_default = 'data'
-		if 'dataset:' + ref_name not in repository:
-			ref_type_default = 'csv'
-		ref_type = pconfig.get(ref_name, 'type', ref_type_default)
-		return ParameterSource.create_psrc_safe(ref_type, pconfig, repository, ref_name, *args)
-	create_psrc = classmethod(create_psrc)
-
-
 class RedirectorParameterSource(ParameterSource):
 	def __init__(self, *args, **kwargs):
 		ParameterSource.__init__(self)
@@ -66,16 +56,25 @@ class RedirectorParameterSource(ParameterSource):
 
 
 class InternalAutoParameterSource(RedirectorParameterSource):
-	def create_psrc(cls, pconfig, repository, output_vn, lookup_vn_list=None):  # pylint:disable=arguments-differ
+	def __new__(cls, pconfig, repository, output_vn, lookup_vn_list=None):
 		parameter_value = pconfig.get_parameter(output_vn.lstrip('!'))
 		if isinstance(parameter_value, list):
 			if len(parameter_value) != 1:  # Simplify single value parameters to const parameters
 				return ParameterSource.create_instance('SimpleParameterSource', output_vn, parameter_value)
 			return ParameterSource.create_instance('ConstParameterSource', output_vn, parameter_value[0])
-		elif isinstance(parameter_value, tuple) and not isinstance(parameter_value[0], dict):
+		elif isinstance(parameter_value, tuple) and isinstance(parameter_value[0], str):
 			return ParameterSource.create_instance(*parameter_value)
 		return ParameterSource.create_instance('InternalAutoLookupParameterSource',
 			pconfig, output_vn, lookup_vn_list)
+
+
+class InternalReferenceParameterSource(RedirectorParameterSource):
+	def create_psrc(cls, pconfig, repository, ref_name, *args):  # pylint:disable=arguments-differ
+		ref_type_default = 'data'
+		if 'dataset:' + ref_name not in repository:
+			ref_type_default = 'csv'
+		ref_type = pconfig.get(ref_name, 'type', ref_type_default)
+		return ParameterSource.create_psrc_safe(ref_type, pconfig, repository, ref_name, *args)
 	create_psrc = classmethod(create_psrc)
 
 

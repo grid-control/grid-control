@@ -1,4 +1,4 @@
-# | Copyright 2007-2017 Karlsruhe Institute of Technology
+# | Copyright 2007-2018 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -103,9 +103,9 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 		cmd_line_config_map = {
 			'state!': {'#init': opts.init, '#resync': opts.resync,
 				'#display config': opts.help_conf, '#display minimal config': opts.help_confmin},
-			'action': {'delete': opts.delete, 'reset': opts.reset},
+			'action': {'delete': opts.delete, 'cancel': opts.cancel, 'reset': opts.reset},
 			'global': {'gui': opts.gui, 'submission': opts.submission},
-			'jobs': {'max retry': opts.max_retry, 'selected': opts.job_selector},
+			'jobs': {'jobs': opts.jobs, 'max retry': opts.max_retry, 'selected': opts.job_selector},
 			'logging': {'debug mode': opts.debug},
 		}
 		for section in cmd_line_config_map:
@@ -151,7 +151,7 @@ def _gc_create_workflow(config, do_freeze=True, **kwargs):
 	help_scfg = global_config.get_state('display', detail='minimal config')
 
 	action_config = config.change_view(set_sections=['action'])
-	action_delete = action_config.get('delete', '', on_change=None)
+	action_cancel = action_config.get(['delete', 'cancel'], '', on_change=None)
 	action_reset = action_config.get('reset', '', on_change=None)
 
 	# Create workflow and freeze config settings
@@ -167,8 +167,8 @@ def _gc_create_workflow(config, do_freeze=True, **kwargs):
 		sys.exit(os.EX_OK)
 
 	# Check if user requested deletion / reset of jobs
-	if action_delete:
-		workflow.job_manager.delete(workflow.task, workflow.backend, action_delete)
+	if action_cancel:
+		workflow.job_manager.cancel(workflow.task, workflow.backend, action_cancel)
 		sys.exit(os.EX_OK)
 	if action_reset:
 		workflow.job_manager.reset(workflow.task, workflow.backend, action_reset)
@@ -212,9 +212,11 @@ def _parse_cmd_line(cmd_line_args):
 	parser.add_accu(None, 'v', 'verbose')
 	parser.add_list(None, 'l', 'logging')
 	parser.add_list(None, 'o', 'override')
-	parser.add_text(None, ' ', 'action')
+	parser.add_text(None, 'a', 'action')
 	parser.add_text(None, 'd', 'delete')
+	parser.add_text(None, 'C', 'cancel')
 	parser.add_text(None, 'J', 'job-selector')
+	parser.add_text(None, 'n', 'jobs')
 	parser.add_text(None, 'm', 'max-retry')
 	parser.add_text(None, ' ', 'reset')
 	parser.add_bool(None, ' ', 'debug-console', False)  # undocumented debug option

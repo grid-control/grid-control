@@ -16,10 +16,10 @@
 
 from hpfwk.hpf_debug import DebugInterface, format_exception, get_thread_name, get_trace_fun, ignore_exception
 from hpfwk.hpf_exceptions import APIError, AbstractError, ExceptionCollector, NestedException, clear_current_exception, except_nested, get_current_exception, rethrow
-from hpfwk.hpf_plugin import InstanceFactory, Plugin, PluginError, init_hpf_plugins
+from hpfwk.hpf_plugin import InstanceFactory, Plugin, init_hpf_plugins
 
 
 __all__ = ['AbstractError', 'APIError', 'clear_current_exception', 'DebugInterface',
 	'except_nested', 'ExceptionCollector', 'format_exception', 'get_current_exception',
 	'get_thread_name', 'get_trace_fun', 'ignore_exception', 'init_hpf_plugins', 'InstanceFactory',
-	'NestedException', 'Plugin', 'PluginError', 'rethrow']
+	'NestedException', 'Plugin', 'rethrow']

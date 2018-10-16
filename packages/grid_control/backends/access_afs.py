@@ -12,9 +12,10 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, time
+import os, time, logging
 from grid_control.backends.access import AccessTokenError, RefreshableAccessToken
 from grid_control.utils import resolve_install_path
+from grid_control.utils.parsing import str_time_long
 from grid_control.utils.process_base import LocalProcess
 from grid_control.utils.thread_tools import GCLock, with_lock
 from python_compat import imap, lmap, rsplit
@@ -28,14 +29,16 @@ class AFSAccessToken(RefreshableAccessToken):
 		RefreshableAccessToken.__init__(self, config, name)
 		self._kinit_exec = resolve_install_path('kinit')
 		self._klist_exec = resolve_install_path('klist')
+		self._aklog_exec = resolve_install_path('aklog')
 		self._cache = None
 		self._map_auth_name2fn = dict(imap(lambda name: (name, config.get_work_path('proxy.%s' % name)),
 			['KRB5CCNAME', 'KRBTKFILE']))
+		self._auth_fn_list = []
 		with_lock(AFSAccessToken.env_lock, self._backup_tickets, config)
 		self._tickets = config.get_list('tickets', [], on_change=None)
 
 	def get_auth_fn_list(self):
-		return self._map_auth_name2fn.values()
+		return self._auth_fn_list
 
 	def get_fq_user_name(self):
 		return self._get_principal()
@@ -55,6 +58,7 @@ class AFSAccessToken(RefreshableAccessToken):
 					shutil.copyfile(fn, self._map_auth_name2fn[name])
 				os.chmod(self._map_auth_name2fn[name], stat.S_IRUSR | stat.S_IWUSR)
 				os.environ[name] = self._map_auth_name2fn[name]
+				self._auth_fn_list.append(os.environ[name])
 
 	def _get_principal(self):
 		info = self._parse_tickets()
@@ -63,11 +67,14 @@ class AFSAccessToken(RefreshableAccessToken):
 	def _get_timeleft(self, cached):
 		info = self._parse_tickets(cached)['tickets']
 		time_current = time.time()
-		time_end = 0
+		time_end = None
 		for ticket in info:
 			if (self._tickets and (ticket not in self._tickets)) or not ticket:
 				continue
-			time_end = max(info[ticket], time_end)
+			if time_end is None:
+				time_end = info[ticket]
+			time_end = min(info[ticket], time_end)
+		time_end = time_end or 0
 		return time_end - time_current
 
 	def _parse_tickets(self, cached=True):
@@ -107,7 +114,12 @@ class AFSAccessToken(RefreshableAccessToken):
 		return self._cache
 
 	def _refresh_access_token(self):
-		return LocalProcess(self._kinit_exec, '-R').finish(timeout=10)
+		timeleft_before = str_time_long(self._get_timeleft(cached=False))
+		LocalProcess(self._kinit_exec, '-R').finish(timeout=10)
+		LocalProcess(self._aklog_exec).finish(timeout=10)
+		timeleft_after = str_time_long(self._get_timeleft(cached=False))
+		self._log.log(logging.INFO2, 'Time left for access token "%s" changed from %s to %s',
+			self.get_object_name(), timeleft_before, timeleft_after)
 
 
 def _parse_date(value, format):

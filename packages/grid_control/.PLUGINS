@@ -498,27 +498,27 @@
 
      * grid_control.output_processor FileInfoProcessor fileinfo
 
-   * grid_control.parameters.config_param ParameterParser
+   * grid_control.parameters.pconfig ParameterParser
 
-    * grid_control.parameters.config_param ExprParameterParser expr eval
+    * grid_control.parameters.pconfig ExprParameterParser expr eval
 
-    * grid_control.parameters.config_param FormatParameterParser format
+    * grid_control.parameters.pconfig FormatParameterParser format
 
-    * grid_control.parameters.config_param GitParameterParser git
+    * grid_control.parameters.pconfig GitParameterParser git
 
-    * grid_control.parameters.config_param LinesParameterParser lines
+    * grid_control.parameters.pconfig LinesParameterParser lines
 
-    * grid_control.parameters.config_param RegexTransformParameterParser regex_transform
+    * grid_control.parameters.pconfig RegexTransformParameterParser regex_transform
 
-    * grid_control.parameters.config_param ShellParameterParser shell default
+    * grid_control.parameters.pconfig ShellParameterParser shell default
 
-    * grid_control.parameters.config_param SplitParameterParser split
+    * grid_control.parameters.pconfig SplitParameterParser split
 
-    * grid_control.parameters.config_param SvnParameterParser svn
+    * grid_control.parameters.pconfig SvnParameterParser svn
 
-    * grid_control.parameters.config_param TransformParameterParser transform
+    * grid_control.parameters.pconfig TransformParameterParser transform
 
-    * grid_control.parameters.config_param VerbatimParameterParser verbatim
+    * grid_control.parameters.pconfig VerbatimParameterParser verbatim
 
    * grid_control.parameters.psource_base ParameterSource
 
@@ -541,6 +541,8 @@
      * grid_control.parameters.psource_internal InternalParameterSource
 
       * grid_control.parameters.psource_file CSVParameterSource csv
+
+     * grid_control.parameters.psource_basic MultiCounterParameterSource multi_counter
 
      * grid_control.parameters.psource_basic SingleParameterSource
 
@@ -567,8 +569,6 @@
       * grid_control.parameters.psource_basic TransformParameterSource transform
 
     * grid_control.parameters.psource_lookup InternalAutoLookupParameterSource
-
-    * grid_control.parameters.psource_internal InternalReferenceParameterSource
 
     * grid_control.parameters.psource_basic KeyParameterSource key
 
@@ -606,15 +606,17 @@
 
      * grid_control.parameters.psource_internal InternalAutoParameterSource
 
+     * grid_control.parameters.psource_internal InternalReferenceParameterSource
+
      * grid_control.parameters.psource_internal InternalResolveParameterSource
 
     * grid_control.parameters.psource_basic RequirementParameterSource req
 
-   * grid_control.parameters.config_param ParameterTupleParser
+   * grid_control.parameters.pconfig ParameterTupleParser
 
-    * grid_control.parameters.config_param BinningTupleParser binning
+    * grid_control.parameters.pconfig BinningTupleParser binning
 
-    * grid_control.parameters.config_param DefaultTupleParser tuple default
+    * grid_control.parameters.pconfig DefaultTupleParser tuple default
 
    * grid_control.datasets.splitter_base PartitionReader
 
@@ -659,6 +661,8 @@
     * grid_control.utils.webservice_urllib2 Urllib2Session urllib2
 
    * grid_control.output_processor TaskOutputProcessor
+
+    * grid_control.output_processor RemoveTaskOutputProcessor null
 
     * grid_control.output_processor SandboxProcessor null
 

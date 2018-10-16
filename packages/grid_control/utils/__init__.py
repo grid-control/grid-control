@@ -103,17 +103,8 @@ def disk_space_avail(dn, timeout=5):
 			'The file system is probably hanging or corrupted' +
 			' - try to check the free disk space manually. ' +
 			'Refer to the documentation to disable checking the free disk space - at your own risk')
+		time.sleep(1)  # give GUI report the possibility to log its output
 		exit_without_cleanup(os.EX_OSERR)
-
-
-def display_selection(log, items_before, items_after, msg, formatter, log_level=logging.DEBUG1):
-	if len(items_before) != len(items_after):
-		log.log(logging.DEBUG, msg, (len(items_before) - len(items_after)))
-		for item in items_before:
-			if item in items_after:
-				log.log(log_level, ' * %s', formatter(item))
-			else:
-				log.log(log_level, '   %s', formatter(item))
 
 
 def ensure_dir_exists(dn, name='directory', exception_type=PathError):
@@ -130,15 +121,6 @@ def exec_wrapper(script, context=None):
 		context = dict()
 	exec(script, context)  # pylint:disable=exec-used
 	return context
-
-
-def filter_processors(processor_list, id_fun=lambda proc: proc.__class__.__name__):
-	(result, processor_id_list) = ([], [])
-	for proc in processor_list:
-		if proc.enabled() and (id_fun(proc) not in processor_id_list):
-			result.append(proc)
-			processor_id_list.append(id_fun(proc))
-	return result
 
 
 def get_file_name(fn):  # Return file name without extension
@@ -189,8 +171,8 @@ def ping_host(host, timeout=1):
 def prune_processors(do_prune, processor_list, log, msg, formatter=None, id_fun=None):
 	def _get_class_name(proc):
 		return proc.__class__.__name__
-	selected = filter_processors(processor_list, id_fun or _get_class_name)
-	display_selection(log, processor_list, selected, msg, formatter or _get_class_name)
+	selected = _filter_processors(processor_list, id_fun or _get_class_name)
+	_display_selection(log, processor_list, selected, msg, formatter or _get_class_name)
 	return selected
 
 
@@ -401,3 +383,22 @@ class TwoSidedIterator(object):
 		while self._left + self._right < len(self.__content):
 			self._left += 1
 			yield self.__content[self._left - 1]
+
+
+def _display_selection(log, items_before, items_after, msg, formatter, log_level=logging.DEBUG1):
+	if len(items_before) != len(items_after):
+		log.log(logging.DEBUG, msg, (len(items_before) - len(items_after)))
+		for item in items_before:
+			if item in items_after:
+				log.log(log_level, ' * %s', formatter(item))
+			else:
+				log.log(log_level, '   %s', formatter(item))
+
+
+def _filter_processors(processor_list, id_fun=lambda proc: proc.__class__.__name__):
+	(result, processor_id_list) = ([], [])
+	for proc in processor_list:
+		if proc.enabled() and (id_fun(proc) not in processor_id_list):
+			result.append(proc)
+			processor_id_list.append(id_fun(proc))
+	return result

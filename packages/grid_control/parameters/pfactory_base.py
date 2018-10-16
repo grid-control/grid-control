@@ -1,4 +1,4 @@
-# | Copyright 2012-2016 Karlsruhe Institute of Technology
+# | Copyright 2012-2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -14,10 +14,10 @@
 
 import random, logging
 from grid_control.gc_plugin import ConfigurablePlugin
-from grid_control.parameters.config_param import ParameterConfig
+from grid_control.parameters.pconfig import ParameterConfig
 from grid_control.parameters.psource_base import ParameterError, ParameterSource
 from hpfwk import AbstractError
-from python_compat import ifilter, imap, irange, lidfilter, lmap, sorted
+from python_compat import ifilter, irange, lmap, sorted
 
 
 class ParameterFactory(ConfigurablePlugin):
@@ -47,7 +47,8 @@ class BasicParameterFactory(ParameterFactory):
 		constants_pconfig = ParameterConfig(constants_config)
 		for vn_const in ifilter(lambda opt: ' ' not in opt, constants_config.get_option_list()):
 			constants_config.set('%s type' % vn_const, 'verbatim', '?=')
-			self._register_psrc(constants_pconfig, vn_const.upper())
+			self._psrc_list.append(_create_psrc('InternalAutoParameterSource',
+				constants_pconfig, {}, vn_const.upper()))
 
 		param_config = config.change_view(view_class='TaggedConfigView',
 			set_classes=None, add_sections=['parameters'], inherit_sections=True)
@@ -56,7 +57,7 @@ class BasicParameterFactory(ParameterFactory):
 		task_pconfig = ParameterConfig(param_config)
 		for vn_const in param_config.get_list('constants', []):
 			config.set('%s type' % vn_const, 'verbatim', '?=')
-			self._register_psrc(task_pconfig, vn_const)
+			self._psrc_list.append(_create_psrc('InternalAutoParameterSource', task_pconfig, {}, vn_const))
 
 		# Get global repeat value from 'parameters' section
 		self._repeat = param_config.get_int('repeat', -1, on_change=None)
@@ -68,8 +69,11 @@ class BasicParameterFactory(ParameterFactory):
 		source_list = []
 		for name in self._random_variables:
 			source_list.append(_create_psrc('RNGParameterSource', name))
+		random_seed_dict = {}
 		for (idx, seed) in enumerate(self._random_seeds):
-			source_list.append(_create_psrc('CounterParameterSource', 'SEED_%d' % idx, int(seed)))
+			random_seed_dict['SEED_%d' % idx] = int(seed)
+		if random_seed_dict:
+			source_list.append(_create_psrc('MultiCounterParameterSource', **random_seed_dict))
 		source_list.extend(self._psrc_list)
 		source_list.append(self._pfactory.get_psrc(repository))
 		source = _create_psrc('ZipLongParameterSource', *source_list)
@@ -78,16 +82,6 @@ class BasicParameterFactory(ParameterFactory):
 			source = _create_psrc('ZipLongParameterSource', source, req_source)
 		source = self._use_available_data_psrc(source, repository)
 		return _create_psrc('RepeatParameterSource', source, self._repeat)
-
-	def _register_psrc(self, pconfig, output_vn):
-		def _replace_nonalnum(value):
-			if str.isalnum(value):
-				return value
-			return ' '
-		lookup_str = pconfig.get(output_vn, 'lookup', '')
-		lookup_vn_list = lidfilter(str.join('', imap(_replace_nonalnum, lookup_str)).split())
-		self._psrc_list.append(ParameterSource.create_psrc_safe('InternalAutoParameterSource',
-			pconfig, {}, output_vn, lookup_vn_list))
 
 	def _use_available_data_psrc(self, source, repository):
 		used_sources = source.get_used_psrc_list()
@@ -124,5 +118,5 @@ class UserParameterFactory(ParameterFactory):
 		raise AbstractError
 
 
-def _create_psrc(psrc_name, *args):
-	return ParameterSource.create_instance(psrc_name, *args)
+def _create_psrc(psrc_name, *args, **kwargs):
+	return ParameterSource.create_instance(psrc_name, *args, **kwargs)

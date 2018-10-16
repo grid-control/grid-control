@@ -186,7 +186,7 @@ class ParameterTupleParser(Plugin):
 class ExprParameterParser(ParameterParser):
 	alias_list = ['expr', 'eval']
 
-	def parse_value(self, pconfig, varexpr, vn, value):
+	def parse_value(self, pconfig, varexpr, output_vn, value):
 		result = eval(value)  # pylint:disable=eval-used
 		if isinstance(result, (list, type(irange(1)))):
 			return list(result)
@@ -196,17 +196,17 @@ class ExprParameterParser(ParameterParser):
 class FormatParameterParser(ParameterParser):
 	alias_list = ['format']
 
-	def parse_value(self, pconfig, varexpr, vn, value):
+	def parse_value(self, pconfig, varexpr, output_vn, value):
 		source = pconfig.get(varexpr, 'source')
 		default = pconfig.get(varexpr, 'default', '')
-		return ('FormatterParameterSource', vn, value, source, default)  # class init tuple
+		return ('FormatterParameterSource', output_vn, value, source, default)  # class init tuple
 
 
 class GitParameterParser(ParameterParser):
 	alias_list = ['git']
 
-	def parse_value(self, pconfig, varexpr, vn, value):
-		version = pconfig.get(vn + ' version', default=self._get_version(value), persistent=True)
+	def parse_value(self, pconfig, varexpr, output_vn, value):
+		version = pconfig.get(varexpr, 'version', self._get_version(value), persistent=True)
 		return [version]
 
 	def _get_version(self, value):
@@ -221,31 +221,32 @@ class GitParameterParser(ParameterParser):
 class LinesParameterParser(ParameterParser):
 	alias_list = ['lines']
 
-	def parse_value(self, pconfig, varexpr, vn, value):
+	def parse_value(self, pconfig, varexpr, output_vn, value):
 		return value.splitlines()
 
 
 class RegexTransformParameterParser(ParameterParser):
 	alias_list = ['regex_transform']
 
-	def parse_value(self, pconfig, varexpr, vn, value):
+	def parse_value(self, pconfig, varexpr, output_vn, value):
+		source = pconfig.get(varexpr, 'source')
 		default = pconfig.get(varexpr, 'default', '')
-		setup_dict = parse_dict_cfg(pconfig.get(varexpr, 'transform', ''))
-		return ('RegexTransformParameterSource', vn, value,
+		setup_dict = parse_dict_cfg(value)
+		return ('RegexTransformParameterSource', output_vn, source,
 			setup_dict[0], setup_dict[1], default)  # class init tuple
 
 
 class ShellParameterParser(ParameterParser):
 	alias_list = ['shell', 'default']
 
-	def parse_value(self, pconfig, varexpr, vn, value):
+	def parse_value(self, pconfig, varexpr, output_vn, value):
 		return shlex.split(value)
 
 
 class SplitParameterParser(ParameterParser):
 	alias_list = ['split']
 
-	def parse_value(self, pconfig, varexpr, vn, value):
+	def parse_value(self, pconfig, varexpr, output_vn, value):
 		delimeter = pconfig.get(varexpr, 'delimeter', ',')
 		return lmap(str.strip, value.split(delimeter))
 
@@ -253,8 +254,8 @@ class SplitParameterParser(ParameterParser):
 class SvnParameterParser(ParameterParser):
 	alias_list = ['svn']
 
-	def parse_value(self, pconfig, varexpr, vn, value):
-		version = pconfig.get(vn + ' version', default=self._get_version(value), persistent=True)
+	def parse_value(self, pconfig, varexpr, output_vn, value):
+		version = pconfig.get(varexpr, 'version', self._get_version(value), persistent=True)
 		return [version]
 
 	def _get_version(self, value):
@@ -269,22 +270,22 @@ class SvnParameterParser(ParameterParser):
 class TransformParameterParser(ParameterParser):
 	alias_list = ['transform']
 
-	def parse_value(self, pconfig, varexpr, vn, value):
+	def parse_value(self, pconfig, varexpr, output_vn, value):
 		default = pconfig.get(varexpr, 'default', '')
-		return ('TransformParameterSource', vn, value, default)  # class init tuple
+		return ('TransformParameterSource', output_vn, value, default)  # class init tuple
 
 
 class VerbatimParameterParser(ParameterParser):
 	alias_list = ['verbatim']
 
-	def parse_value(self, pconfig, varexpr, vn, value):
+	def parse_value(self, pconfig, varexpr, output_vn, value):
 		return [value]
 
 
 class BinningTupleParser(ParameterTupleParser):
 	alias_list = ['binning']
 
-	def parse_tuples(self, pconfig, varexpr, vn, value):
+	def parse_tuples(self, pconfig, varexpr, output_vn, value):
 		# eg. '11 12 13 14' -> [(11, 12), (12, 13), (13, 14)] -> [12, 13, 14]
 		tuple_token_list = value.split()
 		return lzip(tuple_token_list, tuple_token_list[1:])
@@ -293,7 +294,7 @@ class BinningTupleParser(ParameterTupleParser):
 class DefaultTupleParser(ParameterTupleParser):
 	alias_list = ['tuple', 'default']
 
-	def parse_tuples(self, pconfig, varexpr, vn, value):
+	def parse_tuples(self, pconfig, varexpr, output_vn, value):
 		# eg. '(A|11) (B|12) (C|13)' -> [('A', 11), ('B', 12), ('C', 13)] -> [11, 12, 13]
 		tuple_delimeter = pconfig.get(varexpr, 'delimeter', ',')
 		tuple_token_list = lmap(str.strip, split_advanced(value,

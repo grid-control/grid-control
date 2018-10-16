@@ -22,8 +22,8 @@ class JabberAlarm(LocalEventHandler):
 	alias_list = ['jabber']
 	config_section_list = LocalEventHandler.config_section_list + ['jabber']
 
-	def __init__(self, config, name, task):
-		LocalEventHandler.__init__(self, config, name, task)
+	def __init__(self, config, name):
+		LocalEventHandler.__init__(self, config, name)
 		self._source_jid = config.get('source jid', on_change=None)
 		self._target_jid = config.get('target jid', on_change=None)
 		password_fn = config.get_fn('source password file')
@@ -43,7 +43,7 @@ class JabberAlarm(LocalEventHandler):
 			except Exception:
 				raise Exception('Unable to load jabber library!')
 
-	def on_task_finish(self, job_len):
+	def on_task_finish(self, task, job_len):
 		try:
 			jid = self._xmpp.protocol.JID(self._source_jid)
 			xmpp_client = self._xmpp.Client(jid.getDomain(), debug=[])
@@ -53,7 +53,7 @@ class JabberAlarm(LocalEventHandler):
 			auth = xmpp_client.auth(jid.getNode(), self._source_password, resource=jid.getResource())
 			if not auth:
 				return self._log.warning('Could not authenticate to jabber server!')
-			text = 'Task %s finished!' % self._task.get_description().task_name
+			text = 'Task %s finished!' % task.get_description().task_name
 			xmpp_client.send(self._xmpp.protocol.Message(self._target_jid, text))
 			time.sleep(1)  # Stay connected until delivered
 		except Exception:

@@ -26,8 +26,8 @@ class DashboardLocal(LocalEventHandler):
 	alias_list = ['dashboard']
 	config_section_list = LocalEventHandler.config_section_list + ['dashboard']
 
-	def __init__(self, config, name, task):
-		LocalEventHandler.__init__(self, config, name, task)
+	def __init__(self, config, name):
+		LocalEventHandler.__init__(self, config, name)
 		self._app = config.get('application', 'shellscript', on_change=None)
 		self._dashboard_timeout = config.get_time('dashboard timeout', 5, on_change=None)
 		self._tasktype = config.get('task', 'analysis', on_change=None)
@@ -36,14 +36,14 @@ class DashboardLocal(LocalEventHandler):
 			Job.RUNNING: 'RUNNING', Job.ABORTED: 'ABORTED', Job.CANCELLED: 'CANCELLED'}
 		self._tp = GCThreadPool()
 
-	def on_job_output(self, wms, job_obj, jobnum, exit_code):
-		self._update_dashboard(wms, job_obj, jobnum, job_obj, {'ExeExitCode': exit_code})
+	def on_job_output(self, task, wms, job_obj, jobnum, exit_code):
+		self._update_dashboard(task, job_obj, jobnum, job_obj, {'ExeExitCode': exit_code})
 
-	def on_job_submit(self, wms, job_obj, jobnum):
+	def on_job_submit(self, task, wms, job_obj, jobnum):
 		# Called on job submission
 		token = wms.get_access_token(job_obj.gc_id)
-		job_config_dict = self._task.get_job_dict(jobnum)
-		self._start_publish(job_obj, jobnum, 'submission', [{'user': get_local_username(),
+		job_config_dict = task.get_job_dict(jobnum)
+		self._start_publish(task, job_obj, jobnum, 'submission', [{'user': get_local_username(),
 			'GridName': '/CN=%s' % token.get_user_name(), 'CMSUser': token.get_user_name(),
 			'tool': 'grid-control', 'JSToolVersion': get_version(),
 			'SubmissionType': 'direct', 'tool_ui': os.environ.get('HOSTNAME', ''),
@@ -53,8 +53,8 @@ class DashboardLocal(LocalEventHandler):
 			'nevtJob': job_config_dict.get('MAX_EVENTS', 0),
 			'datasetFull': job_config_dict.get('DATASETPATH', 'none')}])
 
-	def on_job_update(self, wms, job_obj, jobnum, data):
-		self._update_dashboard(wms, job_obj, jobnum, job_obj, {})
+	def on_job_update(self, task, wms, job_obj, jobnum, data):
+		self._update_dashboard(task, job_obj, jobnum, job_obj, {})
 
 	def on_workflow_finish(self):
 		self._tp.wait_and_drop(self._dashboard_timeout)
@@ -67,17 +67,17 @@ class DashboardLocal(LocalEventHandler):
 		msg = dict_union({'taskId': task_id, 'jobId': dash_id, 'sid': wms_id}, *usermsg)
 		DashboardAPI(task_id, dash_id).publish(**filter_dict(msg, value_filter=identity))
 
-	def _start_publish(self, job_obj, jobnum, desc, msg):
-		task_id = self._task.substitute_variables('dashboard task id', self._taskname, jobnum,
+	def _start_publish(self, task, job_obj, jobnum, desc, msg):
+		task_id = task.substitute_variables('dashboard task id', self._taskname, jobnum,
 			additional_var_dict={'DATASETNICK': ''}).strip('_')
 		self._tp.start_daemon('Notifying dashboard about %s of job %d' % (desc, jobnum),
 			self._publish, job_obj, jobnum, task_id, msg)
 
-	def _update_dashboard(self, wms, job_obj, jobnum, data, add_dict):
+	def _update_dashboard(self, task, job_obj, jobnum, data, add_dict):
 		# Called on job status update and output
 		# Translate status into dashboard status message
 		status_dashboard = self._map_status_job2dashboard.get(job_obj.state, 'PENDING')
-		self._start_publish(job_obj, jobnum, 'status', [{'StatusValue': status_dashboard,
+		self._start_publish(task, job_obj, jobnum, 'status', [{'StatusValue': status_dashboard,
 			'StatusValueReason': data.get('reason', status_dashboard).upper(),
 			'StatusEnterTime': data.get('timestamp', time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime())),
 			'StatusDestination': job_obj.get_job_location()}, add_dict])

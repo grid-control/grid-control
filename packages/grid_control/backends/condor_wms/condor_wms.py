@@ -1,4 +1,4 @@
-# | Copyright 2012-2017 Karlsruhe Institute of Technology
+# | Copyright 2012-2018 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -17,15 +17,16 @@
 import os, re, time, tempfile
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs
 from grid_control.backends.aspect_status import CheckJobsMissingState
+from grid_control.backends.backend_tools import unpack_wildcard_tar
 from grid_control.backends.broker_base import Broker
 from grid_control.backends.condor_wms.processhandler import ProcessHandler
-from grid_control.backends.wms import BackendError, BasicWMS, WMS
+from grid_control.backends.wms import BackendError, BasicWMS, WMS, WallTimeMode
 from grid_control.backends.wms_condor import CondorCancelJobs, CondorCheckJobs
 from grid_control.backends.wms_local import LocalPurgeJobs, SandboxHelper
 from grid_control.utils import Result, ensure_dir_exists, get_path_share, remove_files, resolve_install_path, safe_write, split_blackwhite_list  # pylint:disable=line-too-long
 from grid_control.utils.activity import Activity
 from grid_control.utils.data_structures import make_enum
-from python_compat import imap, irange, lmap, lzip, md5_hex
+from python_compat import imap, irange, lfilter, lmap, lzip, md5_hex
 
 
 # if the ssh stuff proves too hack'y: http://www.lag.net/paramiko/
@@ -87,6 +88,8 @@ class Condor(BasicWMS):
 		self._pool_host_list = config.get_list(['poolhostlist', 'pool host list'], [])
 		self._broker_site = config.get_plugin('site broker', 'UserBroker', cls=Broker,
 			bind_kwargs={'tags': [self]}, pargs=('sites', 'sites', lambda: self._pool_host_list))
+		self._wall_time_mode = config.get_enum('wall time mode', WallTimeMode, WallTimeMode.ignore,
+			subset=[WallTimeMode.hard, WallTimeMode.ignore])
 
 	def get_interval_info(self):
 		# overwrite for check/submit/fetch intervals
@@ -222,7 +225,13 @@ class Condor(BasicWMS):
 		])
 		# cancel held jobs - ignore spooling ones
 		remove_cond = '(JobStatus == 5 && HoldReasonCode != 16)'
+		if self._wall_time_mode == WallTimeMode.hard:
+			# remove a job when it exceeds the requested wall time
+			remove_cond += ' || ((JobStatus == 2) && (CurrentTime - EnteredCurrentStatus) > %s)' % task.wall_time
 		jdl_str_list.append('periodic_remove = (%s)' % remove_cond)
+
+		if self._wall_time_mode != WallTimeMode.ignore:
+			jdl_str_list.append('max_job_retirement_time = %s' % task.wall_time)
 
 		if self._remote_type == PoolType.SPOOL:
 			jdl_str_list.extend([
@@ -249,17 +258,27 @@ class Condor(BasicWMS):
 
 	def _get_jdl_str_list_job(self, jobnum, task, sb_in_fn_list):
 		workdir = self._get_remote_output_dn(jobnum)
+
+		# publish the WMS id for Dashboard
+		environ = 'CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self._name
+
 		sb_out_fn_list = []
 		for (_, src, target) in self._get_out_transfer_info_list(task):
 			if src not in ('gc.stdout', 'gc.stderr'):
 				sb_out_fn_list.append(target)
+
+		# condor does not handle wildcards in transfer_output_files
+		wildcard_list = lfilter(lambda x: '*' in x, sb_out_fn_list)
+		if len(wildcard_list):
+			sb_out_fn_list = lfilter(lambda x: x not in wildcard_list, sb_out_fn_list) + ['GC_WC.tar.gz']
+			environ += ';GC_WC=' + ' '.join(wildcard_list)
+
 		job_sb_in_fn_list = sb_in_fn_list + [os.path.join(workdir, 'job_%d.var' % jobnum)]
 		jdl_str_list = [
 			# store matching Grid-Control and Condor ID
 			'+GridControl_GCtoWMSID = "%s@$(Cluster).$(Process)"' % task.get_description(jobnum).job_name,
 			'+GridControl_GCIDtoWMSID = "%s@$(Cluster).$(Process)"' % jobnum,
-			# publish the WMS id for Dashboard
-			'environment = CONDOR_WMS_DASHID=https://%s:/$(Cluster).$(Process)' % self._name,
+			'environment = %s' % environ,
 			# condor doesn"t execute the job directly. actual job data, files and arguments
 			# are accessed by the GC scripts (but need to be copied to the worker)
 			'transfer_input_files = ' + str.join(', ', job_sb_in_fn_list),
@@ -297,6 +316,8 @@ class Condor(BasicWMS):
 				# clean up remote working directory
 				self._check_and_log_proc(self._proc_factory.logged_execute(
 					'rm -rf %s' % self._get_remote_output_dn(jobnum)))
+			# eventually extract wildcarded output files from the tarball
+			unpack_wildcard_tar(self._log, sandpath)
 			yield (jobnum, sandpath)
 		# clean up if necessary
 		activity.finish()
@@ -326,23 +347,10 @@ class Condor(BasicWMS):
 	def _get_script_and_fn_list(self, task):
 		# resolve file paths for different pool types
 		# handle gc executable separately
-		(script_cmd, sb_in_fn_list) = ('', [])
-		if self._remote_type in (PoolType.SSH, PoolType.GSISSH):
-			for target in imap(lambda d_s_t: d_s_t[2], self._get_in_transfer_info_list(task)):
-				if 'gc-run.sh' in target:
-					script_cmd = os.path.join(self._get_remote_output_dn(), target)
-				else:
-					sb_in_fn_list.append(os.path.join(self._get_remote_output_dn(), target))
-		else:
-			for source in imap(lambda d_s_t: d_s_t[1], self._get_in_transfer_info_list(task)):
-				if 'gc-run.sh' in source:
-					script_cmd = source
-				else:
-					sb_in_fn_list.append(source)
-		if self._universe.lower() == 'docker':
-			script_cmd = './gc-run.sh'
-			sb_in_fn_list.append(get_path_share('gc-run.sh'))
-		return (script_cmd, sb_in_fn_list)
+		script_cmd = './gc-run.sh'
+		sb_in_fn_list = [d_s_t[1] for d_s_t in self._get_in_transfer_info_list(task)]
+		return script_cmd, sb_in_fn_list
+
 
 	def _init_pool_interface(self, config):
 		# prepare commands and interfaces according to selected submit type
@@ -412,7 +420,8 @@ class Condor(BasicWMS):
 		try:
 			# submit all jobs simultaneously and temporarily store verbose (ClassAdd) output
 			activity = Activity('queuing jobs at scheduler')
-			proc = self._proc_factory.logged_execute(self._submit_exec, ' -verbose ' + submit_jdl_fn)
+			submit_args = ' -verbose -batch-name ' + task.get_description().task_name + ' ' + submit_jdl_fn
+			proc = self._proc_factory.logged_execute(self._submit_exec, submit_args)
 
 			# extract the Condor ID (WMS ID) of the jobs from output ClassAds
 			jobnum_gc_id_list = []

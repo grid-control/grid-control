@@ -69,6 +69,28 @@ class RequirementParameterSource(ParameterSource):
 		return ''
 
 
+class MultiCounterParameterSource(ImmutableParameterSource):
+	alias_list = ['multi_counter']
+
+	def __init__(self, **kwargs):
+		self._seed_dict = kwargs
+		ImmutableParameterSource.__init__(self, [str_dict_linear(self._seed_dict)])
+		self._meta_list = lmap(lambda vn: ParameterMetadata(vn, untracked=True), self._seed_dict)
+
+	def __repr__(self):
+		return 'multi_counter(%s)' % str_dict_linear(self._seed_dict)
+
+	def fill_parameter_content(self, pnum, result):
+		for (seed_vn, seed_value) in self._seed_dict.items():
+			result[seed_vn] = seed_value + result['GC_JOB_ID']
+
+	def fill_parameter_metadata(self, result):
+		result.extend(self._meta_list)
+
+	def show_psrc(self):
+		return ['%s: seeds = {%s}' % (self.__class__.__name__, str_dict_linear(self._seed_dict))]
+
+
 class SingleParameterSource(ImmutableParameterSource):
 	def __init__(self, output_vn, hash_src_list):
 		ImmutableParameterSource.__init__(self, hash_src_list)
@@ -185,7 +207,8 @@ class RegexTransformParameterSource(SingleParameterSource):
 			self._regex_comp[regex_pattern] = re.compile(regex_pattern)
 
 	def __repr__(self):
-		return 'regex_transform(%r, %r, %r)' % (self._output_vn, self._source_vn, str_dict_linear(self._regex_dict))
+		return 'regex_transform(%r, %r, %r)' % (self._output_vn, self._source_vn,
+			str_dict_linear(self._regex_dict))
 
 	def fill_parameter_content(self, pnum, result):
 		for regex_pattern in self._regex_order:

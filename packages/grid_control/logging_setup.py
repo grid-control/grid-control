@@ -26,12 +26,6 @@ LogLevelEnum = make_enum(lmap(lambda level: logging.getLevelName(level).upper(),
 	use_hash=False, register=False)
 
 
-def clean_logger(logger_name=None):
-	logger = logging.getLogger(logger_name)
-	logger.handlers = []
-	return logger
-
-
 def dump_log_setup(level):
 	# Display logging setup
 	output = logging.getLogger('logging')
@@ -64,76 +58,17 @@ def dump_log_setup(level):
 		_display_logger(key.count('.') + 1, logger, key)
 
 
-def get_debug_file_candidates():
-	return [
-		os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'),
-		'/tmp/gc.debug.%d.%d' % (os.getuid(), os.getpid()),
-		'~/gc.debug'
-	]
-
-
-def logging_configure_handler(config, logger_name, handler_str, handler):
-	# Configure formatting of handlers
-	def _get_handler_option(postfix):
-		return ['%s %s' % (logger_name, postfix), '%s %s %s' % (logger_name, handler_str, postfix)]
-	fmt = GCFormatter(
-		details_lt=config.get_enum(_get_handler_option('detail lower limit'),
-			LogLevelEnum, logging.DEBUG, on_change=None),
-		details_gt=config.get_enum(_get_handler_option('detail upper limit'),
-			LogLevelEnum, logging.ERROR, on_change=None),
-		ex_context=config.get_int(_get_handler_option('code context'), 2, on_change=None),
-		ex_vars=config.get_int(_get_handler_option('variables'), 200, on_change=None),
-		ex_fstack=config.get_int(_get_handler_option('file stack'), 1, on_change=None),
-		ex_tree=config.get_int(_get_handler_option('tree'), 2, on_change=None),
-		ex_threads=config.get_int(_get_handler_option('thread stack'), 1, on_change=None))
-	handler.setFormatter(fmt)
-	return handler
-
-
-def logging_create_handlers(config, logger_name):
-	# Configure general setup of loggers - destinations, level and propagation
-	logger = logging.getLogger(logger_name.lower().replace('exception', 'abort').replace('root', ''))
-	# Setup handlers
-	handler_list = config.get_list(logger_name + ' handler', [], on_change=None)
-	if handler_list:  # remove any standard handlers:
-		for handler in list(logger.handlers):
-			logger.removeHandler(handler)
-	else:
-		for handler in logger.handlers:
-			logging_configure_handler(config, logger_name, '', handler)
-	for handler_str in UniqueList(handler_list):  # add only unique output handlers
-		if handler_str == 'stdout':
-			handler = StdoutStreamHandler()
-		elif handler_str == 'stderr':
-			handler = StderrStreamHandler()  # pylint:disable=redefined-variable-type
-		elif handler_str == 'file':
-			handler = logging.FileHandler(config.get(logger_name + ' file', on_change=None), 'w')
-		elif handler_str == 'debug_file':
-			handler = GCLogHandler(config.get_fn_list(logger_name + ' debug file',
-				get_debug_file_candidates(), on_change=None, must_exist=False), 'w')
-		else:
-			raise Exception('Unknown handler %s for logger %s' % (handler_str, logger_name))
-		logger.addHandler(logging_configure_handler(config, logger_name, handler_str, handler))
-		logger.propagate = False
-	# Set propagate status
-	logger.propagate = config.get_bool(logger_name + ' propagate',
-		bool(logger.propagate), on_change=None)
-	# Set logging level
-	logger.setLevel(config.get_enum(logger_name + ' level',
-		LogLevelEnum, logger.level, on_change=None))
-
-
 def logging_defaults():
 	formatter_verbose = GCFormatter(ex_context=2, ex_vars=200, ex_fstack=1, ex_tree=2, ex_threads=1)
-	root_logger = clean_logger()
+	root_logger = _clean_logger()
 	root_logger.manager.loggerDict.clear()
 	root_logger.setLevel(logging.DEFAULT)
-	root_handler = register_handler(root_logger, StdoutStreamHandler(), formatter_verbose)
+	root_handler = _register_handler(root_logger, StdoutStreamHandler(), formatter_verbose)
 
 	# Setup logger used for abort messages
-	abort_logger = clean_logger('abort')
+	abort_logger = _clean_logger('abort')
 	abort_logger.propagate = False
-	abort_handler = register_handler(abort_logger, StderrStreamHandler(), formatter_verbose)
+	abort_handler = _register_handler(abort_logger, StderrStreamHandler(), formatter_verbose)
 
 	# Output verbose exception information into dedicated GC log (in gc / tmp / user directory)
 	ignore_exception(Exception, None, _register_debug_log,
@@ -192,7 +127,7 @@ def logging_setup(config):
 	logger_names = sorted(logger_names_set)
 	logger_names.reverse()
 	for logger_name in logger_names:
-		logging_create_handlers(config, logger_name)
+		_logging_create_handlers(config, logger_name)
 
 	logging.getLogger().addHandler(ProcessArchiveHandler(config.get_work_path('error.tar')))
 
@@ -217,12 +152,6 @@ def parse_logging_args(arg_list):
 			else:
 				tmp.append('DEBUG')  # default is to set debug level
 		yield (tmp[0], tmp[1])
-
-
-def register_handler(logger, handler, formatter=None):
-	handler.setFormatter(formatter)
-	logger.addHandler(handler)
-	return handler
 
 
 class LogEveryNsec(logging.Filter):
@@ -384,9 +313,80 @@ class StdoutStreamHandler(GCStreamHandler):
 		return StdoutStreamHandler.stream[-1]
 
 
+def _clean_logger(logger_name=None):
+	logger = logging.getLogger(logger_name)
+	logger.handlers = []
+	return logger
+
+
+def _get_debug_file_candidates():
+	return [
+		os.path.join(os.environ['GC_PACKAGES_PATH'], '..', 'debug.log'),
+		'/tmp/gc.debug.%d.%d' % (os.getuid(), os.getpid()),
+		'~/gc.debug'
+	]
+
+
+def _logging_configure_handler(config, logger_name, handler_str, handler):
+	# Configure formatting of handlers
+	def _get_handler_option(postfix):
+		return ['%s %s' % (logger_name, postfix), '%s %s %s' % (logger_name, handler_str, postfix)]
+	fmt = GCFormatter(
+		details_lt=config.get_enum(_get_handler_option('detail lower limit'),
+			LogLevelEnum, logging.DEBUG, on_change=None),
+		details_gt=config.get_enum(_get_handler_option('detail upper limit'),
+			LogLevelEnum, logging.ERROR, on_change=None),
+		ex_context=config.get_int(_get_handler_option('code context'), 2, on_change=None),
+		ex_vars=config.get_int(_get_handler_option('variables'), 200, on_change=None),
+		ex_fstack=config.get_int(_get_handler_option('file stack'), 1, on_change=None),
+		ex_tree=config.get_int(_get_handler_option('tree'), 2, on_change=None),
+		ex_threads=config.get_int(_get_handler_option('thread stack'), 1, on_change=None))
+	handler.setFormatter(fmt)
+	return handler
+
+
+def _logging_create_handlers(config, logger_name):
+	# Configure general setup of loggers - destinations, level and propagation
+	logger = logging.getLogger(logger_name.lower().replace('exception', 'abort').replace('root', ''))
+	# Setup handlers
+	handler_list = config.get_list(logger_name + ' handler', [], on_change=None)
+	if handler_list:  # remove any standard handlers:
+		for handler in list(logger.handlers):
+			logger.removeHandler(handler)
+	else:
+		for handler in logger.handlers:
+			_logging_configure_handler(config, logger_name, '', handler)
+	for handler_str in UniqueList(handler_list):  # add only unique output handlers
+		if handler_str == 'stdout':
+			handler = StdoutStreamHandler()
+		elif handler_str == 'stderr':
+			handler = StderrStreamHandler()  # pylint:disable=redefined-variable-type
+		elif handler_str == 'file':
+			handler = logging.FileHandler(config.get(logger_name + ' file', on_change=None), 'w')
+		elif handler_str == 'debug_file':
+			handler = GCLogHandler(config.get_fn_list(logger_name + ' debug file',
+				_get_debug_file_candidates(), on_change=None, must_exist=False), 'w')
+		else:
+			raise Exception('Unknown handler %s for logger %s' % (handler_str, logger_name))
+		logger.addHandler(_logging_configure_handler(config, logger_name, handler_str, handler))
+		logger.propagate = False
+	# Set propagate status
+	logger.propagate = config.get_bool(logger_name + ' propagate',
+		bool(logger.propagate), on_change=None)
+	# Set logging level
+	logger.setLevel(config.get_enum(logger_name + ' level',
+		LogLevelEnum, logger.level, on_change=None))
+
+
 def _register_debug_log(abort_logger, abort_handler, formatter_verbose, root_handler):
-	register_handler(abort_logger,
-		GCLogHandler(get_debug_file_candidates(), mode='w'), formatter_verbose)
+	_register_handler(abort_logger,
+		GCLogHandler(_get_debug_file_candidates(), mode='w'), formatter_verbose)
 	formatter_quiet = GCFormatter(ex_context=0, ex_vars=0, ex_fstack=0, ex_tree=1, ex_threads=0)
 	abort_handler.setFormatter(formatter_quiet)
 	root_handler.setFormatter(formatter_quiet)
+
+
+def _register_handler(logger, handler, formatter=None):
+	handler.setFormatter(formatter)
+	logger.addHandler(handler)
+	return handler

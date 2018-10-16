@@ -26,10 +26,6 @@ class ProcessTimeout(ProcessError):
 	pass
 
 
-def wait_fd(fd_read_list=None, fd_write_list=None, timeout=0.2):
-	return select.select(fd_read_list or [], fd_write_list or [], [], timeout)
-
-
 class Process(object):
 	def __init__(self, cmd, *args, **kwargs):
 		self._time_started = None
@@ -218,7 +214,7 @@ class LocalProcess(Process):
 			else:  # empty local buffer - wait for data to process
 				local_buffer = buffer.get(timeout=1, default='')
 			if local_buffer:
-				wait_fd(fd_write_list=[fd_write])
+				_wait_fd(fd_write_list=[fd_write])
 				if not event_shutdown.is_set():
 					written = ignore_exception(OSError, 0, os.write, fd_write, str2bytes(local_buffer))
 					local_buffer = local_buffer[written:]
@@ -235,7 +231,7 @@ class LocalProcess(Process):
 					break
 				buffer.put(tmp)
 		while not event_shutdown.is_set():
-			wait_fd(fd_read_list=[fd_read])
+			_wait_fd(fd_read_list=[fd_read])
 			_read_to_buffer()
 		_read_to_buffer()  # Final readout after process finished
 	_handle_output = classmethod(_handle_output)
@@ -394,3 +390,7 @@ class ProcessWriteStream(ProcessStream):
 		if log and (self._log is not None):
 			self._log += value
 		self._buffer.put(value)
+
+
+def _wait_fd(fd_read_list=None, fd_write_list=None, timeout=0.2):
+	return select.select(fd_read_list or [], fd_write_list or [], [], timeout)

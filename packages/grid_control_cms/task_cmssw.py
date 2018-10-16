@@ -66,9 +66,9 @@ class SCRAMTask(DataTask):
 			except:
 				raise ConfigError('Installed program in project area not recognized.')
 
-			def filter_arch_dir(dn):
+			def _filter_arch_dir(dn):
 				return os.path.isdir(os.path.join(scram_path, dn))
-			for arch_dir in sorted(ifilter(filter_arch_dir, os.listdir(scram_path))):
+			for arch_dir in sorted(ifilter(_filter_arch_dir, os.listdir(scram_path))):
 				scram_arch_default = arch_dir
 
 		self._scram_version = config.get('scram version', 'scramv1')
