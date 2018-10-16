@@ -1,4 +1,4 @@
-# | Copyright 2014-2017 Karlsruhe Institute of Technology
+# | Copyright 2014-2018 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,11 +12,11 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, gzip, logging
+import os, sys, gzip, errno, logging
 from grid_control.utils import DictFormat
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.file_tools import SafeFile
-from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception, get_current_exception
+from hpfwk import AbstractError, NestedException, Plugin, clear_current_exception
 from python_compat import bytes2str, ifilter, izip
 
 
@@ -76,6 +76,19 @@ class SandboxProcessor(TaskOutputProcessor):
 		return True
 
 
+class RemoveTaskOutputProcessor(TaskOutputProcessor):
+	alias_list = ['null']
+
+	def process(self, dn, task):
+		for fname in ('gc.stdout', 'gc.stderr'):
+			try:
+				os.remove(os.path.join(dn, fname))
+			except OSError as e:
+				if e.errno != errno.ENOENT:  # no such file
+					raise
+		return True
+
+
 class DebugJobInfoProcessor(JobInfoProcessor):
 	alias_list = ['debug']
 
@@ -117,22 +130,22 @@ class FileInfoProcessor(JobInfoProcessor):
 			job_info_dict = JobInfoProcessor.process(self, dn)
 		except JobResultError:
 			logger = logging.getLogger('jobs.results')
-			logger.warning('Unable to process job information', exc_info=get_current_exception())
+			logger.warning('Unable to process job information', exc_info=sys.exc_info())
 			clear_current_exception()
 		if job_info_dict:
 			job_data_dict = job_info_dict[JobResult.RAW]
 			result = {}
 
-			def get_items_with_key(key_prefix):
+			def _get_items_with_key(key_prefix):
 				return ifilter(lambda key_value: key_value[0].startswith(key_prefix), job_data_dict.items())
 
 			# parse old job info data format for files
 			old_fmt_header = [FileInfo.Hash, FileInfo.NameLocal, FileInfo.NameDest, FileInfo.Path]
-			for (file_key, file_data) in get_items_with_key('FILE'):
+			for (file_key, file_data) in _get_items_with_key('FILE'):
 				file_idx = file_key.replace('FILE', '') or '0'
 				result[int(file_idx)] = dict(izip(old_fmt_header, file_data.strip('"').split('  ')))
 			# parse new job info data format
-			for (file_key, file_data) in get_items_with_key('OUTPUT_FILE'):
+			for (file_key, file_data) in _get_items_with_key('OUTPUT_FILE'):
 				(file_idx, file_prop) = file_key.replace('OUTPUT_FILE_', '').split('_')
 				if isinstance(file_data, str):
 					file_data = file_data.strip('"')

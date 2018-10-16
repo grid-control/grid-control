@@ -45,6 +45,8 @@ BackendJobState = make_enum([  # pylint:disable=invalid-name
 	'WAITING',  # job is at WMS but was not yet assigned some place to run
 ])
 
+WallTimeMode = make_enum(['hard', 'soft', 'ignore'])  # pylint:disable=invalid-name
+
 
 class WMS(NamedPlugin):
 	alias_list = ['NullWMS']
@@ -199,23 +201,6 @@ class BasicWMS(WMS):
 		return self._token
 
 	def retrieve_jobs(self, gc_id_jobnum_list):  # Process output sandboxes returned by getJobsOutput
-		# Function to force moving a directory
-		def _force_move(source, target):
-			try:
-				if os.path.exists(target):
-					shutil.rmtree(target)
-			except IOError:
-				self._log.exception('%r cannot be removed', target)
-				clear_current_exception()
-				return False
-			try:
-				shutil.move(source, target)
-			except IOError:
-				self._log.exception('Error moving job output directory from %r to %r', source, target)
-				clear_current_exception()
-				return False
-			return True
-
 		jobnum_list_retrieved = []
 
 		for jobnum_input, output_dn in self._get_jobs_output(gc_id_jobnum_list):
@@ -231,18 +216,10 @@ class BasicWMS(WMS):
 
 			# jobnum_input != None, output_dn != None => Job retrieval from WMS was ok
 			job_fn = os.path.join(output_dn, 'job.info')
-			job_info = ignore_exception(Exception, None, self._job_parser.process, output_dn)
-			if job_info is None:
-				self._log.exception('Unable to parse job.info')
-			if job_info:
-				jobnum = job_info[JobResult.JOBNUM]
-				if jobnum != jobnum_input:
-					raise BackendError('Invalid job id in job file %s' % job_fn)
-				if _force_move(output_dn, os.path.join(self._path_output, 'job_%d' % jobnum)):
-					jobnum_list_retrieved.append(jobnum_input)
-					yield (jobnum, job_info[JobResult.EXITCODE], job_info[JobResult.RAW], output_dn)
-				else:
-					yield (jobnum, -1, {}, None)
+			retrieve_result = self._parse_job_info_file(jobnum_input,
+				job_fn, output_dn, jobnum_list_retrieved)
+			if retrieve_result is not None:
+				yield retrieve_result
 				continue
 
 			# Clean empty output_dns
@@ -252,7 +229,7 @@ class BasicWMS(WMS):
 			if os.path.exists(output_dn):
 				# Preserve failed job
 				ensure_dir_exists(self._path_fail, 'failed output directory')
-				_force_move(output_dn, os.path.join(self._path_fail, os.path.basename(output_dn)))
+				_force_move(self._log, output_dn, os.path.join(self._path_fail, os.path.basename(output_dn)))
 
 			yield (jobnum_input, -1, {}, None)
 
@@ -312,6 +289,26 @@ class BasicWMS(WMS):
 		return os.path.join(self._path_file_cache,
 			task.get_description().task_id, self._name, 'gc-sandbox.tar.gz')
 
+	def _parse_job_info_file(self, jobnum_input, job_fn, output_dn, jobnum_list_retrieved):
+		# jobnum_input != None, output_dn != None => Job retrieval from WMS was ok
+		job_fn = os.path.join(output_dn, 'job.info')
+		job_info_dict = ignore_exception(Exception, None, self._job_parser.process, output_dn)
+		if not os.path.exists(job_fn):
+			self._log.warning('Job information file is missing')
+		elif job_info_dict is None:
+			self._log.warning('Unable to parse job information file')
+		elif job_info_dict.get(JobResult.JOBNUM, '') == '':
+			self._log.warning('Job was unable to read job config file')
+		elif job_info_dict:
+			jobnum = job_info_dict[JobResult.JOBNUM]
+			if jobnum != jobnum_input:  # consistency check
+				raise BackendError('Invalid job id in job file %s' % job_fn)
+			if _force_move(self._log, output_dn, os.path.join(self._path_output, 'job_%d' % jobnum)):
+				jobnum_list_retrieved.append(jobnum_input)
+				return (jobnum, job_info_dict[JobResult.EXITCODE], job_info_dict[JobResult.RAW], output_dn)
+			else:  # error while moving job output directory
+				return (jobnum, -1, {}, None)
+
 	def _run_executor(self, desc, executor, fmt, gc_id_list, *args):
 		# Perform some action with the executor, translate wms_id -> gc_id and format the result
 		activity = Activity(desc)
@@ -348,3 +345,21 @@ class Grid(WMS):  # redirector - used to avoid loading the whole grid module jus
 		grid_config = config.change_view(view_class='TaggedConfigView',
 			set_classes=[WMS.get_class(grid_wms)])
 		return WMS.create_instance(grid_wms, grid_config, name)
+
+
+def _force_move(log, source, target):
+	# Function to force moving a directory
+	try:
+		if os.path.exists(target):
+			shutil.rmtree(target)
+	except IOError:
+		log.exception('%r cannot be removed', target)
+		clear_current_exception()
+		return False
+	try:
+		shutil.move(source, target)
+	except IOError:
+		log.exception('Error moving job output directory from %r to %r', source, target)
+		clear_current_exception()
+		return False
+	return True

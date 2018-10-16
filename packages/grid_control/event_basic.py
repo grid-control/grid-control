@@ -1,4 +1,4 @@
-# | Copyright 2009-2017 Karlsruhe Institute of Technology
+# | Copyright 2017 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -37,13 +37,13 @@ class CompatEventHandlerManager(EventHandlerManager):
 class BasicLogEventHandler(LocalEventHandler):
 	alias_list = ['logmonitor']
 
-	def __init__(self, config, name, task):
-		LocalEventHandler.__init__(self, config, name, task)
-		self._map_error_code2msg = dict(task.map_error_code2msg)
+	def __init__(self, config, name):
+		LocalEventHandler.__init__(self, config, name)
 		self._log_status = logging.getLogger('jobs.status')
 		self._show_wms = config.get_bool('event log show wms', False, on_change=None)
 
-	def on_job_state_change(self, job_db_len, jobnum, job_obj, old_state, new_state, reason=None):
+	def on_job_state_change(self, task, job_db_len,
+			jobnum, job_obj, old_state, new_state, reason=None):
 		jobnum_len = int(math.log10(max(1, job_db_len)) + 1)
 		job_status_str_list = ['Job %s state changed from %s to %s' % (
 			str(jobnum).ljust(jobnum_len), Job.enum2str(old_state), Job.enum2str(new_state))]
@@ -62,21 +62,22 @@ class BasicLogEventHandler(LocalEventHandler):
 			if (job_obj.get('runtime') or 0) >= 0:
 				job_status_str_list.append('(runtime %s)' % str_time_long(job_obj.get('runtime') or 0))
 		elif new_state == Job.FAILED:
-			fail_msg = self._explain_failure(job_obj)
+			fail_msg = self._explain_failure(task, job_obj)
 			if fail_msg:
 				job_status_str_list.append('(%s)' % fail_msg)
 		self._log_status.log_time(logging.INFO, str.join(' ', job_status_str_list))
 
-	def on_task_finish(self, job_len):
+	def on_task_finish(self, task, job_len):
 		self._log_status.log_time(logging.INFO, 'Task successfully completed. Quitting grid-control!')
 
-	def _explain_failure(self, job_obj):
+	def _explain_failure(self, task, job_obj):
+		map_error_code2msg = dict(task.map_error_code2msg)
 		msg_list = []
 		exit_code = job_obj.get('retcode')
 		if exit_code:
 			msg_list.append('error code: %d' % exit_code)
-			if self._log_status.isEnabledFor(logging.DEBUG) and (exit_code in self._map_error_code2msg):
-				msg_list.append(self._map_error_code2msg[exit_code])
+			if self._log_status.isEnabledFor(logging.DEBUG) and (exit_code in map_error_code2msg):
+				msg_list.append(map_error_code2msg[exit_code])
 		job_location = job_obj.get_job_location()
 		if job_location:
 			msg_list.append(job_location)
@@ -89,8 +90,8 @@ class ScriptEventHandler(LocalEventHandler):
 	alias_list = ['scripts']
 	config_section_list = LocalEventHandler.config_section_list + ['scripts']
 
-	def __init__(self, config, name, task):
-		LocalEventHandler.__init__(self, config, name, task)
+	def __init__(self, config, name):
+		LocalEventHandler.__init__(self, config, name)
 		self._silent = config.get_bool('silent', True, on_change=None)
 		self._script_submit = config.get_command('on submit', '', on_change=None)
 		self._script_status = config.get_command('on status', '', on_change=None)
@@ -100,31 +101,32 @@ class ScriptEventHandler(LocalEventHandler):
 		self._path_work = config.get_work_path()
 		self._tp = GCThreadPool()
 
-	def on_job_output(self, wms, job_obj, jobnum, exit_code):
+	def on_job_output(self, task, wms, job_obj, jobnum, exit_code):
 		# Called on job status update
-		self._run_in_background(self._script_output, jobnum, job_obj, {'RETCODE': exit_code})
+		self._run_in_background(self._script_output, task, jobnum, job_obj, {'RETCODE': exit_code})
 
-	def on_job_submit(self, wms, job_obj, jobnum):
+	def on_job_submit(self, task, wms, job_obj, jobnum):
 		# Called on job submission
-		self._run_in_background(self._script_submit, jobnum, job_obj)
+		self._run_in_background(self._script_submit, task, jobnum, job_obj)
 
-	def on_job_update(self, wms, job_obj, jobnum, data):
+	def on_job_update(self, task, wms, job_obj, jobnum, data):
 		# Called on job status update
-		self._run_in_background(self._script_status, jobnum, job_obj)
+		self._run_in_background(self._script_status, task, jobnum, job_obj)
 
-	def on_task_finish(self, job_len):
+	def on_task_finish(self, task, job_len):
 		# Called at the end of the task
-		self._run_in_background(self._script_finish, jobnum=0, additional_var_dict={'NJOBS': job_len})
+		self._run_in_background(self._script_finish, task,
+			jobnum=0, additional_var_dict={'NJOBS': job_len})
 
 	def on_workflow_finish(self):
 		self._tp.wait_and_drop(self._script_timeout)
 
-	def _run_in_background(self, script, jobnum=None, job_obj=None, additional_var_dict=None):
+	def _run_in_background(self, script, task, jobnum=None, job_obj=None, additional_var_dict=None):
 		if script != '':
 			self._tp.start_daemon('Running event handler script %s' % script,
-				self._script_thread, script, jobnum, job_obj, additional_var_dict)
+				self._script_thread, script, task, jobnum, job_obj, additional_var_dict)
 
-	def _script_thread(self, script, jobnum=None, job_obj=None, add_dict=None):
+	def _script_thread(self, script, task, jobnum=None, job_obj=None, add_dict=None):
 		# Get both task and job config / state dicts
 		try:
 			tmp = {}
@@ -133,7 +135,7 @@ class ScriptEventHandler(LocalEventHandler):
 					tmp[key.upper()] = value
 			tmp['GC_WORKDIR'] = self._path_work
 			if jobnum is not None:
-				tmp.update(self._task.get_job_dict(jobnum))
+				tmp.update(task.get_job_dict(jobnum))
 			tmp.update(add_dict or {})
 			env = dict(os.environ)
 			for key, value in tmp.items():
@@ -141,7 +143,7 @@ class ScriptEventHandler(LocalEventHandler):
 					key = 'GC_' + key
 				env[key] = str(value)
 
-			script = self._task.substitute_variables('monitoring script', script, jobnum, tmp)
+			script = task.substitute_variables('monitoring script', script, jobnum, tmp)
 			if not self._silent:
 				proc = LocalProcess(*shlex.split(script), **{'env_dict': env})
 				proc_output = proc.get_output(timeout=self._script_timeout)

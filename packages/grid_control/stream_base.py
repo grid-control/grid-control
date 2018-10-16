@@ -50,7 +50,7 @@ class DefaultActivityMonitor(ActivityMonitor):
 			return ActivityMonitor.create_instance('MultiActivityMonitor', config, stream, register_callback)
 		except Exception:  # fall back to standard terminal activity stream
 			clear_current_exception()
-			return ActivityMonitor.create_instance('SingleActivityMonitor', config, stream, register_callback)
+		return ActivityMonitor.create_instance('SingleActivityMonitor', config, stream, register_callback)
 
 
 class NullOutputStream(ActivityMonitor):

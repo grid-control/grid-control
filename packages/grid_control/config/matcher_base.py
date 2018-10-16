@@ -122,9 +122,9 @@ class ListFilter(Plugin):
 			self._positive = matcher.get_positive_selector(selector)
 			match_obj = matcher.create_matcher(selector)
 			if negate:
-				def match_fun(item):
+				def _match_fun(item):
 					return -match_obj.match(item)
-				self._match_function = match_fun
+				self._match_function = _match_fun
 			else:
 				self._match_function = match_obj.match
 

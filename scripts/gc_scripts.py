@@ -113,6 +113,8 @@ def get_script_object(config_file, job_selector_str, only_success=False, require
 	jobs_config = new_config.change_view(set_sections=['jobs'])
 	job_db = jobs_config.get_plugin('job database', 'TextFileJobDB', cls='JobDB',
 		pkwargs={'job_selector': job_selector}, on_change=None)
+	if require_task:
+		job_db.set_job_limit(task.get_job_len())
 
 	class ScriptObject(object):
 		def __init__(self, config, new_config, task, job_db):

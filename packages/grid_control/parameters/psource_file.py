@@ -51,9 +51,9 @@ class CSVParameterSource(InternalParameterSource):  # Reader for CSV files
 			return 'csv(%r)' % self._fn
 		return 'csv(%r, %r)' % (self._fn, self._format)
 
-	def create_psrc(cls, pconfig, repository, src='CSV'):  # pylint:disable=arguments-differ
-		fn = pconfig.get(src, 'source')
-		return CSVParameterSource(fn, pconfig.get(src, 'format', 'sniffed'))
+	def create_psrc(cls, pconfig, repository, ref_name='CSV'):  # pylint:disable=arguments-differ
+		fn = pconfig.get(ref_name, 'source')
+		return CSVParameterSource(fn, pconfig.get(ref_name, 'format', 'sniffed'))
 	create_psrc = classmethod(create_psrc)
 
 

@@ -1,4 +1,4 @@
-# | Copyright 2016-2017 Karlsruhe Institute of Technology
+# | Copyright 2016-2018 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -61,8 +61,6 @@ class Urllib2Session(RestSession):
 
 			def _get_connection(self, host, timeout=None):
 				return Urllib2Session.HTTPSConnection(host, key_file=cert, cert_file=cert)
-		setattr(HTTPSClientAuthHandler, 'getConnection',
-			getattr(HTTPSClientAuthHandler, '_get_connection'))
 
 		if cert:
 			return Urllib2Session.build_opener(HTTPSClientAuthHandler())

@@ -117,16 +117,16 @@ class JobDB(ConfigurablePlugin):
 			subset = irange(self._job_limit)
 
 		if job_selector and self._always_selector:
-			def select(*args):
+			def _select(*args):
 				return job_selector(*args) and self._always_selector(*args)
 		elif job_selector or self._always_selector:
-			select = job_selector or self._always_selector
+			_select = job_selector or self._always_selector
 		else:
 			for jobnum in subset:
 				yield jobnum
 		if job_selector or self._always_selector:
 			for jobnum in subset:
-				if select(jobnum, self.get_job_transient(jobnum)):
+				if _select(jobnum, self.get_job_transient(jobnum)):
 					yield jobnum
 
 	def set_job_limit(self, value):

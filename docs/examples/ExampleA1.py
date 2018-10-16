@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 
-# Throw exceptions if the file is executed in the wrong way or grid-control incorrectly installed
-if 'Settings' in locals():
+if 'Settings' in locals():  # Throw exceptions if the file is executed in the wrong way
 	raise Exception('This file is supposed to be run directly by python - not by go.py!')
 try:
 	from grid_control_api import gc_create_config, gc_create_workflow
-except ImportError:
+except ImportError:  # .. or if grid-control is incorrectly installed
 	raise Exception('grid-control is not correctly installed ' +
 		'or the gc package directory is not part of the PYTHONPATH.')
 
