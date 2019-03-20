@@ -443,8 +443,15 @@ url_exists() {
 			[ "$(basename $EXCMD)" == "lcg-ls" ] && URL="sfn://${1#gsiftp://}" || URL="$1"
 			print_and_eval "$EXCMD" "$URL";;
 		"srm://"*)
-			EXCMD="`getcommand lcg-ls srm-check-permissions`"
+			EXCMD="`getcommand gfal-ls lcg-ls srm-check-permissions`"
+
 			[ "$(basename $EXCMD)" == "lcg-ls" ] && EXCMD="$EXCMD -b -T srmv2"
+
+			# LD_LIBRARY_PATH is not set in HTCondor submissions (DESY)
+			# adapted from /etc/profile.d/aa-grid-env.sh:
+			GRID_UI_LIBS="${EMI_TARBALL_BASE}/lib64:${EMI_TARBALL_BASE}/lib:${EMI_TARBALL_BASE}/usr/lib64:${EMI_TARBALL_BASE}/usr/lib:${EMI_TARBALL_BASE}/usr/lib64/dcap"
+			[ "$(basename $EXCMD)" == "gfal-ls" ] && EXCMD="LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$GRID_UI_LIBS $EXCMD"
+
 			print_and_eval "$EXCMD" "$1";;
 		"file://"*)
 			print_and_eval " " "test" "-s ${1#file://}";;
