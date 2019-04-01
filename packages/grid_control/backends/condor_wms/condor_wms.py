@@ -91,6 +91,7 @@ class Condor(BasicWMS):
 		self._wall_time_mode = config.get_enum('wall time mode', WallTimeMode, WallTimeMode.ignore,
 			subset=[WallTimeMode.hard, WallTimeMode.ignore])
 		self._blacklist_nodes = config.get_list(['blacklist nodes'], [], on_change=None)
+		self._user_requirements = config.get('user requirements', '', on_change=None)
 
 	def get_interval_info(self):
 		# overwrite for check/submit/fetch intervals
@@ -293,9 +294,11 @@ class Condor(BasicWMS):
 			'arguments = %s ' % jobnum
 		]
 
+		requirements = '(%s)' % self._user_requirements
 		if self._blacklist_nodes:
 			blacklist_nodes = ['Machine != "%s"' % node for node in self._blacklist_nodes]
-			jdl_str_list.append('Requirements = (%s)' % ' && '.join(blacklist_nodes))
+			requirements += ' && (%s)' % ' && '.join(blacklist_nodes)
+		jdl_str_list.append('Requirements = (%s)' % requirements)
 
 		jdl_str_list.extend(self._get_jdl_req_str_list(jobnum, task))
 		jdl_str_list.append('Queue\n')
