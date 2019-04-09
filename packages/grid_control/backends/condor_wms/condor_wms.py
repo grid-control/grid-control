@@ -294,11 +294,16 @@ class Condor(BasicWMS):
 			'arguments = %s ' % jobnum
 		]
 
-		requirements = '(%s)' % self._user_requirements
+		requirements = ''
+		if self._user_requirements:
+			requirements = '(%s)' % self._user_requirements
 		if self._blacklist_nodes:
+			if requirements:
+				requirements += ' && '
 			blacklist_nodes = ['Machine != "%s"' % node for node in self._blacklist_nodes]
-			requirements += ' && (%s)' % ' && '.join(blacklist_nodes)
-		jdl_str_list.append('Requirements = (%s)' % requirements)
+			requirements += '(%s)' % ' && '.join(blacklist_nodes)
+		if requirements:
+			jdl_str_list.append('Requirements = (%s)' % requirements)
 
 		jdl_str_list.extend(self._get_jdl_req_str_list(jobnum, task))
 		jdl_str_list.append('Queue\n')
