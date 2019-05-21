@@ -443,8 +443,9 @@ url_exists() {
 			[ "$(basename $EXCMD)" == "lcg-ls" ] && URL="sfn://${1#gsiftp://}" || URL="$1"
 			print_and_eval "$EXCMD" "$URL";;
 		"srm://"*)
-			EXCMD="`getcommand lcg-ls srm-check-permissions`"
-			[ "$(basename $EXCMD)" == "lcg-ls" ] && EXCMD="$EXCMD -b -T srmv2"
+			#EXCMD="`getcommand gfal-ls srm-check-permissions`"
+			#[ "$(basename $EXCMD)" == "lcg-ls" ] && EXCMD="$EXCMD -b -T srmv2"
+			EXCMD="gfal-ls"
 			print_and_eval "$EXCMD" "$1";;
 		"file://"*)
 			print_and_eval " " "test" "-s ${1#file://}";;
@@ -506,15 +507,15 @@ url_copy_single_local() {
 url_copy_single_srm() {
 	debug_helper $FUNCNAME "$@"
 	RESULT=1
-	if [ "$(basename `getcommand lcg-cp`)" == "lcg-cp" ]; then
+	if [ "$(basename `getcommand gfal-copy`)" == "gfal-copy" ]; then
 		ARGS=""
 		# avoid using bdii: it is not configured at many sites (OSG)
-		if echo "$1" | grep "SFN=" > /dev/null; then
-			ARGS="-b -T srmv2"
-		elif echo "$2" | grep "SFN=" > /dev/null; then
-			ARGS="-b -U srmv2"
-		fi
-		print_and_eval "lcg-cp" $ARGS "-v -n 1" "$1" "$2"
+		#if echo "$1" | grep "SFN=" > /dev/null; then
+		#	ARGS="-b -T srmv2"
+		#elif echo "$2" | grep "SFN=" > /dev/null; then
+		#	ARGS="-b -U srmv2"
+		#fi
+		print_and_eval "gfal-copy" $ARGS "-v -n 1" "$1" "$2"
 		RESULT=$?
 		if [ $RESULT -gt 0 ]; then
 			url_rm "$2" # continue later with srmcp
