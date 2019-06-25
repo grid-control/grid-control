@@ -87,4 +87,4 @@ class GCLogHandler(logging.FileHandler):
 		fp.close()
 		logging.FileHandler.emit(self, record)
 		sys.stderr.write('\nIn case this is caused by a bug, please send the log file:\n' +
-			'\t%r\n' % self._fn + 'to grid-control-dev@googlegroups.com\n')
+			'\t%r\n' % self._fn + 'to naf-cms-support@desy.de\n')
