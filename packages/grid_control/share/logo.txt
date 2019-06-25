@@ -8,4 +8,6 @@
 *    |___/                                                      *
 *                 The Swiss Army knife of job submission tools  *
 *                                             arXiv:1707.03198  *
+*                                                               *
+* https://github.com/grid-control/grid-control                  *
 *****************************************************************
