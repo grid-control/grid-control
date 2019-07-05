@@ -107,7 +107,9 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 			'global': {'gui': opts.gui, 'submission': opts.submission},
 			'jobs': {'jobs': opts.jobs, 'max retry': opts.max_retry, 'selected': opts.job_selector},
 			'logging': {'debug mode': opts.debug},
+			'createwd': {'create wd': opts.createwd},
 		}
+
 		for section in cmd_line_config_map:
 			for (option, value) in cmd_line_config_map[section].items():
 				_set_config_from_opt(section, option, value)
@@ -209,6 +211,7 @@ def _parse_cmd_line(cmd_line_args):
 	parser.add_bool(None, 'q', 'resync', default=False)
 	parser.add_bool(None, 's', 'no-submission', default=True, dest='submission')
 	parser.add_bool(None, 'G', 'gui', default=False, dest='gui_ansi')
+	parser.add_bool(None, ' ', 'createwd', default=False)
 	parser.add_accu(None, 'v', 'verbose')
 	parser.add_list(None, 'l', 'logging')
 	parser.add_list(None, 'o', 'override')
@@ -255,7 +258,8 @@ def _setup_work_path(config):
 			log.warning('Starting initialization of %s!', config.get_work_path())
 			config.set_state(True, 'init')
 		work_dn_create_msg = 'Do you want to create the working directory %s?'
-		if config.get_choice_yes_no('workdir create', True,
+		if config._config_view._container_cur._content['create wd'][0].value or \
+			config.get_choice_yes_no('workdir create', True,
 				interactive_msg=work_dn_create_msg % config.get_work_path()):
 			ensure_dir_exists(config.get_work_path(), 'work directory')
 
