@@ -15,10 +15,14 @@ Quick HOWTO
 
     pip install grid-control
 
+For a more instructive introduction, visit the `user's guide`_.
+
 More examples can be found in the `github`_ repository.
 
 
 .. _github: https://github.com/grid-control/grid-control/tree/testing/docs/examples
+
+.. _user's guide: https://grid-control.github.io
 
 .. |PyPI Version| image:: https://badge.fury.io/py/grid-control.svg
    :target: https://badge.fury.io/py/grid-control
