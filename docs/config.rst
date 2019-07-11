@@ -2577,6 +2577,9 @@ MultiWMS options
 Condor options
 --------------
 
+* ``blacklist nodes`` = <list of values> (Default: '')
+    Nodes to blacklist (for temporary reasons), e.g. ``blacklist nodes = bird9998.desy.de bird9999.desy.de``
+
 * ``classad data / classaddata`` = <list of values> (Default: '')
     List of classAds to manually add to the job submission file
 
@@ -2641,6 +2644,14 @@ Condor options
 
 * ``universe`` = <text> (Default: 'vanilla')
     Specify the name of the Condor universe
+
+* ``user requirements`` = <text> (Default: '')
+    Condor user requirements, e.g.
+
+    .. code:: ini
+
+      [condor]
+      user requirements = ( OpSysAndVer == "CentOS7" || OpSysAndVer == "SL6")
 
 * ``wait idle`` = <integer> (Default: 60)
     Wait for the specified duration if the job cycle was idle
