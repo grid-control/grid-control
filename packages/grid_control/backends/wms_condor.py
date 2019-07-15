@@ -40,6 +40,7 @@ class CondorCheckJobs(CheckJobsWithProcess):
 				Job.READY: [1],          # idle (waiting for a machine to execute on)
 				Job.RUNNING: [2],
 				Job.WAITING: [0, 5, 7],  # unexpanded (never been run); DISABLED (on hold); suspended
+				Job.UNKNOWN: [-1],       # job status was no integer, e.g. 'undefined'
 			})
 
 	def _handle_error(self, proc):
@@ -64,7 +65,11 @@ class CondorCheckJobs(CheckJobsWithProcess):
 				clear_current_exception()
 				continue
 			if key == 'JobStatus':
-				job_info[CheckInfo.RAW_STATUS] = int(value)
+				try:
+					job_info[CheckInfo.RAW_STATUS] = int(value)
+				except ValueError:
+					# e.g. 'undefined' -> set status to unknown
+					job_info[CheckInfo.RAW_STATUS] = -1
 			elif key == 'GlobalJobId':
 				job_info[CheckInfo.WMSID] = value.split('#')[1]
 				job_info[key] = value.strip('"')
