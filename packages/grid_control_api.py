@@ -108,6 +108,7 @@ class OptsConfigFiller(Plugin.get_class('ConfigFiller')):
 			'jobs': {'jobs': opts.jobs, 'max retry': opts.max_retry, 'selected': opts.job_selector},
 			'logging': {'debug mode': opts.debug},
 			'createwd': {'create wd': opts.createwd},
+			'forcedeljob': {'force delete job': opts.forcedeljob},
 		}
 
 		for section in cmd_line_config_map:
@@ -212,6 +213,7 @@ def _parse_cmd_line(cmd_line_args):
 	parser.add_bool(None, 's', 'no-submission', default=True, dest='submission')
 	parser.add_bool(None, 'G', 'gui', default=False, dest='gui_ansi')
 	parser.add_bool(None, ' ', 'createwd', default=False)
+	parser.add_bool(None, ' ', 'forcedeljob', default=False)
 	parser.add_accu(None, 'v', 'verbose')
 	parser.add_list(None, 'l', 'logging')
 	parser.add_list(None, 'o', 'override')

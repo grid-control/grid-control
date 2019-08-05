@@ -53,6 +53,7 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		self._timeout_unknown = config.get_time('unknown timeout', -1, on_change=None)
 		self._timeout_queue = config.get_time('queue timeout', -1, on_change=None)
 		self._job_retries = config.get_int('max retry', -1, on_change=None)
+		self._forcedeljob = config._config_view._container_cur._content['force delete job'][0].value
 
 		selected = JobSelector.create(config.get('selected', '', on_change=None), task=task)
 		self.job_db = config.get_plugin('job database', 'TextFileJobDB',
@@ -195,7 +196,8 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 			return
 		if show_jobs:
 			self._abort_report.show_report(self.job_db, jobnum_list)
-		if interactive and not self._uii.prompt_bool('Do you really want to cancel these jobs?', True):
+
+		if not self._forcedeljob and interactive and not self._uii.prompt_bool('Do you really want to cancel these jobs?', True):
 			return
 
 		def _mark_cancelled(jobnum):
