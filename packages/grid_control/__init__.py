@@ -12,7 +12,23 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
+import os
+
+
 __version__ = '1.9.92 (473c19fe)'
+
+
+def _get_git_version(path):
+	from grid_control.utils.process_base import LocalProcess
+	from grid_control.utils import clean_path
+
+	path = clean_path(path)
+	old_wd = os.getcwd()
+	os.chdir(path)
+	git_proc = LocalProcess('git', 'rev-parse', '--short', 'HEAD')
+	version = git_proc.get_output(timeout=10, raise_errors=False)
+	os.chdir(old_wd)
+	return version.strip() or None
 
 
 def _init_grid_control():
@@ -32,6 +48,10 @@ def _init_grid_control():
 
 	from grid_control.logging_setup import logging_defaults
 	logging_defaults()
+	git_version = _get_git_version(packages_base_path)
+	if git_version:
+		global __version__
+		__version__ = 'git (%s)' % git_version
 _init_grid_control.flag = False  # <global-state>
 
 _init_grid_control()
