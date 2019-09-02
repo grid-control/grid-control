@@ -123,9 +123,14 @@ class CreamWMS(GridWMS):
 		remove_files([log])
 
 	def submit_jobs(self, jobnum_list, task):
-		t=self._begin_bulk_submission()
+		t = self._begin_bulk_submission()
 		while not t:
+			activity = Activity('waiting before trying to delegate proxy again...')
+			time.sleep(1800)
+			activity.finish()
+			activity = Activity('re-attempting to delegate proxy...')
 			t = self._begin_bulk_submission()
+			activity.finish()
 		'''
 		if not self._begin_bulk_submission():  # Trying to delegate proxy failed
 			self._log.error('Unable to delegate proxy! Continue with automatic delegation...')
