@@ -83,6 +83,7 @@ class CreamWMS(GridWMS):
 			check_executor=CREAMCheckJobs(config),
 			cancel_executor=ChunkedExecutor(config, 'cancel', cancel_executor))
 
+		self._log.info("CreamWMS.__init__")
 		self._delegate_exec = resolve_install_path('glite-ce-delegate-proxy')
 		self._use_delegate = config.get_bool('try delegate', True, on_change=None)
 		self._chunk_size = config.get_int('job chunk size', 10, on_change=None)
@@ -90,6 +91,8 @@ class CreamWMS(GridWMS):
 		self._output_regex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored' + \
 			' in the dir (?P<output_dn>.*)$'
 
+		self._end_of_proxy_lifetime = None
+		self._set_proxy_lifetime()
 		#if self._use_delegate is False:
 		#	self._submit_args_dict['-a'] = ' '
 
@@ -140,25 +143,59 @@ class CreamWMS(GridWMS):
 		for result in GridWMS.submit_jobs(self, jobnum_list, task):
 			yield result
 
-	def _begin_bulk_submission(self):
-		self._submit_args_dict.update({'-D': None})
-		#if self._use_delegate is False:
-		#	self._submit_args_dict.update({'-a': ' '})
-		#	return True
-		delegate_id = 'GCD' + md5_hex(str(time.time()))[:10]
-		activity = Activity('creating delegate proxy for job submission')
-		delegate_arg_list = ['-e', self._ce[:self._ce.rfind("/")]]
-		if self._config_fn:
-			delegate_arg_list.extend(['--config', self._config_fn])
-		proc = LocalProcess(self._delegate_exec, '-d', delegate_id,
-			'--logfile', '/dev/stderr', *delegate_arg_list)
+	def _set_proxy_lifetime(self):
+		activity = Activity('Get proxy lifetime...')
+		proc = LocalProcess(resolve_install_path('voms-proxy-info'))
 		output = proc.get_output(timeout=10, raise_errors=False)
-		if ('succesfully delegated to endpoint' in output) and (delegate_id in output):
-			self._submit_args_dict.update({'-D': delegate_id})
+		for l in output.split('\n'):
+			if 'timeleft' in l:
+				h, m, s = int(l.split(':')[-3]), int(l.split(':')[-2]), int(l.split(':')[-1])
+				end_of_proxy = time.time() + h * 60 * 60 + m * 60 + s
+				break
+		self._end_of_proxy_lifetime = end_of_proxy
+		from datetime import datetime
+		left_time_str = datetime.fromtimestamp(self._end_of_proxy_lifetime).strftime("%A, %B %d, %Y %I:%M:%S")
+		self._log.info('End of current proxy lifetime: %s' % str(self._end_of_proxy_lifetime))
 		activity.finish()
+		return 0
 
-		if proc.status(timeout=0, terminate=True) != 0:
-			self._log.log_process(proc)
+	def _begin_bulk_submission(self):
+		self._set_proxy_lifetime()
+		if self._end_of_proxy_lifetime is None:
+			raise Exception("_end_of_proxy_lifetime is not set")
+
+		if self._end_of_proxy_lifetime <= time.time():
+			self._log.info("renew proxy is necessary: %s <= %s" % (str(self._end_of_proxy_lifetime), str(time.time())))
+			raise Exception("renew proxy is necessary")
+
+		elif '-D' in self._submit_args_dict.keys() and self._submit_args_dict['-D'] is not None:
+			from datetime import datetime
+			left_time_str = datetime.timedelta(self._end_of_proxy_lifetime - time.time())
+			self._log.info("Proxy delegation IS NOT ISSUED since expected to be OK. left: %s " % left_time_str)
+
+		else:
+			activity = Activity('Delegating proxy for job submission')
+			self._submit_args_dict.update({'-D': None})
+			#if self._use_delegate is False:
+			#	self._submit_args_dict.update({'-a': ' '})
+			#	return True
+			t = time.time()
+			thehex = md5_hex(str(t))
+			self._log.info('Full hex: %s at time %s' % (thehex, str(t)))
+			delegate_id = 'GCD' + thehex[:15]
+			delegate_arg_list = ['-e', self._ce[:self._ce.rfind("/")]]
+			if self._config_fn:
+				delegate_arg_list.extend(['--config', self._config_fn])
+			proc = LocalProcess(self._delegate_exec, '-d', delegate_id,
+				'--logfile', '/dev/stderr', *delegate_arg_list)
+			output = proc.get_output(timeout=10, raise_errors=False)
+			if ('succesfully delegated to endpoint' in output) and (delegate_id in output):
+				self._submit_args_dict.update({'-D': delegate_id})
+			activity.finish()
+
+			if proc.status(timeout=0, terminate=True) != 0:
+				self._log.log_process(proc)
+
 		return self._submit_args_dict.get('-D') is not None
 
 	def _get_jobs_output(self, gc_id_jobnum_list):
