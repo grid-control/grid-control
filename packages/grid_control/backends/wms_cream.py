@@ -90,8 +90,8 @@ class CreamWMS(GridWMS):
 		self._output_regex = r'.*For JobID \[(?P<rawId>\S+)\] output will be stored' + \
 			' in the dir (?P<output_dn>.*)$'
 
-		if self._use_delegate is False:
-			self._submit_args_dict['-a'] = ' '
+		#if self._use_delegate is False:
+		#	self._submit_args_dict['-a'] = ' '
 
 	def get_jobs_output_chunk(self, tmp_dn, gc_id_jobnum_list, wms_id_list_done):
 		map_gc_id2jobnum = dict(gc_id_jobnum_list)
@@ -123,18 +123,23 @@ class CreamWMS(GridWMS):
 		remove_files([log])
 
 	def submit_jobs(self, jobnum_list, task):
+		t=self._begin_bulk_submission()
+		while not t:
+			t = self._begin_bulk_submission()
+		'''
 		if not self._begin_bulk_submission():  # Trying to delegate proxy failed
 			self._log.error('Unable to delegate proxy! Continue with automatic delegation...')
 			self._submit_args_dict.update({'-a': ' '})
 			self._use_delegate = False
+		'''
 		for result in GridWMS.submit_jobs(self, jobnum_list, task):
 			yield result
 
 	def _begin_bulk_submission(self):
 		self._submit_args_dict.update({'-D': None})
-		if self._use_delegate is False:
-			self._submit_args_dict.update({'-a': ' '})
-			return True
+		#if self._use_delegate is False:
+		#	self._submit_args_dict.update({'-a': ' '})
+		#	return True
 		delegate_id = 'GCD' + md5_hex(str(time.time()))[:10]
 		activity = Activity('creating delegate proxy for job submission')
 		delegate_arg_list = ['-e', self._ce[:self._ce.rfind("/")]]
