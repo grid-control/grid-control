@@ -285,18 +285,41 @@ class ProcessArchiveHandler(logging.Handler):
 		files['stderr'] = record.proc.stderr.read_log()
 		files['stdin'] = record.proc.stdin.read_log()
 
-		def _log_tar():
-			tar = tarfile.TarFile.open(self._fn, 'a')
+		def _log_tar(only_print=False):
+			# self._log.info('tar: %s' % self._fn)
+			if not only_print:
+				tar = tarfile.TarFile.open(self._fn, 'a')
 			for key, value in record.files.items():
-				if os.path.exists(value):
-					value = SafeFile(value).read_close()
-				file_obj = VirtualFile(os.path.join(entry, key), [value])
-				info, handle = file_obj.get_tar_info()
-				tar.addfile(info, handle)
-				handle.close()
-			tar.close()
-		rethrow(GCError('Unable to log results of external call "%s" to "%s"' % (
-			record.proc.get_call(), self._fn)), _log_tar)
+				value = os.linesep.join([s for s in value.splitlines() if s])
+				if only_print:
+					self._log.info('\tkey: "%s"' % key)
+					self._log.info('\tvalue: "%s"' % value)
+				else:
+					if value.startswith('\n'):
+						value = value[1:]
+					if os.path.exists(value):
+						value = SafeFile(value).read_close()
+					# self._log.info('\tvirtual file: "%s"' % os.path.join(entry, key))
+					file_obj = VirtualFile(os.path.join(entry, key), [value])
+					info, handle = file_obj.get_tar_info()
+					# self._log.info('\tinfo: "%s"' % info)
+					# self._log.info('\thandle: "%s"' % handle)
+					tar.addfile(info, handle)
+					handle.close()
+			if not only_print:
+				tar.close()
+		# rethrow(GCError('Unable to log results of external call "%s" to "%s"' % (
+		# 		record.proc.get_call(), self._fn)), _log_tar)
+		try:
+			rethrow(GCError('Unable to log results of external call "%s" to "%s"' % (
+				record.proc.get_call(), self._fn)), _log_tar)
+		except:
+			self._log.warning('Unable to log results of external call "%s" to "%s"' % (
+				record.proc.get_call(), self._fn))
+			_log_tar(only_print=True)
+			# import pdb; pdb.set_trace()  # !import code; code.interact(local=vars())
+			# print record.proc.get_call()
+			# output.log(level, '%s%s %s', '|  ' * indent, propagate_symbol, desc)
 
 
 class StderrStreamHandler(GCStreamHandler):
