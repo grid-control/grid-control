@@ -13,6 +13,7 @@
 # | limitations under the License.
 
 import os, re, time, tempfile
+from datetime import datetime, timedelta
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
 from grid_control.backends.backend_tools import ChunkedExecutor, ProcessCreatorAppendArguments, unpack_wildcard_tar  # pylint:disable=line-too-long
@@ -129,7 +130,7 @@ class CreamWMS(GridWMS):
 		t = self._begin_bulk_submission()
 		while not t:
 			activity = Activity('waiting before trying to delegate proxy again...')
-			time.sleep(1800)
+			time.sleep(900)
 			activity.finish()
 			activity = Activity('re-attempting to delegate proxy...')
 			t = self._begin_bulk_submission()
@@ -147,16 +148,22 @@ class CreamWMS(GridWMS):
 		activity = Activity('Get proxy lifetime...')
 		proc = LocalProcess(resolve_install_path('voms-proxy-info'))
 		output = proc.get_output(timeout=10, raise_errors=False)
+		end_of_proxy = 0
 		for l in output.split('\n'):
 			if 'timeleft' in l:
 				h, m, s = int(l.split(':')[-3]), int(l.split(':')[-2]), int(l.split(':')[-1])
 				end_of_proxy = time.time() + h * 60 * 60 + m * 60 + s
 				break
-		self._end_of_proxy_lifetime = end_of_proxy
-		from datetime import datetime
-		left_time_str = datetime.fromtimestamp(self._end_of_proxy_lifetime).strftime("%A, %B %d, %Y %I:%M:%S")
-		self._log.info('End of current proxy lifetime: %s' % str(self._end_of_proxy_lifetime))
-		activity.finish()
+		if end_of_proxy == 0:
+			self._log.warning('couldnt evaluate end of proxy. Output was:')
+			self._log.warning(output)
+			time.sleep(300)
+			self._set_proxy_lifetime()
+		else:
+			self._end_of_proxy_lifetime = end_of_proxy
+			left_time_str = datetime.fromtimestamp(self._end_of_proxy_lifetime).strftime("%A, %B %d, %Y %I:%M:%S")
+			self._log.info('End of current proxy lifetime: %s' % left_time_str)
+			activity.finish()
 		return 0
 
 	def _begin_bulk_submission(self):
@@ -169,8 +176,10 @@ class CreamWMS(GridWMS):
 			raise Exception("renew proxy is necessary")
 
 		elif '-D' in self._submit_args_dict.keys() and self._submit_args_dict['-D'] is not None:
-			from datetime import datetime
-			left_time_str = datetime.timedelta(self._end_of_proxy_lifetime - time.time())
+			try:
+				left_time_str = timedelta(seconds=self._end_of_proxy_lifetime - time.time())
+			except:
+				left_time_str = str(self._end_of_proxy_lifetime - time.time()) + ' sec.'
 			self._log.info("Proxy delegation IS NOT ISSUED since expected to be OK. left: %s " % left_time_str)
 
 		else:
@@ -181,7 +190,7 @@ class CreamWMS(GridWMS):
 			#	return True
 			t = time.time()
 			thehex = md5_hex(str(t))
-			self._log.info('Full hex: %s at time %s' % (thehex, str(t)))
+			self._log.info('Proxy delegation full hex: %s at time %s' % (thehex, str(t)))
 			delegate_id = 'GCD' + thehex[:15]
 			delegate_arg_list = ['-e', self._ce[:self._ce.rfind("/")]]
 			if self._config_fn:
