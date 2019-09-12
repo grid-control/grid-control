@@ -194,8 +194,8 @@ class Condor(BasicWMS):
 				_add_list_classad('blacklistSite', blacklist)
 				_add_list_classad('whitelistSite', whitelist)
 			elif req_type == WMS.WALLTIME:
-				if ('walltimeMin' in self._pool_req_dict) and (req_value > 0):
-					jdl_req_str_list.append('%s = %d' % (self._pool_req_dict['walltimeMin'], req_value))
+				if ('walltime' in self._pool_req_dict) and (req_value > 0):
+					jdl_req_str_list.append('%s = %d' % (self._pool_req_dict['walltime'], req_value))
 			elif (req_type == WMS.STORAGE) and req_value:
 				_add_list_classad('requestSEs', req_value)
 			elif (req_type == WMS.MEMORY) and (req_value > 0):
