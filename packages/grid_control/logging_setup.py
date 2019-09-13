@@ -287,13 +287,15 @@ class ProcessArchiveHandler(logging.Handler):
 
 		def _log_tar(only_print=False):
 			# self._log.info('tar: %s' % self._fn)
+			sleep_when_cannot_accept_jobs = False
 			if not only_print:
 				tar = tarfile.TarFile.open(self._fn, 'a')
 			for key, value in record.files.items():
+				if "The CREAM service cannot accept jobs at the moment" in value:
+					sleep_when_cannot_accept_jobs = True
 				value = os.linesep.join([s for s in value.splitlines() if s])
 				if only_print:
-					self._log.info('\tkey: "%s"' % key)
-					self._log.info('\tvalue: "%s"' % value)
+					self._log.info('\n\tkey: "%s"\n\tvalue: "%s"' % (key, value))
 				else:
 					if value.startswith('\n'):
 						value = value[1:]
@@ -308,6 +310,11 @@ class ProcessArchiveHandler(logging.Handler):
 					handle.close()
 			if not only_print:
 				tar.close()
+			if sleep_when_cannot_accept_jobs:
+				from grid_control.utils.activity import Activity
+				activity = Activity('The CREAM service cannot accept jobs at the moment. Waiting before trying to delegate proxy again...')
+				time.sleep(900)
+				activity.finish()
 		# rethrow(GCError('Unable to log results of external call "%s" to "%s"' % (
 		# 		record.proc.get_call(), self._fn)), _log_tar)
 		try:
