@@ -43,7 +43,7 @@ class CMSBaseProvider(DataProvider):
 			['lumi metadata', '%s lumi metadata' % datasource_name], default=not self._lumi_filter.empty())
 		config.set('phedex sites matcher mode', 'ShellStyleMatcher', '?=')
 		# PhEDex blacklist: 'T1_*_Disk nodes allow user jobs - other T1's dont!
-		self._phedex_filter = dataset_config.get_filter('phedex sites', '-* T1_DE_KIT T1_*_Disk T2_* T3_*',
+		self._phedex_filter = dataset_config.get_filter('phedex sites', '-* T1_*_Disk T2_* T3_*',
 			default_matcher='BlackWhiteMatcher', default_filter='StrictListFilter')
 		self._only_complete = dataset_config.get_bool('only complete sites', True)
 		self._only_valid = dataset_config.get_bool('only valid', True)
