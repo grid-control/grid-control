@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, getpass, logging
+import os, signal, getpass, logging
 from grid_control.backends import AccessToken
 from grid_control.config import create_config
 from grid_control.utils import resolve_install_path
