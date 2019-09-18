@@ -12,7 +12,7 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-import os, getpass, logging
+import os, signal, getpass, logging
 from grid_control.backends import AccessToken
 from grid_control.config import create_config
 from grid_control.utils import resolve_install_path
@@ -45,8 +45,10 @@ def _get_cms_cert(config):
 		role = config.get_list('new proxy roles', '', on_change=None)
 		timeout = config.get_time('new proxy timeout', 10, on_change=None)
 		lifetime = config.get_time('new proxy lifetime', 192 * 60, on_change=None)
+		signal_handler = signal.signal(signal.SIGINT, signal.SIG_DFL) # reset Ctrl+C handler
 		# password in variable name removes it from debug log
 		password = getpass.getpass('Please enter proxy password: ')
+		signal.signal(signal.SIGINT, signal_handler) # restore Ctrl+C handler
 		try:
 			proxy_init_exec = resolve_install_path('voms-proxy-init')
 			proc = LocalProcess(proxy_init_exec, '--voms', str.join(':', ['cms'] + role),
