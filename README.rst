@@ -1,4 +1,4 @@
-| |PyPI Version| |Build Status| |Coverage| |Landscape| |Gitter|
+| |PyPI Version| |Build Status| |Coverage| |Codeclimate| |Gitter|
 
 grid-control
 ============
@@ -45,9 +45,16 @@ Base your work on the ``testing`` branch and also use it as the base branch for 
 .. |Coverage| image:: https://codecov.io/github/grid-control/grid-control/coverage.svg?branch=testing
    :target: https://codecov.io/github/grid-control/grid-control?branch=testing
 
+.. |Codeclimate| image:: https://api.codeclimate.com/v1/badges/f497c2f091ebfabbbf39/maintainability
+   :target: https://codeclimate.com/github/grid-control/grid-control/maintainability
+   :alt: Maintainability
+
 .. |Gitter| image:: https://badges.gitter.im/grid-control/grid-control.svg
    :alt: Join the chat at https://gitter.im/grid-control/grid-control
    :target: https://gitter.im/grid-control/grid-control?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+
+..
+   landscape.io is down (2019/09)
 
 .. |Landscape| image:: https://landscape.io/github/grid-control/grid-control/testing/landscape.svg?style=flat
    :target: https://landscape.io/github/grid-control/grid-control/testing
