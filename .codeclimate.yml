@@ -1,3 +1,7 @@
+version: "2"         # required to adjust maintainability checks
+checks:
+  file-lines:
+    enabled: false
 engines:
   duplication:
     enabled: true
