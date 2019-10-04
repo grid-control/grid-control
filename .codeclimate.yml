@@ -2,6 +2,13 @@ version: "2"         # required to adjust maintainability checks
 checks:
   file-lines:
     enabled: false
+  similar-code:
+    config:
+      threshold: 128
+  identical-code:
+    config:
+      threshold: 128
+
 exclude_patterns:
   - docs/*
   - packages/grid_control/backends/htcondor_wms/*
