@@ -13,6 +13,7 @@
 # | limitations under the License.
 
 import os, re, time, tempfile
+import threading
 from datetime import datetime, timedelta
 from grid_control.backends.aspect_cancel import CancelAndPurgeJobs, CancelJobsWithProcessBlind
 from grid_control.backends.aspect_status import CheckInfo, CheckJobsWithProcess
@@ -126,7 +127,40 @@ class CreamWMS(GridWMS):
 				yield (None, os.path.join(tmp_dn, dn))
 		remove_files([log])
 
+	@staticmethod
+	def delfile(filename, sleeptime=100, log=None):
+		# activity = Activity("Releasing lock in %d" % sleeptime)
+		import os
+		time.sleep(sleeptime)
+		try:
+			os.remove(filename)
+		except:
+			if os.path.isfile(filename):
+				if log is not None:
+					log.error("Couldn't releasing lock...")
+				else:
+					print "Couldn't releasing lock..."
+				exit(1)
+			else:
+				if log is not None:
+					log.warning("Couldn't releasing lock...")
+				else:
+					print "Couldn't releasing lock..."
+				# activity = Activity("Lock not found")
+		# activity.finish()
+
 	def submit_jobs(self, jobnum_list, task):
+		import os
+		filename = os.path.join(os.path.expanduser("~"), ".gcFileLock")
+
+		activity = Activity("Waiting for lock to be released...")
+		while os.path.isfile(filename):
+			time.sleep(5)
+		file = open(filename, "w+")
+		activity.finish()
+		activity = Activity("Lock acquired:" + filename)
+		activity.finish()
+
 		t = self._begin_bulk_submission()
 		while not t:
 			activity = Activity('waiting before trying to delegate proxy again...')
@@ -141,8 +175,17 @@ class CreamWMS(GridWMS):
 			self._submit_args_dict.update({'-a': ' '})
 			self._use_delegate = False
 		'''
+
+		count_submitted = 0
 		for result in GridWMS.submit_jobs(self, jobnum_list, task):
+			count_submitted += 1
 			yield result
+		file.close()
+		self._log.info('count_submitted: %d' % count_submitted)
+		count_submitted = int(count_submitted * 0.2)
+
+		x = threading.Thread(target=self.delfile, args=(filename, count_submitted, self._log))
+		x.start()
 
 	def _set_proxy_lifetime(self):
 		activity = Activity('Get proxy lifetime...')
@@ -173,6 +216,8 @@ class CreamWMS(GridWMS):
 
 		if self._end_of_proxy_lifetime <= time.time():
 			self._log.info("renew proxy is necessary: %s <= %s" % (str(self._end_of_proxy_lifetime), str(time.time())))
+			x = threading.Thread(target=CreamWMS.delfile, args=(os.path.join(os.path.expanduser("~"), ".gcFileLock"), 0, self._log))
+			x.start()
 			raise Exception("renew proxy is necessary")
 
 		elif '-D' in self._submit_args_dict.keys() and self._submit_args_dict['-D'] is not None:
