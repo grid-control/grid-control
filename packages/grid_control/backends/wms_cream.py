@@ -98,6 +98,10 @@ class CreamWMS(GridWMS):
 		#if self._use_delegate is False:
 		#	self._submit_args_dict['-a'] = ' '
 
+		self._lock_filename = os.path.join(os.path.expanduser("~"), ".gcFileLock")
+		self._delegated_proxy_filename = None
+		self._delegated_proxy_lock = os.path.join(os.path.expanduser("~"), ".gcDelegatedProxyLock")
+
 	def get_jobs_output_chunk(self, tmp_dn, gc_id_jobnum_list, wms_id_list_done):
 		map_gc_id2jobnum = dict(gc_id_jobnum_list)
 		jobs = list(self._iter_wms_ids(gc_id_jobnum_list))
@@ -151,14 +155,13 @@ class CreamWMS(GridWMS):
 
 	def submit_jobs(self, jobnum_list, task):
 		import os
-		filename = os.path.join(os.path.expanduser("~"), ".gcFileLock")
 
 		activity = Activity("Waiting for lock to be released...")
-		while os.path.isfile(filename):
-			time.sleep(5)
-		file = open(filename, "w+")
+		while os.path.isfile(self._lock_filename):
+			time.sleep(2)
+		file = open(self._lock_filename, "w+")
 		activity.finish()
-		activity = Activity("Lock acquired:" + filename)
+		activity = Activity("Lock acquired:" + self._lock_filename)
 		activity.finish()
 
 		t = self._begin_bulk_submission()
@@ -184,7 +187,7 @@ class CreamWMS(GridWMS):
 		self._log.info('count_submitted: %d' % count_submitted)
 		count_submitted = int(count_submitted * 0.2)
 
-		x = threading.Thread(target=self.delfile, args=(filename, count_submitted, self._log))
+		x = threading.Thread(target=self.delfile, args=(self._lock_filename, count_submitted, self._log))
 		x.start()
 
 	def _set_proxy_lifetime(self):
@@ -192,7 +195,10 @@ class CreamWMS(GridWMS):
 		proc = LocalProcess(resolve_install_path('voms-proxy-info'))
 		output = proc.get_output(timeout=10, raise_errors=False)
 		end_of_proxy = 0
+		proxy_key = None
 		for l in output.split('\n'):
+			if 'subject' in l:
+				proxy_key = l.encode("hex")[-15:]
 			if 'timeleft' in l:
 				h, m, s = int(l.split(':')[-3]), int(l.split(':')[-2]), int(l.split(':')[-1])
 				end_of_proxy = time.time() + h * 60 * 60 + m * 60 + s
@@ -204,6 +210,8 @@ class CreamWMS(GridWMS):
 			self._set_proxy_lifetime()
 		else:
 			self._end_of_proxy_lifetime = end_of_proxy
+			if proxy_key is not None:
+				self._delegated_proxy_filename = os.path.join(os.path.expanduser("~"), ".gcDelegatedProxy" + proxy_key)
 			left_time_str = datetime.fromtimestamp(self._end_of_proxy_lifetime).strftime("%A, %B %d, %Y %I:%M:%S")
 			self._log.info('End of current proxy lifetime: %s' % left_time_str)
 			activity.finish()
@@ -214,10 +222,15 @@ class CreamWMS(GridWMS):
 		if self._end_of_proxy_lifetime is None:
 			raise Exception("_end_of_proxy_lifetime is not set")
 
+		if self._delegated_proxy_filename is None:
+			raise Exception("_delegated_proxy_filename is not set")
+
 		if self._end_of_proxy_lifetime <= time.time():
 			self._log.info("renew proxy is necessary: %s <= %s" % (str(self._end_of_proxy_lifetime), str(time.time())))
-			x = threading.Thread(target=CreamWMS.delfile, args=(os.path.join(os.path.expanduser("~"), ".gcFileLock"), 0, self._log))
+			x = threading.Thread(target=CreamWMS.delfile, args=(self._lock_filename, 0, self._log))
 			x.start()
+			y = threading.Thread(target=CreamWMS.delfile, args=(self._delegated_proxy_filename, 0, self._log))
+			y.start()
 			raise Exception("renew proxy is necessary")
 
 		elif '-D' in self._submit_args_dict.keys() and self._submit_args_dict['-D'] is not None:
@@ -228,27 +241,47 @@ class CreamWMS(GridWMS):
 			self._log.info("Proxy delegation IS NOT ISSUED since expected to be OK. left: %s " % left_time_str)
 
 		else:
-			activity = Activity('Delegating proxy for job submission')
-			self._submit_args_dict.update({'-D': None})
-			#if self._use_delegate is False:
-			#	self._submit_args_dict.update({'-a': ' '})
-			#	return True
-			t = time.time()
-			thehex = md5_hex(str(t))
-			self._log.info('Proxy delegation full hex: %s at time %s' % (thehex, str(t)))
-			delegate_id = 'GCD' + thehex[:15]
-			delegate_arg_list = ['-e', self._ce[:self._ce.rfind("/")]]
-			if self._config_fn:
-				delegate_arg_list.extend(['--config', self._config_fn])
-			proc = LocalProcess(self._delegate_exec, '-d', delegate_id,
-				'--logfile', '/dev/stderr', *delegate_arg_list)
-			output = proc.get_output(timeout=10, raise_errors=False)
-			if ('succesfully delegated to endpoint' in output) and (delegate_id in output):
-				self._submit_args_dict.update({'-D': delegate_id})
-			activity.finish()
+			if os.path.isfile(self._delegated_proxy_filename):
+				file = open(self._delegated_proxy_filename, "r")
+				delegate_id = file.read()
+				file.close()
+				# file is empty -> another process edditing it?
+				# if delegate_id is None or delegate_id == '': return False
+				if delegate_id is not None and delegate_id != "":
+					self._submit_args_dict.update({'-D': delegate_id})
+				self._log.info('Proxy delegation read from a file: %s ' % (delegate_id))
 
-			if proc.status(timeout=0, terminate=True) != 0:
-				self._log.log_process(proc)
+			elif not os.path.isfile(self._delegated_proxy_lock): #not os.path.isfile(self._delegated_proxy_filename):
+				file_lock = open(self._delegated_proxy_lock, "w+")
+				file = open(self._delegated_proxy_filename, "w+")
+
+				activity = Activity('Delegating proxy for job submission')
+				self._submit_args_dict.update({'-D': None})
+				#if self._use_delegate is False:
+				#	self._submit_args_dict.update({'-a': ' '})
+				#	return True
+				t = time.time()
+				thehex = md5_hex(str(t))
+				self._log.info('Proxy delegation full hex: %s at time %s' % (thehex, str(t)))
+				delegate_id = 'GCD' + thehex[:15]
+				delegate_arg_list = ['-e', self._ce[:self._ce.rfind("/")]]
+				if self._config_fn:
+					delegate_arg_list.extend(['--config', self._config_fn])
+				proc = LocalProcess(self._delegate_exec, '-d', delegate_id,
+					'--logfile', '/dev/stderr', *delegate_arg_list)
+				output = proc.get_output(timeout=10, raise_errors=False)
+				if ('succesfully delegated to endpoint' in output) and (delegate_id in output):
+					self._submit_args_dict.update({'-D': delegate_id})
+				activity.finish()
+
+				if proc.status(timeout=0, terminate=True) != 0:
+					self._log.log_process(proc)
+
+				file.write(delegate_id)
+				file.close()
+				file_lock.close()
+				y = threading.Thread(target=CreamWMS.delfile, args=(self._delegated_proxy_lock, 0, self._log))
+				y.start()
 
 		return self._submit_args_dict.get('-D') is not None
 
