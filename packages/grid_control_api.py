@@ -186,6 +186,7 @@ def _gc_run(args):
 			try:
 				gui.start_interface()
 			except Exception:
+				# capture nested exception infos before calling ignore_exception
 				ex_value = GUIException('GUI init exception')
 				ignore_exception(Exception, None, gui.end_interface)
 				raise ex_value
