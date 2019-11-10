@@ -150,14 +150,12 @@ class Condor(BasicWMS):
 		else:  # UserMod style
 			fn_list = fn_list.split(' ')
 
-		if len(fn_list) > 1 or len(fn_list[0]) > 1:
-			data_file = os.path.join(self._get_sandbox_dn(jobnum), 'job_%d_files.txt' % jobnum)
-			fp_data_list = open(data_file, 'w')
-			try:
-				fp_data_list.writelines(lmap(lambda line: line + '\n', fn_list))
-			finally:
-				fp_data_list.close()
-			return ['%s = "%s"' % (self._pool_req_dict['dataFiles'], data_file)]
+		if len(fn_list) > 0 or len(fn_list[0]) > 1:
+			fn_string = str()
+			for i in fn_list[:-1]:
+				fn_string += "{},".format(i)
+			fn_string += fn_list[-1]
+			return ['%s = %s' % (self._pool_req_dict['dataFiles'], fn_string)]
 		return []
 
 	def _get_dest(self, config):
