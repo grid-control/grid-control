@@ -23,7 +23,7 @@ Additionally, the following config files are included if they exist, so they can
  * `/etc/grid-control.conf` - this can be installed by the admin on a machine to affect ALL users
  * `~/.grid-control.conf` - this is a user specific config file
  * `config/default.conf` - this config file is affecting only this specific grid-control installation
- * `$GC_CONFIG` - this environment variable can be set to point to some 
+ * `$GC_CONFIG` - this environment variable can be set to point to some config file
 
 grid-control will NOT stop going through this list if one of these config files is found!
 They will all get added in exactly THIS order to the included config files.
