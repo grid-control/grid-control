@@ -23,7 +23,7 @@ class CRIC(object):
 
 	def __init__(self, url = None):
 		if url:
-			print 'Custom url currently not supportet, please contact the grid-control developers!'
+			raise Exception('Custom url currently not supportet, please contact the grid-control developers!')
 		self._url = url or 'http://cms-cric.cern.ch/api'
 		self._gjrc = GridJSONRestClient(get_cms_cert(), self._url, 'VOMS proxy needed to query siteDB!')
 
