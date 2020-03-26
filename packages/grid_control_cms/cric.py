@@ -1,4 +1,4 @@
-# | Copyright 2015-2017 Karlsruhe Institute of Technology
+# | Copyright 2020 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -57,31 +57,31 @@ class CRIC(object):
 			site_names.extend(self._query('site-names', name=site_resource['alias']))
 		return lmap(lambda x: x['alias'], ifilter(lambda site: site['type'] == 'cms', site_names))
 
-	def username_to_dn(self, Username):
-		for user in self._query('people', username=Username):
+	def username_to_dn(self, username):
+		for user in self._query('people', username=username):
 			return user['dn']
 
 	def _query(self, api, **kwargs):
 		key = (self._url, api, tuple(kwargs.items()))
 		if key not in CRIC.query_cache:
 			if api == 'people':
-				CRIC.query_cache[key] = self._gjrc_people.get(api = None, params=kwargs or None)
-			elif api=='site-names':
-				CRIC.query_cache[key] = self._gjrc_names.get(api = None, params=kwargs or None)
-			elif api== 'site-resources':
-				CRIC.query_cache[key] = self._gjrc_recources.get(api = None, params=kwargs or None)
+				CRIC.query_cache[key] = self._gjrc_people.get(api=None, params=kwargs or None)
+			elif api == 'site-names':
+				CRIC.query_cache[key] = self._gjrc_names.get(api=None, params=kwargs or None)
+			elif api == 'site-resources':
+				CRIC.query_cache[key] = self._gjrc_recources.get(api=None, params=kwargs or None)
 			else:
 				CRIC.query_cache[key] = self._gjrc.get(api=api, params=kwargs or None)
 		data = CRIC.query_cache[key]
-		#workaround for site-resources query
+		# workaround for site-resources query
 		name = ''
 		fqdn = ''
-		thetype= ''
+		thetype = ''
 		flavour = ''
 		alias = ''
-		if api=='site-resources':
+		if api == 'site-resources':
 			for d in data.keys():
-				name = d 
+				name = d
 				for e in data[d]:
 					if len(e['usage']['cms'])>0:
 						alias = e['usage']['cms'][0]
