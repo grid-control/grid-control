@@ -13,7 +13,7 @@
 # | limitations under the License.
 
 import re
-from grid_control.utils.webservice import GridJSONRestClientCric
+from grid_control.utils.webservice import GridJSONRestClient
 from grid_control_cms.access_cms import get_cms_cert
 from python_compat import ifilter, imap, izip, lmap, set
 
@@ -21,9 +21,20 @@ from python_compat import ifilter, imap, izip, lmap, set
 class CRIC(object):
 	query_cache = {}
 
-	def __init__(self, url=None):
+	def __init__(self, url = None):
+		if url:
+			print 'Custom url currentkly not supportet, please contact the grid-control developers!'
 		self._url = url or 'http://cms-cric.cern.ch/api'
-		self._gjrc = GridJSONRestClientCric(get_cms_cert(), self._url, 'VOMS proxy needed to query siteDB!')
+		self._gjrc = GridJSONRestClient(get_cms_cert(), self._url, 'VOMS proxy needed to query siteDB!')
+
+		self._url_people = 'http://cms-cric.cern.ch/api/accounts/user/query/?json&preset=people'
+		self._gjrc_people = GridJSONRestClient(get_cms_cert(), self._url_people, 'VOMS proxy needed to query CRIC!')
+
+		self._url_names = 'http://cms-cric.cern.ch/api/cms/site/query/?json&preset=site-names'
+		self._gjrc_names = GridJSONRestClient(get_cms_cert(), self._url_names, 'VOMS proxy needed to query CRIC!')
+
+		self._url_recources = 'http://wlcg-cric.cern.ch/api/core/service/query/?json' # WIP of the CRIC developers, might change!
+		self._gjrc_recources = GridJSONRestClient(get_cms_cert(), self._url_recources, 'VOMS proxy needed to query siteDB!')
 
 	def cms_name_to_se(self, cms_name):
 		cms_name_regex = re.compile(cms_name.replace('*', '.*').replace('%', '.*'))
@@ -53,7 +64,14 @@ class CRIC(object):
 	def _query(self, api, **kwargs):
 		key = (self._url, api, tuple(kwargs.items()))
 		if key not in CRIC.query_cache:
-			CRIC.query_cache[key] = self._gjrc.get(api=api, params=kwargs or None)
+			if api == 'people':
+				CRIC.query_cache[key] = self._gjrc_people.get(api = None, params=kwargs or None)
+			elif api=='site-names':
+				CRIC.query_cache[key] = self._gjrc_names.get(api = None, params=kwargs or None)
+			elif api== 'site-resources':
+				CRIC.query_cache[key] = self._gjrc_recources.get(api = None, params=kwargs or None)
+			else:
+				CRIC.query_cache[key] = self._gjrc.get(api=api, params=kwargs or None)
 		data = CRIC.query_cache[key]
 		#workaround for site-resources query
 		name = ''

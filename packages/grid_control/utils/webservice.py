@@ -55,22 +55,13 @@ class RestClient(object):
 		request_result = self._request(RestSession.PUT, url, api, headers, params=params, data=data)
 		return self._process_result(request_result)
 
-	def _request(self, mode, url, api, headers, params=None, data=None, cric=False):
+	def _request(self, mode, url, api, headers, params=None, data=None):
 		header_dict = dict(self._headers or {})
 		header_dict.update(headers or {})
 		if url is None:
 			url = self._url
-		if api and not cric:
+		if api:
 			url += '/%s' % api
-		if api and cric:
-			if api == 'people':
-				url += '/accounts/user/query/?json&preset=people'
-			elif api == 'site-names':
-				url += '/cms/site/query/?json&preset=site-names'
-			elif api == 'site-resources':
-				url = 'http://wlcg-cric.cern.ch/api/core/service/query/?json' # WIP of the CRIC developers, might change
-			else:
-				raise ResntError('Unknown api %r'%(api))
 		try:
 			return self._session.request(mode, url=url, headers=header_dict,
 				params=params, data=data, cert=self._cert)
@@ -125,14 +116,7 @@ class GridJSONRestClient(JSONRestClient):
 	def _raise_cert_error(self, msg):
 		raise self._cert_error_cls(self._fmt_cert_error(msg))
 
-	def _request(self, request_fun, url, api, headers, params=None, data=None, cric = False):
+	def _request(self, request_fun, url, api, headers, params=None, data=None):
 		if not self._cert:
 			self._cert = self._get_grid_cert()
-		return JSONRestClient._request(self, request_fun, url, api, headers, params, data, cric)
-
-class GridJSONRestClientCric(GridJSONRestClient):
-	def __init__(self, cert=None, url=None, cert_error_msg='', cert_error_cls=Exception):
-		(self._cert_error_msg, self._cert_error_cls) = (cert_error_msg, cert_error_cls)
-		GridJSONRestClient.__init__(self, cert, url, cert_error_msg, cert_error_cls)
-	def _request(self, request_fun, url, api, headers, params=None, data=None):
-		return GridJSONRestClient._request(self, request_fun, url, api, headers, params, data, cric=True)
+		return JSONRestClient._request(self, request_fun, url, api, headers, params, data)
