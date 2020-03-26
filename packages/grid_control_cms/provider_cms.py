@@ -21,7 +21,8 @@ from grid_control.utils.data_structures import make_enum
 from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import JSONRestClient
 from grid_control_cms.lumi_tools import parse_lumi_filter, str_lumi
-from grid_control_cms.sitedb import SiteDB
+#from grid_control_cms.sitedb import SiteDB
+from grid_control_cms.cric import CRIC
 from hpfwk import AbstractError
 from python_compat import itemgetter, lfilter, sorted
 
@@ -51,7 +52,8 @@ class CMSBaseProvider(DataProvider):
 		self._location_format = dataset_config.get_enum('location format',
 			CMSLocationFormat, CMSLocationFormat.hostname)
 		self._pjrc = JSONRestClient(url='https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
-		self._sitedb = SiteDB()
+		#self._sitedb = SiteDB()
+		self._sitedb = CRIC()
 
 		dataset_expr_parts = split_opt(dataset_expr, '@#')
 		(self._dataset_path, self._dataset_instance, self._dataset_block_selector) = dataset_expr_parts

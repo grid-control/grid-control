@@ -15,7 +15,8 @@
 from grid_control.backends import AccessToken
 from grid_control.config import ConfigError, create_config
 from grid_control.utils.webservice import JSONRestClient
-from grid_control_cms.sitedb import SiteDB
+#from grid_control_cms.sitedb import SiteDB
+from grid_control_cms.cric import CRIC
 
 
 class SEPathParser(object):
@@ -24,7 +25,8 @@ class SEPathParser(object):
 		config.set('jobs', 'monitor', 'dashboard', override=False)
 		config.set('grid', 'sites', '-samtest -cmsprodhi', append=True)
 
-		site_db = SiteDB()
+		#site_db = SiteDB()
+		site_db = CRIC()
 		token = AccessToken.create_instance('VomsProxy', create_config(), 'token')
 		self._hn_name = site_db.dn_to_username(token.get_fq_user_name())
 		if not self._hn_name:
