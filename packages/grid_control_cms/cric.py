@@ -33,7 +33,7 @@ class CRIC(object):
 		self._url_names = 'http://cms-cric.cern.ch/api/cms/site/query/?json&preset=site-names'
 		self._gjrc_names = GridJSONRestClient(get_cms_cert(), self._url_names, 'VOMS proxy needed to query CRIC!')
 
-		self._url_recources = 'http://wlcg-cric.cern.ch/api/core/service/query/?json' # WIP of the CRIC developers, might change!
+		self._url_recources = 'http://wlcg-cric.cern.ch/api/core/service/query/?json&groupby=rcsite'
 		self._gjrc_recources = GridJSONRestClient(get_cms_cert(), self._url_recources, 'VOMS proxy needed to query siteDB!')
 
 	def cms_name_to_se(self, cms_name):
