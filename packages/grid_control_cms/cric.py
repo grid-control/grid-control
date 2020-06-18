@@ -83,7 +83,7 @@ class CRIC(object):
 			for d in data.keys():
 				name = d
 				for e in data[d]:
-					if len(e['usage']['cms'])>0:
+					if 'cms' in e['usage'].keys() and len(e['usage']['cms'])>0:
 						alias = e['usage']['cms'][0]
 						thetype = e['type']
 						if thetype == 'CE':
