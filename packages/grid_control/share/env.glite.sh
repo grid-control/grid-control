@@ -62,10 +62,13 @@ gc_set_proxy() {
 	echo "Using GRID proxy $X509_USER_PROXY"
 }
 
-if [ -n "$GLITE_LOCATION" ]; then
-	GC_GLITE_TYPE="LOCAL"
+
+if [ -z "$GLITE_LOCATION" ] && [ -d "$GLITE_LOCATION" ]; then
+        GC_GLITE_TYPE="LOCAL"
 elif gc_find_grid "USER" "$GC_GLITE_LOCATION"; then
 	GC_GLITE_TYPE="USER"
+elif [[ $(uname -a) == *"el7"* ]] &&gc_find_grid "CVMFS (el7)" "/cvmfs/grid.cern.ch/centos7-ui-preview-v01/etc/profile.d/setup-c7-ui-example.sh"; then
+	GC_GLITE_TYPE="CVMFS"
 elif gc_find_grid "CVMFS" "/cvmfs/grid.cern.ch/emi3ui-latest/etc/profile.d/setup-ui-example.sh"; then
 	GC_GLITE_TYPE="CVMFS"
 elif gc_find_grid "CVMFS - 2nd try" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/grid*.sh 2> /dev/null | head -n 1); then
