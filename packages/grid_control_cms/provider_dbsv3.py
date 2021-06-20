@@ -52,6 +52,10 @@ class DBS3Provider(CMSBaseProvider):
 	def _iter_blocks_raw(self):
 		return self._get_gc_block_list(use_phedex=self._use_phedex)
 
+	def _iter_cms_block_parents(self, block_name):
+		return lmap(lambda bpi: bpi['parent_block_name'],
+			self._query_dbsv3('blockparents', block_name=block_name))
+
 	def _iter_cms_blocks(self, dataset_path, do_query_sites):
 		def _get_name_locationinfo_list(blockinfo):
 			if do_query_sites:
@@ -60,13 +64,9 @@ class DBS3Provider(CMSBaseProvider):
 		return lmap(_get_name_locationinfo_list,
 			self._query_dbsv3('blocks', dataset=dataset_path, detail=do_query_sites))
 
-	def _iter_cms_block_parents(self, block_name):
-		return lmap(lambda bpi: bpi['parent_block_name'],
-			self._query_dbsv3('blockparents', block_name=blockinfo['block_name']))
-
 	def _iter_cms_file_parents(self, block_name, lfn):
 		file_parent_info = self._query_dbsv3('fileparents', block_name=block_name, logical_file_name=lfn)
-		assert(len(file_parent_info) == 1)
+		assert len(file_parent_info) == 1
 		return file_parent_info[0]['parent_logical_file_name']
 
 	def _iter_cms_files(self, block_path, query_only_valid, query_lumi):

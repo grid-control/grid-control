@@ -15,6 +15,7 @@
 from grid_control.config import TriggerResync
 from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
+from grid_control.gc_plugin import ConfigurablePlugin
 from grid_control.utils import split_opt
 from grid_control.utils.activity import Activity, ProgressActivity
 from grid_control.utils.data_structures import make_enum
@@ -22,36 +23,22 @@ from grid_control.utils.thread_tools import start_thread
 from grid_control.utils.webservice import JSONRestClient
 from grid_control_cms.lumi_tools import parse_lumi_filter, str_lumi
 from grid_control_cms.sitedb import SiteDB
-from hpfwk import AbstractError, Plugin
+from hpfwk import AbstractError
 from python_compat import itemgetter, lfilter, sorted
-from grid_control.gc_plugin import ConfigurablePlugin
+
 
 CMSLocationFormat = make_enum(['hostname', 'siteDB', 'both'])  # pylint:disable=invalid-name
 
+
 class CMSParentSelector(ConfigurablePlugin):
+	def __init__(self, config):
+		self._parent_ds_list = config.get_list('secondary dataset', [])
+
 	def enabled(self):
 		return False
 
 	def select_parent(self, parent_list):
 		raise AbstractError
-
-
-class CMSNoParentSelector(CMSParentSelector):
-	alias_list = ['null']
-
-	def select_parent(self, parent_list):
-		return
-
-
-class CMSDirectParentSelector(CMSParentSelector):
-	alias_list = ['direct']
-
-	def enabled(self):
-		return True
-
-	def select_parent(self, parent_list):
-		return True
-#		self._parent_ds_list = config.get_list('secondary dataset', [])
 
 
 class CMSBaseProvider(DataProvider):
@@ -77,7 +64,8 @@ class CMSBaseProvider(DataProvider):
 			CMSLocationFormat, CMSLocationFormat.hostname)
 		self._pjrc = JSONRestClient(url='https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
 		self._sitedb = SiteDB()
-		self._parent_selector = config.get_plugin('secondary dataset selector', 'null', cls=CMSParentSelector)
+		self._parent_selector = config.get_plugin('secondary dataset selector', 'null',
+			cls=CMSParentSelector)
 
 		dataset_expr_parts = split_opt(dataset_expr, '@#')
 		(self._dataset_path, self._dataset_instance, self._dataset_block_selector) = dataset_expr_parts
@@ -274,9 +262,33 @@ class CMSBaseProvider(DataProvider):
 		return list(_expanded_replica_locations(replica_infos_complete))
 
 
+class CMSDirectParentSelector(CMSParentSelector):
+	alias_list = ['direct']
+
+	def enabled(self):
+		return True
+
+	def select_parent(self, parent_list):
+		return True
+
+
+class CMSNoParentSelector(CMSParentSelector):
+	alias_list = ['null']
+
+	def select_parent(self, parent_list):
+		return
+
+
 class DBS2Provider(CMSBaseProvider):
 	alias_list = ['dbs2']
 
 	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None):  # pylint:disable=super-init-not-called
 		raise DatasetError('CMS deprecated all DBS2 Services in April 2014! ' +
 			'Please use DBS3Provider instead.')
+
+
+class DASProvider(CMSBaseProvider):
+	alias_list = ['das']
+
+	def __init__(self, config, datasource_name, dataset_expr, dataset_nick=None):  # pylint:disable=super-init-not-called
+		raise DatasetError('CMS deprecated DAS API access! Please use DBS3Provider instead.')

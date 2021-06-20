@@ -28,6 +28,8 @@ class RestClient(object):
 			process_result=None, process_data=None, session=None):
 		self._log = logging.getLogger('webservice')
 		(self._cert, self._url, self._headers, self._session) = (cert, url, default_headers, session)
+		if (self._cert is not None) and (self._url is not None):
+			self._log.info('Using certificate %r to access %r' % (self._cert, self._url))
 		self._process_result = process_result or identity
 		self._process_data = process_data or resolve_fun('urllib.parse:urlencode', 'urllib:urlencode')
 		if not session:

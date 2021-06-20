@@ -1019,6 +1019,14 @@ ActivityMonitor options
     Specify maximum number of activities to display
 
 
+.. _CMSParentSelector:
+CMSParentSelector options
+-------------------------
+
+* ``secondary dataset`` = <list of values> (Default: '')
+    Specify the list of parent datasets that should be selected during the secondary dataset discovery
+
+
 .. _Matcher:
 Matcher options
 ---------------
@@ -1366,6 +1374,11 @@ CMSBaseProvider options
 * ``phedex sites order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
     Specify the order of the filtered list
 
+* ``secondary dataset selector`` = <plugin> (Default: 'null')
+    List of available plugins:
+     * CMSDirectParentSelector_ (alias: direct)
+     * CMSNoParentSelector_ (alias: null)
+
 
 .. _ConfigDataProvider:
 ConfigDataProvider options
@@ -1480,6 +1493,11 @@ DASProvider options
 
 * ``phedex sites order`` = <enum: SOURCE|MATCHER> (Default: SOURCE)
     Specify the order of the filtered list
+
+* ``secondary dataset selector`` = <plugin> (Default: 'null')
+    List of available plugins:
+     * CMSDirectParentSelector_ (alias: direct)
+     * CMSNoParentSelector_ (alias: null)
 
 
 .. _ThreadedMultiDatasetProvider:
@@ -3295,6 +3313,35 @@ TFCPartitionProcessor options
      * RegExMatcher_ (alias: regex)
      * ShellStyleMatcher_ (alias: shell)
      * StartMatcher_ (alias: start)
+
+
+.. _CMSSWPartitionProcessor:
+CMSSWPartitionProcessor options
+-------------------------------
+
+* ``<datasource> partition file names delimeter / partition file names delimeter`` = <text> (Default: '')
+    Specify the delimeter used to concatenate the dataset file list
+
+* ``<datasource> partition file names format / partition file names format`` = <text> (Default: '%s')
+    Specify the format of the dataset files given to the job
+
+* ``<datasource> partition metadata secondary file names / partition metadata secondary file names`` = <text> (Default: 'CMSSW_PARENT_LFNS')
+    Specify the name of the metdata variable that is used as source for the list of files of the secondary dataset
+
+* ``<datasource> partition variable file names / partition variable file names`` = <text> (Default: 'FILE_NAMES')
+    Specify variable name containing the list of file names
+
+* ``<datasource> partition variable max events / partition variable max events`` = <text> (Default: 'MAX_EVENTS')
+    Specify variable name containing the number of events to process
+
+* ``<datasource> partition variable prefix / partition variable prefix`` = <text> (Default: 'DATASET')
+    Specify prefix for variables containing dataset information
+
+* ``<datasource> partition variable secondary file names / partition variable secondary file names`` = <text> (Default: 'FILE_NAMES2')
+    Specify the name of the variable that will contain the list of files of the secondary dataset
+
+* ``<datasource> partition variable skip events / partition variable skip events`` = <text> (Default: 'SKIP_EVENTS')
+    Specify variable name containing the number of events to skip
 
 
 .. _FormatParameterParser:

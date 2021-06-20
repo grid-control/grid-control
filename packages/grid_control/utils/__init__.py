@@ -47,31 +47,14 @@ def clean_path(value):
 
 
 def create_tarball(match_info_iter, **kwargs):
-	tar = tarfile.open(mode='w:gz', **kwargs)
-	activity = Activity('Generating tarball')
-	for match_info in match_info_iter:
-		if isinstance(match_info, tuple):
-			(path_source, path_target) = match_info
-		else:
-			(path_source, path_target) = (match_info, None)
-		if isinstance(path_source, str):
-			if not os.path.exists(path_source):
-				raise PathError('File %s does not exist!' % path_source)
-			tar.add(path_source, path_target or os.path.basename(path_source), recursive=False)
-		elif path_source is None:  # Update activity
-			activity.update('Generating tarball: %s' % path_target)
-		else:  # File handle
-			info, handle = path_source.get_tar_info()
-			if path_target:
-				info.name = path_target
-			info.mtime = time.time()
-			info.mode = stat.S_IRUSR + stat.S_IWUSR + stat.S_IRGRP + stat.S_IROTH
-			if info.name.endswith('.sh') or info.name.endswith('.py'):
-				info.mode += stat.S_IXUSR + stat.S_IXGRP + stat.S_IXOTH
-			tar.addfile(info, handle)
-			handle.close()
-	activity.finish()
-	tar.close()
+	if 'name' in kwargs:
+		fn = kwargs.pop('name')
+		if os.path.exists(fn):
+			os.unlink(fn)
+		_create_tarball(match_info_iter, name=fn + '.tmp', **kwargs)
+		os.rename(fn + '.tmp', fn)
+	else:
+		_create_tarball(match_info_iter, **kwargs)
 
 
 def deprecated(text):
@@ -383,6 +366,34 @@ class TwoSidedIterator(object):
 		while self._left + self._right < len(self.__content):
 			self._left += 1
 			yield self.__content[self._left - 1]
+
+
+def _create_tarball(match_info_iter, **kwargs):
+	tar = tarfile.open(mode='w:gz', **kwargs)
+	activity = Activity('Generating tarball')
+	for match_info in match_info_iter:
+		if isinstance(match_info, tuple):
+			(path_source, path_target) = match_info
+		else:
+			(path_source, path_target) = (match_info, None)
+		if isinstance(path_source, str):
+			if not os.path.exists(path_source):
+				raise PathError('File %s does not exist!' % path_source)
+			tar.add(path_source, path_target or os.path.basename(path_source), recursive=False)
+		elif path_source is None:  # Update activity
+			activity.update('Generating tarball: %s' % path_target)
+		else:  # File handle
+			info, handle = path_source.get_tar_info()
+			if path_target:
+				info.name = path_target
+			info.mtime = time.time()
+			info.mode = stat.S_IRUSR + stat.S_IWUSR + stat.S_IRGRP + stat.S_IROTH
+			if info.name.endswith('.sh') or info.name.endswith('.py'):
+				info.mode += stat.S_IXUSR + stat.S_IXGRP + stat.S_IXOTH
+			tar.addfile(info, handle)
+			handle.close()
+	activity.finish()
+	tar.close()
 
 
 def _display_selection(log, items_before, items_after, msg, formatter, log_level=logging.DEBUG1):

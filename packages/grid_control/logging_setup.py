@@ -204,6 +204,10 @@ class GCFormatter(logging.Formatter):
 
 
 class GCStreamHandler(logging.Handler):
+	# All logging that is configured to use stdout / stderr is actually passed through subclasses of this class
+	# The class has a global stack of output streams and will only output to the latest configured stdout/stderr streams
+	# This class also takes care of multi-threaded access, eg. in case the output is first routed through a buffer
+	# and the cursor needs to be moved to the proper position first
 	global_instances = []
 	global_lock = GCLock()
 

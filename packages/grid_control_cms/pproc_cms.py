@@ -14,7 +14,7 @@
 
 from grid_control.datasets import DataSplitter, PartitionProcessor
 from grid_control.parameters import ParameterMetadata
-from python_compat import imap, lmap
+from python_compat import imap, lmap, reduce, set, sorted
 
 
 class LFNPartitionProcessor(PartitionProcessor):
@@ -56,23 +56,32 @@ class LFNPartitionProcessor(PartitionProcessor):
 				partition[DataSplitter.FileList] = _modify_filelist_for_srm(partition[DataSplitter.FileList])
 
 
-BasicPartitionProcessor = PartitionProcessor.get_class('BasicPartitionProcessor')
+BasicPartitionProcessor = PartitionProcessor.get_class('BasicPartitionProcessor')  # pylint:disable=invalid-name
 
-class CMSSWPartitionProcessor(BasicPartitionProcessor):  # pylint:disable=no-init
+
+class CMSSWPartitionProcessor(BasicPartitionProcessor):
 	alias_list = ['cmsswpart']
 
-	def _format_fn_list(self, fn_list):
-		return str.join(', ', imap(lambda x: '"%s"' % x, fn_list))
+	def __init__(self, config, datasource_name):
+		BasicPartitionProcessor.__init__(self, config, datasource_name)
+		self._vn_secondary_file_names = config.get(
+			self._get_pproc_opt('variable secondary file names'), 'FILE_NAMES2')
+		self._meta_secondary_file_names = config.get(
+			self._get_pproc_opt('metadata secondary file names'), 'CMSSW_PARENT_LFNS')
 
 	def get_partition_metadata(self):
 		result = BasicPartitionProcessor.get_partition_metadata(self)
-		result.append(ParameterMetadata('FILE_NAMES2', untracked=True))
+		result.append(ParameterMetadata(self._vn_secondary_file_names, untracked=True))
 		return result
 
 	def process(self, pnum, partition_info, result):
 		BasicPartitionProcessor.process(self, pnum, partition_info, result)
-		if 'CMSSW_PARENT_LFNS' in partition_info.get(DataSplitter.MetadataHeader, []):
-			parent_lfn_info_idx = partition_info[DataSplitter.MetadataHeader].index('CMSSW_PARENT_LFNS')
-			parent_lfn_info = partition_info[DataSplitter.Metadata][parent_lfn_info_idx]
-			parent_lfn_list = reduce(list.__add__, parent_lfn_info, [])
-			result['FILE_NAMES2'] = self._format_fn_list(parent_lfn_list)
+		metadata_header = partition_info.get(DataSplitter.MetadataHeader, [])
+		if self._meta_secondary_file_names in metadata_header:
+			parent_lfn_info_idx = metadata_header.index(self._meta_secondary_file_names)
+			parent_lfn_list_list = partition_info[DataSplitter.Metadata][parent_lfn_info_idx]
+			parent_lfn_list = sorted(set(reduce(list.__add__, parent_lfn_list_list, [])))
+			result[self._vn_secondary_file_names] = self._format_fn_list(parent_lfn_list)
+
+	def _format_fn_list(self, fn_list):
+		return str.join(', ', imap(lambda x: '"%s"' % x, fn_list))
