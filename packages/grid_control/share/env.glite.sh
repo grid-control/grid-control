@@ -62,6 +62,28 @@ gc_set_proxy() {
 	echo "Using GRID proxy $X509_USER_PROXY"
 }
 
+gc_find_os_release() {
+	# First try to read /etc/redhat-release, because it should be present on SL6 and CentOS7.
+	# Then try to read any /etc/*-release file, except for lsb-release and os-release, because
+	# that is a more structured standard, not present for SL6. It could be added as fallback, if
+	# necessary.
+	# http://linuxmafia.com/faq/Admin/release-files.html
+	# https://www.freedesktop.org/software/systemd/man/os-release.html
+
+	if [ -f "/etc/redhat-release" ]; then
+		echo $(head -1 /etc/redhat-release)
+		return 0
+	fi
+	for f in $(ls -1 /etc/*-release | grep -v -e "/etc/os-release" -e "/etc/lsb-release"); do
+		echo $(head -1 "$f")
+		return 0
+	done
+
+	# Nothing found. Should not happen on EL systems. If this is somewhere else, we should implement
+	# a fallback, e.g., using /etc/os-release.
+	return 1
+}
+
 
 if [ -z "$GLITE_LOCATION" ] && [ -d "$GLITE_LOCATION" ]; then
         GC_GLITE_TYPE="LOCAL"
