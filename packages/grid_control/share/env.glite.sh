@@ -86,7 +86,7 @@ gc_find_os_release() {
 
 
 if [ -z "$GLITE_LOCATION" ] && [ -d "$GLITE_LOCATION" ]; then
-        GC_GLITE_TYPE="LOCAL"
+	GC_GLITE_TYPE="LOCAL"
 elif gc_find_grid "USER" "$GC_GLITE_LOCATION"; then
 	GC_GLITE_TYPE="USER"
 elif [[ $(uname -a) == *"el7"* ]] &&gc_find_grid "CVMFS (el7)" "/cvmfs/grid.cern.ch/umd-c7ui-latest/etc/profile.d/setup-c7-ui-example.sh"; then
