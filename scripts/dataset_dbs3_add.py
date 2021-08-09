@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# | Copyright 2017 Karlsruhe Institute of Technology
+# | Copyright 2017-2020 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ from grid_control.utils.file_tools import SafeFile, with_file
 from grid_control.utils.webservice import GridJSONRestClient
 from grid_control_cms.access_cms import get_cms_cert
 from grid_control_cms.dbs3_input_validation import validate_dbs3_json
-from grid_control_cms.sitedb import SiteDB
+from grid_control_cms.cric import CRIC
 from hpfwk import NestedException, clear_current_exception
 from python_compat import imap, izip, json, lmap, md5_hex, partial, resolve_fun, set
 
@@ -56,7 +56,7 @@ def create_dbs3_json_blocks(opts, dataset_blocks):
 		}
 
 		# add block information
-		site_db = SiteDB()
+		site_db = CRIC()
 		try:
 			origin_site_name = site_db.se_to_cms_name(block[DataProvider.Locations][0])[0]
 		except IndexError:

@@ -62,11 +62,42 @@ gc_set_proxy() {
 	echo "Using GRID proxy $X509_USER_PROXY"
 }
 
-if [ -n "$GLITE_LOCATION" ]; then
+gc_find_os_release() {
+	# First try to read /etc/redhat-release, because it should be present on SL6 and CentOS7.
+	# Then try to read any /etc/*-release file, except for lsb-release and os-release, because
+	# that is a more structured standard, not present for SL6. It could be added as fallback, if
+	# necessary.
+	# http://linuxmafia.com/faq/Admin/release-files.html
+	# https://www.freedesktop.org/software/systemd/man/os-release.html
+
+	if [ -f "/etc/redhat-release" ]; then
+		echo $(head -1 /etc/redhat-release)
+		return 0
+	fi
+	for f in $(ls -1 /etc/*-release | grep -v -e "/etc/os-release" -e "/etc/lsb-release"); do
+		echo $(head -1 "$f")
+		return 0
+	done
+
+	# Nothing found. Should not happen on EL systems. If this is somewhere else, we should implement
+	# a fallback, e.g., using /etc/os-release.
+	return 1
+}
+
+if gc_find_os_release | grep -q -e "Scientific Linux.* 6.*" -e "CentOS Linux.* 6.*"; then
+	# EL6 installations need a different UI setup script
+	GC_GLITE_TRY_CVMFS_LOCATION="/cvmfs/grid.cern.ch/umd-sl6ui-latest/etc/profile.d/setup-ui-example.sh"
+else
+	# EL7 (and above?) should use this one
+	GC_GLITE_TRY_CVMFS_LOCATION="/cvmfs/grid.cern.ch/umd-c7ui-latest/etc/profile.d/setup-c7-ui-example.sh"
+fi
+
+
+if [ -z "$GLITE_LOCATION" ] && [ -d "$GLITE_LOCATION" ]; then
 	GC_GLITE_TYPE="LOCAL"
 elif gc_find_grid "USER" "$GC_GLITE_LOCATION"; then
 	GC_GLITE_TYPE="USER"
-elif gc_find_grid "CVMFS" "/cvmfs/grid.cern.ch/emi3ui-latest/etc/profile.d/setup-ui-example.sh"; then
+elif gc_find_grid "CVMFS" "$GC_GLITE_TRY_CVMFS_LOCATION"; then
 	GC_GLITE_TYPE="CVMFS"
 elif gc_find_grid "CVMFS - 2nd try" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/grid*.sh 2> /dev/null | head -n 1); then
 	GC_GLITE_TYPE="CVMFS-2"

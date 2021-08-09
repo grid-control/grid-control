@@ -2342,7 +2342,7 @@ SEStorageManager options
     Specify the files that are transferred over this storage channel
 
 * ``<storage channel> force`` = <boolean> (Default: True)
-    Specify the files that are transferred over this storage channel
+    Force overwriting of files transferred over this storage channel
 
 * ``<storage channel> path / <storage type> path`` = <list of values> (Default: '')
     Specify the default transport URL(s) that are used to transfer files over this type of storage channel

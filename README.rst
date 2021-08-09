@@ -8,7 +8,7 @@ and grid middleware.
 It supports complex parameterized and dataset based jobs with a convenient way to
 specify the parameter space to be processed by the jobs.
 
-.. image:: gc_running.gif
+.. image:: docs/gc_running.gif
 
 Quick HOWTO
 -----------

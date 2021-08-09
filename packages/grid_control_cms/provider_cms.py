@@ -1,4 +1,4 @@
-# | Copyright 2012-2017 Karlsruhe Institute of Technology
+# | Copyright 2012-2020 Karlsruhe Institute of Technology
 # |
 # | Licensed under the Apache License, Version 2.0 (the "License");
 # | you may not use this file except in compliance with the License.
@@ -12,18 +12,19 @@
 # | See the License for the specific language governing permissions and
 # | limitations under the License.
 
-from grid_control.config import TriggerResync
+from grid_control.backends import AccessToken
+from grid_control.config import ConfigError, create_config, TriggerResync
 from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
 from grid_control.utils import split_opt
 from grid_control.utils.activity import Activity, ProgressActivity
 from grid_control.utils.data_structures import make_enum
 from grid_control.utils.thread_tools import start_thread
-from grid_control.utils.webservice import JSONRestClient
+from grid_control_cms.cric import CRIC
 from grid_control_cms.lumi_tools import parse_lumi_filter, str_lumi
-from grid_control_cms.sitedb import SiteDB
 from hpfwk import AbstractError
 from python_compat import itemgetter, lfilter, sorted
+from rucio.client import Client
 
 
 CMSLocationFormat = make_enum(['hostname', 'siteDB', 'both'])  # pylint:disable=invalid-name
@@ -50,9 +51,9 @@ class CMSBaseProvider(DataProvider):
 		self._allow_phedex = dataset_config.get_bool('allow phedex', True)
 		self._location_format = dataset_config.get_enum('location format',
 			CMSLocationFormat, CMSLocationFormat.hostname)
-		self._pjrc = JSONRestClient(url='https://cmsweb.cern.ch/phedex/datasvc/json/prod/blockreplicas')
-		self._sitedb = SiteDB()
-
+		self._sitedb = CRIC()
+		token = AccessToken.create_instance('VomsProxy', create_config(), 'token')
+		self._rucio = Client(account=self._sitedb.dn_to_username(token.get_fq_user_name()))
 		dataset_expr_parts = split_opt(dataset_expr, '@#')
 		(self._dataset_path, self._dataset_instance, self._dataset_block_selector) = dataset_expr_parts
 		instance_default = dataset_config.get('dbs instance', '')
@@ -150,10 +151,10 @@ class CMSBaseProvider(DataProvider):
 
 				if use_phedex and self._allow_phedex:  # Start parallel phedex query
 					replicas_dict = {}
-					phedex_thread = start_thread('Query phedex site info for %s' % block_path,
-						self._get_phedex_replica_list, block_path, replicas_dict)
+					rucio_thread = start_thread('Query rucio site info for %s' % block_path,
+						self._get_rucio_replica_list, block_path, replicas_dict)
 					self._fill_cms_fi_list(result, block_path)
-					phedex_thread.join()
+					rucio_thread.join()
 					replica_infos = replicas_dict.get(block_path)
 				else:
 					self._fill_cms_fi_list(result, block_path)
@@ -168,14 +169,20 @@ class CMSBaseProvider(DataProvider):
 				raise DatasetError('Dataset %s does not contain any valid blocks!' % dataset_path)
 		progress_ds.finish()
 
-	def _get_phedex_replica_list(self, block_path, replicas_dict):
-		activity_fi = Activity('Getting file replica information from PhEDex')
-		# Get dataset se list from PhEDex (perhaps concurrent with get_dbs_file_list)
+	def _get_rucio_replica_list(self, block_path, replicas_dict):
+		activity_fi = Activity('Getting file replica information from Rucio')
+		replicas = self._rucio.list_dataset_replicas('cms', block_path)
 		replicas_dict[block_path] = []
-		for phedex_block in self._pjrc.get(params={'block': block_path})['phedex']['block']:
-			for replica in phedex_block['replica']:
-				replica_info = (replica['node'], replica.get('se'), replica['complete'] == 'y')
-				replicas_dict[block_path].append(replica_info)
+		for rep in replicas:
+			rse = self._rucio.get_rse(rep['rse'])
+			protocols = rse['protocols']
+			se = ''
+			for protocol in protocols:
+				extended_attributes = protocol['extended_attributes']
+				if protocol['scheme'] == 'srm' or protocol['scheme'] == 'gsiftp':
+					se = protocol['hostname']
+			replica_info = (rse['rse'], se, rep['available_length']/rep['length'] == 1)
+			replicas_dict[block_path].append(replica_info)
 		activity_fi.finish()
 
 	def _iter_cms_blocks(self, dataset_path, do_query_sites):
