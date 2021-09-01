@@ -96,8 +96,11 @@ class AFSAccessToken(RefreshableAccessToken):
 					if expires_str.count(' ') == 3:
 						if len(expires_str.split()[2]) == 2:
 							expires = _parse_date(expires_str, '%m %d %y %H:%M:%S')
+						elif len(expires_str.split()[2]) == 4:
+							expires = _parse_date(expires_str, '%m %d %Y %H:%M:%S')  # here
 						else:
-							expires = _parse_date(expires_str, '%m %d %Y %H:%M:%S')
+							# On NAF, we get an entirely different format now: Sep 2 12:31:34 2021
+							expires = _parse_date(expires_str, '%b %d %H:%M:%S %Y')
 					elif expires_str.count(' ') == 2:  # year information is missing
 						cur_year = int(time.strftime('%Y'))
 						expires = _parse_date(expires_str + ' %d' % cur_year, '%b %d %H:%M:%S %Y')
