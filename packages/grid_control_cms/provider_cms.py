@@ -25,10 +25,6 @@ from grid_control_cms.cric import CRIC
 from grid_control_cms.lumi_tools import parse_lumi_filter, str_lumi
 from hpfwk import AbstractError
 from python_compat import itemgetter, lfilter, sorted
-try:
-	from rucio.client import Client
-except ImportError:
-	raise InstallationError('rucio is not installed or set up correctly. For CMS you can find instructions here https://twiki.cern.ch/twiki/bin/viewauth/CMS/Rucio')
 
 
 CMSLocationFormat = make_enum(['hostname', 'siteDB', 'both'])  # pylint:disable=invalid-name
@@ -57,7 +53,11 @@ class CMSBaseProvider(DataProvider):
 			CMSLocationFormat, CMSLocationFormat.hostname)
 		self._sitedb = CRIC()
 		token = AccessToken.create_instance('VomsProxy', create_config(), 'token')
-		self._rucio = Client(account=self._sitedb.dn_to_username(token.get_fq_user_name()))
+		try:
+			from rucio.client import Client
+		except ImportError:
+			raise InstallationError('rucio is not installed or set up correctly. For CMS you can find instructions here https://twiki.cern.ch/twiki/bin/viewauth/CMS/Rucio')
+		self._rucio_client = Client(account=self._sitedb.dn_to_username(token.get_fq_user_name()))
 		dataset_expr_parts = split_opt(dataset_expr, '@#')
 		(self._dataset_path, self._dataset_instance, self._dataset_block_selector) = dataset_expr_parts
 		instance_default = dataset_config.get('dbs instance', '')
@@ -175,10 +175,10 @@ class CMSBaseProvider(DataProvider):
 
 	def _get_rucio_replica_list(self, block_path, replicas_dict):
 		activity_fi = Activity('Getting file replica information from Rucio')
-		replicas = self._rucio.list_dataset_replicas('cms', block_path)
+		replicas = self._rucio_client.list_dataset_replicas('cms', block_path)
 		replicas_dict[block_path] = []
 		for rep in replicas:
-			rse = self._rucio.get_rse(rep['rse'])
+			rse = self._rucio_client.get_rse(rep['rse'])
 			protocols = rse['protocols']
 			se = ''
 			for protocol in protocols:
