@@ -16,6 +16,7 @@ from grid_control.backends import AccessToken
 from grid_control.config import ConfigError, create_config, TriggerResync
 from grid_control.datasets import DataProvider, DataSplitter, DatasetError
 from grid_control.datasets.splitter_basic import HybridSplitter
+from grid_control.gc_exceptions import InstallationError
 from grid_control.utils import split_opt
 from grid_control.utils.activity import Activity, ProgressActivity
 from grid_control.utils.data_structures import make_enum
@@ -24,7 +25,10 @@ from grid_control_cms.cric import CRIC
 from grid_control_cms.lumi_tools import parse_lumi_filter, str_lumi
 from hpfwk import AbstractError
 from python_compat import itemgetter, lfilter, sorted
-from rucio.client import Client
+try:
+	from rucio.client import Client
+except ImportError:
+	raise InstallationError('rucio is not installed or set up correctly. For CMS you can find instructions here https://twiki.cern.ch/twiki/bin/viewauth/CMS/Rucio')
 
 
 CMSLocationFormat = make_enum(['hostname', 'siteDB', 'both'])  # pylint:disable=invalid-name
