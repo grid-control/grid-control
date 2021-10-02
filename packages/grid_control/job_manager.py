@@ -220,11 +220,11 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 		if interactive:
 			wait(2)
 
-	def _check_get_jobnum_list(self, task, wms, jobnum_list):
+	def _check_get_jobnum_list(self, task, wms, jobnum_list, debug=False):
 		(change, jobnum_list_timeout, reported) = (False, [], [])
 		if not jobnum_list:
 			return (change, jobnum_list_timeout, reported)
-		for (jobnum, job_obj, state, info) in self._check_jobs_raw(wms, jobnum_list):
+		for (jobnum, job_obj, state, info) in self._check_jobs_raw(wms, jobnum_list, debug):
 			if state != Job.UNKNOWN:
 				reported.append(jobnum)
 			if state != job_obj.state:
@@ -245,10 +245,17 @@ class JobManager(NamedPlugin):  # pylint:disable=too-many-instance-attributes
 				return (None, jobnum_list_timeout, reported)
 		return (change, jobnum_list_timeout, reported)
 
-	def _check_jobs_raw(self, wms, jobnum_list):
+	def _check_jobs_raw(self, wms, jobnum_list, debug):
 		# ask wms and yield (jobnum, job_obj, job_status, job_info)
 		map_gc_id2jobnum = self._get_map_gc_id_jobnum(jobnum_list)
-		for (gc_id, job_state, job_info) in wms.check_jobs(map_gc_id2jobnum.keys()):
+#		if debug:
+		print "check", jobnum_list
+		job_status_iter = wms.debug_jobs(map_gc_id2jobnum.keys())
+#		else:
+#			job_status_iter = wms.check_jobs(map_gc_id2jobnum.keys())
+
+		for (gc_id, job_state, job_info) in job_status_iter:
+			print "check", gc_id, job_info
 			if not abort():
 				jobnum = map_gc_id2jobnum.pop(gc_id, None)
 				if jobnum is not None:
@@ -433,6 +440,8 @@ class SimpleJobManager(JobManager):
 			self._log.log_time(logging.DEBUG, str.join(' > ',
 				imap(lambda chunk_threshold: '%d x %4.2f' % chunk_threshold, iter_verify_info)))
 		self._unreachable_goal_flag = False
+		self._global_failed_threshold = config.get_int('job debug threshold', -1, on_change=None)
+		self._global_failed_counter = 0
 
 	def _check_get_jobnum_list(self, task, wms, jobnum_list):
 		if self._defect_tries:
@@ -441,10 +450,16 @@ class SimpleJobManager(JobManager):
 			jobnum_list_wait = self._sample(self._defect_counter, num_wait)
 			jobnum_list = lfilter(lambda jobnum: jobnum not in jobnum_list_wait, jobnum_list)
 
+		debug_mode = False
+		if self._global_failed_threshold >= 0:
+			debug_mode = self._global_failed_counter >= self._global_failed_threshold
+		print debug_mode, self._global_failed_threshold
 		(change, jobnum_list_timeout, reported) = JobManager._check_get_jobnum_list(
-			self, task, wms, jobnum_list)
+			self, task, wms, jobnum_list, debug_mode)
 		for jobnum in reported:
 			self._defect_counter.pop(jobnum, None)
+			if self.job_db.get_job_transient(jobnum).state in [Job.FAILED, Job.ABORTED]:
+				self._global_failed_counter += 1
 
 		if self._defect_tries and (change is not None):
 			# make 'raster' iteratively smaller

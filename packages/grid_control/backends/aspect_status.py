@@ -49,8 +49,10 @@ class CheckJobsMissingState(CheckJobs):
 
 	def execute(self, wms_id_list):  # yields list of (wms_id, job_status, job_info)
 		checked_ids = set()
+		print self._executor
 		for (wms_id, job_status, job_info) in self._executor.execute(wms_id_list):
 			checked_ids.add(wms_id)
+			print wms_id, job_info
 			yield (wms_id, job_status, job_info)
 		if self._executor.get_status() == CheckStatus.OK:
 			for wms_id in wms_id_list:

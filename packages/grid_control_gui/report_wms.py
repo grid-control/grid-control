@@ -39,6 +39,7 @@ class BackendReport(TableReport):
 		self._level_map = {'wms': 2, 'endpoint': 3, 'site': 4, 'queue': 5}
 		self._use_history = config.get_bool('report history', False, on_change=None)
 		hierarchy_list = config.get_list('report hierarchy', ['wms'], on_change=None)
+		print config, hierarchy_list
 		self._idx_list = lmap(lambda x: self._level_map[x.lower()], hierarchy_list)
 		self._idx_list.reverse()
 		if not self._idx_list:
@@ -151,11 +152,13 @@ class BackendReport(TableReport):
 				state = job_obj.state
 				if attempt != job_obj.attempt:
 					state = Job.FAILED
-				site_queue_str = job_obj.history[attempt]
+				site_queue_str = job_obj.get_job_location()#history[attempt]
 				if site_queue_str == 'N/A':
 					dest_info = [site_queue_str]
 				else:
 					dest_info = site_queue_str.split('/')
+				if job_obj.get('wn'):
+					dest_info = [job_obj.get('wn').split('@')[1]]
 				wms_name = job_obj.gc_id.split('.')[1]
 				endpoint = 'N/A'
 				if 'http:' in job_obj.gc_id:
