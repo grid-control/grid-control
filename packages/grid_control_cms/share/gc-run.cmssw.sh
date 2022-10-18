@@ -110,7 +110,7 @@ if [ -n "$CMSSW_PROLOG_EXEC" ]; then
 	echo
 	timestamp "CMSSW_PROLOG1" "DONE"
 	if [ "$GC_CMSSWRUN_RETCODE" != "0" ]; then
-		echo "Prologue $CMSSW_EPILOG_EXEC failed with code: $GC_CMSSWRUN_RETCODE"
+		echo "Prologue $CMSSW_PROLOG_EXEC failed with code: $GC_CMSSWRUN_RETCODE"
 		echo "Aborting..."
 	fi
 fi
