@@ -123,9 +123,9 @@ if [ "$GC_CMSSWRUN_RETCODE" == "0" ] && [ -n "$CMSSW_CONFIG" ]; then
 	echo "---------------------------"
 	echo
 	cd "$GC_WORKDIR" || fail 102
+	_CMSRUN_COUNT=1
 	for CFG_NAME in $CMSSW_CONFIG; do
 		CFG_BASENAME="$(basename $CFG_NAME)"
-		_CMSRUN_COUNT=1
 		timestamp "CMSSW_CMSRUN${_CMSRUN_COUNT}" "START"
 		echo "Config file: $CFG_NAME"
 		echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~"
