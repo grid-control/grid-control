@@ -42,7 +42,10 @@ class LSFCheckJobs(CheckJobsWithProcess):
 
 	def _parse(self, proc):
 		status_iter = proc.stdout.iter(timeout=self._timeout)
-		next(status_iter)
+		try:
+			next(status_iter)
+		except StopIteration:
+			return
 		tmp_head = [CheckInfo.WMSID, 'user', CheckInfo.RAW_STATUS,
 			CheckInfo.QUEUE, 'from', CheckInfo.WN, 'job_name']
 		for line in ifilter(identity, status_iter):
