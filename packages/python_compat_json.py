@@ -28,7 +28,7 @@ def py_make_scanner(context):
         try:
             nextchar = string[idx]
         except IndexError:
-            raise StopIteration
+            raise
 
         if nextchar == '"':
             return parse_string(string, idx + 1, encoding, strict)
@@ -59,7 +59,7 @@ def py_make_scanner(context):
         elif nextchar == '-' and string[idx:idx + 9] == '-Infinity':
             return parse_constant('-Infinity'), idx + 9
         else:
-            raise StopIteration
+            return
 
     return _scan_once
 
@@ -311,7 +311,7 @@ def JSONArray(s_and_end, scan_once, _w=WHITESPACE.match, _ws=WHITESPACE_STR):
     while True:
         try:
             value, end = scan_once(s, end)
-        except StopIteration:
+        except IndexError:
             raise ValueError(errmsg("Expecting object", s, end))
         _append(value)
         nextchar = s[end:end + 1]
@@ -442,7 +442,7 @@ class JSONDecoder(object):
         """
         try:
             obj, end = self.scan_once(s, idx)
-        except StopIteration:
+        except IndexError:
             raise ValueError("No JSON object could be decoded")
         return obj, end
 

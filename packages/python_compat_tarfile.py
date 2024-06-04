@@ -2486,12 +2486,12 @@ class TarIter:
             tarinfo = self.tarfile.next()
             if not tarinfo:
                 self.tarfile._loaded = True
-                raise StopIteration
+                return
         else:
             try:
                 tarinfo = self.tarfile.members[self.index]
             except IndexError:
-                raise StopIteration
+                return
         self.index += 1
         return tarinfo
 

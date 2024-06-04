@@ -114,7 +114,7 @@ class CreamWMS(GridWMS):
 		if exit_code != 0:
 			if 'Keyboard interrupt raised by user' in proc.stdout.read_log():
 				remove_files([log, tmp_dn])
-				raise StopIteration
+				return
 			else:
 				self._log.log_process(proc)
 			self._log.error('Trying to recover from error ...')
@@ -154,7 +154,7 @@ class CreamWMS(GridWMS):
 	def _get_jobs_output(self, gc_id_jobnum_list):
 		# Get output of jobs and yield output dirs
 		if len(gc_id_jobnum_list) == 0:
-			raise StopIteration
+			return
 
 		tmp_dn = os.path.join(self._path_output, 'tmp')
 		try:

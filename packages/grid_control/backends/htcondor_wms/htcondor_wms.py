@@ -191,7 +191,7 @@ class HTCondor(BasicWMS):
 
 	def check_jobs(self, gc_id_jobnum_list):
 		if not len(gc_id_jobnum_list):
-			raise StopIteration
+			return
 		activity   = Activity('Checking jobs')
 		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(gc_id_jobnum_list))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(gc_id_jobnum_list)), self._schedd.getURI())
 		rawJobInfoMaps = self._schedd.check_jobs(
@@ -211,7 +211,7 @@ class HTCondor(BasicWMS):
 
 	def _get_jobs_output(self, gc_id_jobnum_list):
 		if not len(gc_id_jobnum_list):
-			raise StopIteration
+			return
 		activity   = Activity('Fetching jobs')
 		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(gc_id_jobnum_list))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(gc_id_jobnum_list)), self._schedd.getURI())
 		returnedJobs = self._schedd.getJobsOutput(
@@ -227,7 +227,7 @@ class HTCondor(BasicWMS):
 	
 	def cancel_jobs(self, gc_id_jobnum_list):
 		if not len(gc_id_jobnum_list):
-			raise StopIteration
+			return
 		activity   = Activity('Canceling jobs')
 		assert not bool(lfilter( lambda htcid: htcid.scheddURI != self._schedd.getURI(), self._splitGcRequests(gc_id_jobnum_list))), 'Bug! Got jobs at Schedds %s, but servicing only Schedd %s' % (lfilter( lambda itr: itr.scheddURI != self._schedd.getURI(), self._splitGcRequests(gc_id_jobnum_list)), self._schedd.getURI())
 		canceledJobs = self._schedd.cancel_jobs(
