@@ -35,4 +35,8 @@ jobs:
     - name: Test using testsuite
       run: |
         ./setup.py install > setup.log 2>&1 || cat setup.log
+        rm -rf packages
         ls -la
+        export GC_SCRIPT="/$(grep gridcontrol setup.log | cut -d "/" -f 2-)/gridcontrol"
+        echo $GC_SCRIPT
+        ./testsuite/test_gh_actions_testsuite.sh ""
