@@ -20,6 +20,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+      with:
+        repository: grid-control/testsuite
+        path: testsuite
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
@@ -31,3 +35,4 @@ jobs:
     - name: Test using testsuite
       run: |
         ./setup.py install > setup.log 2>&1 || cat setup.log
+        ls -la
