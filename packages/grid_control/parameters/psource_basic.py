@@ -197,6 +197,10 @@ class RNGParameterSource(SingleParameterSource):
 class RegexTransformParameterSource(SingleParameterSource):
 	alias_list = ['regex_transform']
 
+	# https://stackoverflow.com/questions/61249613/python-re-sub-behavior-changed-with-3-7-bug-or-not
+	# Change in python 3.7 re.sub (https://docs.python.org/3/library/re.html#re.sub):
+	# Empty matches for the pattern are replaced when adjacent to a previous non-empty match.
+	# Rationale: https://bugs.python.org/issue32308
 	def __init__(self, output_vn, source_vn, regex_dict, regex_order, default=None):
 		SingleParameterSource.__init__(self, '!%s' % output_vn,
 			[output_vn, source_vn, regex_order, str_dict_linear(regex_dict)])
