@@ -151,7 +151,7 @@ def is_dumb_terminal(stream=sys.stdout):
 		term_env = os.environ['GC_TERM']
 	if term_env == 'gc_color256':
 		return False
-	elif term_env == 'gc_color':
+	elif term_env in ['gc_color', 'gc_color16']:
 		return None
 	missing_attr = (not hasattr(stream, 'isatty')) or not hasattr(stream, 'fileno')
 	if (term_env == 'dumb') or missing_attr or not stream.isatty():
