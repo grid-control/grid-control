@@ -3,11 +3,7 @@
 
 name: Testsuite
 
-on:
-  push:
-    branches: [ "gh_actions" ]
-  pull_request:
-    branches: [ "master" ]
+on: [push, pull_request]
 
 jobs:
   build:
