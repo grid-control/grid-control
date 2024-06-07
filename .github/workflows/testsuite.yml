@@ -20,6 +20,8 @@ jobs:
       with:
         repository: grid-control/testsuite
         path: testsuite
+        # use the branch with the same name in testsuite repo; TODO: what about PRs?
+        ref: ${{ github.ref }}
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
