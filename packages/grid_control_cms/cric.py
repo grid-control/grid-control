@@ -24,16 +24,16 @@ class CRIC(object):
 	def __init__(self, url = None):
 		if url:
 			raise Exception('Custom url currently not supportet, please contact the grid-control developers!')
-		self._url = url or 'http://cms-cric.cern.ch/api'
+		self._url = url or 'https://cms-cric.cern.ch/api'
 		self._gjrc = GridJSONRestClient(get_cms_cert(), self._url, 'VOMS proxy needed to query siteDB!')
 
-		self._url_people = 'http://cms-cric.cern.ch/api/accounts/user/query/?json&preset=people'
+		self._url_people = 'https://cms-cric.cern.ch/api/accounts/user/query/?json&preset=people'
 		self._gjrc_people = GridJSONRestClient(get_cms_cert(), self._url_people, 'VOMS proxy needed to query CRIC!')
 
-		self._url_names = 'http://cms-cric.cern.ch/api/cms/site/query/?json&preset=site-names'
+		self._url_names = 'https://cms-cric.cern.ch/api/cms/site/query/?json&preset=site-names'
 		self._gjrc_names = GridJSONRestClient(get_cms_cert(), self._url_names, 'VOMS proxy needed to query CRIC!')
 
-		self._url_recources = 'http://wlcg-cric.cern.ch/api/core/service/query/?json&groupby=rcsite'
+		self._url_recources = 'https://wlcg-cric.cern.ch/api/core/service/query/?json&groupby=rcsite'
 		self._gjrc_recources = GridJSONRestClient(get_cms_cert(), self._url_recources, 'VOMS proxy needed to query siteDB!')
 
 	def cms_name_to_se(self, cms_name):
