@@ -38,6 +38,6 @@ Base your work on the ``testing`` branch and also use it as the base branch for 
    :target: https://badge.fury.io/py/grid-control
    :alt: Latest PyPI version
 
-.. |Build Status| image:: https://travis-ci.org/grid-control/grid-control.svg?branch=testing
-   :target: https://travis-ci.org/grid-control/grid-control
+.. |Build Status| image:: https://github.com/grid-control/grid-control/actions/workflows/testsuite.yml/badge.svg
+   :target: https://github.com/grid-control/grid-control/actions/workflows/testsuite.yml
    :alt: Build Status
