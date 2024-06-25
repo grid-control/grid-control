@@ -1,4 +1,4 @@
-| |PyPI Version| |Build Status| |Coverage| |Landscape| |Gitter|
+| |PyPI Version| |Build Status|
 
 grid-control
 ============
@@ -41,14 +41,3 @@ Base your work on the ``testing`` branch and also use it as the base branch for 
 .. |Build Status| image:: https://travis-ci.org/grid-control/grid-control.svg?branch=testing
    :target: https://travis-ci.org/grid-control/grid-control
    :alt: Build Status
-
-.. |Coverage| image:: https://codecov.io/github/grid-control/grid-control/coverage.svg?branch=testing
-   :target: https://codecov.io/github/grid-control/grid-control?branch=testing
-
-.. |Gitter| image:: https://badges.gitter.im/grid-control/grid-control.svg
-   :alt: Join the chat at https://gitter.im/grid-control/grid-control
-   :target: https://gitter.im/grid-control/grid-control?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
-
-.. |Landscape| image:: https://landscape.io/github/grid-control/grid-control/testing/landscape.svg?style=flat
-   :target: https://landscape.io/github/grid-control/grid-control/testing
-   :alt: Code Health
