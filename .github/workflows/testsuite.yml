@@ -6,7 +6,7 @@ name: Testsuite
 on: [push, pull_request]
 
 jobs:
-  build:
+  test:
 
     runs-on: ubuntu-20.04
     strategy:
@@ -20,19 +20,32 @@ jobs:
       with:
         repository: grid-control/testsuite
         path: testsuite
+        # use the branch with the same name in testsuite repo; TODO: what about PRs?
+        # ref: ${{ github.ref }}  # does not work for PRs and non-existing testsuite-branches
+        # instead fetch all and possibly checkout ref manually:
+        fetch-depth: 0
+    - name: Possibly switch to corresponding testsuite branch
+      run: |
+        cd testsuite
+        GC_TEST_BRANCH=$(basename ${{ github.ref }})
+        if [ ${{ github.event_name }} == "pull_request" ]; then GC_TEST_BRANCH="PR${{ github.event.number }}"; fi
+        # fallback: if the corresponding branch does not exist, us testing
+        if ! git ls-remote --exit-code --heads https://github.com/grid-control/testsuite.git $GC_TEST_BRANCH > /dev/null; then echo "no branch $GC_TEST_BRANCH, using testing"; GC_TEST_BRANCH="testing"; fi
+        echo "GC_TEST_BRANCH=$GC_TEST_BRANCH"
+        git checkout -B $GC_TEST_BRANCH origin/$GC_TEST_BRANCH
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install dependencies, set up grid-control
       run: |
         python -m pip install --upgrade pip
         python -m pip install setuptools requests
-    - name: Test using testsuite
-      run: |
         ./setup.py install > setup.log 2>&1 || cat setup.log
         rm -rf packages
         ls -la
+    - name: Test using testsuite
+      run: |
         export GC_SCRIPT="/$(grep gridcontrol setup.log | cut -d "/" -f 2-)/gridcontrol"
         echo $GC_SCRIPT
         ./testsuite/test_gh_actions_testsuite.sh ""
