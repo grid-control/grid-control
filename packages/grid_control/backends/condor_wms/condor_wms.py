@@ -311,7 +311,7 @@ class Condor(BasicWMS):
 	def _get_jobs_output(self, gc_id_jobnum_list):
 		# retrieve task output files from sandbox directory
 		if not len(gc_id_jobnum_list):
-			raise StopIteration
+			return
 
 		activity = Activity('retrieving job outputs')
 		for gc_id, jobnum in gc_id_jobnum_list:

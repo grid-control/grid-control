@@ -97,7 +97,7 @@ class LocalWMS(BasicWMS):
 
 	def _get_jobs_output(self, gc_id_jobnum_list):
 		if not len(gc_id_jobnum_list):
-			raise StopIteration
+			return
 
 		activity = Activity('retrieving %d job outputs' % len(gc_id_jobnum_list))
 		for gc_id, jobnum in gc_id_jobnum_list:

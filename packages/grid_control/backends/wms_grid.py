@@ -69,7 +69,7 @@ class GridWMS(BasicWMS):
 	def _get_jobs_output(self, gc_id_jobnum_list):
 		# Get output of jobs and yield output dirs
 		if len(gc_id_jobnum_list) == 0:
-			raise StopIteration
+			return
 
 		root_dn = os.path.join(self._path_output, 'tmp')
 		try:
@@ -107,7 +107,7 @@ class GridWMS(BasicWMS):
 		if exit_code != 0:
 			if 'Keyboard interrupt raised by user' in proc.stderr.read(timeout=0):
 				remove_files([jobs, root_dn])
-				raise StopIteration
+				return
 			else:
 				self._log.log_process(proc, files={'jobs': SafeFile(jobs).read()})
 			self._log.error('Trying to recover from error ...')

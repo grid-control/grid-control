@@ -36,8 +36,11 @@ class JMSCheckJobs(CheckJobsWithProcess):
 		tmp_head = [CheckInfo.WMSID, 'user', 'group', 'job_name', CheckInfo.QUEUE, 'partition',
 			'nodes', 'cpu_time', 'wall_time', 'memory', 'queue_time', CheckInfo.RAW_STATUS]
 		status_iter = ifilter(identity, proc.stdout.iter(self._timeout))
-		next(status_iter)
-		next(status_iter)
+		try:
+			next(status_iter)
+			next(status_iter)
+		except StopIteration:
+			return
 		for line in status_iter:
 			tmp = lmap(lambda x: x.strip(), line.replace('\x1b(B', '').replace('\x1b[m', '').split())
 			job_info = dict(izip(tmp_head, tmp[:12]))
