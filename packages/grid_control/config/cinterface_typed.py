@@ -38,7 +38,18 @@ class TypedConfigInterface(ConfigInterface):
 			if result is None:
 				raise ConfigError('Valid boolean expressions are: "true", "false"')
 			return result
-		return self._get_internal('bool', bool.__str__, _str2obj, None, option, default, **kwargs)
+
+		# Change in python 3.8, causing "TypeError" not to be thrown:
+		# https://docs.python.org/3/whatsnew/3.8.html
+		# "Removed __str__ implementations from builtin types bool, int, float, complex"
+		_obj2str = bool.__str__
+		if bool.__str__ == object.__str__:
+			def _obj2str(self):
+				if self == None:
+					raise TypeError("descriptor '__str__' requires a 'int' object but received a 'NoneType'")
+				return self.__str__()
+
+		return self._get_internal('bool', _obj2str, _str2obj, None, option, default, **kwargs)
 
 	def get_composited_plugin(self, option, default=unspecified, default_compositor=unspecified,
 			option_compositor=None, cls=Plugin, require_plugin=True,
@@ -76,7 +87,18 @@ class TypedConfigInterface(ConfigInterface):
 
 	def get_int(self, option, default=unspecified, **kwargs):
 		# Getting integer config options - using strict integer (de-)serialization
-		return self._get_internal('int', int.__str__, int, None, option, default, **kwargs)
+
+		# Change in python 3.8, causing "TypeError" not to be thrown:
+		# https://docs.python.org/3/whatsnew/3.8.html
+		# "Removed __str__ implementations from builtin types bool, int, float, complex"
+		_obj2str = int.__str__
+		if int.__str__ == object.__str__:
+			def _obj2str(self):
+				if self == None:
+					raise TypeError("descriptor '__str__' requires a 'int' object but received a 'NoneType'")
+				return self.__str__()
+
+		return self._get_internal('int', _obj2str, int, None, option, default, **kwargs)
 
 	def get_list(self, option, default=unspecified, parse_item=identity, **kwargs):
 		# Get whitespace separated list (space, tab, newline)
