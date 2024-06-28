@@ -137,10 +137,8 @@ class GCLock(object):
 		self._lock = lock or threading.Lock()
 
 	def _at_fork_reinit(self):
-		try:
-			self._lock._at_fork_reinit()
-		except AttributeError:
-			pass
+		# new in python 3.9: https://bugs.python.org/issue40089
+		self._lock._at_fork_reinit()
 
 	def acquire(self, timeout=None):
 		try:
