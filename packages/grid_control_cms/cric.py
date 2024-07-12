@@ -84,7 +84,7 @@ class CRIC(object):
 				name = d
 				for e in data[d]:
 					if 'cms' in e['usage'].keys() and len(e['usage']['cms'])>0:
-						alias = e['usage']['cms'][0]
+						alias = e['usage']['cms'][0]['site']
 						thetype = e['type']
 						if thetype == 'CE':
 							fqdn = e['endpoint'].split(':')[0]
