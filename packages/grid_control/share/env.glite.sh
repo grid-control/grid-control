@@ -35,8 +35,11 @@ gc_find_grid() {
 		return 1
 	fi
 	if [ -z "$GLITE_LOCATION" ]; then
-		echo "       \$GLITE_LOCATION is empty!"
-		return 1
+		# GLITE_LOCATION is not set by the current alma9 test-setup; remove this manual fix if this will be set
+		# in future "production" versions (JL, 17.07.2024)
+		echo "       Warning: \$GLITE_LOCATION is empty!"
+		echo "       Setting it to $3"
+		GLITE_LOCATION="$3"
 	fi
 
 	# We want to keep the local VO environment variables
@@ -84,11 +87,19 @@ gc_find_os_release() {
 	return 1
 }
 
-if gc_find_os_release | grep -q -e "Scientific Linux.* 6.*" -e "CentOS Linux.* 6.*"; then
-	# EL6 installations need a different UI setup script
+ASSUMED_OS_RELEASE=$(gc_find_os_release)
+echo "[GRID] assuming OS release: $ASSUMED_OS_RELEASE"
+if   echo "$ASSUMED_OS_RELEASE" | grep -q -e "Scientific Linux.* 6.*" -e "CentOS.* 6.*"; then
 	GC_GLITE_TRY_CVMFS_LOCATION="/cvmfs/grid.cern.ch/umd-sl6ui-latest/etc/profile.d/setup-ui-example.sh"
+elif echo "$ASSUMED_OS_RELEASE" | grep -q -e "Red Hat Enterprise Linux.* 7.*" -e "CentOS.* 7.*"; then
+	GC_GLITE_TRY_CVMFS_LOCATION="/cvmfs/grid.cern.ch/umd-c7ui-latest/etc/profile.d/setup-c7-ui-example.sh"
+elif echo "$ASSUMED_OS_RELEASE" | grep -q -e "Red Hat Enterprise Linux.* 9.*" -e "AlmaLinux.* 9.*"; then
+	GC_GLITE_TRY_CVMFS_LOCATION="/cvmfs/grid.cern.ch/alma9-ui-test/etc/profile.d/setup-alma9-test.sh"
+	# GLITE_LOCATION is not set by the current alma9 test-setup; remove this manual fix if this will be set
+	# in future "production" versions (JL, 17.07.2024)
+	GC_GLITE_TRY_GLITE_LOCATION="/cvmfs/grid.cern.ch/alma9-ui-test/usr"
 else
-	# EL7 (and above?) should use this one
+	echo "       OS-to-GRID-UI mapping unknown, trying EL7"
 	GC_GLITE_TRY_CVMFS_LOCATION="/cvmfs/grid.cern.ch/umd-c7ui-latest/etc/profile.d/setup-c7-ui-example.sh"
 fi
 
@@ -97,7 +108,7 @@ if [ -z "$GLITE_LOCATION" ] && [ -d "$GLITE_LOCATION" ]; then
 	GC_GLITE_TYPE="LOCAL"
 elif gc_find_grid "USER" "$GC_GLITE_LOCATION"; then
 	GC_GLITE_TYPE="USER"
-elif gc_find_grid "CVMFS" "$GC_GLITE_TRY_CVMFS_LOCATION"; then
+elif gc_find_grid "CVMFS" "$GC_GLITE_TRY_CVMFS_LOCATION" "$GC_GLITE_TRY_GLITE_LOCATION"; then
 	GC_GLITE_TYPE="CVMFS"
 elif gc_find_grid "CVMFS - 2nd try" $(ls -1t /cvmfs/grid.cern.ch/*/etc/profile.d/grid*.sh 2> /dev/null | head -n 1); then
 	GC_GLITE_TYPE="CVMFS-2"
