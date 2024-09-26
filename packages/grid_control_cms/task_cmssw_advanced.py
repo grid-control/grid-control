@@ -76,7 +76,7 @@ class CMSSWAdvanced(CMSSW):  # pylint:disable=too-many-ancestors
 	def get_job_dict(self, jobnum):
 		data = CMSSW.get_job_dict(self, jobnum)
 		config_fn_list = self._nm_cfg.lookup(data.get('DATASETNICK'), [], is_selector=False)
-		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, config_fn_list))
+		data['CMSSW_CONFIG'] = str.join(' ', imap(os.path.basename, config_fn_list[0].split(' ')))
 		return data
 
 	def _display_setup(self, dataset_fn, head):
