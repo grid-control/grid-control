@@ -55,8 +55,11 @@ class CondorCheckJobs(CheckJobsWithProcess):
 
 	def _parse(self, proc):
 		job_info = {}
+		print proc
 		for line in proc.stdout.iter(self._timeout):
+			print 'parsing', repr(line)
 			if not line.strip():
+				print job_info
 				yield job_info
 				job_info = {}
 			try:
@@ -73,8 +76,22 @@ class CondorCheckJobs(CheckJobsWithProcess):
 			elif key == 'GlobalJobId':
 				job_info[CheckInfo.WMSID] = value.split('#')[1]
 				job_info[key] = value.strip('"')
-			elif key == 'RemoteHost':
+			elif (key == 'RemoteHost') or (key == 'LastRemoteHost'):
 				job_info[CheckInfo.WN] = value.strip('"')
 			elif 'date' in key.lower():
 				job_info[key] = value
+		print job_info
 		yield job_info
+
+
+class CondorDebugJobs(CondorCheckJobs):
+	def __init__(self, config):
+		CheckJobsWithProcess.__init__(self, config,
+			ProcessCreatorAppendArguments(config, 'condor_history', ['-long']), status_map={
+				Job.ABORTED: [3],        # removed
+				Job.DONE: [4],           # completed
+				Job.FAILED: [6],         # submit error
+				Job.READY: [1],          # idle (waiting for a machine to execute on)
+				Job.RUNNING: [2],
+				Job.WAITING: [0, 5, 7],  # unexpanded (never been run); DISABLED (on hold); suspended
+			})
