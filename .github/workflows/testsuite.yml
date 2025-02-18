@@ -34,11 +34,16 @@ jobs:
         echo "GC_TEST_BRANCH=$GC_TEST_BRANCH"
         git checkout -B $GC_TEST_BRANCH origin/$GC_TEST_BRANCH
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: gabrielfalcao/pyenv-action@v17
       with:
-        python-version: ${{ matrix.python-version }}
+        default: ${{ matrix.python-version }}
+
     - name: Install dependencies, set up grid-control
       run: |
+        echo ${{ matrix.python-version }}
+        which -a python
+        pyenv versions
+        pyenv local ${{ matrix.python-version }}
         python -m pip install --upgrade pip
         python -m pip install setuptools requests
         ./setup.py install > setup.log 2>&1 || cat setup.log
