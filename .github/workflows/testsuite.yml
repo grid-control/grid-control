@@ -36,13 +36,14 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: gabrielfalcao/pyenv-action@v17
       with:
-        default: 3.6
+        default: ${{ matrix.python-version }}
 
     - name: Install dependencies, set up grid-control
       run: |
         echo ${{ matrix.python-version }}
         which -a python
         pyenv versions
+        pyenv local ${{ matrix.python-version }}
         python -m pip install --upgrade pip
         python -m pip install setuptools requests
         ./setup.py install > setup.log 2>&1 || cat setup.log
