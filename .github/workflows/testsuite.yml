@@ -37,15 +37,14 @@ jobs:
       uses: gabrielfalcao/pyenv-action@v17
       with:
         default: 3.6
-        command: |
-          python -m pip install --upgrade pip
-          python -m pip install setuptools requests
 
     - name: Install dependencies, set up grid-control
       run: |
         echo ${{ matrix.python-version }}
         which -a python
         pyenv versions
+        python -m pip install --upgrade pip
+        python -m pip install setuptools requests
         ./setup.py install > setup.log 2>&1 || cat setup.log
         rm -rf packages
         ls -la
