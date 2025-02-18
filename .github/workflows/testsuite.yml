@@ -34,7 +34,7 @@ jobs:
         echo "GC_TEST_BRANCH=$GC_TEST_BRANCH"
         git checkout -B $GC_TEST_BRANCH origin/$GC_TEST_BRANCH
     - name: Set up Python ${{ matrix.python-version }}
-      uses: gabrielfalcao/pyenv-action@v18
+      uses: gabrielfalcao/pyenv-action@v17
       with:
         default: 3.6
         command: |
