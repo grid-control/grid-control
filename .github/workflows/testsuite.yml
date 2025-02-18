@@ -43,6 +43,7 @@ jobs:
 
     - name: Install dependencies, set up grid-control
       run: |
+        echo ${{ matrix.python-version }}
         which -a python
         ./setup.py install > setup.log 2>&1 || cat setup.log
         rm -rf packages
