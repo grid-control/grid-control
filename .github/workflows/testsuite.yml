@@ -45,6 +45,7 @@ jobs:
       run: |
         echo ${{ matrix.python-version }}
         which -a python
+        pyenv versions
         ./setup.py install > setup.log 2>&1 || cat setup.log
         rm -rf packages
         ls -la
