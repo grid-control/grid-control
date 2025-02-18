@@ -36,7 +36,7 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: gabrielfalcao/pyenv-action@v18
       with:
-        default: ${{ matrix.python-version }}
+        default: 3.6
         command: |
           python -m pip install --upgrade pip
           python -m pip install setuptools requests
