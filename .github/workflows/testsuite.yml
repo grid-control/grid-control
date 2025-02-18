@@ -34,9 +34,9 @@ jobs:
         echo "GC_TEST_BRANCH=$GC_TEST_BRANCH"
         git checkout -B $GC_TEST_BRANCH origin/$GC_TEST_BRANCH
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      uses: gabrielfalcao/pyenv-action@v18
       with:
-        python-version: ${{ matrix.python-version }}
+        default: ${{ matrix.python-version }}
     - name: Install dependencies, set up grid-control
       run: |
         python -m pip install --upgrade pip
