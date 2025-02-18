@@ -38,13 +38,13 @@ jobs:
       with:
         default: ${{ matrix.python-version }}
         command: |
-          python --version
+          python3 --version
           python -m pip install --upgrade pip
           python -m pip install setuptools requests
 
     - name: Install dependencies, set up grid-control
       run: |
-        python --version
+        python3 --version
         ./setup.py install > setup.log 2>&1 || cat setup.log
         rm -rf packages
         ls -la
