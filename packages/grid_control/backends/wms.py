@@ -76,6 +76,10 @@ class WMS(NamedPlugin):
 		# Check status and return (gc_id, job_state, job_info) for active jobs
 		raise AbstractError
 
+	def debug_jobs(self, gc_id_list):
+		# Check detailed status and return (gc_id, job_state, job_info) for active jobs
+		raise AbstractError
+
 	def deploy_task(self, task, transfer_se, transfer_sb):
 		raise AbstractError
 
@@ -117,11 +121,12 @@ make_enum(['WALLTIME', 'CPUTIME', 'MEMORY', 'CPUS', 'BACKEND',
 
 
 class BasicWMS(WMS):
-	def __init__(self, config, name, check_executor, cancel_executor):
+	def __init__(self, config, name, check_executor, cancel_executor, debug_executor=None):
 		WMS.__init__(self, config, name)
 		for executor in [check_executor, cancel_executor]:
 			executor.setup(self._log)
 		(self._check_executor, self._cancel_executor) = (check_executor, cancel_executor)
+		self._debug_executor = debug_executor
 
 		if self._name != self.__class__.__name__.upper():
 			self._log.info('Using batch system: %s (%s)', self.__class__.__name__, self._name)
@@ -170,6 +175,16 @@ class BasicWMS(WMS):
 					job_info[CheckInfo.enum2str(key)] = job_info.pop(key)
 			return value
 		return self._run_executor('checking job status', self._check_executor, _fmt, gc_id_list)
+
+	def debug_jobs(self, gc_id_list):
+		# Check status and return (gc_id, job_state, job_info) for active jobs
+		def _fmt(value):  # translate CheckInfo enum values in job_info dictionary
+			job_info = value[2]  # get mutable job_info dictionary from the immutable tuple
+			for key in CheckInfo.enum_value_list:
+				if key in job_info:
+					job_info[CheckInfo.enum2str(key)] = job_info.pop(key)
+			return value
+		return self._run_executor('checking detailed job status', self._debug_executor, _fmt, gc_id_list)
 
 	def deploy_task(self, task, transfer_se, transfer_sb):
 		# HACK

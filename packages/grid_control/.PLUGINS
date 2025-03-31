@@ -318,6 +318,8 @@
 
       * grid_control.report TableReport
 
+       * grid_control.report CGReport gc
+
        * grid_control.report LocationReport location
 
        * grid_control.report TrivialReport trivial
