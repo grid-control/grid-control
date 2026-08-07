@@ -180,10 +180,10 @@ class CMSBaseProvider(DataProvider):
 		for rep in replicas:
 			rse = self._rucio_client.get_rse(rep['rse'])
 			protocols = rse['protocols']
-			se = ''
+			se = None
 			for protocol in protocols:
 				extended_attributes = protocol['extended_attributes']
-				if protocol['scheme'] == 'srm' or protocol['scheme'] == 'gsiftp':
+				if protocol['scheme'] in ('srm', 'gsiftp', 'root', 'xrootd', 'https'):
 					se = protocol['hostname']
 			replica_info = (rse['rse'], se, rep['available_length']/rep['length'] == 1)
 			replicas_dict[block_path].append(replica_info)
