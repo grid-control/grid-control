@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 if 'Settings' in locals():  # Throw exceptions if the file is executed in the wrong way
 	raise Exception('This file is supposed to be run directly by python - not by go.py!')
