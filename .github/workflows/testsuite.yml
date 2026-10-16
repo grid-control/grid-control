@@ -21,6 +21,13 @@ jobs:
     container: ${{ matrix.container }}
 
     steps:
+    - name: Install executables needed for tests
+      run: |
+        if [ -f /etc/debian_version ] && grep -q "bullseye" /etc/debian_version 2>/dev/null || grep -q "bullseye" /etc/os-release 2>/dev/null; then
+          sed -i 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list
+          sed -i 's|http://deb.debian.org/debian bullseye-updates|http://archive.debian.org/debian bullseye-updates|g' /etc/apt/sources.list
+        fi
+        apt-get update && apt-get install -y git subversion procps
     - uses: actions/checkout@v4
     - uses: actions/checkout@v4
       with:
