@@ -8,11 +8,17 @@ on: [push, pull_request]
 jobs:
   test:
 
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.6", "3.9"]
+        include:
+          - python-version: "3.6"
+            container: "python:3.6-slim"
+          - python-version: "3.9"
+            container: "python:3.9-slim"
+
+    container: ${{ matrix.container }}
 
     steps:
     - uses: actions/checkout@v4
@@ -33,17 +39,11 @@ jobs:
         if ! git ls-remote --exit-code --heads https://github.com/grid-control/testsuite.git $GC_TEST_BRANCH > /dev/null; then echo "no branch $GC_TEST_BRANCH, using testing"; GC_TEST_BRANCH="testing"; fi
         echo "GC_TEST_BRANCH=$GC_TEST_BRANCH"
         git checkout -B $GC_TEST_BRANCH origin/$GC_TEST_BRANCH
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: gabrielfalcao/pyenv-action@v17
-      with:
-        default: ${{ matrix.python-version }}
 
     - name: Install dependencies, set up grid-control
       run: |
         echo ${{ matrix.python-version }}
         which -a python
-        pyenv versions
-        pyenv local ${{ matrix.python-version }}
         python -m pip install --upgrade pip
         python -m pip install setuptools requests
         ./setup.py install > setup.log 2>&1 || cat setup.log
