@@ -8,13 +8,26 @@ on: [push, pull_request]
 jobs:
   test:
 
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.6", "3.7", "3.8", "3.9"]
+        include:
+          - python-version: "3.6"
+            container: "python:3.6-slim"
+          - python-version: "3.9"
+            container: "python:3.9-slim"
+
+    container: ${{ matrix.container }}
 
     steps:
+    - name: Install executables needed for tests
+      run: |
+        if [ -f /etc/debian_version ] && grep -q "bullseye" /etc/debian_version 2>/dev/null || grep -q "bullseye" /etc/os-release 2>/dev/null; then
+          sed -i 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' /etc/apt/sources.list
+          sed -i 's|http://deb.debian.org/debian bullseye-updates|http://archive.debian.org/debian bullseye-updates|g' /etc/apt/sources.list
+        fi
+        apt-get update && apt-get install -y git subversion procps
     - uses: actions/checkout@v4
     - uses: actions/checkout@v4
       with:
@@ -33,12 +46,11 @@ jobs:
         if ! git ls-remote --exit-code --heads https://github.com/grid-control/testsuite.git $GC_TEST_BRANCH > /dev/null; then echo "no branch $GC_TEST_BRANCH, using testing"; GC_TEST_BRANCH="testing"; fi
         echo "GC_TEST_BRANCH=$GC_TEST_BRANCH"
         git checkout -B $GC_TEST_BRANCH origin/$GC_TEST_BRANCH
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
+
     - name: Install dependencies, set up grid-control
       run: |
+        echo ${{ matrix.python-version }}
+        which -a python
         python -m pip install --upgrade pip
         python -m pip install setuptools requests
         ./setup.py install > setup.log 2>&1 || cat setup.log
@@ -48,4 +60,5 @@ jobs:
       run: |
         export GC_SCRIPT="/$(grep gridcontrol setup.log | cut -d "/" -f 2-)/gridcontrol"
         echo $GC_SCRIPT
+        export USER=root
         ./testsuite/test_gh_actions_testsuite.sh ""
