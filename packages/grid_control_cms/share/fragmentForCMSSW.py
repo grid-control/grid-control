@@ -37,10 +37,16 @@ def customise_for_gc(process):
 		randSvc = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
 		randSvc.populate()
 
-	process.AdaptorConfig = cms.Service('AdaptorConfig',
-		enable = cms.untracked.bool(True),
-		stats = cms.untracked.bool(True),
-	)
+	import os
+	try:
+		cmssw_version = os.environ.get('CMSSW_VERSION', 'CMSSW_0_0_0').split('_')
+		if int(cmssw_version[1]) < 14 or (int(cmssw_version[1]) == 14 and int(cmssw_version[2]) == 0):
+			process.AdaptorConfig = cms.Service('AdaptorConfig',
+				enable = cms.untracked.bool(True),
+				stats = cms.untracked.bool(True),
+			)
+	except Exception:
+		pass
 
 	# Generator related setup
 	try:
