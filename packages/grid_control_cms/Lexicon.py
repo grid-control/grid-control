@@ -558,7 +558,10 @@ def replaceToSantizeURL(url_str):
         return matchObj.group(1) + matchObj.group(4)
 
     # TODO: won't catch every case (But is it good enough (trade off to performance)?)
-    urlRegExpr = r'\b(((?i)http|https|ftp|mysql|oracle|sqlite)+://)([^:]+:[^@]+@)(\S+)\b'
+    # Changed w.r.t. dmwm/WMCore: the global inline flag (?i) was moved to the start of the
+    # pattern. Python >= 3.11 raises re.error for global flags not at the start (bpo-47066,
+    # deprecated since 3.6); behaviour is unchanged since the flag always applied globally.
+    urlRegExpr = r'(?i)\b((http|https|ftp|mysql|oracle|sqlite)+://)([^:]+:[^@]+@)(\S+)\b'
     return re.sub(urlRegExpr, _repUrl, url_str)
 
 def splitCouchServiceURL(serviceURL):
