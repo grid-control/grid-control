@@ -190,7 +190,6 @@ SimpleJobManager options
 
     List of available plugins:
      * BasicLogEventHandler_ (alias: logmonitor)
-     * DashboardLocal_ (alias: dashboard)
      * JabberAlarm_ (alias: jabber)
      * ScriptEventHandler_ (alias: scripts)
 
@@ -2206,23 +2205,6 @@ BasicLogEventHandler options
     Toggle displaying the wms name during job state changes
 
 
-.. _DashboardLocal:
-DashboardLocal options
-----------------------
-
-* ``application`` = <text> (Default: 'shellscript')
-    Specify the name of the application that is reported to dashboard
-
-* ``dashboard timeout`` = <duration hh[:mm[:ss]]> (Default: 00:00:05)
-    Specify the timeout for dashboard interactions
-
-* ``task`` = <text> (Default: 'analysis')
-    Specify the task type reported to dashboard
-
-* ``task name`` = <text> (Default: '@GC_TASK_ID@_@DATASETNICK@')
-    Specify the task name reported to dashboard
-
-
 .. _JabberAlarm:
 JabberAlarm options
 -------------------
@@ -2270,17 +2252,6 @@ ScriptEventHandler options
 
 * ``silent`` = <boolean> (Default: True)
     Do not show output of event scripts
-
-
-.. _DashboardRemote:
-DashboardRemote options
------------------------
-
-* ``application`` = <text> (Default: 'shellscript')
-    Specify the name of the application that is reported to dashboard
-
-* ``task name`` = <text> (Default: '@GC_TASK_ID@_@DATASETNICK@')
-    Specify the task name reported to dashboard
 
 
 .. _FileReport:
@@ -2480,9 +2451,6 @@ InactiveWMS options
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
 
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``
 
@@ -2510,9 +2478,6 @@ Local options
 
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``
@@ -2550,9 +2515,6 @@ MultiWMS options
 
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``
@@ -2611,9 +2573,6 @@ Condor options
 
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``
@@ -2684,9 +2643,6 @@ GridWMS options
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
 
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``
 
@@ -2736,9 +2692,6 @@ HTCondor options
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
 
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``
 
@@ -2784,9 +2737,6 @@ CreamWMS options
 
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``
@@ -2845,9 +2795,6 @@ GliteWMS options
 
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``
@@ -2909,9 +2856,6 @@ PBSGECommon options
 
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``
@@ -2990,9 +2934,6 @@ GridEngine options
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
 
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
-
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``
 
@@ -3069,9 +3010,6 @@ PBS options
 
 * ``remote event handler / remote monitor`` = <list of plugin[:name] ...> (Default: '')
     Specify remote event handler plugins to track the task / job progress on the worker node
-
-    List of available plugins:
-     * DashboardRemote_ (alias: dashboard)
 
 * ``remote event handler manager`` = <plugin> (Default: 'MultiRemoteEventHandler')
     Specify compositor class to merge the different plugins given in ``remote event handler``

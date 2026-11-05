@@ -118,7 +118,6 @@ class CMSSW(SCRAMTask):
 
 	def __init__(self, config, name):
 		config.set('se input timeout', '0:30')
-		config.set('application', 'cmsRun', section='dashboard')
 		config.set('dataset provider', 'DBS3Provider')
 		config.set('dataset splitter', 'EventBoundarySplitter')
 		config.set('dataset processor', 'LumiDataProcessor', '+=')

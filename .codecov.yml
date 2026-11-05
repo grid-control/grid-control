@@ -5,7 +5,6 @@ comment:
 coverage:
   ignore:
     - packages/grid_control/backends/htcondor_wms/*
-    - packages/grid_control_cms/DashboardAPI/*
     - packages/grid_control_cms/Lexicon.py
     - packages/grid_control_cms/share/fragmentForCMSSW.py
     - packages/grid_control_gui/xmpp/*

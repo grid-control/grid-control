@@ -44,14 +44,6 @@
 
     * grid_control.gc_plugin NamedPlugin
 
-     * grid_control.event_base LocalEventHandler NullLocalEventHandler null
-
-      * grid_control_cms.event_dashboard DashboardLocal dashboard
-
-     * grid_control.event_base RemoteEventHandler NullRemoteEventHandler null
-
-      * grid_control_cms.event_dashboard DashboardRemote dashboard
-
      * grid_control.tasks.task_base TaskModule
 
       * grid_control.tasks.task_data DataTask

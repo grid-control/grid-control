@@ -21,7 +21,6 @@ from grid_control_cms.cric import CRIC
 class SEPathParser(object):
 	# TODO: integrate this into the SEManager infrastructure
 	def __init__(self, config):
-		config.set('jobs', 'monitor', 'dashboard', override=False)
 		config.set('grid', 'sites', '-samtest -cmsprodhi', append=True)
 
 		site_db = CRIC()
