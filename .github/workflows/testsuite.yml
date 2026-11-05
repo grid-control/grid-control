@@ -17,6 +17,8 @@ jobs:
             container: "python:3.6-slim"
           - python-version: "3.9"
             container: "python:3.9-slim"
+          - python-version: "3.11"
+            container: "python:3.11-slim"
 
     container: ${{ matrix.container }}
 
