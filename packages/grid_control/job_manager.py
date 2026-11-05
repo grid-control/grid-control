@@ -438,7 +438,7 @@ class SimpleJobManager(JobManager):
 		if self._defect_tries:
 			num_defect = len(self._defect_counter)  # Waiting list gets larger in case reported == []
 			num_wait = num_defect - max(1, int(num_defect / 2 ** self._defect_raster))
-			jobnum_list_wait = self._sample(self._defect_counter, num_wait)
+			jobnum_list_wait = self._sample(list(self._defect_counter), num_wait)
 			jobnum_list = lfilter(lambda jobnum: jobnum not in jobnum_list_wait, jobnum_list)
 
 		(change, jobnum_list_timeout, reported) = JobManager._check_get_jobnum_list(
