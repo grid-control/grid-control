@@ -304,10 +304,10 @@ class HTCScheddCLIBase(HTCScheddBase):
 		raise AbstractError
 		verProc = self._adapter.LoggedExecute("condor_version")
 		if verProc.wait(timeout = self._adapterMaxWait):
-			subProc.log_error(self.parentPool.error_log_fn, brief=True)
+			verProc.log_error(self.parentPool.error_log_fn, brief=True)
 		for line in verProc.iter():
 			try:
-				return re.match("$CondorVersion:*?(\d)\.(\d)\.(\d)").groups()
+				return tuple(lmap(int, re.match(r'\$CondorVersion:\s*(\d+)\.(\d+)\.(\d+)', line).groups()))
 			except AttributeError:
 				continue
 		return None
